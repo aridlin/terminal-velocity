@@ -33,11 +33,12 @@ jobs:
           ./physics_tests.exe
           ./extension_tests.exe
           ./multiplayer_tests.exe
+          ./campaign_tests.exe
           TV_TEST_CONSOLE=1 ./windows_input_tests.exe
           ./terminal_velocity.exe --smoke
       - name: Package portable Windows game
         shell: pwsh
-        run: Compress-Archive -Path terminal_velocity.exe,play.cmd,README.md,README.pl.md -DestinationPath terminal-velocity-windows-x64.zip
+        run: Compress-Archive -Path terminal_velocity.exe,play.cmd,README.md,README.pl.md,assets -DestinationPath terminal-velocity-windows-x64.zip
       - uses: actions/upload-artifact@v4
         with:
           name: terminal-velocity-windows-x64
