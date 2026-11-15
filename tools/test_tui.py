@@ -21,15 +21,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Terminal:
-    def __init__(self, port):
+    def __init__(self, port, course=None, profile=None):
         self.master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 34, 110, 1100, 680))
         self.original = termios.tcgetattr(slave)
         self.slave = slave
         self.process = subprocess.Popen(
-            [str(ROOT / 'terminal_velocity'), '--ssh-basic', '--summit',
+            [str(ROOT / 'terminal_velocity'), '--ssh-basic', '--mute', *(course or ['--summit']),
              '--connect', f'127.0.0.1:{port}', '--room', 'pty-test'],
-            stdin=slave, stdout=slave, stderr=slave, start_new_session=True)
+            stdin=slave, stdout=slave, stderr=slave, start_new_session=True,
+            env=dict(os.environ, **({'TV_PROGRESS_FILE': str(profile)} if profile else {})))
         self.screen = pyte.Screen(110, 34)
         self.stream = pyte.Stream(self.screen)
         self.decoder = codecs.getincrementaldecoder('utf-8')('replace')
@@ -122,6 +123,26 @@ def main():
             terminal.close()
         terminals = []
         print('PASS clean exits and terminal restoration in both PTYs')
+        import tempfile
+        with tempfile.TemporaryDirectory(prefix='tv-menu-') as folder:
+            profile = Path(folder) / 'progress.dat'
+            profile.write_text('TVP1 2\n10 0 0 2 1\n0 -1 0 0 0\n0 -1 0 0 0\n')
+            campaign = Terminal(port, ['--chapter', '1'], profile)
+            terminals = [campaign]
+            pump(terminals, .3)
+            assert any('[4] ZACISZE' in row for row in campaign.screen.display)
+            campaign.send('5\r')
+            pump(terminals, .2)
+            assert any('WSPINACZKA / 2' in row for row in campaign.screen.display)
+            campaign.send('m6')
+            pump(terminals, .2)
+            assert any('Ukończ poprzedni etap' in row for row in campaign.screen.display)
+            campaign.send('4\r')
+            pump(terminals, .2)
+            assert any('WSPINACZKA / 1' in row for row in campaign.screen.display)
+            campaign.close()
+            terminals = []
+        print('PASS campaign menu honors saved unlocks and blocks locked chapters')
     finally:
         for terminal in terminals:
             terminal.close()

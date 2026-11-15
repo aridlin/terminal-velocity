@@ -75,7 +75,7 @@ inline bool decode(const Packet &p, Snapshot &s) {
   s.y = int32_t(get(p, 48)) / 1000.;
   s.flags = get(p, 52);
   s.epoch = get(p, 56);
-  return s.level <= 2 && s.flags <= 7 && s.x >= -64 && s.x <= 4096 &&
+  return s.level <= 5 && s.flags <= 7 && s.x >= -64 && s.x <= 4096 &&
          s.y >= -64 && s.y <= 512;
 }
 inline bool newer(uint32_t a, uint32_t b) {

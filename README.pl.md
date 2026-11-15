@@ -16,6 +16,16 @@ Natywne zdarzenia konsoli Windows obsługują naciśnięcia i zwolnienia klawisz
 
 Budowanie w MSYS2 UCRT64: `pacman -S --needed make mingw-w64-ucrt-x86_64-gcc`, następnie `make windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=windres`. Cross-build na Linuxie z MinGW-w64: `make windows windows-tests`. CI buduje, testuje i udostępnia ZIP. Testy automatyczne nie potwierdzają odczuć na fizycznej klawiaturze Windows.
 
+## Wspinaczka i dźwięk
+
+Domyślna gra to trzyetapowa wyprawa: **Zacisze → Przełęcz → Ostatnia Grań**. Ukończenie odblokowuje kolejny etap, Enter na podsumowaniu prowadzi dalej. **4/5/6** wybiera odblokowany etap; `--chapter 1..3` pozwala ćwiczyć wybraną trasę.
+
+Każdy etap ma trzy gwiazdki: meta, przejście bez upadków/resetów checkpointu i komplet znajdziek. Rekord czasu, najlepszy wynik zbierania i gwiazdki zapisują się niezależnie. **N** zaczyna świeżą próbę; **R** wraca do checkpointu i liczy się jako ponowna próba. Postęp: `~/.local/state/terminal-velocity/progress.dat` (lub `$XDG_STATE_HOME`) na Linuxie, `%LOCALAPPDATA%/TerminalVelocity/progress.dat` na Windows. `TV_PROGRESS_FILE` wybiera inny profil. Demo nie zapisuje wyników.
+
+Muzyka to pobrane nagrania Kevina MacLeoda: **Dreams Become Real** (fortepian/ambient) i **Ascending the Vale** (harfa/chór/flet), CC BY 4.0. Efekty Kenney (CC0): szelest ubrania, świst zrywu, miękkie uderzenia, kroki po śniegu i delikatne szklane/dźwięczne znajdźki. Usunięto generowane tony SDL. Nie ma syntezy muzyki ani efektów przez kod.
+
+Muzyka przechodzi płynnie między etapami; pauza ją ścisza, utrata fokusu wycisza wszystko. Efekty mogą grać jednocześnie. **U** wycisza/włącza dźwięk; `--mute` nie otwiera urządzenia audio. SSH domyślnie milczy: `--audio` odtwarza na zdalnym komputerze z grą, nie przesyła audio do klienta SSH. Trzymaj `assets/audio/` obok pliku wykonywalnego. Źródła, licencje i modyfikacje: [CREDITS.txt](assets/audio/CREDITS.txt), [manifest](assets/audio/manifest.json).
+
 ## Start i wybór poziomu
 
 Uruchom `terminal-velocity` (launcher jest w `~/.local/bin`) albo `./ghostty-play.sh`. W istniejącym Ghostty możesz użyć `./play.sh`.

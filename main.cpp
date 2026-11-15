@@ -1,4 +1,6 @@
+#include "audio.hpp"
 #include "ghost_net.hpp"
+#include "progress.hpp"
 #include <csignal>
 #ifndef _WIN32
 #include <fcntl.h>
@@ -123,7 +125,7 @@ struct Controls {
   bool pause = false, journal = false, confirm = false, debug = false,
        new_run = false;
   int select_level = 0;
-  bool next_seed = false, menu_request = false;
+  bool next_seed = false, menu_request = false, mute_audio = false;
 };
 
 struct HeldKeys {
@@ -263,6 +265,24 @@ struct GameState {
   std::vector<double> refill_cooldown;
   std::vector<ghosts::Ghost> ghosts;
   bool multiplayer = false;
+  std::array<ChapterRecord, 3> records{};
+  int unlocked = 1, earned_stars = 0;
+  bool result_recorded = false, new_best = false, progress_error = false;
+  std::string audio_error;
+  bool audio_muted = false;
+  struct Mote {
+    double x, y, vx, vy, life;
+    bool gold;
+  };
+  std::vector<Mote> motes;
+  struct Afterimage {
+    double x, y, life;
+  };
+  std::vector<Afterimage> afterimages;
+  double step_distance = 0, trail_clock = 0, pickup_flash = 0;
+  int step_variant = 0;
+  std::string moment;
+  double moment_left = 0;
   bool ssh = false, ssh_basic = false;
   double elapsed = 0, notice = 0;
   bool menu = false, paused = false, journal = false, debug = false;
@@ -380,6 +400,7 @@ public:
 
   bool event_level = true;
   bool summit = false;
+  int chapter = 0;
   uint32_t seed = 0;
   std::vector<std::pair<double, double>> sweets;
   std::vector<double> checkpoints;
@@ -533,6 +554,59 @@ EngineGrid build_summit() {
   return g;
 }
 
+const char *chapter_name(int chapter) {
+  static const char *names[] = {"", "ZACISZE", "PRZEŁĘCZ", "OSTATNIA GRAŃ"};
+  return names[std::clamp(chapter, 0, 3)];
+}
+
+EngineGrid build_chapter(int chapter) {
+  chapter = std::clamp(chapter, 1, 3);
+  const int rooms = chapter == 3 ? 5 : 4;
+  const int span = chapter == 1 ? 30 : chapter == 2 ? 32 : 34;
+  const int floor_width = chapter == 1 ? 23 : chapter == 2 ? 21 : 22;
+  EngineGrid g(8 + rooms * span + 16, 46);
+  g.event_level = false;
+  g.chapter = chapter;
+  g.spawn_x = 4;
+  g.spawn_y = 38 - kPlayerHeight;
+  g.goal = {double(g.width() - 8), 33, 3, 5};
+  g.checkpoints = {4};
+  g.add_solid_rect(0, 38, 8, 8);
+  for (int room = 0; room < rooms; ++room) {
+    int x = 8 + room * span;
+    g.add_solid_rect(x, 38, floor_width, 8);
+    g.checkpoints.push_back(x + 2);
+    int height = chapter == 1 ? 1 + room % 2 : 2 + room % 3;
+    g.add_solid_rect(x + 7, 38 - height, 3, height);
+    g.sweets.push_back({double(x + 8), double(35 - height)});
+    g.sweets.push_back({double(x + floor_width - 1), 33});
+    g.refills.push_back({x + floor_width + (span - floor_width) * .5, 34.5});
+    if (chapter == 1) {
+      g.add_solid_rect(x + 13, 32, 4, 1);
+      g.sweets.push_back({double(x + 14), 29});
+    } else if (chapter == 2) {
+      g.platforms.push_back(
+          {{double(x + 15), 31, 3, .5}, 2, 1, 4.2, room * .2});
+      g.add_solid_rect(x + 2, 30, 4, 1);
+      g.springs.push_back({double(x + 3), 29.7, 1.3, .3});
+      g.sweets.push_back({double(x + 16), 27.5});
+      if (room >= 2)
+        g.add_hazard_rect(x + 17, 37, 2);
+    } else {
+      g.add_solid_rect(x + 13, 29, 2, 5);
+      g.add_solid_rect(x + 17, 26, 4, 1);
+      g.sweets.push_back({double(x + 18), 23});
+      g.add_hazard_rect(x + 16, 37, 2);
+    }
+  }
+  g.add_solid_rect(8 + rooms * span, 38, 16, 8);
+  return g;
+}
+
+int course_id(const EngineGrid &g) {
+  return g.chapter ? 2 + g.chapter : g.summit ? 2 : g.event_level ? 0 : 1;
+}
+
 GameState new_state(const EngineGrid &grid) {
   GameState state;
   state.collected.resize(grid.sweets.size());
@@ -563,6 +637,9 @@ void reset_player(GameState &state) {
   state.player.support = -1;
   state.player.drop_left = 0;
   state.won = false;
+  state.result_recorded = false;
+  state.earned_stars = 0;
+  state.new_best = false;
 }
 
 void move_axis(const EngineGrid &grid, Player &player, double dt, char axis) {
@@ -620,6 +697,7 @@ void update_step(GameState &state, const EngineGrid &grid,
                  const Controls &controls, double dt) {
   Player &player = state.player;
   if (controls.restart) {
+    ++state.deaths;
     reset_player(state);
     return;
   }
@@ -912,6 +990,96 @@ public:
   }
 };
 
+void attach_progress(GameState &s, const ProgressStore &progress) {
+  s.records = progress.records;
+  s.unlocked = progress.unlocked;
+}
+void finish_chapter(GameState &s, const EngineGrid &g,
+                    ProgressStore &progress) {
+  if (!g.chapter || !s.won || s.result_recorded)
+    return;
+  s.result_recorded = true;
+  s.earned_stars = run_stars(s.deaths, s.sweets_count(), int(g.sweets.size()));
+  s.progress_error =
+      !progress.record(g.chapter, s.elapsed, s.deaths, s.sweets_count(),
+                       int(g.sweets.size()), s.new_best);
+  attach_progress(s, progress);
+  s.earned_stars = progress.records[size_t(g.chapter - 1)].stars;
+}
+void burst(GameState &s, double x, double y, int count, bool gold) {
+  for (int i = 0; i < count && s.motes.size() < 96; ++i) {
+    double angle = i * 6.2831853 / count;
+    s.motes.push_back({x, y, std::cos(angle) * 3.5, std::sin(angle) * 3.5 - 1,
+                       .30 + (i % 3) * .07, gold});
+  }
+}
+void feedback_step(GameState &s, const EngineGrid &g, const Player &before,
+                   int old_deaths, int old_pickups, int old_checkpoint,
+                   bool was_won, double dt, GameAudio &audio) {
+  dt = clamp(dt, 0., .1);
+  for (auto &m : s.motes) {
+    m.life -= dt;
+    m.x += m.vx * dt;
+    m.y += m.vy * dt;
+    m.vy += dt * 6;
+  }
+  std::erase_if(s.motes, [](const auto &m) { return m.life <= 0; });
+  for (auto &t : s.afterimages)
+    t.life -= dt;
+  std::erase_if(s.afterimages, [](const auto &t) { return t.life <= 0; });
+  s.moment_left = std::max(0., s.moment_left - dt);
+  s.pickup_flash = std::max(0., s.pickup_flash - dt);
+  auto &p = s.player;
+  if (s.deaths != old_deaths) {
+    audio.play(AudioCue::Death);
+    burst(s, before.x, before.y + 1, 12, false);
+    s.step_distance = 0;
+    s.afterimages.clear();
+    return;
+  }
+  if (p.dash_time_left > before.dash_time_left) {
+    audio.play(AudioCue::Dash);
+    burst(s, p.x, p.y + .8, 6, true);
+  } else if (before.vy >= -1 && p.vy < -8 && !p.grounded) {
+    audio.play(p.vy < -27 ? AudioCue::Spring : AudioCue::Jump);
+  }
+  if (!before.grounded && p.grounded && before.vy > 4) {
+    audio.play(AudioCue::Land);
+    burst(s, p.x + .45, p.y + kPlayerHeight, 5, false);
+  }
+  if (!before.dash_available && p.dash_available && !p.grounded) {
+    audio.play(AudioCue::Refill);
+    s.moment = "ZRYW ODNOWIONY";
+    s.moment_left = .7;
+    burst(s, p.x + .45, p.y + .8, 8, true);
+  }
+  if (s.sweets_count() > old_pickups) {
+    audio.play(AudioCue::Pickup);
+    s.pickup_flash = .25;
+    s.moment = "+" + std::to_string(s.sweets_count() - old_pickups);
+    s.moment_left = .7;
+    burst(s, p.x + .45, p.y + .5, 10, true);
+  }
+  if (s.checkpoint != old_checkpoint)
+    audio.play(AudioCue::Checkpoint);
+  if (s.won && !was_won)
+    audio.play(AudioCue::Win);
+  if (p.grounded && before.grounded && std::abs(p.vx) > 2) {
+    s.step_distance += std::abs(p.x - before.x);
+    if (s.step_distance > 2.3) {
+      s.step_distance = 0;
+      audio.play((s.step_variant++ % 2) ? AudioCue::Step1 : AudioCue::Step2);
+    }
+  }
+  s.trail_clock += dt;
+  if (p.dash_time_left > 0 && s.trail_clock > .025) {
+    s.trail_clock = 0;
+    if (s.afterimages.size() < 8)
+      s.afterimages.push_back({before.x, before.y, .14});
+  }
+  (void)g;
+}
+
 // Compatibility helper for existing smoke probes; collision steps never exceed
 // 1/120 s.
 void update(GameState &state, const EngineGrid &grid, Controls input,
@@ -1158,7 +1326,14 @@ public:
   }
 
   void ui_controls(Controls &c) const {
-    c.select_level = press(KEY_1) ? 1 : press(KEY_2) ? 2 : press(KEY_3) ? 3 : 0;
+    c.select_level = press(KEY_1)   ? 1
+                     : press(KEY_2) ? 2
+                     : press(KEY_3) ? 3
+                     : press(KEY_4) ? 4
+                     : press(KEY_5) ? 5
+                     : press(KEY_6) ? 6
+                                    : 0;
+    c.mute_audio = press(KEY_U);
     c.next_seed = press(KEY_G);
     c.menu_request = press(KEY_M);
     c.pause = press(KEY_ESC) || press(KEY_P);
@@ -1372,6 +1547,11 @@ private:
 enum class Color {
   Gold,
   Ghost,
+  Moss,
+  Ice,
+  Trail,
+  ForestShade,
+  Fog,
   Decor,
   Default,
   Solid,
@@ -1433,6 +1613,21 @@ std::string ansi_for(Color c, bool, bool bold) {
   case Color::Ghost:
     out += "\x1b[38;2;93;201;210m";
     break;
+  case Color::Moss:
+    out += "\x1b[38;2;76;119;107m";
+    break;
+  case Color::Ice:
+    out += "\x1b[38;2;116;151;177m";
+    break;
+  case Color::Trail:
+    out += "\x1b[38;2;150;117;62m";
+    break;
+  case Color::ForestShade:
+    out += "\x1b[38;2;39;58;51m";
+    break;
+  case Color::Fog:
+    out += "\x1b[38;2;43;54;72m";
+    break;
   case Color::Decor:
     out += "\x1b[38;2;65;42;49m";
     break;
@@ -1482,8 +1677,14 @@ public:
     for (size_t i = 0; i < grid_.checkpoints.size(); ++i) {
       double wx = grid_.checkpoints[i];
       auto [x, y] = screen(wx, 34.5);
-      text(y, x, "│██", Color::Player);
-      text(y + 1, x, "│██", Color::Hazard);
+      if (grid_.event_level) {
+        text(y, x, "│██", Color::Player);
+        text(y + 1, x, "│██", Color::Hazard);
+      } else {
+        text(y, x, "│◆",
+             int(i) <= state_.checkpoint ? Color::Gold : Color::Ghost);
+        text(y + 1, x, "│", Color::Decor);
+      }
       text(y + 2, x, "│", Color::Gold);
     }
     for (auto platform : grid_.platforms) {
@@ -1505,7 +1706,7 @@ public:
         text(y, x, "[! ]", Color::Hazard);
       }
     auto [gx, gy] = screen(grid_.goal.x, grid_.goal.y - 1);
-    text(gy, gx, "META", Color::Gold);
+    text(gy, gx, grid_.chapter ? "SZLAK" : "META", Color::Gold);
     if (grid_.event_level) {
       auto [px, py] = screen(state_.player.x - .15, state_.player.y - .9);
       text(py, px, "JP2", Color::Gold);
@@ -1515,13 +1716,23 @@ public:
       text(y, x, state_.refill_cooldown[i] > 0 ? "◇" : "◆",
            state_.refill_cooldown[i] > 0 ? Color::Decor : Color::Ghost);
     }
+    for (const auto &m : state_.motes)
+      if (!grid_.solid_at(int(std::floor(m.x)), int(std::floor(m.y))) &&
+          !state_.player.rect().intersects({m.x, m.y, .05, .05})) {
+        auto [x, y] = screen(m.x, m.y);
+        if (y >= 4 && y < rows_ - 3)
+          text(y, x, m.life > .2 ? "·" : "˙",
+               m.gold ? Color::Gold : Color::Ghost);
+      }
     fill(0, 0, cols_, 3, Color::Default);
     text(0, 0, "█", Color::Player);
     text(1, 0, "█", Color::Hazard);
     text(0, 2,
-         grid_.event_level ? "EVENT / JP2: SZTAFETA WOLNOŚCI"
-         : grid_.summit    ? "TERMINAL VELOCITY / SZCZYT"
-                           : "TERMINAL VELOCITY / EKSPEDYCJA",
+         grid_.chapter       ? "WSPINACZKA / " + std::to_string(grid_.chapter) +
+                                   " / " + chapter_name(grid_.chapter)
+         : grid_.event_level ? "EVENT / JP2: SZTAFETA WOLNOŚCI"
+         : grid_.summit      ? "TERMINAL VELOCITY / SZCZYT"
+                             : "TERMINAL VELOCITY / EKSPEDYCJA",
          Color::Gold);
     if (state_.multiplayer)
       text(0, cols_ - 12, "DUCHY " + std::to_string(state_.ghosts.size()),
@@ -1529,8 +1740,10 @@ public:
     int chapter = state_.player.x < 60 ? 0 : state_.player.x < 118 ? 1 : 2;
     const char *names[] = {"01 WADOWICE", "02 KRAKÓW", "03 WARSZAWA"};
     text(1, 2,
-         grid_.event_level ? std::string(names[chapter]) +
-                                 "   11 LISTOPADA • NIEPODLEGŁOŚĆ POLSKI"
+         grid_.chapter       ? "ETAP " + std::to_string(grid_.chapter) +
+                                   "/3   •   DOTRZYJ DO KOŃCA SZLAKU"
+         : grid_.event_level ? std::string(names[chapter]) +
+                                   "   11 LISTOPADA • NIEPODLEGŁOŚĆ POLSKI"
          : grid_.summit
              ? "6 ETAPÓW   •   ŚCIANY / PRZEPAŚCIE / ODNOWIENIA ZRYWU"
              : "SEED " + std::to_string(grid_.seed) +
@@ -1559,16 +1772,25 @@ public:
          "R checkpoint  N ponów  G nowy seed  M menu  TAB pomoc  P pauza  Q "
          "koniec",
          Color::Text);
-    text(rows_ - 1, 2,
-         "F3 debug  •  " + state_.input_source +
-             (state_.ssh ? "  •  fizyka 120 Hz / obraz 30 Hz"
-                         : "  •  fizyka 120 Hz / obraz 60 Hz"),
-         Color::Gold);
+    std::string bottom =
+        "U dźwięk: " + std::string(state_.audio_muted ? "wył." : "wł.") +
+        "   •   TAB ruch i cele";
+    if (grid_.chapter && state_.records[size_t(grid_.chapter - 1)].complete)
+      bottom += "   •   Rekord " +
+                fixed(state_.records[size_t(grid_.chapter - 1)].best_time) +
+                " s";
+    if (state_.debug)
+      bottom = "F3 debug • " + state_.input_source + " • 120 Hz";
+    text(rows_ - 1, 2, bottom, Color::Gold);
+    if (state_.moment_left > 0 && state_.notice <= 0)
+      center(5, state_.moment, Color::Gold);
+    if (!state_.audio_error.empty())
+      text(rows_ - 1, 2, state_.audio_error, Color::Text);
     if (state_.notice > 0) {
       center(5, "PUNKT ZAPISU — R wraca tutaj", Color::Gold);
       center(6,
              !grid_.event_level
-                 ? "Kolejny bezpieczny punkt. N powtarza ten sam seed."
+                 ? "Możesz próbować dalej. R wraca do tego punktu."
              : state_.checkpoint == 1
                  ? "1918: odrodzenie Polski po 123 latach zaborów."
                  : "11 XI 1918: Piłsudski przejmuje władzę wojskową.",
@@ -1639,7 +1861,8 @@ private:
   Cell world_cell(int x, int y) const {
     double wx = state_.camera_x + x * kWorldUnitsPerRenderCol,
            wy = state_.camera_y + y * aspect_ * kWorldUnitsPerRenderCol;
-    unsigned solid = 0, edge = 0, hazard = 0, body = 0, goal = 0, ghost = 0;
+    unsigned solid = 0, edge = 0, hazard = 0, body = 0, goal = 0, ghost = 0,
+             trail = 0;
     for (int dy = 0; dy < 4; ++dy)
       for (int dx = 0; dx < 2; ++dx) {
         double a = wx + (dx + .5) * kWorldUnitsPerRenderCol / 2,
@@ -1648,6 +1871,10 @@ private:
         unsigned dot = braille_dot(dx, dy);
         if (state_.player.rect().intersects({a, b, .01, .01}))
           body |= dot;
+        for (const auto &t : state_.afterimages)
+          if (Rect{t.x, t.y, kPlayerWidth, kPlayerHeight}.intersects(
+                  {a, b, .01, .01}))
+            trail |= dot;
         for (const auto &g : state_.ghosts)
           if (Rect{g.x, g.y, kPlayerWidth, kPlayerHeight}.intersects(
                   {a, b, .01, .01}))
@@ -1668,15 +1895,35 @@ private:
           true);
     if (hazard)
       return braille_cell(hazard, Color::Hazard, true);
+    if (trail && !solid && !ghost)
+      return braille_cell(trail, Color::Trail);
     if (ghost && !solid)
       return braille_cell(ghost, Color::Ghost);
     if (goal)
       return braille_cell(goal, Color::Gold);
     if (edge)
       return braille_cell(solid, Color::Player);
-    if (solid)
-      return solid == 255 ? Cell{"█", Color::Solid}
-                          : braille_cell(solid, Color::Solid);
+    if (solid) {
+      Color terrain = grid_.chapter == 1   ? Color::Moss
+                      : grid_.chapter == 2 ? Color::Ice
+                                           : Color::Solid;
+      return solid == 255 ? Cell{"█", terrain} : braille_cell(solid, terrain);
+    }
+    if (grid_.chapter) {
+      // Two distant ridgelines; decoration never enters collision geometry.
+      double near_ridge =
+          25 +
+          std::abs(std::fmod(wx * .35 + grid_.chapter * 7, 22.) - 11) * .65;
+      double far_ridge = 19 + std::abs(std::fmod(wx * .15 + 9, 30.) - 15) * .55;
+      Color shade = grid_.chapter == 1 ? Color::ForestShade : Color::Fog;
+      if (wy > near_ridge)
+        return {"░", shade};
+      if (wy > far_ridge && (x + y) % 3 == 0)
+        return {"·", shade};
+      if ((x * 47 + y * 71) % 173 == 0)
+        return {"·", Color::Text};
+      return {};
+    }
     // Quiet architectural silhouettes and stars stay behind the collision
     // geometry.
     int skyline = 31 + (int(wx / 4) % 4);
@@ -1687,36 +1934,38 @@ private:
     return {};
   }
   void panel() { fill(4, 2, cols_ - 4, rows_ - 8, Color::Default); }
+  std::string stars(int count) const {
+    std::string result;
+    for (int i = 0; i < 3; ++i)
+      result += i < count ? "★" : "☆";
+    return result;
+  }
   void draw_menu() {
     panel();
-    center(5, "T E R M I N A L   V E L O C I T Y", Color::Player);
-    center(7,
-           grid_.event_level ? "[1] EVENT: JP2 / 11 LISTOPADA  ◀"
-                             : "[1] EVENT: JP2 / 11 LISTOPADA",
-           Color::Gold);
-    center(9,
-           !grid_.event_level && !grid_.summit
-               ? "[2] EKSPEDYCJA PROCEDURALNA  ◀"
-               : "[2] EKSPEDYCJA PROCEDURALNA",
-           Color::Gold);
-    center(10,
-           grid_.summit ? "[3] SZCZYT / PRECYZJA  ◀" : "[3] SZCZYT / PRECYZJA",
-           Color::Gold);
-    center(11, grid_.event_level
-                   ? "Oryginalna trasa, kremówki i dziennik niepodległości."
-                   : "Seed: " + std::to_string(grid_.seed) +
-                         "   [G] losuj nowy / [N] ponów ten sam");
-    center(13, "[ENTER] GRAJ     [TAB] HISTORIA / MECHANIKI", Color::Player);
-    center(15, "Ruch i skoki jak wcześniej. Windy są jednostronne: S schodzi.");
-    center(16, "◆ odnawia zryw i wraca po 2.5 s. Żółty gracz = zryw gotowy.");
-    center(
-        18,
-        state_.ssh_basic
-            ? "SSH podstawowe: A/D uruchamia bieg, S zatrzymuje, X robi zryw."
-            : "SPACJA: skok o zmiennej wysokości. SHIFT/X + kierunek: zryw.");
+    center(5, "T E R M I N A L   V E L O C I T Y", Color::Gold);
+    center(7, "Noc zapada w dolinie. Znajdź drogę ponad chmurami.",
+           Color::Player);
+    for (int i = 1; i <= 3; ++i) {
+      bool selected = grid_.chapter == i;
+      center(8 + i,
+             "[" + std::to_string(i + 3) + "] " + chapter_name(i) + "   " +
+                 stars(state_.records[size_t(i - 1)].stars) +
+                 (selected ? "  ◀" : ""),
+             i > state_.unlocked ? Color::Decor
+             : selected          ? Color::Gold
+                                 : Color::Player);
+    }
+    center(13, "[ENTER] GRAJ", Color::Gold);
+    center(15, "[1] EVENT JP2   [2] EKSPEDYCJA   [3] SZCZYT", Color::Player);
+    center(17, "SPACJA skok • SHIFT/X + kierunek zryw • żółty = gotowy zryw");
+    center(19, "U dźwięk   TAB ruch i cele   Q wyjście");
+    if (state_.moment_left > 0)
+      center(12, state_.moment, Color::Gold);
     if (rows_ >= 29) {
-      center(21, "R checkpoint  •  N powtórz  •  M menu  •  Q wyjście");
-      center(23, "Stała fizyka 120 Hz. GUI pozostaje narzędziem debugowania.");
+      center(22, "★ dotrzyj do mety   ★ bez upadków   ★ wszystkie znajdźki",
+             Color::Gold);
+      center(24, "Muzyka: Kevin MacLeod / incompetech.com • CC BY 4.0",
+             Color::Text);
     }
   }
   void draw_journal() {
@@ -1727,7 +1976,11 @@ private:
       center(10, "^^ Sprężyny: automatyczny wysoki skok i odnowienie zrywu.");
       center(12, "[!] Patrole: skok na głowę albo zryw usuwa wroga. Bok boli.");
       center(14, "◆ odnawia zryw i wraca po 2.5 s. ▰ to jednorazowy skarb.");
-      center(16, "Seed tworzy tę samą mapę. N powtarza, G losuje następną.");
+      center(16,
+             grid_.chapter
+                 ? "★ meta • ★ bez upadków • ★ komplet znajdziek. Postęp się "
+                   "zapisuje."
+                 : "Seed tworzy tę samą mapę. N powtarza, G losuje następną.");
       center(18, "TAB / ESC / ENTER — powrót", Color::Gold);
       return;
     }
@@ -1758,10 +2011,40 @@ private:
     center(8, "CHWILA ODDECHU", Color::Gold);
     center(11, "[ ENTER / ESC ] WZNÓW");
     center(13, "[ TAB ] HISTORIA    [ N ] NOWY BIEG    [ Q ] WYJŚCIE");
-    center(16, "Utrata fokusu Ghostty automatycznie pauzuje grę.");
+    center(16, "U dźwięk • gra pauzuje po utracie fokusu.");
   }
   void draw_win() {
     panel();
+    if (grid_.chapter) {
+      center(6, grid_.chapter == 3 ? "PONAD CHMURAMI" : "SZLAK UKOŃCZONY",
+             Color::Gold);
+      center(8, chapter_name(grid_.chapter), Color::Player);
+      center(10,
+             stars(state_.earned_stars
+                       ? state_.earned_stars
+                       : run_stars(state_.deaths, state_.sweets_count(),
+                                   int(grid_.sweets.size()))),
+             Color::Gold);
+      center(12, "Czas " + fixed(state_.elapsed) + " s   •   Upadki " +
+                     std::to_string(state_.deaths) + "   •   Znajdźki " +
+                     std::to_string(state_.sweets_count()) + "/" +
+                     std::to_string(grid_.sweets.size()));
+      center(14,
+             state_.new_best ? "NOWY REKORD!"
+                             : "★ meta • ★ bez upadków • ★ komplet znajdziek",
+             Color::Gold);
+      center(16,
+             grid_.chapter < 3
+                 ? "[ENTER] DALEJ: " +
+                       std::string(chapter_name(grid_.chapter + 1))
+                 : "[ENTER] WRÓĆ DO DOLINY",
+             Color::Player);
+      center(18, "[N] PONÓW   [M] MENU   [Q] WYJŚCIE");
+      if (state_.progress_error)
+        center(20, "Nie można zapisać postępu. Sprawdź uprawnienia do "
+                   "katalogu profilu.");
+      return;
+    }
     center(7,
            grid_.event_level ? "N I E P O D L E G Ł A !"
                              : "E K S P E D Y C J A   U K O Ń C Z O N A",
@@ -1860,12 +2143,31 @@ private:
   return 0;
 }
 
+std::filesystem::path audio_directory() {
+#ifdef _WIN32
+  std::vector<wchar_t> executable(32768);
+  DWORD n =
+      GetModuleFileNameW(nullptr, executable.data(), DWORD(executable.size()));
+  if (n && n < executable.size())
+    return std::filesystem::path(executable.data()).parent_path() /
+           "assets/audio";
+#else
+  std::error_code ec;
+  auto executable = std::filesystem::canonical("/proc/self/exe", ec);
+  if (!ec)
+    return executable.parent_path() / "assets/audio";
+#endif
+  return std::filesystem::current_path() / "assets/audio";
+}
+
 [[maybe_unused]] int run_game(double aspect, InputMode input_mode,
                               bool demo = false, bool event_level = false,
                               uint32_t seed = 1, bool summit = false,
                               const std::string &ghost_host = "",
                               const std::string &ghost_port = "27888",
-                              const std::string &room = "default") {
+                              const std::string &room = "default",
+                              int campaign_chapter = 1, bool mute = false,
+                              bool remote_audio = false) {
   bool remote =
       input_mode == InputMode::Ssh || input_mode == InputMode::SshBasic;
   TerminalGuard terminal(input_mode == InputMode::Ssh);
@@ -1882,10 +2184,15 @@ private:
     network.connect_to(ghost_host, ghost_port);
   uint32_t network_epoch = 0;
   int previous_deaths = 0;
-  EngineGrid grid = summit        ? build_summit()
-                    : event_level ? build_level()
-                                  : build_procedural(seed);
+  EngineGrid grid = campaign_chapter ? build_chapter(campaign_chapter)
+                    : summit         ? build_summit()
+                    : event_level    ? build_level()
+                                     : build_procedural(seed);
+  ProgressStore progress;
+  GameAudio audio;
+  audio.init(audio_directory(), mute || (remote && !remote_audio));
   GameState state = new_state(grid);
+  attach_progress(state, progress);
   state.ssh = remote;
   TuiInput input(input_mode);
   if (!demo && !input.ready()) {
@@ -1914,7 +2221,7 @@ private:
       for (double dx = 1; dx <= 2.5; dx += .5) {
         int x = int(p.x + kPlayerWidth + dx);
         trouble |= grid.solid_at(x, foot - 1) || grid.hazard_at(x, foot - 1) ||
-                   !grid.solid_at(x, foot);
+                   grid.hazard_at(x, 37) || !grid.solid_at(x, foot);
       }
       c.jump_pressed = p.grounded && trouble;
       int x = int(p.x + kPlayerWidth + 1);
@@ -1940,6 +2247,8 @@ private:
     }
     if (c.quit)
       return 0;
+    if (c.mute_audio)
+      audio.muted = !audio.muted;
     state.ssh_basic = input.basic_ssh();
     if (!demo)
       state.input_source = input.label();
@@ -1950,21 +2259,30 @@ private:
       input.clear();
       stepper = FixedStepper{};
     }
+    if (c.select_level >= 4 && c.select_level - 3 > progress.unlocked) {
+      c.select_level = 0;
+      state.moment = "Ukończ poprzedni etap.";
+      state.moment_left = 2;
+    }
     if ((c.select_level && (state.menu || state.paused || state.won)) ||
         c.next_seed) {
       if (c.next_seed) {
         event_level = false;
         summit = false;
+        campaign_chapter = 0;
         ++seed;
       } else {
         event_level = c.select_level == 1;
         summit = c.select_level == 3;
+        campaign_chapter = c.select_level >= 4 ? c.select_level - 3 : 0;
       }
       ++network_epoch;
-      grid = summit        ? build_summit()
-             : event_level ? build_level()
-                           : build_procedural(seed);
+      grid = campaign_chapter ? build_chapter(campaign_chapter)
+             : summit         ? build_summit()
+             : event_level    ? build_level()
+                              : build_procedural(seed);
       state = new_state(grid);
+      attach_progress(state, progress);
       state.ssh = remote;
       state.menu = true;
       state.ssh_basic = input.basic_ssh();
@@ -1989,11 +2307,21 @@ private:
     }
     if (c.new_run || (c.confirm && state.won && !state.journal)) {
       ++network_epoch;
+      bool campaign_end = c.confirm && !c.new_run && grid.chapter == 3;
+      if (c.confirm && !c.new_run && grid.chapter) {
+        campaign_chapter = grid.chapter == 3 ? 1 : grid.chapter + 1;
+        grid = build_chapter(campaign_chapter);
+      }
       auto label = state.input_source;
       state = new_state(grid);
+      attach_progress(state, progress);
       state.ssh = remote;
       state.ssh_basic = input.basic_ssh();
       state.input_source = label;
+      state.menu = campaign_end;
+      c.restart = false;
+      if (campaign_end)
+        c.confirm = false;
       stepper = FixedStepper{};
       update_camera(state, grid, size.cols, std::max(1, size.rows - 7), aspect,
                     10);
@@ -2005,15 +2333,33 @@ private:
         state.menu = false;
         state.paused = false;
       }
+      audio.play(AudioCue::Menu);
       c.jump_pressed = false;
       input.clear();
       stepper = FixedStepper{};
     }
     size = term_size();
     bool too_small = size.cols < 76 || size.rows < 24;
-    if (!state.menu && !state.paused && !state.journal && !too_small)
+    auto scene = state.menu ? AudioScene::Menu
+                 : state.paused || state.journal || too_small
+                     ? AudioScene::Paused
+                 : state.won ? AudioScene::Win
+                             : AudioScene::Play;
+    audio.update(scene, grid.chapter >= 2 || grid.summit ? 1 : 0, dt,
+                 demo || input.focused);
+    state.audio_error = audio.error();
+    state.audio_muted = audio.muted;
+    if (!state.menu && !state.paused && !state.journal && !too_small) {
+      Player before = state.player;
+      int deaths = state.deaths, pickups = state.sweets_count(),
+          checkpoint = state.checkpoint;
+      bool was_won = state.won;
       stepper.advance(state, grid, c, dt);
-    else
+      feedback_step(state, grid, before, deaths, pickups, checkpoint, was_won,
+                    dt, audio);
+      if (!demo)
+        finish_chapter(state, grid, progress);
+    } else
       stepper = FixedStepper{};
     update_camera(state, grid, size.cols, std::max(1, size.rows - 7), aspect,
                   dt);
@@ -2023,8 +2369,9 @@ private:
     state.multiplayer = network.enabled();
     ghosts::Snapshot snapshot;
     snapshot.room = room;
-    snapshot.level = grid.summit ? 2 : grid.event_level ? 0 : 1;
-    snapshot.seed = grid.event_level || grid.summit ? 0 : grid.seed;
+    snapshot.level = course_id(grid);
+    snapshot.seed =
+        grid.event_level || grid.summit || grid.chapter ? 0 : grid.seed;
     snapshot.x = state.player.x;
     snapshot.y = state.player.y;
     snapshot.epoch = network_epoch;
@@ -2045,6 +2392,8 @@ private:
 
 struct Args {
   bool event_level = false, summit = false;
+  int chapter = 1;
+  bool mute = false, remote_audio = false;
   int relay_port = 0;
   std::string ghost_host, ghost_port = "27888", room = "default";
   uint32_t seed =
@@ -2066,9 +2415,23 @@ struct Args {
     if (arg == "--event") {
       args.event_level = true;
       args.summit = false;
+      args.chapter = 0;
     } else if (arg == "--summit") {
       args.summit = true;
       args.event_level = false;
+      args.chapter = 0;
+    } else if (arg == "--chapter" && i + 1 < argc) {
+      std::string value = argv[++i];
+      if (value != "1" && value != "2" && value != "3") {
+        std::cerr << "Chapter must be 1..3\n";
+        std::exit(2);
+      }
+      args.chapter = std::stoi(value);
+      args.event_level = args.summit = false;
+    } else if (arg == "--mute") {
+      args.mute = true;
+    } else if (arg == "--audio") {
+      args.remote_audio = true;
     } else if ((arg == "--relay" || arg == "--connect" || arg == "--room") &&
                i + 1 < argc) {
       std::string value = argv[++i];
@@ -2110,6 +2473,8 @@ struct Args {
         if (used != value.size() || v > UINT32_MAX || value[0] == '-')
           throw std::invalid_argument("seed");
         args.seed = uint32_t(v);
+        args.chapter = 0;
+        args.summit = args.event_level = false;
       } catch (...) {
         std::cerr << "Seed must be 0..4294967295\n";
         std::exit(2);
@@ -2144,12 +2509,16 @@ struct Args {
       }
     } else if (arg == "-h" || arg == "--help") {
       std::cout
-          << "usage: terminal_velocity [--smoke] [--input-test] [--smoke-steps "
+          << "usage: terminal_velocity [--smoke] [--input-test] "
+             "[--smoke-steps "
              "N] [--cell-aspect R] [--input evdev|terminal|auto] [--event] "
-             "[--seed N] [--summit] [--ssh | --ssh-basic]\n"
+             "[--seed N] [--summit] [--chapter 1..3] [--mute] [--ssh | "
+             "--ssh-basic]\n"
+             "  --audio               Enable server-local audio in SSH mode\n"
              "  --relay PORT          Run a headless UDP ghost relay\n"
              "  --connect HOST[:PORT] Join live ghosts (default port 27888)\n"
-             "  --room NAME           Match friends in the same course/seed\n";
+             "  --room NAME           Match friends in the same "
+             "course/seed\n";
       std::exit(0);
     } else if (debug_frontend &&
                (arg == "--screenshot" || arg == "--scene" ||
@@ -2189,10 +2558,13 @@ int main(int argc, char **argv) {
       clamp(args.cell_aspect > 0.0 ? args.cell_aspect : detect_cell_aspect(),
             1.1, 3.4);
   if (!args.preview.empty()) {
-    auto g = args.summit        ? build_summit()
+    auto g = args.chapter       ? build_chapter(args.chapter)
+             : args.summit      ? build_summit()
              : args.event_level ? build_level()
                                 : build_procedural(args.seed);
     auto s = new_state(g);
+    ProgressStore progress;
+    attach_progress(s, progress);
     s.menu = args.preview == "menu";
     s.journal = args.preview == "journal";
     s.won = args.preview == "win";
@@ -2235,7 +2607,7 @@ int main(int argc, char **argv) {
   try {
     return run_game(aspect, args.input_mode, args.demo, args.event_level,
                     args.seed, args.summit, args.ghost_host, args.ghost_port,
-                    args.room);
+                    args.room, args.chapter, args.mute, args.remote_audio);
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

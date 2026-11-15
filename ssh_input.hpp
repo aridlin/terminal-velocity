@@ -164,8 +164,10 @@ private:
       edges_.select_level = 1;
     if (k == '2')
       edges_.select_level = 2;
-    if (k == '3')
-      edges_.select_level = 3;
+    if (k >= '3' && k <= '6')
+      edges_.select_level = int(k - '0');
+    if (k == 'u')
+      edges_.mute_audio = true;
     if (k == 13 || k == 10)
       edges_.confirm = true;
     if (k == 27 || k == 'p')

@@ -58,6 +58,12 @@ int main() {
     check(input.focused && c.select_level == 3 && c.confirm,
           "native precision course menu controls");
     input.clear();
+    key('5', true);
+    key('U', true);
+    c = input.consume();
+    check(c.select_level == 5 && c.mute_audio,
+          "native campaign selection and audio mute controls");
+    input.clear();
     key(VK_CONTROL, true);
     key('R', true);
     check(input.consume().new_run, "native Ctrl+R retries run");

@@ -96,7 +96,14 @@ public:
     c.restart = press('R');
     c.new_run = press('N') || (press('R') && key(VK_CONTROL));
     c.quit = press('Q') || (press('C') && key(VK_CONTROL));
-    c.select_level = press('1') ? 1 : press('2') ? 2 : press('3') ? 3 : 0;
+    c.select_level = press('1')   ? 1
+                     : press('2') ? 2
+                     : press('3') ? 3
+                     : press('4') ? 4
+                     : press('5') ? 5
+                     : press('6') ? 6
+                                  : 0;
+    c.mute_audio = press('U');
     c.next_seed = press('G');
     c.menu_request = press('M');
     c.pause = press(VK_ESCAPE) || press('P');

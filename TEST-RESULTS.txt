@@ -1,6 +1,6 @@
-g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o physics_tests physics_tests.cpp
-g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o extension_tests extension_tests.cpp
-g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o multiplayer_tests multiplayer_tests.cpp
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o physics_tests physics_tests.cpp audio.o -ldl -lpthread
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o extension_tests extension_tests.cpp audio.o -ldl -lpthread
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o multiplayer_tests multiplayer_tests.cpp audio.o -ldl -lpthread
 ./physics_tests
 PASS stable resting contact
 PASS run speed reaches target
@@ -66,13 +66,45 @@ PASS checkpoint retry restores refill route
 PASS wall jump accepted just after leaving wall
 PASS six-room precision course completable with normal controls
 summit deaths=0 dashes=6
+./campaign_tests
+PASS separate completion, clean-run and collection goals
+chapter=1 x=135.147 deaths=0 time=9.58333
+PASS authored chapter completed with normal jump/dash inputs
+PASS campaign ghost course identity isolated
+chapter=2 x=143.138 deaths=0 time=10.4917
+PASS authored chapter completed with normal jump/dash inputs
+PASS campaign ghost course identity isolated
+chapter=3 x=185.19 deaths=0 time=14.8
+PASS authored chapter completed with normal jump/dash inputs
+PASS campaign ghost course identity isolated
+PASS checkpoint retries count toward the clean-run challenge
+PASS new profile starts at chapter one
+PASS completion saves and unlocks next chapter
+PASS clean-run star earned independently of collecting treasures
+PASS slower replay preserves faster time
+PASS best time, clean run and collection stars preserved independently
+PASS second local profile writer saves
+PASS progress persists and merges across local game clients
+PASS result recorded once and exposes earned stars
+PASS win screen does not repeatedly rewrite records
+PASS malformed profile safely ignored
+PASS save failure retains session result without stopping play
+PASS all sourced music and effect voices decode offline
+PASS music and overlapping effects mix from real recordings
+audio peak=0.8901 rms=0.0676967
+PASS conservative overlapping audio mix leaves headroom
+PASS muted mix renders
+PASS mute silences music and already-playing effects
+PASS second music track crossfades
+PASS focus loss silences audio immediately
+PASS --mute does not open an audio device or load assets
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./terminal_velocity_sdl --smoke
 SDL smoke: key edges, focus pause, held input, renderer; x=12.3351 result=0
 
-2026-11-15 additional integration checks:
-PASS tools/test_tui.py: two actual PTYs, relay, yellow ready body, white spent body, no @, cyan live ghost, 2/3 menu selection and terminal restoration.
-PASS MinGW-w64 static x64 Windows game and all four test executables built.
-PASS Windows physics, 100 seeded courses, real Winsock multiplayer and native key-state tests under Wine.
-PASS Windows executable imports only Windows system DLLs; game icon embedded in .rsrc.
-Wine headless could not create native console handles; native console I/O and mode restoration run separately in Windows CI with TV_TEST_CONSOLE=1.
-Physical Windows/Linux keyboard feel and Internet latency are not established by these automated checks.
+2026-11-15 presentation/audio integration:
+PASS actual TUI PTYs: visible yellow/white dash state, live cyan ghosts, menu, saved campaign unlocks, blocked locked chapters, clean exits and terminal restoration.
+PASS actual TUI audio playback captured through a temporary isolated PulseAudio sink (no speakers): peak 0.2270, RMS 0.0257; temporary sink removed afterwards.
+PASS worst-case offline mix with all 24 SFX voices: peak 0.8901, finite samples and no clipping; mute, track crossfade, focus-loss silence.
+PASS all 14 bundled sourced audio files match manifest SHA-256 hashes; source/license/processing records bundled.
+PASS MinGW-w64 Windows game and tests built with the same audio/campaign code.
+Physical keyboard feel and Windows speaker playback remain unverified; native Windows offline-audio and console tests run in CI.

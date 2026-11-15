@@ -138,44 +138,7 @@ public:
       FT_Done_FreeType(lib);
   }
 };
-struct Sound {
-  SDL_AudioDeviceID device = 0;
-  bool muted = false;
-  void init() {
-    SDL_AudioSpec desired{};
-    desired.freq = 48000;
-    desired.format = AUDIO_F32SYS;
-    desired.channels = 1;
-    desired.samples = 512;
-    device = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, 0);
-    if (device)
-      SDL_PauseAudioDevice(device, 0);
-  }
-  void play(int kind) {
-    if (!device || muted)
-      return;
-    double freq = kind == 0   ? 440
-                  : kind == 1 ? 660
-                  : kind == 2 ? 880
-                  : kind == 3 ? 180
-                              : 523.25;
-    double duration = kind == 3 ? .15 : kind == 4 ? .4 : .09;
-    std::vector<float> wave(int(48000 * duration));
-    for (size_t i = 0; i < wave.size(); ++i) {
-      double t = double(i) / 48000, env = std::sin(3.1415926535 * t / duration);
-      double f = freq * (kind == 0 ? 1 + t * 3 : kind == 3 ? 1 - t * 3 : 1);
-      wave[i] = float(
-          .08 * env *
-          (std::sin(t * f * 6.2831853) + .25 * std::sin(t * f * 12.56637)));
-    }
-    SDL_ClearQueuedAudio(device);
-    SDL_QueueAudio(device, wave.data(), wave.size() * sizeof(float));
-  }
-  ~Sound() {
-    if (device)
-      SDL_CloseAudioDevice(device);
-  }
-};
+using Sound = GameAudio;
 struct Sweet {
   double x, y;
   bool got = false;
@@ -206,15 +169,17 @@ struct App {
   std::deque<Trail> trail;
   std::string base;
   Sound sound;
+  ProgressStore progress;
   ghosts::Client network;
   std::string room = "default";
   uint32_t network_epoch = 0;
   explicit App(std::string p, bool event_level = true, uint32_t seed = 1,
-               bool summit = false)
+               bool summit = false, int campaign_chapter = 1)
       : base(std::move(p)) {
-    grid = summit        ? build_summit()
-           : event_level ? build_level()
-                         : build_procedural(seed);
+    grid = campaign_chapter ? build_chapter(campaign_chapter)
+           : summit         ? build_summit()
+           : event_level    ? build_level()
+                            : build_procedural(seed);
     reset();
     std::ifstream f(base + "best.txt");
     if (grid.event_level)
@@ -223,6 +188,7 @@ struct App {
   void reset() {
     ++network_epoch;
     state = new_state(grid);
+    attach_progress(state, progress);
     stepper = FixedStepper{};
     elapsed = 0;
     camx = 0;
@@ -289,7 +255,7 @@ struct App {
       if (mode == Menu && x >= 72 && x <= 398 && y >= 454 && y <= 516) {
         mode = Play;
         clear_input();
-        sound.play(4);
+        sound.play(AudioCue::Menu);
       }
       if (mode == Menu && x >= 72 && x <= 398 && y >= 530 && y <= 580) {
         return_mode = Menu;
@@ -300,15 +266,22 @@ struct App {
     if (e.type != SDL_KEYDOWN || e.key.repeat || !focused)
       return;
     auto k = e.key.keysym.scancode;
-    if (k == SDL_SCANCODE_M && mode != Play) {
+    if ((k == SDL_SCANCODE_M || k == SDL_SCANCODE_U) && mode != Play) {
       sound.muted = !sound.muted;
       return;
     }
     if ((mode == Menu || mode == Pause || mode == Win) &&
         (k == SDL_SCANCODE_1 || k == SDL_SCANCODE_2 || k == SDL_SCANCODE_3 ||
+         k == SDL_SCANCODE_4 || k == SDL_SCANCODE_5 || k == SDL_SCANCODE_6 ||
          k == SDL_SCANCODE_G)) {
       uint32_t seed = grid.seed + (k == SDL_SCANCODE_G ? 1 : 0);
-      grid = k == SDL_SCANCODE_3   ? build_summit()
+      int selected_chapter = k >= SDL_SCANCODE_4 && k <= SDL_SCANCODE_6
+                                 ? int(k - SDL_SCANCODE_4 + 1)
+                                 : 0;
+      if (selected_chapter > progress.unlocked)
+        return;
+      grid = selected_chapter      ? build_chapter(selected_chapter)
+             : k == SDL_SCANCODE_3 ? build_summit()
              : k == SDL_SCANCODE_1 ? build_level()
                                    : build_procedural(seed);
       reset();
@@ -322,7 +295,7 @@ struct App {
       debug = !debug;
       return;
     }
-    if (k == SDL_SCANCODE_M) {
+    if (k == SDL_SCANCODE_M || k == SDL_SCANCODE_U) {
       sound.muted = !sound.muted;
       return;
     }
@@ -360,14 +333,22 @@ struct App {
     }
     if ((k == SDL_SCANCODE_RETURN || k == SDL_SCANCODE_SPACE) && mode != Play) {
       if (mode == Menu || mode == Win) {
+        bool finished = mode == Win && grid.chapter == 3;
+        if (mode == Win && grid.chapter)
+          grid = build_chapter(grid.chapter == 3 ? 1 : grid.chapter + 1);
         reset();
-        mode = Play;
-        sound.play(4);
+        mode = finished ? Menu : Play;
+        sound.play(AudioCue::Menu);
       } else if (mode == Pause)
         mode = Play;
       else
         mode = return_mode;
       clear_input();
+      return;
+    }
+    if (k == SDL_SCANCODE_N && mode != Journal) {
+      reset();
+      mode = Play;
       return;
     }
     if (k == SDL_SCANCODE_R && mode != Journal) {
@@ -398,8 +379,8 @@ struct App {
     state.multiplayer = network.enabled();
     ghosts::Snapshot s;
     s.room = room;
-    s.level = grid.summit ? 2 : grid.event_level ? 0 : 1;
-    s.seed = grid.summit || grid.event_level ? 0 : grid.seed;
+    s.level = course_id(grid);
+    s.seed = grid.summit || grid.event_level || grid.chapter ? 0 : grid.seed;
     s.x = state.player.x;
     s.y = state.player.y;
     s.epoch = network_epoch;
@@ -410,6 +391,11 @@ struct App {
   }
   void tick(double dt) {
     time += dt;
+    sound.update(mode == Menu   ? AudioScene::Menu
+                 : mode == Win  ? AudioScene::Win
+                 : mode == Play ? AudioScene::Play
+                                : AudioScene::Paused,
+                 grid.chapter >= 2 || grid.summit ? 1 : 0, dt, focused);
     if (mode != Play)
       return;
     elapsed = state.elapsed;
@@ -417,24 +403,24 @@ struct App {
     flash = std::max(0.0, flash - dt);
     Controls c = controls();
     int deaths = state.deaths, cp = state.checkpoint;
+    Player before = state.player;
+    int pickups = state.sweets_count();
+    bool was_won = state.won;
     bool wasground = state.player.grounded;
     double vy = state.player.vy, oldx = state.player.x, oldy = state.player.y;
     bool hadpending = stepper.pending.jump_pressed ||
                       stepper.pending.dash_pressed || jump_edge || dash_edge;
     stepper.advance(state, grid, c, dt);
+    feedback_step(state, grid, before, deaths, pickups, cp, was_won, dt, sound);
+    finish_chapter(state, grid, progress);
     elapsed = state.elapsed;
     if (hadpending && !stepper.pending.jump_pressed &&
         !stepper.pending.dash_pressed)
       input_age = SDL_GetTicks() - last_event;
     jump_edge = dash_edge = restart_edge = false;
-    if (c.jump_pressed && state.player.vy < 0)
-      sound.play(0);
-    if (c.dash_pressed && state.player.dash_time_left > 0)
-      sound.play(1);
     if (state.deaths != deaths || c.restart) {
       ++network_epoch;
       burst(oldx, oldy, red, 24);
-      sound.play(3);
       flash = .16;
       camx = std::max(0.0, state.player.x - 13);
       trail.clear();
@@ -443,7 +429,6 @@ struct App {
       burst(state.player.x, 38, cream, 9);
     if (cp != state.checkpoint) {
       toast = 5;
-      sound.play(4);
       burst(state.player.x, state.player.y, gold, 30);
     }
     chapter = state.player.x < 60 ? 0 : state.player.x < 118 ? 1 : 2;
@@ -451,7 +436,6 @@ struct App {
       if (!sweets[i].got && state.collected[i]) {
         sweets[i].got = true;
         burst(sweets[i].x, sweets[i].y, gold, 15);
-        sound.play(2);
       }
     if (state.player.dash_time_left > 0)
       trail.push_back({state.player.x, state.player.y, .18});
@@ -471,7 +455,6 @@ struct App {
     camx += (target - camx) * (1 - std::exp(-dt * 10));
     if (state.won) {
       mode = Win;
-      sound.play(4);
       if (best <= 0 || elapsed < best) {
         best = elapsed;
         std::ofstream f(grid.event_level ? base + "best.txt" : "/dev/null");
@@ -741,6 +724,27 @@ void hud(App &a, Font &f) {
   }
 }
 void menu(App &a, Font &f) {
+  if (a.grid.chapter) {
+    box(0, 0, W, H, {17, 19, 28, 235});
+    f.center("TERMINAL VELOCITY", 74, 50, gold);
+    f.center("Noc zapada w dolinie. Znajdź drogę ponad chmurami.", 152, 22);
+    for (int i = 1; i <= 3; ++i) {
+      auto &r = a.progress.records[size_t(i - 1)];
+      std::string stars;
+      for (int n = 0; n < 3; ++n)
+        stars += n < r.stars ? "★" : "☆";
+      f.center("[" + std::to_string(i + 3) + "] " + chapter_name(i) + "   " +
+                   stars + (a.grid.chapter == i ? "  ◀" : ""),
+               220 + (i - 1) * 50, 27, i > a.progress.unlocked ? muted : gold);
+    }
+    f.center("ENTER — GRAJ", 408, 30, gold);
+    f.center("[1] Event JP2   [2] Ekspedycja   [3] Szczyt", 468, 20);
+    f.center("★ meta   ★ bez upadków   ★ wszystkie znajdźki", 530, 20, gold);
+    f.center("U dźwięk   TAB ruch i cele   Q wyjście", 582, 18);
+    f.center("Muzyka: Kevin MacLeod / incompetech.com • CC BY 4.0", 650, 16,
+             muted);
+    return;
+  }
   if (!a.grid.event_level) {
     box(0, 0, W, H, {17, 19, 28, 235});
     f.center("TERMINAL VELOCITY", 98, 54, gold);
@@ -852,6 +856,25 @@ void pause_or_win(App &a, Font &f) {
              378, 18);
     f.center("F3   Diagnostyka     F11   Pełny ekran", 421, 16, muted);
     f.center("Q   Wyjście", 493, 16, muted);
+  } else if (a.grid.chapter) {
+    f.center(a.grid.chapter == 3 ? "PONAD CHMURAMI" : "SZLAK UKOŃCZONY", 196,
+             36, gold);
+    f.center(chapter_name(a.grid.chapter), 254, 24);
+    std::string stars;
+    for (int n = 0; n < 3; ++n)
+      stars += n < a.state.earned_stars ? "★" : "☆";
+    f.center(stars, 300, 36, gold);
+    f.center(clock_text(a.elapsed) + " • Upadki " +
+                 std::to_string(a.state.deaths) + " • Znajdźki " +
+                 std::to_string(a.count()) + "/" +
+                 std::to_string(a.grid.sweets.size()),
+             358, 20);
+    f.center(a.state.new_best ? "NOWY REKORD!"
+                              : "★ meta • ★ bez upadków • ★ komplet znajdziek",
+             402, 18, gold);
+    f.center(a.grid.chapter < 3 ? "ENTER — DALEJ" : "ENTER — WRÓĆ DO DOLINY",
+             466, 24, gold);
+    f.center("N ponów   ESC menu   Q wyjście", 516, 18);
   } else {
     f.center(a.grid.event_level ? "NIEPODLEGŁA!" : "EKSPEDYCJA UKOŃCZONA!", 190,
              45, gold);
@@ -927,7 +950,7 @@ int main(int argc, char **argv) {
       return 1;
     }
     const Args shared = parse_args(argc, argv, true);
-    App a(base, shared.event_level, shared.seed, shared.summit);
+    App a(base, shared.event_level, shared.seed, shared.summit, shared.chapter);
     a.room = shared.room;
     if (shared.relay_port) {
       std::cerr << "Use terminal_velocity --relay PORT\n";
@@ -941,7 +964,8 @@ int main(int argc, char **argv) {
         return 1;
       }
     }
-    a.sound.init();
+    a.sound.init(std::filesystem::path(base) / "assets/audio",
+                 shared.mute || smoke || !screenshot.empty());
     if (scene == "play" || smoke)
       a.mode = App::Play;
     if (scene == "journal")

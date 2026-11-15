@@ -1,8 +1,8 @@
 # Terminal Velocity
 
-**A Ghostty-first platformer. Real keyboard input. Fixed 120 Hz physics.**
+**A terminal mountain climb with saved chapters, live ghosts and an atmospheric soundtrack.**
 
-Run, jump, wall-jump and dash through seeded courses or a six-room precision course, with reusable dash refills and live multiplayer ghosts. The original **JP2: Sztafeta Wolności** course lives on as a special Polish Independence Day event.
+Climb from a quiet valley to the final ridge through three authored chapters. Replay for a clean run, hidden treasures and personal bests, or race live ghosts through seeded courses and the precision trial. The original **JP2: Sztafeta Wolności** course lives on as a special Polish Independence Day event.
 
 The terminal is the main game. The SDL window is a debug frontend for comparing the same physics and collisions.
 
@@ -69,7 +69,7 @@ Prefer not to use that helper? `./play.sh --ssh` also works locally through the 
 
 ## Play on Windows
 
-Extract **terminal-velocity-windows-x64.zip** and run `play.cmd` from Windows Terminal (Windows 10/11 x64). The portable `terminal_velocity.exe` includes the C++ runtime; no MSYS2, SDL or administrator access is needed to play. Use a font with Braille/block glyphs, such as Cascadia Mono, and a terminal of at least 76×24 (110×34 recommended).
+Extract **terminal-velocity-windows-x64.zip** and run `play.cmd` from Windows Terminal (Windows 10/11 x64). The portable ZIP includes `terminal_velocity.exe`, the C++ runtime and the audio assets; no MSYS2, SDL or administrator access is needed to play. Use a font with Braille/block glyphs, such as Cascadia Mono, and a terminal of at least 76×24 (110×34 recommended).
 
 ```powershell
 .\terminal_velocity.exe --summit
@@ -95,10 +95,33 @@ make windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=windres
 
 On Linux with MinGW-w64 installed: `make windows windows-tests`. GitHub Actions builds, tests and uploads a Windows ZIP on every push/PR. Automated Windows tests cover simulation, UDP networking and native input handling; physical Windows Terminal/keyboard feel still needs user testing.
 
+## The climb
+
+The default run is a three-chapter campaign: **Zacisze → Przełęcz → Ostatnia Grań**. Finishing a chapter unlocks the next one; Enter on the result screen continues the journey. Chapters have their own terrain colors, safe checkpoint bays and optional upper treasure routes. Select an unlocked chapter with **4 / 5 / 6**, or use `--chapter 1`, `--chapter 2` or `--chapter 3` for direct practice.
+
+Each chapter has three independent stars: reach the end, finish without falls/checkpoint retries, and collect every treasure. Your fastest time, best clean-run result, collection record and stars are saved separately, so a slower collection run does not erase a faster time. **N** starts a fresh attempt; **R** returns to the checkpoint and counts as a retry. Dash trails, landing dust, pickup bursts and dash-refill feedback are visual effects only; physics and ghost collisions remain unchanged.
+
+Progress lives in `$XDG_STATE_HOME/terminal-velocity/progress.dat` (or `~/.local/state/terminal-velocity/progress.dat`) on Linux and `%LOCALAPPDATA%/TerminalVelocity/progress.dat` on Windows. `TV_PROGRESS_FILE` overrides the location for isolated tests/profiles. A save error preserves the current session and reports the problem. Demos and previews do not write campaign records.
+
+![Campaign chapters and persistent star challenges](docs/media/campaign-menu.png)
+
+## Music and sound
+
+Both the terminal and SDL frontend play **downloaded recordings**, through the same bundled miniaudio playback engine. No synthesized beeps, generated music, shell players, SDL runtime dependency for the TUI, or microphone access.
+
+- **Music:** “Dreams Become Real” (piano/ambient) and “Ascending the Vale” (harp/choir/flute), by [Kevin MacLeod / Incompetech](https://incompetech.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Effects:** cloth movement, a dash swish, soft impacts, snow footsteps, glass/pluck pickups and interface confirmations from Kenney's [Impact Sounds](https://kenney.nl/assets/impact-sounds), [RPG Audio](https://kenney.nl/assets/rpg-audio) and [Interface Sounds](https://kenney.nl/assets/interface-sounds), under CC0.
+
+Music crossfades between the valley and ascent; pause lowers the music and focus loss silences output. Effects overlap instead of cutting one another off. Assets are normalized with peak headroom, softened effects and conservative playback levels. **U** mutes/unmutes everything; `--mute` starts without opening an audio device. SSH is quiet by default: `--audio` enables playback on the **remote game host**, not audio streaming to the SSH client. Relay, smoke and preview commands do not open an audio device.
+
+Keep **assets/audio/** next to the executable. Assets are resolved relative to the executable, so launch from any working directory. Full track/source/license details, modifications and hashes: [audio credits](assets/audio/CREDITS.txt), [manifest](assets/audio/manifest.json). Playback library: miniaudio 0.11.26, with its [bundled license](vendor/MINIAUDIO-LICENSE). Original synthesized SDL tones have been removed.
+
 ## Pick a run
 
 | Key | Action |
 | --- | --- |
+| **4 / 5 / 6** | Select an unlocked campaign chapter |
+| **U** | Mute/unmute audio |
 | **1** | Original JP2 / 11 Listopada event |
 | **2** | Procedural expedition |
 | **3** | Summit: six authored precision rooms |
@@ -197,13 +220,15 @@ Both modes were exercised through an actual localhost OpenSSH connection and rem
 
 ```sh
 make                  # TUI, keyboard helper, and SDL debug frontend
-make test             # Physics, courses, mechanics, UDP ghosts, SSH parser, SDL smoke
+make test             # Physics, campaign/save/audio mix, UDP ghosts, SSH parser, SDL smoke
 python tools/test_tui.py  # Two actual TUI PTYs + relay (requires pyte)
 ./terminal_velocity --demo --seed 73
 ./terminal_velocity --demo --event
 ```
 
 The TUI and helper need C++20 and standard Linux headers. The debug GUI additionally needs SDL2, FreeType and pkg-config. On Debian/Ubuntu, the corresponding build packages are `g++ make pkg-config libsdl2-dev libfreetype6-dev`.
+
+Campaign tests complete all three chapters with ordinary controls, verify stars/unlocks/save recovery, decode every bundled audio asset, and check overlapping mixes, mute, track crossfade and focus silence without an audio device.
 
 Tests cover resting contacts, acceleration/braking, jump height, identical simulation at 30/60/144 Hz, short taps, normalized dash speed, collision tunnelling, coyote time, jump buffers, wall jumps, checkpoints, the original event route, moving-platform carry, drop-through, springs, patrol combat and 100 procedural seeds. SSH parser tests cover fragmented sequences, simultaneous keys, releases, short taps and focus changes. Multiplayer tests use real localhost UDP sockets to verify room/course/seed isolation, assigned identities, stale/oversized packet rejection, smoothing, respawns and expiry/rejoin. The six-room Summit route completes using ordinary inputs with zero deaths. PTY tests verify the visible yellow player, removed marker, live cyan ghost, menu selection and terminal restoration. Internet/LAN latency and physical keyboard play are not established by these automated checks.
 
