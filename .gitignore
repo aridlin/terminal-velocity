@@ -1,0 +1,9 @@
+/terminal_velocity
+/terminal_velocity_sdl
+/keyboard_launcher
+/physics_tests
+/extension_tests
+/best.txt
+*.o
+__pycache__/
+*.tmp

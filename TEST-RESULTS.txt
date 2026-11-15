@@ -1,0 +1,40 @@
+PASS stable resting contact
+PASS run speed reaches target
+PASS release stops ground motion
+PASS variable jump height
+jump full=4.07861 short=2.11361
+PASS identical physics at 30 / 60 / 144 Hz
+PASS short tap retained between ticks
+PASS diagonal dash normalized
+PASS air dash cannot recharge in midair
+PASS dash cannot tunnel through one-tile wall
+PASS wall jump survives held direction into wall
+PASS coyote jump accepted after leaving ledge
+PASS jump buffered just before landing
+PASS safe checkpoint activates
+PASS death respawns at checkpoint
+Route x=176.172 deaths=0 jumps=13 dashes=5 cp=2
+PASS entire course beatable with ordinary inputs and zero deaths
+PASS seeds repeat exactly and different seeds vary
+PASS lands on moving one-way platform
+PASS platform carries rider without jitter or drift
+PASS down drops through moving platform
+PASS upward movement passes through one-way platform
+PASS spring launches and refills dash
+PASS enemy stomp bounces safely
+PASS enemy side contact resets to checkpoint
+PASS dash defeats patrol
+PASS SSH basic starts movement
+PASS SSH basic does not depend on autorepeat
+PASS SSH basic stop is explicit
+PASS SSH legacy menu controls
+PASS partial network sequence is retained
+PASS SSH simultaneous press states
+PASS SSH releases clear held state
+PASS SSH short tap survives same packet release
+PASS SSH focus loss clears controls
+PASS SSH focus regain
+PASS 100 seeded routes completed using normal controls; max deaths=0
+SDL smoke: key edges, focus pause, held input, renderer; x=12.3351 result=0
+Previously verified integration: actual localhost OpenSSH + remote PTY in --ssh and --ssh-basic modes; successful exits and terminal restoration.
+CachyOS PC installation: rebuilt natively and passed the full make test suite on 2026-11-15.
