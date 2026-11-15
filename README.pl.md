@@ -2,11 +2,26 @@
 
 Gra platformowa C++ z fizyką 120 Hz, grana w Ghostty. SDL jest wyłącznie frontendem debugowania i używa tego samego silnika, map oraz mechanik.
 
+## Windows 10/11 x64
+
+Rozpakuj `terminal-velocity-windows-x64.zip` i uruchom `play.cmd` w Windows Terminal. Przenośny `terminal_velocity.exe` zawiera runtime C++; nie wymaga MSYS2, SDL ani administratora. Zalecane 110×34 i font z Braille, np. Cascadia Mono.
+
+```powershell
+.\terminal_velocity.exe --summit
+.\terminal_velocity.exe --seed 73 --connect HOST:27888 --room friends
+.\terminal_velocity.exe --relay 27888
+```
+
+Natywne zdarzenia konsoli Windows obsługują naciśnięcia i zwolnienia klawiszy. Fizyka, mapy i protokół duchów są wspólne z Linuxem — można grać razem. Po zwykłym wyjściu przywracane są tryby i strony kodowe konsoli. W paczce nie ma debugowania SDL ani linuksowego pomocnika klawiatury. SSH: uruchom linuksową grę na zdalnym serwerze.
+
+Budowanie w MSYS2 UCRT64: `pacman -S --needed make mingw-w64-ucrt-x86_64-gcc`, następnie `make windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=windres`. Cross-build na Linuxie z MinGW-w64: `make windows windows-tests`. CI buduje, testuje i udostępnia ZIP. Testy automatyczne nie potwierdzają odczuć na fizycznej klawiaturze Windows.
+
 ## Start i wybór poziomu
 
 Uruchom `terminal-velocity` (launcher jest w `~/.local/bin`) albo `./ghostty-play.sh`. W istniejącym Ghostty możesz użyć `./play.sh`.
 
 - **1 — event JP2 / 11 listopada:** zachowana oryginalna Sztafeta Wolności z Wadowic do Warszawy, 15 kremówek i dziennik niepodległości.
+- **3 — Szczyt:** sześć zaprojektowanych etapów precyzji, przepaście, ściany, odnawialne kryształy i checkpoint przed każdym etapem. `terminal-velocity --summit`.
 - **2 — ekspedycja proceduralna:** osiem losowanych sekcji, opcjonalne górne trasy, kryształy, windy, sprężyny i patrole.
 - **Enter:** start; **M:** powrót do menu; **N:** ponów tę samą mapę; **G:** kolejny seed proceduralny.
 
@@ -18,6 +33,9 @@ Generator dobiera ograniczone skoki, szerokości przerw i moduły z bezpiecznymi
 
 - A/D lub strzałki: ruch. SPACJA/W/góra: skok; przytrzymanie zwiększa wysokość.
 - Shift/X + kierunek: zryw w ośmiu kierunkach. Lądowanie i nowa znajdźka odnawiają zryw.
+- Postać jest żółta, gdy zryw jest gotowy, i biała po jego zużyciu. Usunięto osobny znak `@`.
+- `◆`: odnawialny kryształ zrywu; po użyciu zmienia się w `◇` i wraca po 2,5 s. Retry checkpointu przywraca kryształy od razu. Znajdźki `▰` pozostają jednorazowe.
+- Skok od ściany działa też do 100 ms po utracie kontaktu.
 - S/dół: szybkie opadanie; na ruchomej platformie — zejście przez nią.
 - Przy ścianie: skok od ściany. Zachowane coyote time, bufor skoku i kontrola w powietrzu.
 - `===`: ruchome platformy przenoszą postać; można przez nie skoczyć od dołu.
@@ -31,6 +49,22 @@ Zalecany terminal 110 × 34, minimum 76 × 24. Przełączenie fokusu pauzuje gr�
 ## Wejście lokalne — poza terminalem
 
 Domyślnie evdev dostarcza rzeczywiste key-down/key-up. Autorepeat terminala nie steruje postacią. Jeśli użytkownik nie ma dostępu do klawiatury, `play.sh` poprosi o hasło sudo **lokalnie w terminalu**. `keyboard_launcher` otwiera urządzenia klawiatury, trwale porzuca root i uruchamia grę jako pierwotny użytkownik. Nie zmienia ACL, grup, udev ani ustawień konta i nie jest instalowany setuid. Dostęp kończy się wraz z grą. Klawisze nie są zapisywane.
+
+## Duchy multiplayer na żywo
+
+Na osiągalnym komputerze Linux uruchom `./terminal_velocity --relay 27888`. Każdy gracz łączy się poleceniem:
+
+```sh
+./play.sh --summit --connect HOST:27888 --room friends
+# Albo ta sama mapa proceduralna u wszystkich:
+./play.sh --seed 73 --connect HOST:27888 --room friends
+```
+
+`HOST` to adres komputera z relayem. Potrzebny jest osiągalny port **UDP** 27888 (lokalnie można użyć `127.0.0.1`). Relay nie wymaga terminala, SDL, evdev ani sudo; Ctrl+C kończy pracę. Zainstalowany launcher obsługuje `terminal-velocity --relay 27888` bez otwierania Ghostty.
+
+Turkusowe duchy pokazują pozycje innych graczy z 30 aktualizacjami/s i wygładzaniem. Każdy ma własną fizykę, znajdźki i checkpointy; duchy nie mają kolizji. Ten sam pokój, trasa i seed łączą graczy; używajcie tej samej wersji gry. Limit relaya: 32 klientów. Pauza/menu ukrywa ducha, respawn przeskakuje od razu, rozłączenie usuwa ducha po 3 s. Brak relaya nie blokuje gry solo. Nie ma zapisu powtórek ani wspólnego stanu świata.
+
+Pokój: 1–23 litery/cyfry/`-`/`_`. Relay do gry ze znajomymi/LAN: nazwa pokoju nie jest hasłem, a pakiety UDP nie mają szyfrowania ani uwierzytelniania. Przy SSH to komputer z uruchomioną grą łączy się z `HOST`. GUI debugowania obsługuje te same flagi.
 
 ## SSH — bez sudo, bez GUI, bez evdev
 
@@ -57,11 +91,13 @@ SSH odświeża obraz do 30 Hz przy fizyce 120 Hz i wysyła różnice komórek. O
 
 ## Debug GUI i testy
 
-`./terminal_velocity_sdl --seed 73` albo `--event`. Te same wybory 1/2/G w menu lub pauzie. F3: hitbox, prędkości, FPS. R: checkpoint, Ctrl+R: reset, M: dźwięk, F11: pełny ekran. Czas „zdarzenie → tick” nie mierzy pełnej latencji sprzętu.
+`./terminal_velocity_sdl --seed 73` albo `--event`. Te same wybory 1/2/3/G w menu lub pauzie. F3: hitbox, prędkości, FPS. R: checkpoint, Ctrl+R: reset, M: dźwięk, F11: pełny ekran. Czas „zdarzenie → tick” nie mierzy pełnej latencji sprzętu.
 
 Budowanie wszystkiego: `make` (C++20; SDL2 i FreeType są potrzebne tylko dla GUI). Budowanie na serwerze bez bibliotek graficznych: `make terminal_velocity`.
 
-`make test` obejmuje pierwotne testy ruchu i eventu, deterministyczność seedów, 100 przejść proceduralnych, platformy, sprężyny, starcia z patrolami i parser SSH. `./terminal_velocity --demo --seed 73` pokazuje automatyczne przejście bez klawiatury evdev; `--demo --event` odtwarza event. Demo jest testem, nie alternatywnym wejściem.
+`python tools/test_tui.py` (wymaga pyte) sprawdza dwie prawdziwe sesje TUI w PTY z relayem: menu, kolory, duchy i przywrócenie terminala.
+
+`make test` obejmuje testy UDP relaya, odnawialnych kryształów, okna skoku od ściany, przejścia Szczytu oraz pierwotne testy ruchu i eventu, deterministyczność seedów, 100 przejść proceduralnych, platformy, sprężyny, starcia z patrolami i parser SSH. `./terminal_velocity --demo --seed 73` pokazuje automatyczne przejście bez klawiatury evdev; `--demo --event` odtwarza event. Demo jest testem, nie alternatywnym wejściem.
 
 ## Inspiracje
 

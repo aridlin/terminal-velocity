@@ -1,4 +1,6 @@
+#include "ghost_net.hpp"
 #include <csignal>
+#ifndef _WIN32
 #include <fcntl.h>
 #include <fstream>
 #include <linux/input.h>
@@ -8,6 +10,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -100,6 +103,8 @@ struct Player {
   double dash_buffer_left = 0.0;
   double dash_time_left = 0.0;
   double wall_lock_left = 0.0;
+  double wall_coyote_left = 0;
+  int last_wall = 0;
   int support = -1;
   double drop_left = 0.0;
 
@@ -255,6 +260,9 @@ struct GameState {
   int checkpoint = 0;
   std::vector<bool> collected;
   std::vector<bool> defeated;
+  std::vector<double> refill_cooldown;
+  std::vector<ghosts::Ghost> ghosts;
+  bool multiplayer = false;
   bool ssh = false, ssh_basic = false;
   double elapsed = 0, notice = 0;
   bool menu = false, paused = false, journal = false, debug = false;
@@ -371,12 +379,14 @@ public:
   }
 
   bool event_level = true;
+  bool summit = false;
   uint32_t seed = 0;
   std::vector<std::pair<double, double>> sweets;
   std::vector<double> checkpoints;
   std::vector<MovingPlatform> platforms;
   std::vector<Patrol> enemies;
   std::vector<Rect> springs;
+  std::vector<std::pair<double, double>> refills;
   double spawn_x = 5.0;
   double spawn_y = 36.0 - kPlayerHeight;
   Rect goal{173.0, 13.0, 3.0, 5.0};
@@ -461,6 +471,7 @@ EngineGrid build_procedural(uint32_t seed) {
       g.platforms.push_back(
           {{double(x + 14), 33.5, 4, .5}, 3, 0, 3.8, double(room) / 8});
       g.sweets.push_back({double(x + 16), 30.5});
+      g.refills.push_back({double(x + 20), 33});
     }
     if (variant == 2) {
       g.platforms.push_back(
@@ -489,10 +500,44 @@ EngineGrid build_procedural(uint32_t seed) {
   return g;
 }
 
+// Six authored precision rooms, with safe retries before every crossing.
+EngineGrid build_summit() {
+  EngineGrid g(216, 46);
+  g.event_level = false;
+  g.summit = true;
+  g.spawn_x = 4;
+  g.spawn_y = 38 - kPlayerHeight;
+  g.goal = {208, 33, 3, 5};
+  g.checkpoints = {4};
+  g.add_solid_rect(0, 38, 8, 8);
+  for (int room = 0; room < 6; ++room) {
+    int x = 8 + room * 32;
+    g.add_solid_rect(x, 38, 20, 8);
+    g.checkpoints.push_back(x + 2);
+    g.add_solid_rect(x + 7, 36 - room % 3, 3, 2 + room % 3);
+    if (room >= 3)
+      g.add_hazard_rect(x + 14, 37, 2);
+    g.refills.push_back({double(x + 24), 34.5});
+    g.sweets.push_back({double(x + 24), 31});
+    // Optional upper wall-jump route and a spring-fed aerial collectible.
+    if (room % 2 == 0) {
+      g.add_solid_rect(x + 12, 29, 2, 5);
+      g.sweets.push_back({double(x + 12), 26});
+    } else {
+      g.springs.push_back({double(x + 3), 37.7, 1.3, .3});
+      g.platforms.push_back({{double(x + 15), 29, 3, .5}, 2, 0, 4, 0});
+      g.sweets.push_back({double(x + 16), 26});
+    }
+  }
+  g.add_solid_rect(200, 38, 16, 8);
+  return g;
+}
+
 GameState new_state(const EngineGrid &grid) {
   GameState state;
   state.collected.resize(grid.sweets.size());
   state.defeated.resize(grid.enemies.size());
+  state.refill_cooldown.resize(grid.refills.size());
   state.spawn_x = grid.spawn_x;
   state.spawn_y = grid.spawn_y;
   state.player.x = grid.spawn_x;
@@ -512,6 +557,9 @@ void reset_player(GameState &state) {
   state.player.dash_buffer_left = 0.0;
   state.player.dash_time_left = 0.0;
   state.player.wall_lock_left = 0.0;
+  state.player.wall_coyote_left = 0;
+  state.player.last_wall = 0;
+  std::fill(state.refill_cooldown.begin(), state.refill_cooldown.end(), 0);
   state.player.support = -1;
   state.player.drop_left = 0;
   state.won = false;
@@ -606,6 +654,7 @@ void update_step(GameState &state, const EngineGrid &grid,
     player.dash_available = false;
     player.grounded = false;
     player.coyote_left = 0.0;
+    player.wall_coyote_left = 0;
     player.jump_buffer_left = 0.0;
     player.dash_buffer_left = 0.0;
   }
@@ -644,6 +693,13 @@ void update_step(GameState &state, const EngineGrid &grid,
   }
 
   const int touching_wall = player.grounded ? 0 : wall_dir(grid, player);
+  player.wall_coyote_left = std::max(0., player.wall_coyote_left - dt);
+  if (player.grounded)
+    player.wall_coyote_left = 0;
+  else if (touching_wall) {
+    player.last_wall = touching_wall;
+    player.wall_coyote_left = .10;
+  }
   if (touching_wall != 0 && controls.move == touching_wall &&
       player.vy > kWallSlideSpeed) {
     player.vy = kWallSlideSpeed;
@@ -655,10 +711,11 @@ void update_step(GameState &state, const EngineGrid &grid,
       player.grounded = false;
       player.coyote_left = 0.0;
       player.jump_buffer_left = 0.0;
-    } else if (touching_wall != 0) {
-      player.vx = -touching_wall * kWallJumpX;
+    } else if (player.wall_coyote_left > 0) {
+      player.vx = -player.last_wall * kWallJumpX;
       player.vy = -kWallJumpY;
-      player.facing = -touching_wall;
+      player.facing = -player.last_wall;
+      player.wall_coyote_left = 0;
       player.wall_lock_left = 0.13;
       player.jump_buffer_left = 0.0;
     }
@@ -760,6 +817,15 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
         p.coyote_left = kCoyoteTime;
         p.support = int(i);
       }
+    }
+  }
+  for (size_t i = 0; i < g.refills.size(); ++i) {
+    s.refill_cooldown[i] = std::max(0., s.refill_cooldown[i] - dt);
+    auto [x, y] = g.refills[i];
+    if (s.refill_cooldown[i] == 0 && !p.dash_available &&
+        p.rect().intersects({x - .5, y - .5, 1, 1})) {
+      p.dash_available = true;
+      s.refill_cooldown[i] = 2.5;
     }
   }
   for (auto spring : g.springs)
@@ -879,6 +945,12 @@ struct TermSize {
 };
 
 TermSize term_size() {
+#ifdef _WIN32
+  CONSOLE_SCREEN_BUFFER_INFO info{};
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info))
+    return {info.srWindow.Bottom - info.srWindow.Top + 1,
+            info.srWindow.Right - info.srWindow.Left + 1, 0, 0};
+#else
   winsize ws{};
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_row > 0 &&
       ws.ws_col > 0) {
@@ -886,6 +958,7 @@ TermSize term_size() {
                     static_cast<int>(ws.ws_xpixel),
                     static_cast<int>(ws.ws_ypixel)};
   }
+#endif
   return {};
 }
 
@@ -903,6 +976,9 @@ TermSize term_size() {
 volatile std::sig_atomic_t stop_requested = 0;
 void request_stop(int) { stop_requested = 1; }
 
+#include "ssh_input.hpp"
+
+#ifndef _WIN32
 class TerminalGuard {
 public:
   explicit TerminalGuard(bool ssh = false) : ssh_(ssh) {
@@ -1082,7 +1158,7 @@ public:
   }
 
   void ui_controls(Controls &c) const {
-    c.select_level = press(KEY_1) ? 1 : press(KEY_2) ? 2 : 0;
+    c.select_level = press(KEY_1) ? 1 : press(KEY_2) ? 2 : press(KEY_3) ? 3 : 0;
     c.next_seed = press(KEY_G);
     c.menu_request = press(KEY_M);
     c.pause = press(KEY_ESC) || press(KEY_P);
@@ -1219,8 +1295,6 @@ private:
   std::vector<std::string> diagnostics_;
 };
 
-#include "ssh_input.hpp"
-
 class TuiInput {
 public:
   explicit TuiInput(InputMode mode)
@@ -1291,8 +1365,13 @@ private:
   std::string focus_buffer_;
 };
 
+#else
+#include "windows_console.hpp"
+#endif
+
 enum class Color {
   Gold,
+  Ghost,
   Decor,
   Default,
   Solid,
@@ -1351,6 +1430,9 @@ std::string ansi_for(Color c, bool, bool bold) {
   case Color::Gold:
     out += "\x1b[38;2;244;205;94m";
     break;
+  case Color::Ghost:
+    out += "\x1b[38;2;93;201;210m";
+    break;
   case Color::Decor:
     out += "\x1b[38;2;65;42;49m";
     break;
@@ -1384,7 +1466,7 @@ public:
   }
   void draw() {
     if (rows_ < 24 || cols_ < 76) {
-      text(1, 2, "Powiększ Ghostty do co najmniej 76 × 24.");
+      text(1, 2, "Powiększ terminal do co najmniej 76 × 24.");
       text(3, 2, "Zalecane: 110 × 34. Q — wyjście.");
       flush();
       return;
@@ -1424,23 +1506,35 @@ public:
       }
     auto [gx, gy] = screen(grid_.goal.x, grid_.goal.y - 1);
     text(gy, gx, "META", Color::Gold);
-    auto [px, py] = screen(state_.player.x - .15, state_.player.y - .9);
-    text(py, px, grid_.event_level ? "JP2" : "@",
-         state_.player.dash_available ? Color::Gold : Color::Text);
+    if (grid_.event_level) {
+      auto [px, py] = screen(state_.player.x - .15, state_.player.y - .9);
+      text(py, px, "JP2", Color::Gold);
+    }
+    for (size_t i = 0; i < grid_.refills.size(); ++i) {
+      auto [x, y] = screen(grid_.refills[i].first, grid_.refills[i].second);
+      text(y, x, state_.refill_cooldown[i] > 0 ? "◇" : "◆",
+           state_.refill_cooldown[i] > 0 ? Color::Decor : Color::Ghost);
+    }
     fill(0, 0, cols_, 3, Color::Default);
     text(0, 0, "█", Color::Player);
     text(1, 0, "█", Color::Hazard);
     text(0, 2,
          grid_.event_level ? "EVENT / JP2: SZTAFETA WOLNOŚCI"
+         : grid_.summit    ? "TERMINAL VELOCITY / SZCZYT"
                            : "TERMINAL VELOCITY / EKSPEDYCJA",
          Color::Gold);
+    if (state_.multiplayer)
+      text(0, cols_ - 12, "DUCHY " + std::to_string(state_.ghosts.size()),
+           Color::Ghost);
     int chapter = state_.player.x < 60 ? 0 : state_.player.x < 118 ? 1 : 2;
     const char *names[] = {"01 WADOWICE", "02 KRAKÓW", "03 WARSZAWA"};
     text(1, 2,
          grid_.event_level ? std::string(names[chapter]) +
                                  "   11 LISTOPADA • NIEPODLEGŁOŚĆ POLSKI"
-                           : "SEED " + std::to_string(grid_.seed) +
-                                 "   •   WINDY / SPRĘŻYNY / PATROLE",
+         : grid_.summit
+             ? "6 ETAPÓW   •   ŚCIANY / PRZEPAŚCIE / ODNOWIENIA ZRYWU"
+             : "SEED " + std::to_string(grid_.seed) +
+                   "   •   WINDY / SPRĘŻYNY / PATROLE",
          Color::Player);
     text(2, 2,
          (grid_.event_level ? "Kremówki " : "Kryształy ") +
@@ -1545,7 +1639,7 @@ private:
   Cell world_cell(int x, int y) const {
     double wx = state_.camera_x + x * kWorldUnitsPerRenderCol,
            wy = state_.camera_y + y * aspect_ * kWorldUnitsPerRenderCol;
-    unsigned solid = 0, edge = 0, hazard = 0, body = 0, goal = 0;
+    unsigned solid = 0, edge = 0, hazard = 0, body = 0, goal = 0, ghost = 0;
     for (int dy = 0; dy < 4; ++dy)
       for (int dx = 0; dx < 2; ++dx) {
         double a = wx + (dx + .5) * kWorldUnitsPerRenderCol / 2,
@@ -1554,6 +1648,10 @@ private:
         unsigned dot = braille_dot(dx, dy);
         if (state_.player.rect().intersects({a, b, .01, .01}))
           body |= dot;
+        for (const auto &g : state_.ghosts)
+          if (Rect{g.x, g.y, kPlayerWidth, kPlayerHeight}.intersects(
+                  {a, b, .01, .01}))
+            ghost |= dot;
         if (grid_.solid_at(col, row)) {
           solid |= dot;
           if (!grid_.solid_at(col, row - 1) && b - row < .2)
@@ -1566,10 +1664,12 @@ private:
       }
     if (body)
       return braille_cell(
-          body, state_.player.dash_time_left > 0 ? Color::Gold : Color::Player,
+          body, state_.player.dash_available ? Color::Gold : Color::Player,
           true);
     if (hazard)
       return braille_cell(hazard, Color::Hazard, true);
+    if (ghost && !solid)
+      return braille_cell(ghost, Color::Ghost);
     if (goal)
       return braille_cell(goal, Color::Gold);
     if (edge)
@@ -1595,8 +1695,12 @@ private:
                              : "[1] EVENT: JP2 / 11 LISTOPADA",
            Color::Gold);
     center(9,
-           !grid_.event_level ? "[2] EKSPEDYCJA PROCEDURALNA  ◀"
-                              : "[2] EKSPEDYCJA PROCEDURALNA",
+           !grid_.event_level && !grid_.summit
+               ? "[2] EKSPEDYCJA PROCEDURALNA  ◀"
+               : "[2] EKSPEDYCJA PROCEDURALNA",
+           Color::Gold);
+    center(10,
+           grid_.summit ? "[3] SZCZYT / PRECYZJA  ◀" : "[3] SZCZYT / PRECYZJA",
            Color::Gold);
     center(11, grid_.event_level
                    ? "Oryginalna trasa, kremówki i dziennik niepodległości."
@@ -1604,8 +1708,7 @@ private:
                          "   [G] losuj nowy / [N] ponów ten sam");
     center(13, "[ENTER] GRAJ     [TAB] HISTORIA / MECHANIKI", Color::Player);
     center(15, "Ruch i skoki jak wcześniej. Windy są jednostronne: S schodzi.");
-    center(16,
-           "Sprężyna ^^ wybija w górę. Wroga [!] pokonaj skokiem lub zrywem.");
+    center(16, "◆ odnawia zryw i wraca po 2.5 s. Żółty gracz = zryw gotowy.");
     center(
         18,
         state_.ssh_basic
@@ -1623,7 +1726,7 @@ private:
       center(8, "=== Ruchome platformy: wskakuj od dołu, S schodzi przez nie.");
       center(10, "^^ Sprężyny: automatyczny wysoki skok i odnowienie zrywu.");
       center(12, "[!] Patrole: skok na głowę albo zryw usuwa wroga. Bok boli.");
-      center(14, "Kryształy odnawiają zryw. Górne trasy są opcjonalne.");
+      center(14, "◆ odnawia zryw i wraca po 2.5 s. ▰ to jednorazowy skarb.");
       center(16, "Seed tworzy tę samą mapę. N powtarza, G losuje następną.");
       center(18, "TAB / ESC / ENTER — powrót", Color::Gold);
       return;
@@ -1759,15 +1862,29 @@ private:
 
 [[maybe_unused]] int run_game(double aspect, InputMode input_mode,
                               bool demo = false, bool event_level = false,
-                              uint32_t seed = 1) {
+                              uint32_t seed = 1, bool summit = false,
+                              const std::string &ghost_host = "",
+                              const std::string &ghost_port = "27888",
+                              const std::string &room = "default") {
   bool remote =
       input_mode == InputMode::Ssh || input_mode == InputMode::SshBasic;
   TerminalGuard terminal(input_mode == InputMode::Ssh);
   if (!terminal.active()) {
+#ifdef _WIN32
+    std::cerr << "Run in Windows Terminal: play.cmd\n";
+#else
     std::cerr << "Uruchom w Ghostty: ./play.sh\n";
+#endif
     return 1;
   }
-  EngineGrid grid = event_level ? build_level() : build_procedural(seed);
+  ghosts::Client network;
+  if (!ghost_host.empty())
+    network.connect_to(ghost_host, ghost_port);
+  uint32_t network_epoch = 0;
+  int previous_deaths = 0;
+  EngineGrid grid = summit        ? build_summit()
+                    : event_level ? build_level()
+                                  : build_procedural(seed);
   GameState state = new_state(grid);
   state.ssh = remote;
   TuiInput input(input_mode);
@@ -1837,10 +1954,16 @@ private:
         c.next_seed) {
       if (c.next_seed) {
         event_level = false;
+        summit = false;
         ++seed;
-      } else
+      } else {
         event_level = c.select_level == 1;
-      grid = event_level ? build_level() : build_procedural(seed);
+        summit = c.select_level == 3;
+      }
+      ++network_epoch;
+      grid = summit        ? build_summit()
+             : event_level ? build_level()
+                           : build_procedural(seed);
       state = new_state(grid);
       state.ssh = remote;
       state.menu = true;
@@ -1865,6 +1988,7 @@ private:
       stepper = FixedStepper{};
     }
     if (c.new_run || (c.confirm && state.won && !state.journal)) {
+      ++network_epoch;
       auto label = state.input_source;
       state = new_state(grid);
       state.ssh = remote;
@@ -1893,6 +2017,23 @@ private:
       stepper = FixedStepper{};
     update_camera(state, grid, size.cols, std::max(1, size.rows - 7), aspect,
                   dt);
+    if (c.restart || state.deaths != previous_deaths)
+      ++network_epoch;
+    previous_deaths = state.deaths;
+    state.multiplayer = network.enabled();
+    ghosts::Snapshot snapshot;
+    snapshot.room = room;
+    snapshot.level = grid.summit ? 2 : grid.event_level ? 0 : 1;
+    snapshot.seed = grid.event_level || grid.summit ? 0 : grid.seed;
+    snapshot.x = state.player.x;
+    snapshot.y = state.player.y;
+    snapshot.epoch = network_epoch;
+    snapshot.flags =
+        (state.player.dash_available ? 1 : 0) |
+        (!state.menu && !state.paused && !state.journal && !too_small ? 2 : 0) |
+        (state.won ? 4 : 0);
+    network.tick(snapshot, dt);
+    state.ghosts = network.visible();
     if (now >= render_at) {
       RenderGrid(grid, state, size.rows, size.cols, aspect).draw();
       render_at = now + std::chrono::microseconds(remote ? 33333 : 16667);
@@ -1903,7 +2044,9 @@ private:
 }
 
 struct Args {
-  bool event_level = false;
+  bool event_level = false, summit = false;
+  int relay_port = 0;
+  std::string ghost_host, ghost_port = "27888", room = "default";
   uint32_t seed =
       uint32_t(std::chrono::system_clock::now().time_since_epoch().count());
   bool demo = false;
@@ -1915,13 +2058,51 @@ struct Args {
   InputMode input_mode = InputMode::Evdev;
 };
 
-[[maybe_unused]] Args parse_args(int argc, char **argv) {
+[[maybe_unused]] Args parse_args(int argc, char **argv,
+                                 bool debug_frontend = false) {
   Args args;
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
-    if (arg == "--event")
+    if (arg == "--event") {
       args.event_level = true;
-    else if (arg == "--seed" && i + 1 < argc) {
+      args.summit = false;
+    } else if (arg == "--summit") {
+      args.summit = true;
+      args.event_level = false;
+    } else if ((arg == "--relay" || arg == "--connect" || arg == "--room") &&
+               i + 1 < argc) {
+      std::string value = argv[++i];
+      if (arg == "--room") {
+        if (!ghosts::valid_room(value)) {
+          std::cerr << "Room: 1..23 letters, digits, - or _\n";
+          std::exit(2);
+        }
+        args.room = value;
+      } else {
+        std::string port = value;
+        if (arg == "--connect") {
+          auto split = value.rfind(':');
+          args.ghost_host =
+              split == std::string::npos ? value : value.substr(0, split);
+          port = split == std::string::npos ? "27888" : value.substr(split + 1);
+          if (args.ghost_host.empty()) {
+            std::cerr << "Missing relay host\n";
+            std::exit(2);
+          }
+        }
+        if (port.empty() ||
+            port.find_first_not_of("0123456789") != std::string::npos ||
+            port.size() > 5 || std::stoul(port) == 0 ||
+            std::stoul(port) > 65535) {
+          std::cerr << "UDP port must be 1..65535\n";
+          std::exit(2);
+        }
+        if (arg == "--relay")
+          args.relay_port = std::stoi(port);
+        else
+          args.ghost_port = port;
+      }
+    } else if (arg == "--seed" && i + 1 < argc) {
       std::string value = argv[++i];
       size_t used = 0;
       try {
@@ -1965,8 +2146,19 @@ struct Args {
       std::cout
           << "usage: terminal_velocity [--smoke] [--input-test] [--smoke-steps "
              "N] [--cell-aspect R] [--input evdev|terminal|auto] [--event] "
-             "[--seed N] [--ssh | --ssh-basic]\n";
+             "[--seed N] [--summit] [--ssh | --ssh-basic]\n"
+             "  --relay PORT          Run a headless UDP ghost relay\n"
+             "  --connect HOST[:PORT] Join live ghosts (default port 27888)\n"
+             "  --room NAME           Match friends in the same course/seed\n";
       std::exit(0);
+    } else if (debug_frontend &&
+               (arg == "--screenshot" || arg == "--scene" ||
+                arg == "--frames") &&
+               i + 1 < argc) {
+      ++i;
+    } else {
+      std::cerr << "Unknown or incomplete option: " << arg << "\n";
+      std::exit(2);
     }
   }
   return args;
@@ -1977,11 +2169,29 @@ struct Args {
 #ifndef TERMINAL_VELOCITY_NO_TUI_MAIN
 int main(int argc, char **argv) {
   const Args args = parse_args(argc, argv);
+  if (args.relay_port) {
+    try {
+      ghosts::Relay relay(uint16_t(args.relay_port));
+      std::signal(SIGINT, [](int) { stop_requested = true; });
+      std::signal(SIGTERM, [](int) { stop_requested = true; });
+      std::cout << "Ghost relay listening on UDP " << relay.port() << std::endl;
+      while (!stop_requested) {
+        relay.poll();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+      }
+      return 0;
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << '\n';
+      return 1;
+    }
+  }
   const double aspect =
       clamp(args.cell_aspect > 0.0 ? args.cell_aspect : detect_cell_aspect(),
             1.1, 3.4);
   if (!args.preview.empty()) {
-    auto g = args.event_level ? build_level() : build_procedural(args.seed);
+    auto g = args.summit        ? build_summit()
+             : args.event_level ? build_level()
+                                : build_procedural(args.seed);
     auto s = new_state(g);
     s.menu = args.preview == "menu";
     s.journal = args.preview == "journal";
@@ -1992,6 +2202,13 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (args.input_test) {
+#ifdef _WIN32
+    DWORD mode = 0;
+    bool console = GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &mode);
+    std::cout << (console ? "Windows console input ready\n"
+                          : "Run in Windows Terminal\n");
+    return console ? 0 : 1;
+#else
     EvdevInput evdev;
     if (!evdev.active()) {
       std::cerr
@@ -2010,11 +2227,18 @@ int main(int argc, char **argv) {
       std::cout << "  " << line << "\n";
     }
     return 0;
+#endif
   }
   if (args.smoke) {
     return run_smoke(aspect, args.smoke_steps);
   }
-  return run_game(aspect, args.input_mode, args.demo, args.event_level,
-                  args.seed);
+  try {
+    return run_game(aspect, args.input_mode, args.demo, args.event_level,
+                    args.seed, args.summit, args.ghost_host, args.ghost_port,
+                    args.room);
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << '\n';
+    return 1;
+  }
 }
 #endif

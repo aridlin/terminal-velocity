@@ -7,3 +7,7 @@
 *.o
 __pycache__/
 *.tmp
+
+/multiplayer_tests
+*.exe
+*.zip

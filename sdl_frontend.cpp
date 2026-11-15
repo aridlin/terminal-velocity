@@ -206,15 +206,22 @@ struct App {
   std::deque<Trail> trail;
   std::string base;
   Sound sound;
-  explicit App(std::string p, bool event_level = true, uint32_t seed = 1)
+  ghosts::Client network;
+  std::string room = "default";
+  uint32_t network_epoch = 0;
+  explicit App(std::string p, bool event_level = true, uint32_t seed = 1,
+               bool summit = false)
       : base(std::move(p)) {
-    grid = event_level ? build_level() : build_procedural(seed);
+    grid = summit        ? build_summit()
+           : event_level ? build_level()
+                         : build_procedural(seed);
     reset();
     std::ifstream f(base + "best.txt");
     if (grid.event_level)
       f >> best;
   }
   void reset() {
+    ++network_epoch;
     state = new_state(grid);
     stepper = FixedStepper{};
     elapsed = 0;
@@ -298,9 +305,12 @@ struct App {
       return;
     }
     if ((mode == Menu || mode == Pause || mode == Win) &&
-        (k == SDL_SCANCODE_1 || k == SDL_SCANCODE_2 || k == SDL_SCANCODE_G)) {
+        (k == SDL_SCANCODE_1 || k == SDL_SCANCODE_2 || k == SDL_SCANCODE_3 ||
+         k == SDL_SCANCODE_G)) {
       uint32_t seed = grid.seed + (k == SDL_SCANCODE_G ? 1 : 0);
-      grid = k == SDL_SCANCODE_1 ? build_level() : build_procedural(seed);
+      grid = k == SDL_SCANCODE_3   ? build_summit()
+             : k == SDL_SCANCODE_1 ? build_level()
+                                   : build_procedural(seed);
       reset();
       mode = Menu;
       best = 0;
@@ -384,6 +394,20 @@ struct App {
                            c});
     }
   }
+  void network_tick(double dt) {
+    state.multiplayer = network.enabled();
+    ghosts::Snapshot s;
+    s.room = room;
+    s.level = grid.summit ? 2 : grid.event_level ? 0 : 1;
+    s.seed = grid.summit || grid.event_level ? 0 : grid.seed;
+    s.x = state.player.x;
+    s.y = state.player.y;
+    s.epoch = network_epoch;
+    s.flags = (state.player.dash_available ? 1 : 0) |
+              (mode == Play || mode == Win ? 2 : 0) | (state.won ? 4 : 0);
+    network.tick(s, dt);
+    state.ghosts = network.visible();
+  }
   void tick(double dt) {
     time += dt;
     if (mode != Play)
@@ -408,6 +432,7 @@ struct App {
     if (c.dash_pressed && state.player.dash_time_left > 0)
       sound.play(1);
     if (state.deaths != deaths || c.restart) {
+      ++network_epoch;
       burst(oldx, oldy, red, 24);
       sound.play(3);
       flash = .16;
@@ -576,6 +601,15 @@ void world(App &a, Font &f) {
     box(a.sx(r.x), a.sy(r.y), r.w * PPU, r.h * PPU, gold);
     line(a.sx(r.x), a.sy(r.y) + 4, a.sx(r.right()), a.sy(r.y) + 4, cream);
   }
+  for (size_t i = 0; i < a.grid.refills.size(); ++i) {
+    auto [x, y] = a.grid.refills[i];
+    auto c = a.state.refill_cooldown[i] > 0 ? muted : RGBA{93, 201, 210};
+    tri(a.sx(x) - 9, a.sy(y) - 13, 18, 13, c);
+    tri(a.sx(x) - 9, a.sy(y) + 13, 18, -13, c);
+  }
+  for (const auto &g : a.state.ghosts)
+    box(a.sx(g.x), a.sy(g.y), kPlayerWidth * PPU, kPlayerHeight * PPU,
+        {93, 201, 210, 110});
   for (auto r : a.grid.springs) {
     box(a.sx(r.x), a.sy(r.y), r.w * PPU, 8, teal);
     for (int n = 0; n < 3; ++n)
@@ -621,11 +655,12 @@ void world(App &a, Font &f) {
          p.grounded && std::abs(p.vx) > 1);
   else {
     double x = a.sx(p.x), y = a.sy(p.y);
-    box(x, y, 27, 15, cream);
+    auto body = p.dash_available ? gold : cream;
+    box(x, y, 27, 15, body);
     box(x + 4, y + 6, 19, 5, ink);
     box(x + 3, y + 17, 21, 27, p.dash_available ? gold : muted);
-    box(x + 2, y + 44, 9, 10, cream);
-    box(x + 17, y + 44, 9, 10, cream);
+    box(x + 2, y + 44, 9, 10, body);
+    box(x + 17, y + 44, 9, 10, body);
   }
   for (auto p : a.particles)
     box(a.sx(p.x), a.sy(p.y), 4, 4,
@@ -650,9 +685,9 @@ void hud(App &a, Font &f) {
   const char *chapters[] = {"01 / WADOWICE • ROZGRZEWKA",
                             "02 / KRAKÓW • NABIERZ PĘDU",
                             "03 / WARSZAWA • DO WOLNOŚCI"};
-  f.text(a.grid.event_level
-             ? chapters[a.chapter]
-             : "EKSPEDYCJA • SEED " + std::to_string(a.grid.seed),
+  f.text(a.grid.event_level ? chapters[a.chapter]
+         : a.grid.summit ? "SZCZYT / PRECYZJA"
+                         : "EKSPEDYCJA • SEED " + std::to_string(a.grid.seed),
          48, 53, 12, gold);
   f.text(a.grid.event_level ? "KREMÓWKI" : "KRYSZTAŁY", 495, 21, 11, muted);
   f.text(std::to_string(a.count()) + " / " +
@@ -709,11 +744,14 @@ void menu(App &a, Font &f) {
   if (!a.grid.event_level) {
     box(0, 0, W, H, {17, 19, 28, 235});
     f.center("TERMINAL VELOCITY", 98, 54, gold);
-    f.center("EKSPEDYCJA PROCEDURALNA", 184, 28);
-    f.center("Seed " + std::to_string(a.grid.seed), 238, 22, gold);
-    f.center(
-        "[1] Event JP2 / 11 listopada     [2] Ekspedycja     [G] Nowy seed",
-        322, 22);
+    f.center(a.grid.summit ? "SZCZYT / PRECYZJA" : "EKSPEDYCJA PROCEDURALNA",
+             184, 28);
+    f.center(a.grid.summit ? "6 etapów / skoki / zrywy / odnowienia"
+                           : "Seed " + std::to_string(a.grid.seed),
+             238, 22, gold);
+    f.center("[1] Event JP2 / 11 listopada     [2] Ekspedycja     [3] Szczyt   "
+             "  [G] Nowy seed",
+             322, 22);
     f.center("ENTER — GRAJ", 400, 32, gold);
     f.center("Ruchome platformy • sprężyny • patrole • opcjonalne górne trasy",
              479, 20);
@@ -728,7 +766,8 @@ void menu(App &a, Font &f) {
   box(0, 0, 730, H, {27, 19, 25, 235});
   box(72, 65, 40, 5, cream);
   box(112, 65, 40, 5, red);
-  f.text("[1] EVENT 11 XI   [2] EKSPEDYCJA   [G] NOWY SEED", 72, 94, 14, gold);
+  f.text("[1] EVENT 11 XI   [2] EKSPEDYCJA   [3] SZCZYT   [G] NOWY SEED", 72,
+         94, 14, gold);
   f.text("JP2", 67, 128, 105, cream);
   f.text("SZTAFETA", 70, 253, 61, cream);
   f.text("WOLNOŚCI", 70, 320, 61, cream);
@@ -887,8 +926,21 @@ int main(int argc, char **argv) {
       std::cerr << "Missing assets/font.ttf\n";
       return 1;
     }
-    const Args shared = parse_args(argc, argv);
-    App a(base, shared.event_level, shared.seed);
+    const Args shared = parse_args(argc, argv, true);
+    App a(base, shared.event_level, shared.seed, shared.summit);
+    a.room = shared.room;
+    if (shared.relay_port) {
+      std::cerr << "Use terminal_velocity --relay PORT\n";
+      return 2;
+    }
+    if (!shared.ghost_host.empty()) {
+      try {
+        a.network.connect_to(shared.ghost_host, shared.ghost_port);
+      } catch (const std::exception &e) {
+        std::cerr << e.what() << '\n';
+        return 1;
+      }
+    }
     a.sound.init();
     if (scene == "play" || smoke)
       a.mode = App::Play;
@@ -951,6 +1003,7 @@ int main(int argc, char **argv) {
       double dt = std::chrono::duration<double>(now - last).count();
       last = now;
       a.tick(smoke ? 1.0 / 120 : std::min(.1, dt));
+      a.network_tick(std::min(.1, dt));
       if (now >= render_at || smoke || !screenshot.empty()) {
         double render_dt =
             std::chrono::duration<double>(now - last_render).count();

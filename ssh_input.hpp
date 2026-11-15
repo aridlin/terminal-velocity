@@ -106,10 +106,12 @@ public:
     return c;
   }
   Controls poll(double dt) {
+#ifndef _WIN32
     char bytes[1024];
     ssize_t n;
     while ((n = read(STDIN_FILENO, bytes, sizeof(bytes))) > 0)
       feed(std::string(bytes, n));
+#endif
     return consume(dt);
   }
 
@@ -162,6 +164,8 @@ private:
       edges_.select_level = 1;
     if (k == '2')
       edges_.select_level = 2;
+    if (k == '3')
+      edges_.select_level = 3;
     if (k == 13 || k == 10)
       edges_.confirm = true;
     if (k == 27 || k == 'p')

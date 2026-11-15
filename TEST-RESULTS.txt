@@ -1,3 +1,7 @@
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o physics_tests physics_tests.cpp
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o extension_tests extension_tests.cpp
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o multiplayer_tests multiplayer_tests.cpp
+./physics_tests
 PASS stable resting contact
 PASS run speed reaches target
 PASS release stops ground motion
@@ -15,6 +19,7 @@ PASS safe checkpoint activates
 PASS death respawns at checkpoint
 Route x=176.172 deaths=0 jumps=13 dashes=5 cp=2
 PASS entire course beatable with ordinary inputs and zero deaths
+./extension_tests
 PASS seeds repeat exactly and different seeds vary
 PASS lands on moving one-way platform
 PASS platform carries rider without jitter or drift
@@ -35,6 +40,39 @@ PASS SSH short tap survives same packet release
 PASS SSH focus loss clears controls
 PASS SSH focus regain
 PASS 100 seeded routes completed using normal controls; max deaths=0
+./multiplayer_tests
+PASS snapshot roundtrip, signed coordinates
+PASS reject incompatible protocol
+PASS reject out-of-bounds positions
+PASS reject hidden room bytes
+PASS sequence wrap and reordering
+PASS two real UDP clients exchange ghosts; rooms isolated
+PASS relay assigns identity and carries positions
+PASS remote movement smoothed between snapshots
+PASS respawn snaps immediately
+PASS paused players hide their ghost
+PASS changing seed clears old ghosts
+PASS silent peers expire after three seconds
+PASS clients rejoin after relay expiry
+PASS different courses isolated
+PASS raw UDP test endpoint connects
+PASS relay ignores client-supplied identity
+PASS relay rejects stale UDP snapshot
+PASS relay rejects oversized datagrams
+PASS airborne refill restores dash without cancelling momentum
+PASS refill cooldown prevents infinite immediate recharge
+PASS refill becomes available again
+PASS checkpoint retry restores refill route
+PASS wall jump accepted just after leaving wall
+PASS six-room precision course completable with normal controls
+summit deaths=0 dashes=6
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./terminal_velocity_sdl --smoke
 SDL smoke: key edges, focus pause, held input, renderer; x=12.3351 result=0
-Previously verified integration: actual localhost OpenSSH + remote PTY in --ssh and --ssh-basic modes; successful exits and terminal restoration.
-CachyOS PC installation: rebuilt natively and passed the full make test suite on 2026-11-15.
+
+2026-11-15 additional integration checks:
+PASS tools/test_tui.py: two actual PTYs, relay, yellow ready body, white spent body, no @, cyan live ghost, 2/3 menu selection and terminal restoration.
+PASS MinGW-w64 static x64 Windows game and all four test executables built.
+PASS Windows physics, 100 seeded courses, real Winsock multiplayer and native key-state tests under Wine.
+PASS Windows executable imports only Windows system DLLs; game icon embedded in .rsrc.
+Wine headless could not create native console handles; native console I/O and mode restoration run separately in Windows CI with TV_TEST_CONSOLE=1.
+Physical Windows/Linux keyboard feel and Internet latency are not established by these automated checks.
