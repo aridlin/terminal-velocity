@@ -7,6 +7,8 @@
 namespace iceberg {
 inline constexpr unsigned ContentVersion = 1;
 inline constexpr int DistrictCount = 6;
+// Content registry boundary: increment when another district is fully authored.
+inline constexpr int AuthoredDistrictCount = 2;
 inline constexpr int RoomsPerLeg = 8;
 enum class Language { Polish, English };
 enum class Mode { Campaign, Endless, Trial };
@@ -58,6 +60,7 @@ struct Record {
   int best_treasures = 0;
   bool complete = false;
 };
+struct SeedRecord {uint32_t seed=1;int district=0;unsigned version=ContentVersion;Record record;};
 struct Expedition {
   bool active = false;
   uint32_t seed = 1;
@@ -69,7 +72,7 @@ struct Expedition {
 };
 struct Profile {
   Language language = Language::Polish;
-  bool started = false, finished = false;
+  bool started = false, finished = false, at_content_boundary = false;
   uint32_t seed = 1;
   unsigned content_version = ContentVersion;
   int district = 0, stage = 0, room = 0;
@@ -89,6 +92,7 @@ struct Profile {
   std::array<Record, DistrictCount> trials{};
   int endless_best = 0;
   std::array<Expedition, 2> expeditions;
+  std::vector<SeedRecord> challenges;
   // Persist the assembled itinerary as well as its seed: content additions
   // cannot silently reroll an expedition that somebody has already started.
   std::vector<int> itinerary;
@@ -112,14 +116,17 @@ struct View {
   int district = 0, stage = 0, room = 0, depth = 0, selected = 0;
   int unlocked = 0, outfit = 0;
   int hidden_room = -1, visit_district = -1;
+  int run_district = 0, endless_best = 0;
+  uint32_t seed = 1;
   uint32_t cosmetics = 0;
-  bool map = false, settings = false, confirm_new = false, finished = false;
+  bool map = false, settings = false, confirm_new = false, finished = false, at_content_boundary = false;
   bool save_error = false, can_continue = false;
   bool endless_resume = false, trial_resume = false;
   uint64_t switches = 0;
   uint32_t discoveries = 0;
   std::array<unsigned, 8> quests{};
   std::array<unsigned, 8> quest_counts{};
+  std::array<uint64_t,2> task_items{};
   std::array<Record, DistrictCount> records{}, trials{};
   Dialogue dialogue;
   std::string prompt, notice, room_name;

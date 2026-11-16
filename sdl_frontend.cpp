@@ -67,7 +67,7 @@ std::vector<unsigned> utf8(const std::string &s) {
 }
 class Font {
   FT_Library lib{};
-  FT_Face face{};
+  FT_Face face{}, fallback{};
   struct Glyph {
     SDL_Texture *texture = nullptr;
     int w = 0, h = 0, left = 0, top = 0, advance = 0;
@@ -75,18 +75,20 @@ class Font {
   std::map<std::pair<int, unsigned>, Glyph> cache;
 
 public:
-  bool init(const std::string &path) {
-    return FT_Init_FreeType(&lib) == 0 &&
-           FT_New_Face(lib, path.c_str(), 0, &face) == 0;
+  bool init(const std::string &path,const std::string &fallback_path={}) {
+    if(FT_Init_FreeType(&lib)!=0||FT_New_Face(lib,path.c_str(),0,&face)!=0)return false;
+    if(!fallback_path.empty())FT_New_Face(lib,fallback_path.c_str(),0,&fallback);
+    return true;
   }
   Glyph &glyph(int size, unsigned c) {
     auto key = std::make_pair(size, c);
     auto it = cache.find(key);
     if (it != cache.end())
       return it->second;
-    FT_Set_Pixel_Sizes(face, 0, size);
-    FT_Load_Char(face, c, FT_LOAD_RENDER);
-    auto b = face->glyph;
+    FT_Face selected=fallback&&!FT_Get_Char_Index(face,c)?fallback:face;
+    FT_Set_Pixel_Sizes(selected,0,size);
+    FT_Load_Char(selected,c,FT_LOAD_RENDER);
+    auto b=selected->glyph;
     Glyph g;
     g.w = b->bitmap.width;
     g.h = b->bitmap.rows;
@@ -136,19 +138,65 @@ public:
     if(c.glyph=="█"){box(x,y,cell_w,cell_h,fg);return;}
     auto codepoints=utf8(c.glyph);
     if(codepoints.empty())return;
-    auto &g=glyph(cell_h-3,codepoints.front());
+    unsigned code=codepoints.front();
+    auto rectangle=[&](int left,int top,int width,int height){box(x+left,y+top,width,height,fg);};
+    if(code>=0x2800&&code<=0x28ff) {
+      static const unsigned dots[4][2]={{1,8},{2,16},{4,32},{64,128}};
+      for(int row=0;row<4;++row)for(int col=0;col<2;++col)
+        if((code-0x2800)&dots[row][col])rectangle(col*cell_w/2+1,row*cell_h/4+1,std::max(1,cell_w/4),std::max(1,cell_h/8));
+      return;
+    }
+    if(code>=0x2581&&code<=0x2588){int h=cell_h*int(code-0x2580)/8;rectangle(0,cell_h-h,cell_w,h);return;}
+    if(code>=0x2589&&code<=0x258f){rectangle(0,0,cell_w*int(0x2590-code)/8,cell_h);return;}
+    if(code==0x2580){rectangle(0,0,cell_w,cell_h/2);return;}
+    if(code==0x2590){rectangle(cell_w/2,0,cell_w-cell_w/2,cell_h);return;}
+    if(code==0x2594){rectangle(0,0,cell_w,std::max(1,cell_h/8));return;}
+    if(code==0x2595){rectangle(cell_w-std::max(1,cell_w/8),0,std::max(1,cell_w/8),cell_h);return;}
+    if(code>=0x2591&&code<=0x2593) {
+      for(int py=0;py<cell_h;py+=2)for(int px=0;px<cell_w;px+=2)
+        if(((px/2+py/2*3)%4)<int(code-0x2590))rectangle(px,py,1,1);
+      return;
+    }
+    if(code>=0x2596&&code<=0x259f) {
+      static const int quadrants[]={4,8,1,13,9,7,11,2,6,14};int mask=quadrants[code-0x2596];
+      for(int row=0;row<2;++row)for(int col=0;col<2;++col)
+        if(mask&(1<<(row*2+col)))rectangle(col*cell_w/2,row*cell_h/2,cell_w/2,cell_h/2);
+      return;
+    }
+    int directions=0; // left, right, up, down; joins reach the cell boundary.
+    switch(code) {
+    case 0x2500:directions=3;break;case 0x2502:directions=12;break;
+    case 0x250c:case 0x256d:directions=10;break;
+    case 0x2510:case 0x256e:directions=9;break;
+    case 0x2514:case 0x2570:directions=6;break;
+    case 0x2518:case 0x256f:directions=5;break;
+    case 0x251c:directions=14;break;case 0x2524:directions=13;break;
+    case 0x252c:directions=11;break;case 0x2534:directions=7;break;case 0x253c:directions=15;break;
+    }
+    if(directions) {
+      int mx=cell_w/2,my=cell_h/2;
+      if(directions&1)rectangle(0,my,mx+1,1);
+      if(directions&2)rectangle(mx,my,cell_w-mx,1);
+      if(directions&4)rectangle(mx,0,1,my+1);
+      if(directions&8)rectangle(mx,my,1,cell_h-my);
+      return;
+    }
+    if(code==0x2550){rectangle(0,cell_h/2-2,cell_w,1);rectangle(0,cell_h/2+2,cell_w,1);return;}
+    if(code==0x2551){rectangle(cell_w/2-2,0,1,cell_h);rectangle(cell_w/2+2,0,1,cell_h);return;}
+    auto &g=glyph(cell_h-3,code);
     if(!g.texture)return;
     SDL_SetTextureColorMod(g.texture,fg.r,fg.g,fg.b);
     SDL_SetTextureAlphaMod(g.texture,255);
     double scale=std::min(1.,double(cell_w)/std::max(1,g.w));
-    int width=std::max(1,int(g.w*scale)),height=std::max(1,int(g.h*scale));
-    SDL_Rect rect{x+(cell_w-width)/2,y+cell_h-4-int(g.top*scale),width,height};
+    int width=std::max(1,int(g.w*scale)),height=g.h;
+    SDL_Rect rect{x+(cell_w-width)/2,y+cell_h-4-g.top,width,height};
     SDL_RenderCopy(ren,g.texture,nullptr,&rect);
   }
   ~Font() {
     for (auto &[key, g] : cache)
       if (g.texture)
         SDL_DestroyTexture(g.texture);
+    if(fallback)FT_Done_Face(fallback);
     if (face)
       FT_Done_Face(face);
     if (lib)
@@ -928,8 +976,8 @@ int terminal_window_main(int argc,char **argv) {
   int result=0;
   {
     Font font;
-    auto font_file=audio_directory().parent_path()/"font.ttf";
-    if(!font.init(font_file.string())){std::cerr<<"Cannot load bundled font\n";result=1;}
+    auto font_file=audio_directory().parent_path()/"cell-font.ttf";
+    if(!font.init(font_file.string(),(audio_directory().parent_path()/"font.ttf").string())){std::cerr<<"Cannot load bundled font\n";result=1;}
     else {
       auto options=adventure_options(args);
       std::string screenshot,scene="menu";int maxframes=0;
@@ -942,7 +990,14 @@ int terminal_window_main(int argc,char **argv) {
       options.no_save=args.smoke||!screenshot.empty();options.mute|=options.no_save;
       AdventureSession session(options);
       if(scene=="play")session.state.menu=false;
+      if(options.no_save&&scene=="heat") {
+        session.profile.started=true;session.district=1;session.stage=0;session.load_room();session.state.menu=false;
+      }
+      if(options.no_save&&scene=="route") {
+        session.profile.started=true;session.district=1;session.stage=2;session.room=0;session.load_room();session.state.menu=false;
+      }
       if(scene=="dialogue"){session.state.menu=false;session.talk(iceberg::introduction(0));}
+      if(options.no_save&&scene=="journal"){session.state.menu=false;session.state.journal=true;session.profile.quests[0]=1;session.sync_view();}
       if(args.smoke){session.state.menu=false;maxframes=120;}
       std::array<bool,SDL_NUM_SCANCODES> held{};
       bool focused=true,fullscreen=false;

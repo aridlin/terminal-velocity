@@ -1,0 +1,72 @@
+#define TERMINAL_VELOCITY_NO_TUI_MAIN
+#include "main.cpp"
+#include "iceberg_search.hpp"
+#include <stdexcept>
+void require_quest(bool okay,const char *message){if(!okay)throw std::runtime_error(message);std::cout<<"PASS "<<message<<'\n';}
+Rect reach_area(Rect goal){goal.x-=1.5;goal.y-=.9;goal.w+=3;goal.h+=1.8;return goal;}
+void install_test_room(AdventureSession &game,EngineGrid grid,int stage=2) {
+  game.grid=std::move(grid);game.district=game.grid.district;game.stage=stage;game.room=0;
+  game.state=new_state(game.grid);game.stepper={};game.sync_view();
+}
+void walk_to(AdventureSession &game,Rect goal) {
+  auto path=find_motion_path(game.grid,game.state,goal);
+  require_quest(path.reached,"ordinary-input path found");
+  int deaths=game.state.deaths;
+  for(auto c:path.actions)game.tick(c,.1);
+  require_quest(game.state.deaths==deaths&&game.state.player.rect().intersects(goal),"path replays through production session without teleporting or damage");
+}
+void interact(AdventureSession &game){Controls c;c.interact=true;game.tick(c,1./120);}
+void finish_dialogue(AdventureSession &game){for(int i=0;i<20&&game.state.adventure.dialogue.active();++i){Controls c;c.confirm=true;game.tick(c,1./120);}}
+int main() {
+  try {
+    iceberg::SessionOptions options;options.no_save=true;options.mute=true;options.seed=73;
+    AdventureSession game(options,std::filesystem::temp_directory_path()/"tv-quest-nosave");game.begin_campaign(true);
+    game.profile.story=63;
+    for(int q:{0,1,7})game.profile.quests[size_t(q)]=1;
+    for(int id:{0,4,8,12,16,20,13,17,21}) {
+      install_test_room(game,verified_room(id,73,id/12));
+      Interaction target{};bool found=false;
+      for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Task){target=node;found=true;}
+      require_quest(found,"quest location reserved in assembled room");
+      walk_to(game,reach_area(target.area));interact(game);
+      unsigned count=game.profile.quest_counts[size_t(target.id)];interact(game);
+      require_quest(game.profile.quest_counts[size_t(target.id)]==count,"task interaction cannot duplicate a collected objective");
+      walk_to(game,game.grid.goal);
+      require_quest(game.state.won,"optional branch has a playable return to the main exit");
+    }
+    for(int quest:{0,1,7}) {
+      require_quest(game.profile.quests[size_t(quest)]==2,"all three unique objectives make the task ready");
+      install_test_room(game,iceworld::build_settlement(quest==0?0:1),3);
+      Rect goal{};for(auto node:game.grid.interactions)
+        if(node.kind==InteractionKind::Npc&&node.id==iceberg::Quests[size_t(quest)].owner)goal=reach_area(node.area);
+      walk_to(game,goal);interact(game);finish_dialogue(game);
+      require_quest(game.profile.quests[size_t(quest)]==3&&(game.profile.cosmetics&(1u<<(quest%7+1))),"character turn-in grants its persistent reward");
+    }
+    EngineGrid practice(200,60);practice.adventure_level=true;practice.event_level=false;
+    practice.add_solid_rect(0,50,200,10);practice.spawn_x=4;practice.spawn_y=50-kPlayerHeight;practice.goal={190,45,2,5};
+    install_test_room(game,std::move(practice));game.profile.quests[6]=1;game.profile.quest_counts[6]=0;
+    game.tick({},1./120);
+    for(int attempt=0;attempt<3;++attempt) {
+      Controls c;c.move=1;c.dash_pressed=true;game.tick(c,1./120);
+      c.dash_pressed=false;c.jump_pressed=c.jump_held=true;game.tick(c,1./120);
+      c.jump_pressed=false;for(int tick=0;tick<160&&!game.state.player.grounded;++tick)game.tick(c,1./120);
+    }
+    require_quest(game.profile.quest_counts[6]==3&&game.profile.quests[6]==2,"Kuba counts three real momentum jumps");
+    install_test_room(game,iceworld::build_settlement(0),3);
+    Rect kuba{};for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Npc&&node.id==6)kuba=reach_area(node.area);
+    walk_to(game,kuba);interact(game);finish_dialogue(game);
+    require_quest(game.profile.quests[6]==3,"mastery task can be turned in on the upper settlement street");
+    for(int id=0;id<3;++id) {
+      game.profile.hidden_room=id;install_test_room(game,iceworld::build_hidden(id));
+      Rect note{},door{};
+      for(auto node:game.grid.interactions){if(node.kind==InteractionKind::Note)note=reach_area(node.area);if(node.kind==InteractionKind::Return)door=reach_area(node.area);}
+      walk_to(game,note);interact(game);finish_dialogue(game);
+      require_quest(game.profile.discoveries&(1u<<id),"hidden testimony persists independently of campaign completion");
+      walk_to(game,door);
+      // The unit fixture has no underlying campaign route; return physics is
+      // verified here and the campaign checkpoint restoration has its own test.
+      game.profile.hidden_room=-1;
+    }
+    return 0;
+  }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
+}

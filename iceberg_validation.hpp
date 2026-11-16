@@ -5,6 +5,9 @@ struct RoutePilot {
   size_t target = 1;
   int previous_deaths = 0;
   double dash_delay = 0;
+  bool predictive=false;
+  bool launched=false;
+  double takeoff_y=0;
   Controls controls(const EngineGrid &g,const GameState &s) {
     Controls c;
     auto &p=s.player;
@@ -35,11 +38,48 @@ struct RoutePilot {
     if(p.support>=0)gap=true;
     if(p.grounded&&target<g.route_points.size())
       c.jump_pressed=(gap||rise)&&std::abs(dx)>1;
-    // Horizontal dash near the apex supplies range while preserving a clear
-    // landing above the target platform. No airborne recharge is injected.
+    if(p.grounded){launched=c.jump_pressed;takeoff_y=p.y+kPlayerHeight;}
+    if(!p.grounded&&launched&&takeoff_y-ty>3.6&&p.dash_available&&p.dash_time_left<=0&&p.vy>=-7&&p.vy<0&&
+       p.y+kPlayerHeight>ty-.5&&std::abs(dx)>2) {
+      c.dash_pressed=true;c.aim_y=-1;
+    }
+    // Predict whether the leading foot can reach the actual landing edge.
+    // Using the centre distance alone fails when a vent forces an early jump.
+    double landing_left=tx-2,landing_right=tx+2;
+    int landing_y=int(std::floor(ty));
+    if(g.solid_at(int(std::floor(tx)),landing_y)) {
+      int left=int(std::floor(tx)),right=left;
+      while(left>0&&g.solid_at(left-1,landing_y))--left;
+      while(right<g.width()&&g.solid_at(right,landing_y))++right;
+      landing_left=left;landing_right=right;
+    } else for(const auto &platform:g.platforms) {
+      auto r=platform.at(s.elapsed);
+      if(std::abs(r.y-ty)<1.5&&tx>=r.x-1&&tx<=r.right()+1){landing_left=r.x;landing_right=r.right();break;}
+    }
+    double drop=ty-p.y-kPlayerHeight;
+    double flight=drop>0?(std::sqrt(p.vy*p.vy+2*kGravity*drop)-p.vy)/kGravity+.06:0;
+    double edge_distance=dx>=0?landing_left-p.x-kPlayerWidth:p.x-landing_right;
+    bool needs_range=edge_distance>std::abs(p.vx)*flight-.6;
     if(!p.grounded&&p.dash_available&&p.dash_time_left<=0&&p.vy>=-5&&
-       p.vy<8&&p.y+kPlayerHeight<ty-.25&&std::abs(dx)>9)
+       p.vy<8&&p.y+kPlayerHeight<ty-.25&&(predictive?(std::abs(dx)>4&&needs_range):std::abs(dx)>9))
       c.dash_pressed=true;
+    if(!p.grounded&&!c.dash_pressed&&p.dash_time_left<=0&&std::abs(p.vx)>14&&p.vx*dx>0&&
+       std::abs(dx)<p.vx*p.vx/(2*kAirAccel)+.4)c.move=p.vx>0?-1:1;
+    if(p.grounded)for(const auto &pulse:g.pulses) {
+      double eta=std::max(.45,std::abs(dx)/kMaxRunSpeed);
+      bool target_exposed=tx>=pulse.area.x-2&&tx<=pulse.area.right()+2&&std::abs(ty-pulse.area.bottom())<1;
+      bool standing_clear=!p.rect().intersects(pulse.area);
+      if(target_exposed&&standing_clear&&(pulse.active(s.elapsed+eta)||pulse.active(s.elapsed+eta+.4))) {
+        c.move=0;c.jump_pressed=c.dash_pressed=false;return c;
+      }
+    }
+    if(p.grounded)for(const auto &pulse:g.pulses) {
+      bool approaching=(c.move>0&&pulse.area.x>p.x)||(c.move<0&&pulse.area.x<p.x);
+      if(approaching&&std::abs(pulse.area.x-p.x)<4&&std::abs(pulse.area.bottom()-p.y-kPlayerHeight)<2&&
+         (pulse.active(s.elapsed+.15)||pulse.warning(s.elapsed))) {
+        c.jump_pressed=true;
+      }
+    }
     if(p.grounded)for(const auto &enemy:g.enemies) {
       auto r=enemy.at(s.elapsed);
       if(std::abs(r.y+1-p.y-kPlayerHeight)<2&&std::abs(r.x-p.x)<3)c.jump_pressed=true;
@@ -47,21 +87,28 @@ struct RoutePilot {
     return c;
   }
 };
-struct RouteResult {bool complete=false;int deaths=0,ticks=0;size_t target=0;double x=0,y=0;};
-RouteResult verify_route(const EngineGrid &g,int max_ticks=120*120) {
-  auto state=new_state(g);FixedStepper stepper;RoutePilot pilot;
+struct RouteResult {bool complete=false;int deaths=0,ticks=0,policy=0;size_t target=0;double x=0,y=0;};
+RouteResult verify_route_once(const EngineGrid &g,int max_ticks,bool predictive) {
+  auto state=new_state(g);FixedStepper stepper;RoutePilot pilot;pilot.predictive=predictive;
   int ticks=0;
   for(;ticks<max_ticks&&!state.won&&state.deaths<5;++ticks)
     stepper.advance(state,g,pilot.controls(g,state),1./120);
-  return {state.won,state.deaths,ticks,pilot.target,state.player.x,state.player.y};
+  return {state.won,state.deaths,ticks,int(predictive),pilot.target,state.player.x,state.player.y};
 }
 
+inline RouteResult verify_route(const EngineGrid &g,int max_ticks=120*120) {
+  auto first=verify_route_once(g,max_ticks,false);
+  if(first.complete)return first;
+  return verify_route_once(g,max_ticks,true);
+}
 // Generation has a hard two-candidate bound. Failure falls back to a separately
 // tested authored recovery route; death/resume rebuilds the same candidate.
 inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=false) {
   auto candidate=iceworld::build_room(id,seed,district,expert);
-  if(verify_route(candidate).complete)return candidate;
+  auto result=verify_route(candidate);
+  if(result.complete){candidate.verification_policy=result.policy;return candidate;}
   candidate=iceworld::build_room(id,seed,district,expert,true);
-  if(verify_route(candidate).complete)return candidate;
-  return iceworld::build_room(7,seed,district,false,true);
+  result=verify_route(candidate);
+  if(result.complete){candidate.verification_policy=result.policy;candidate.generation_fallback=1;return candidate;}
+  candidate=iceworld::build_room(7,seed,district,false,true);candidate.generation_fallback=2;return candidate;
 }

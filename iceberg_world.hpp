@@ -49,6 +49,8 @@ inline const std::vector<Pattern> &patterns() {
     {11,{"Ostatnia mila poczty","The post's last mile"},Rhythm::Explore,
       {{3,54,12},{21,51,9},{36,48,8},{50,45,9},{65,42,8},{79,39,9},{94,36,8},{108,33,9},{123,30,12}},
       {{27,42,5},{40,37,5},{54,32,5},{68,27,7},{84,28,5},{98,25,6}}}
+
+#include "iceberg_rooms_heat.inc"
   };
   return values;
 }
@@ -140,6 +142,8 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
   g.route_points.push_back({g.spawn_x, double(first.y)});
   for (size_t i = 0; i < spec.path.size(); ++i) {
     auto p = spec.path[i];
+    // Trials demand accurate landings while retaining the room's silhouette.
+    if(expert&&i>0&&i+1<spec.path.size()&&p.w>=7&&spec.rhythm!=Rhythm::Vertical){++p.x;p.w-=2;}
     if (p.kind == 'm') {
       // Conservative movement envelopes preserve both neighboring landings.
       g.platforms.push_back({{double(p.x), double(p.y), double(p.w), .5}, .6, .5, stable?4.5:3.5+variation.below(21)*.1, stable?0.:variation.below(100)*.01});
@@ -163,20 +167,29 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
     auto p = spec.optional.back();
     int quest = district == 0 ? 0 : district == 1 ? 1 : district == 2 ? 2 : district == 3 ? 4 : 5;
     g.interactions.push_back({{p.x + 1.,p.y - 2.,2,2},InteractionKind::Task,quest,
-      {"Zbadaj przesyłkę","Inspect parcel"},district * 3 + (id % 12) / 4});
+      quest==1?Text{"Otwórz zawór","Open valve"}:quest==2?Text{"Napraw sygnał","Repair signal"}:quest==4?Text{"Zabierz teczkę","Recover file"}:
+      quest==5?Text{"Zabierz nasiona","Take seeds"}:Text{"Zbadaj przesyłkę","Inspect parcel"},quest * 3 + (id % 12) / 4});
+  }
+  if(!spec.optional.empty() && ((district==2&&id%4==2)||(district==1&&id%4==1))) {
+    auto p=spec.optional.back();int quest=district==2?3:7;
+    g.interactions.push_back({{p.x+1.,p.y-2.,2,2},InteractionKind::Task,quest,
+      quest==3?Text{"Sprawdź tabliczkę","Read the plaque"}:Text{"Dostrój głośnik","Tune speaker"},quest*3+(id%12)/4});
   }
   // Catching a fall is a fast retry; no long free fall beneath the room.
   g.add_hazard_rect(0, 62, width, 2);
-  if (expert) {
-    for (size_t i = 2; i + 1 < spec.path.size(); i += 3) {
-      auto p = spec.path[i];
-      if (p.w >= 7 && p.kind != 'm') g.add_hazard_rect(p.x + 1, p.y - 1, 1);
+  if(district==1 && !stable && (spec.rhythm==Rhythm::Timing||spec.rhythm==Rhythm::Precision)) {
+    for(size_t i=3;i+1<spec.path.size();i+=4) {
+      auto p=spec.path[i];if(p.kind=='m'||p.w<10)continue;
+      g.pulses.push_back({{p.x+p.w*.5,p.y-2.5,1.2,2.5},4.2,variation.below(100)*.01});
     }
   }
   return g;
 }
 
+#include "iceberg_sequences.hpp"
+
 inline EngineGrid build_authored(int district, bool finale) {
+  if(district==1)return build_heatworks_sequence(finale);
   EngineGrid g(finale ? 144 : 128, 64);
   g.event_level = false; g.adventure_level = true; g.district = district;
   g.template_id = 72 + district * 2 + int(finale);
@@ -217,6 +230,7 @@ inline EngineGrid build_authored(int district, bool finale) {
 }
 
 inline EngineGrid build_settlement(int district) {
+  if(district==1)return build_heatworks_settlement();
   EngineGrid g(94, 58);
   g.event_level = false; g.adventure_level = true; g.district = district;
   g.template_id = 100 + district; g.room_role = RoomRole::Settlement;

@@ -327,7 +327,7 @@ struct Patrol {
     return {left + (z < w ? z : 2 * w - z), y, 1.1, 1.0};
   }
 };
-enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return };
+enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut };
 struct Interaction {
   Rect area;
   InteractionKind kind;
@@ -337,6 +337,13 @@ struct Interaction {
 };
 struct AirField { Rect area; double ax = 0, ay = 0, period = 0, phase = 0; };
 struct Gate { Rect area; uint64_t flag = 0; };
+struct PulseHazard {
+  Rect area;
+  double period=4,phase=0;
+  double cycle(double t) const {return std::fmod(t/period+phase,1.);}
+  bool active(double t) const {return cycle(t)<.24;}
+  bool warning(double t) const {return cycle(t)>.82;}
+};
 class EngineGrid {
 public:
   EngineGrid(int width, int height)
@@ -374,7 +381,7 @@ public:
       return false;
     }
     for (const auto &gate : gates)
-      if (!(switch_flags & gate.flag) && gate.area.intersects({double(col),double(row),1,1}))
+      if ((switch_flags & gate.flag) != gate.flag && gate.area.intersects({double(col),double(row),1,1}))
         return true;
     return solid_[index(col, row)];
   }
@@ -422,12 +429,14 @@ public:
 
   bool event_level = true;
   bool adventure_level = false;
+  int verification_policy = 0, generation_fallback = 0;
   int district = 0, template_id = -1;
   iceberg::RoomRole room_role = iceberg::RoomRole::Traverse;
   iceberg::Text room_name;
   std::vector<std::pair<double,double>> checkpoint_points, route_points;
   std::vector<Interaction> interactions;
   std::vector<AirField> air_fields;
+  std::vector<PulseHazard> pulses;
   std::vector<Gate> gates;
   uint64_t switch_flags = 0;
   bool summit = false;
@@ -1019,6 +1028,9 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
         }
       }
     }
+  for(const auto &pulse:g.pulses)if(pulse.active(s.elapsed)&&p.rect().intersects(pulse.area)) {
+    ++s.deaths;reset_player(s);return;
+  }
   // A carried player must never remain embedded in static terrain.
   for (auto solid : g.solid_rects_near(p.rect()))
     if (p.rect().intersects(solid)) {
@@ -1190,10 +1202,11 @@ void update(GameState &state, const EngineGrid &grid, Controls input,
 
 void update_camera(GameState &state, const EngineGrid &grid, int view_width,
                    int play_height, double aspect, double dt) {
-  const double visible_w = view_width * kWorldUnitsPerRenderCol;
-  const double visible_h = play_height * aspect * kWorldUnitsPerRenderCol;
+  const double scale=grid.adventure_level?.40:kWorldUnitsPerRenderCol;
+  const double visible_w = view_width * scale;
+  const double visible_h = play_height * aspect * scale;
   double target_x = state.player.x - visible_w * 0.42 + state.player.vx * 0.15;
-  double target_y = state.player.y - visible_h * 0.55 + state.player.vy * 0.065;
+  double target_y = state.player.y - visible_h * (grid.adventure_level?.68:.55) + state.player.vy * 0.065;
   target_x = clamp(target_x, 0.0, std::max(0.0, grid.width() - visible_w));
   target_y = clamp(target_y, 0.0, std::max(0.0, grid.height() - visible_h));
   const double blend = 1.0 - std::exp(-dt * 10.5);
@@ -1779,14 +1792,14 @@ public:
   RenderGrid(const EngineGrid &grid, const GameState &state, int rows, int cols,
              double aspect)
       : grid_(grid), state_(state), rows_(std::max(1, rows)),
-        cols_(std::max(1, cols)), aspect_(aspect),
+        cols_(std::max(1, cols)), aspect_(aspect), scale_(grid.adventure_level?.40:kWorldUnitsPerRenderCol),
         play_rows_(std::max(1, rows - 7)) {
     buffer_.assign(rows_, std::vector<Cell>(cols_));
   }
   void draw() {
     if (rows_ < 24 || cols_ < 76) {
       text(1, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Powiększ terminal do co najmniej 76 × 24.","Resize the window to at least 76 × 24."):"Powiększ terminal do co najmniej 76 × 24.");
-      text(3, 2, "Zalecane: 110 × 34. Q — wyjście.");
+      text(3, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Zalecane: 110 × 34. Q — wyjście.","Recommended: 110 × 34. Q — quit."):"Zalecane: 110 × 34. Q — wyjście.");
       flush();
       return;
     }
@@ -1820,7 +1833,7 @@ public:
       auto r = platform.at(state_.elapsed);
       auto [x, y] = screen(r.x, r.y);
       text(y, x,
-           std::string(std::max(1, int(r.w / kWorldUnitsPerRenderCol)), '='),
+           std::string(std::max(1, int(r.w / scale_)), '='),
            Color::Gold);
       text(y - 1, x, "↔", Color::Gold);
     }
@@ -1948,7 +1961,7 @@ private:
   const EngineGrid &grid_;
   const GameState &state_;
   int rows_, cols_;
-  double aspect_;
+  double aspect_,scale_;
   int play_rows_;
   std::vector<std::vector<Cell>> buffer_;
   static std::vector<std::string> glyphs(const std::string &s) {
@@ -1984,19 +1997,19 @@ private:
     text(row, (cols_ - int(glyphs(s).size())) / 2, s, c);
   }
   std::pair<int, int> screen(double x, double y) const {
-    return {int(std::floor((x - state_.camera_x) / kWorldUnitsPerRenderCol)),
+    return {int(std::floor((x - state_.camera_x) / scale_)),
             4 + int(std::floor((y - state_.camera_y) /
-                               (aspect_ * kWorldUnitsPerRenderCol)))};
+                               (aspect_ * scale_)))};
   }
   Cell world_cell(int x, int y) const {
-    double wx = state_.camera_x + x * kWorldUnitsPerRenderCol,
-           wy = state_.camera_y + y * aspect_ * kWorldUnitsPerRenderCol;
+    double wx = state_.camera_x + x * scale_,
+           wy = state_.camera_y + y * aspect_ * scale_;
     unsigned solid = 0, edge = 0, hazard = 0, body = 0, goal = 0, ghost = 0,
              trail = 0;
     for (int dy = 0; dy < 4; ++dy)
       for (int dx = 0; dx < 2; ++dx) {
-        double a = wx + (dx + .5) * kWorldUnitsPerRenderCol / 2,
-               b = wy + (dy + .5) * aspect_ * kWorldUnitsPerRenderCol / 4;
+        double a = wx + (dx + .5) * scale_ / 2,
+               b = wy + (dy + .5) * aspect_ * scale_ / 4;
         int col = int(std::floor(a)), row = int(std::floor(b));
         unsigned dot = braille_dot(dx, dy);
         if (state_.player.rect().intersects({a, b, .01, .01}))
@@ -2019,7 +2032,7 @@ private:
         if (grid_.goal.intersects({a, b, .01, .01}))
           goal |= dot;
       }
-    if (body)
+    if (body && !grid_.adventure_level)
       return braille_cell(
           body, state_.player.dash_available ? Color::Gold : Color::Player,
           true);
@@ -2029,14 +2042,19 @@ private:
       return braille_cell(trail, Color::Trail);
     if (ghost && !solid)
       return braille_cell(ghost, Color::Ghost);
-    if (goal)
+    if (goal && !grid_.adventure_level)
       return braille_cell(goal, Color::Gold);
     if (edge)
       return braille_cell(solid, Color::Player);
     if (solid) {
       if (grid_.adventure_level) {
         auto c=solid==255?Cell{"█",Color::Solid}:braille_cell(solid,Color::Solid);
-        c.rgb=iceberg::Districts[size_t(grid_.district)].stone;
+        const auto &district=iceberg::Districts[size_t(grid_.district)];
+        c.rgb=district.stone;
+        // Sparse masonry/plate seams retain a solid collision silhouette.
+        if(solid==255 && (int(std::floor(wx*2))+int(std::floor(wy))*3)%17==0) {
+          c.glyph=grid_.district==1?"▥":"▓";
+        }
         return c;
       }
       Color terrain = grid_.chapter == 1   ? Color::Moss

@@ -10,8 +10,9 @@ int main(int argc,char **argv) {
   try {
     int seeds=argc>1?std::max(1,std::atoi(argv[1])):100;
     for(int seed=0;seed<seeds;++seed) {
-      auto route=iceworld::make_itinerary(unsigned(seed),0);
-      if(route!=iceworld::make_itinerary(unsigned(seed),0))throw std::runtime_error("nondeterministic itinerary");
+      int biome=seed%int(iceworld::patterns().size()/12);
+      auto route=iceworld::make_itinerary(unsigned(seed),biome);
+      if(route!=iceworld::make_itinerary(unsigned(seed),biome))throw std::runtime_error("nondeterministic itinerary");
       for(size_t i=1;i<route.size();++i)if(route[i]==route[i-1]||!iceworld::connects(iceworld::pattern(route[i-1]),iceworld::pattern(route[i])))throw std::runtime_error("repeated adjacent room");
     }
     check(true,"structural seed determinism and adjacency checks");
@@ -25,14 +26,19 @@ int main(int argc,char **argv) {
     }
     check(failures==0,"all room templates traversed with ordinary inputs");
     int traversals=argc>2?std::max(0,std::atoi(argv[2])):0;
+    bool expert=argc>3&&std::string(argv[3])=="expert";
+    int stable_fallbacks=0,recovery_fallbacks=0;
     for(int n=0;n<traversals;++n) {
       const auto &p=iceworld::patterns()[size_t(n)%iceworld::patterns().size()];
-      auto g=iceworld::build_room(p.id,iceberg::mix(unsigned(n)),p.id/12);
+      auto g=verified_room(p.id,iceberg::mix(unsigned(n)),p.id/12,expert);
+      stable_fallbacks+=g.generation_fallback==1;recovery_fallbacks+=g.generation_fallback==2;
+      if(g.generation_fallback)std::cout<<"FALLBACK seed="<<g.seed<<" requested="<<p.id<<" actual="<<g.template_id<<" kind="<<g.generation_fallback<<'\n';
       auto result=verify_route(g);
       if(!result.complete) {
         std::cerr<<"FAILED seed="<<iceberg::mix(unsigned(n))<<" template="<<p.id<<" target="<<result.target<<'\n';++failures;
       }
     }
+    std::cout<<"GENERATION routes="<<traversals<<" expert="<<expert<<" stable_fallbacks="<<stable_fallbacks<<" recovery_fallbacks="<<recovery_fallbacks<<'\n';
     check(failures==0,"distributed generated routes traversed with ordinary inputs");
     EngineGrid flat(80,60);flat.adventure_level=true;flat.event_level=false;
     flat.add_solid_rect(0,50,80,10);flat.spawn_x=4;flat.spawn_y=50-kPlayerHeight;flat.goal={75,45,2,5};
@@ -52,12 +58,17 @@ int main(int argc,char **argv) {
     auto rising=new_state(lift);rising.player.support=0;rising.player.grounded=true;
     input={};input.jump_pressed=input.jump_held=true;physics={};physics.advance(rising,lift,input,1./120);
     check(rising.player.vy<-26&&rising.player.momentum_left>0,"rising platform contributes real launch momentum");
+    iceberg::SaveStore old_save("tests/fixtures/iceberg-v2.dat");iceberg::Profile migrated;
+    check(old_save.load(migrated)&&migrated.story==291&&migrated.room==4&&migrated.expeditions[0].seed==821,
+      "published TVICE2 campaign migrates without losing story or expedition state");
     auto path=std::filesystem::temp_directory_path()/"terminal-velocity-iceberg-test.dat";
     iceberg::SaveStore save(path);iceberg::Profile profile;
     profile.started=true;profile.seed=73;profile.stage=2;profile.room=4;
     profile.itinerary=iceworld::make_itinerary(73,0);
     profile.story=0x123;profile.quests[0]=2;profile.quest_counts[0]=3;profile.task_items[0]=7;
     profile.checkpoint=2;profile.collected=17;
+    profile.challenges.push_back({73,0,iceberg::ContentVersion,{99,0,12,true}});
+    profile.challenges.push_back({74,0,iceberg::ContentVersion,{88,1,14,true}});
     auto &exp=profile.expeditions[0];exp.active=true;exp.seed=821;exp.depth=13;exp.room=5;exp.seconds=100;
     exp.itinerary=iceworld::make_itinerary(821,0,iceberg::RoomsPerLeg);exp.checkpoint=1;exp.switches=2;
     check(save.save(profile),"campaign save written and verified");
@@ -66,6 +77,17 @@ int main(int argc,char **argv) {
       "route, story, task and checkpoint survive reload");
     check(loaded.expeditions[0].seed==821&&loaded.expeditions[0].depth==13&&loaded.expeditions[0].itinerary==exp.itinerary,
       "expedition identity and checkpoint stored independently");
+    check(loaded.challenges.size()==2&&loaded.challenges[0].record.best_seconds==99&&loaded.challenges[1].seed==74,"seeded challenge records stay isolated by route identity");
+    // A correctly checksummed save from a later release must not be replaced,
+    // including when an older healthy backup happens to be available.
+    {std::ifstream in(path);std::string bytes((std::istreambuf_iterator<char>(in)),{});
+      auto future=bytes;future.replace(0,6,"TVICE9");
+      {std::ofstream out(path);out<<future;}
+      iceberg::SaveStore newer(path);iceberg::Profile ignored;
+      newer.load(ignored);
+      check(newer.protected_future&&!newer.save(profile),"unknown future format is protected against overwrite");
+      {std::ofstream out(path);out<<bytes;}
+    }
     profile.room=5;check(save.save(profile),"replacement save retains recovery copy");
     {std::ofstream out(path);out<<"damaged";}
     check(save.load(loaded)&&save.recovered&&loaded.room==4,"damaged primary recovers prior good save");

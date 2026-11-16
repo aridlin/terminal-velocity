@@ -37,7 +37,7 @@ inline const std::array<Quest,8> Quests{{
  {{"Odpis oryginału","Copy of the original"},{"Odzyskaj trzy teczki z zalanych półek archiwum.","Recover three files from the flooded archive shelves."},{"Dodatkowe zeznanie w dzienniku","An additional testimony in the journal"},4,3,3},
  {{"Na przyszłą wiosnę","For next spring"},{"Zbierz trzy kapsuły nasienne w górnych szklarniach.","Collect three seed capsules in the upper greenhouses."},{"Zielony płaszcz i ogród w przystani","A green coat and a harbor garden"},5,4,3},
  {{"Nie skrót, tylko doświadczenie","Experience, not a shortcut"},{"Wykonaj trzy skoki ze zrywu na trasie.","Perform three dash jumps on the route."},{"Próba mistrzowska Kuby","Kuba's mastery trial"},6,0,3},
- {{"Próba mikrofonu","Microphone test"},{"Dostrój trzy głośniki przy bocznych drogach.","Tune three speakers along the side routes."},{"Archiwalne komunikaty i emblemat","Archived announcements and an emblem"},7,3,3}
+ {{"Próba mikrofonu","Microphone test"},{"Dostrój trzy głośniki przy bocznych drogach.","Tune three speakers along the side routes."},{"Archiwalne komunikaty i emblemat","Archived announcements and an emblem"},7,1,3}
 }};
 
 inline std::vector<DialogueLine> introduction(int district) {
@@ -97,7 +97,18 @@ inline std::vector<DialogueLine> conclusion(int district) {
   }
 }
 inline std::vector<DialogueLine> small_talk(int npc, unsigned quest_state) {
-  if (quest_state == 3) return {{npc,{"Dobra robota. Nie każda droga musi prowadzić wyżej. Czasem warto wrócić do ludzi.","Good work. Not every road needs to go higher. Sometimes it's worth coming back to people."}}};
+  if(quest_state==3) {
+    static const Text after[]{
+      {"W okienku znów stoi kolejka. Nigdy nie sądziłam, że powiem to z ulgą. Herbata jest po lewej. Reklamacje też, ale herbatę polecam bardziej.","There's a queue at the counter again. I never thought I'd say that with relief. Tea is on the left. So are complaints, but I recommend the tea."},
+      {"Założyłem tabliczkę: działa. Grażyna kazała dopisać: na odpowiedzialność użytkownika. Ciepło na szczęście nie umie czytać.","I put up a sign: working. Grażyna made me add: at the user's own risk. Fortunately heat can't read."},
+      {"Pierwszy kurs miał osiem minut opóźnienia. Pasażerowie bili brawo. Chyba nigdy już nie będę miał lepszego dnia w pracy.","The first service was eight minutes late. The passengers applauded. I may never have a better day at work."},
+      {"Na dachu suszą koce. Oficjalnie to niedozwolona zmiana funkcji powierzchni wspólnej. Nieoficjalnie ja je tam zaniosłam.","They're drying blankets on the roof. Officially, that's an unauthorised change of common-space use. Unofficially, I carried them up there."},
+      {"Otworzyłam czytelnię. Ktoś przyniósł zdjęcie rodziny. Pierwszy raz od dawna podpis pod zdjęciem był dłuższy niż numer teczki.","I opened the reading room. Someone brought a family photograph. For the first time in ages, its caption was longer than the file number."},
+      {"W przystani wykiełkowała fasola. Najpierw ją zmierzyli, potem sporządzili protokół. Fasola w tym czasie urosła jeszcze trochę.","The beans sprouted in the harbor. First they measured them, then filed a report. The beans grew a little more meanwhile."},
+      {"Ścigajmy się jeszcze kiedyś. Ale najpierw usiądźmy. Można robić obie rzeczy w życiu; sprawdziłem regulamin.","Let's race again sometime. But first let's sit down. You're allowed to do both in life; I checked the regulations."},
+      {"KOMUNIKAT NIEARCHIWALNY. PAN WITEK PROSI O ZWROT KUBKA. PAN WITEK ZAZNACZA, ŻE KUBEK NIE JEST CZĘŚCIĄ INSTALACJI.","NON-ARCHIVED NOTICE. MR WITEK REQUESTS THE RETURN OF HIS MUG. MR WITEK STRESSES THAT THE MUG IS NOT PART OF THE INSTALLATION."}
+    };return {{npc,after[std::clamp(npc,0,7)]}};
+  }
   switch(npc) {
   case 0:return {{0,{"Trzy worki pocztowe zostały na bocznych pomostach. Suche listy są na wagę złota. Mokre też, tylko więcej ważą.","Three mailbags were left on the side boardwalks. Dry letters are worth their weight in gold. Wet ones too, but they weigh more."}}};
   case 1:return {{1,{"Boczne zawory tkwią za głównymi pomostami. Otwórz trzy. Narzędzie uniwersalne? E. Wreszcie ktoś je ustandaryzował.","The side valves are beyond the main platforms. Open three. Universal tool? E. Someone finally standardized it."}}};
@@ -114,9 +125,9 @@ inline std::vector<DialogueLine> small_talk(int npc, unsigned quest_state) {
 namespace iceberg {
 inline std::vector<DialogueLine> hidden_testimony(int id) {
   if(id==0)return {
-    {0,{"Na kartce jest dziecięcy plan mieszkania. Kuchnia, pokój mamy, schowek. Za ścianą schowka dorysowano jeszcze jeden pokój. Bez drzwi.","The paper shows a child's apartment plan. Kitchen, Mum's room, cupboard. Another room is drawn behind the cupboard wall. No door."}},
-    {0,{"Na odwrocie: Jeśli ogłoszą próbę syreny, nie zamykaj okna. Babcia nie słyszy. Numer mieszkania poprawiano tak długo, aż papier pękł.","On the back: If they announce a siren test, don't close the window. Grandma can't hear. The apartment number was corrected until the paper tore."}},
-    {0,{"Podpis konserwatora: Głośnik szkoleniowy, górny pomost. Sygnał mieszkańców nadal wraca tą linią. Nie kasować przed odczytem.","Maintenance note: Training loudspeaker, upper landing. The residents' signal still returns along that line. Do not erase before reading."}}
+    {-1,{"Na kartce jest dziecięcy plan mieszkania. Kuchnia, pokój mamy, schowek. Za ścianą schowka dorysowano jeszcze jeden pokój. Bez drzwi.","The paper shows a child's apartment plan. Kitchen, Mum's room, cupboard. Another room is drawn behind the cupboard wall. No door."}},
+    {-1,{"Na odwrocie: Jeśli ogłoszą próbę syreny, nie zamykaj okna. Babcia nie słyszy. Numer mieszkania poprawiano tak długo, aż papier pękł.","On the back: If they announce a siren test, don't close the window. Grandma can't hear. The apartment number was corrected until the paper tore."}},
+    {-1,{"Podpis konserwatora: Głośnik szkoleniowy, górny pomost. Sygnał mieszkańców nadal wraca tą linią. Nie kasować przed odczytem.","Maintenance note: Training loudspeaker, upper landing. The residents' signal still returns along that line. Do not erase before reading."}}
   };
   if(id==1)return {
     {7,{"Próba komunikatu. Mieszkańcy klatki jedenastej proszeni są o pozostanie w mieszkaniach. To tylko próba. To tylko próba.","Announcement test. Residents of stairwell eleven are asked to remain in their apartments. This is only a test. This is only a test."}},
@@ -125,10 +136,71 @@ inline std::vector<DialogueLine> hidden_testimony(int id) {
     {7,{"Linia kończy się nad kołem wyrównawczym. Proszę sprawdzić górną platformę przepompowni. Nie rozłączać mnie, zanim ktoś odbierze.","The line ends above the equalization wheel. Please check the pumping station's upper platform. Do not disconnect me before someone answers."}}
   };
   return {
-    {4,{"Protokół mówi, że zamknięcie miało potrwać siedem minut. Pierwszy podpis jest stanowczy. Drugi drży. Pod trzecim zostało tylko wgłębienie długopisu.","The log says the closure was meant to last seven minutes. The first signature is firm. The second shakes. Of the third, only the pen's impression remains."}},
-    {4,{"Mieszkańcy odpowiadali przez czujniki drgań w rurach. System zapisywał ich jako zakłócenia. Potem ktoś zmienił kategorię: odgłosy eksploatacyjne.","Residents replied through vibration sensors in the pipes. The system logged them as interference. Then someone changed the category: operational noise."}},
+    {-1,{"Protokół mówi, że zamknięcie miało potrwać siedem minut. Pierwszy podpis jest stanowczy. Drugi drży. Pod trzecim zostało tylko wgłębienie długopisu.","The log says the closure was meant to last seven minutes. The first signature is firm. The second shakes. Of the third, only the pen's impression remains."}},
+    {-1,{"Mieszkańcy odpowiadali przez czujniki drgań w rurach. System zapisywał ich jako zakłócenia. Potem ktoś zmienił kategorię: odgłosy eksploatacyjne.","Residents replied through vibration sensors in the pipes. The system logged them as interference. Then someone changed the category: operational noise."}},
     {7,{"Ostatnia odpowiedź nie przyszła z zamkniętej klatki. Przyszła stąd. Siedem minut po zabraniu ostatniego pracownika.","The last reply did not come from the sealed stairwell. It came from here. Seven minutes after the last worker was taken out."}},
-    {4,{"Na wewnętrznej stronie drzwi ktoś wyrył: Nie trzeba otwierać. Trzeba pamiętać. Zabierasz kopię protokołu. Oryginał zostaje.","Someone scratched the inside of the door: You don't have to open it. You have to remember. You take a copy of the log. The original stays."}}
+    {-1,{"Na wewnętrznej stronie drzwi ktoś wyrył: Nie trzeba otwierać. Trzeba pamiętać. Zabierasz kopię protokołu. Oryginał zostaje.","Someone scratched the inside of the door: You don't have to open it. You have to remember. You take a copy of the log. The original stays."}}
   };
+}
+}
+
+namespace iceberg {
+inline std::vector<DialogueLine> homecoming(int district,int leg) {
+  switch(district) {
+  case 0:
+    if(leg==0)return {
+      {0,{"Pierwszy kabel odpowiada. Trzydzieści sześć mieszkań znów wie, która jest godzina. Niestety wszystkie myślą, że szósta rano.","The first cable responds. Thirty-six homes know the time again. Unfortunately they all think it's six in the morning."}},
+      {6,{"Widziałem prom pod lodem. Ładownia jest sucha, ale kabina siedzi w bryle jak mucha w bursztynie. Ktoś nadal zapala tam lampę.","I saw the ferry under the ice. Its hold is dry, but the cabin sits in a block like a fly in amber. Someone still lights a lamp there."}},
+      {0,{"To Bogdan. Pilnuje tramwajów, promów i ostatnich resztek rozkładu. Teraz przejdź przez nabrzeże do regulatora odpływu.","That's Bogdan. He guards the trams, the ferries, and the last scraps of the timetable. Cross the quay to the drainage regulator next."}}};
+    return {
+      {0,{"Woda przestała rosnąć. Sąsiad z parteru odwołał rezerwację na mieszkanie w łódce.","The water stopped rising. The ground-floor neighbour cancelled his reservation for an apartment in a boat."}},
+      {6,{"Przy przepompowni pracuje stary automat kontrolny. Nie rozpoznaje nowej przepustki. Przeskocz go albo użyj zrywu, kiedy będzie blisko.","An old inspection drone is working by the pumping station. It doesn't recognise the new pass. Jump over it or dash when it's close."}},
+      {0,{"Trzeci odcinek prowadzi do głównego koła. Otwórz je ręcznie. Witek odbierze cię po drugiej stronie, jeśli jeszcze pamięta, co to znaczy odbierać pocztę.","The third route leads to the main wheel. Open it by hand. Witek will meet you on the other side, if he still remembers what receiving mail means."}}};
+  case 1:
+    if(leg==0)return {{1,{"Ciśnienie wróciło. Przyłożyłem ucho do rury i usłyszałem sąsiada. Twierdzi, że ma zimny kaloryfer. Kanał informacyjny działa.","The pressure's back. I put my ear to the pipe and heard a neighbour. He says his radiator is cold. The information channel works."}},
+      {7,{"OBIEG POMOCNICZY: SPRAWNY. OBIEG ODPOWIEDZIALNOŚCI: ZAMKNIĘTY. WNIOSEK PRZEKAZANO DO INNEGO DZIAŁU.","AUXILIARY CIRCUIT: OPERATIONAL. RESPONSIBILITY CIRCUIT: CLOSED. REQUEST FORWARDED TO ANOTHER DEPARTMENT."}}};
+    return {{1,{"Pod izolacją znalazłem plomby sprzed dwudziestu lat. Ktoś odcinał górę już wcześniej. I zrobił to bardzo starannie.","I found twenty-year-old seals under the insulation. Someone cut off the upper levels before. And they did it very carefully."}},
+      {1,{"Nie będę zgadywał, po co. Najpierw otwórz wyjście. Potem zapytamy ludzi, którzy zachowali papier.","I won't guess why. Open the outlet first. Then we'll ask the people who kept the paperwork."}}};
+  case 2:
+    if(leg==0)return {{3,{"Połączyłeś dwie ulice. Mieszkańcy zdążyli już pokłócić się o nazwę wspólnego przystanku. To dobry znak.","You connected two streets. The residents have already argued about the name of the shared stop. That's a good sign."}},
+      {2,{"Na pierwszym kursie pojadą leki. Na drugim dzieci do ogrodu. Na trzecim ja, jeśli ktoś mnie wreszcie zastąpi.","The first service carries medicine. The second takes the children to the garden. The third carries me, if someone finally covers my shift."}}};
+    return {{3,{"Mam listę lokali. Archiwum ma drugą. Różnią się o całą klatkę schodową. Nie, to nie jest problem zaokrąglenia.","I have a list of apartments. The archive has another. They differ by an entire stairwell. No, this is not a rounding issue."}},
+      {2,{"Jedź do Ireny. Znasz już drogę przez przewieszone ulice. Dalej będzie cicho, ale to wciąż czyjeś miasto.","Go to Irena. You know the suspended streets now. It gets quiet beyond them, but it's still somebody's city."}}};
+  case 3:
+    if(leg==0)return {{4,{"Plan instalacji ma sześć warstw. Pięć pokazuje rury. Szósta pokazuje, kto kazał udawać, że ich nie ma.","The installation plan has six layers. Five show pipes. The sixth shows who ordered everyone to pretend they weren't there."}},
+      {7,{"KOMUNIKAT ARCHIWALNY. W CZASIE AWARII WSZYSCY MIESZKAŃCY ZOSTALI EWAKUOWANI. ŹRÓDŁO: KOMUNIKAT ARCHIWALNY.","ARCHIVED NOTICE. ALL RESIDENTS WERE EVACUATED DURING THE EMERGENCY. SOURCE: ARCHIVED NOTICE."}}};
+    return {{4,{"Mam zeznania ratowników. Zamknięcie obiegu uratowało dolne piętra. Ale potem nikt nie wrócił, żeby sprawdzić górę. Wygodniej było zamknąć również sprawę.","I found the rescuers' testimony. Closing the circuit saved the lower levels. But nobody returned to check upstairs. It was easier to close the case too."}},
+      {4,{"Nie poprawimy tamtego dnia. Możemy przestać go ukrywać. Kopie pojadą do każdej dzielnicy razem z ciepłem.","We can't repair that day. We can stop hiding it. Copies will travel to every district along with the heat."}}};
+  case 4:
+    if(leg==0)return {{5,{"Pierwsza szklarnia oddycha. Nie wiem, czy wiesz, ale pomidor nie ma obowiązku ratować ludzkości. Ten akurat się zgodził.","The first greenhouse is breathing. You may not know this, but a tomato has no obligation to save humanity. This one agreed."}},
+      {0,{"Na dole znowu pachnie ziemią. Ludzie pytają, czy to przeciek. Powiedziałam, że tym razem to przyszłość.","It smells of soil downstairs again. People ask if it's a leak. I told them this time it's the future."}}};
+    return {{5,{"Korzenie wchodzą w szczeliny, których nie ma na planach. Poszły za ciepłem. Gdyby urzędnicy robili to samo, oszczędzilibyśmy sporo papieru.","The roots enter cracks that aren't on the plans. They followed the warmth. If officials did the same, we'd save a lot of paper."}},
+      {5,{"Przy wyjściu został drugi automat. Omijaj jego ramię. Za nim jest przewód do Korony i pierwszy prawdziwy wiatr.","The second drone is by the outlet. Avoid its arm. Beyond it is the pipe to the Crown, and the first real wind."}}};
+  default:
+    if(leg==0)return {{6,{"Ścigałem się z tobą, żeby nie myśleć o tym, jak wysoko jesteśmy. Teraz jesteśmy za wysoko, żeby to działało.","I raced you so I wouldn't think about how high we were. Now we're too high for that to work."}},
+      {6,{"Pójdę sprawdzić boczny pomost. Ty trzymaj główną linię. Tym razem naprawdę nie musisz mnie doganiać.","I'll check the side landing. You stay on the main line. This time you really don't need to catch me."}}};
+    return {{4,{"Wszystkie dzielnice potwierdziły odbiór. Nie zostało już jedno biuro, które może schować dokumenty. Każdy ma własną kopię.","Every district acknowledged receipt. There's no single office left that can hide the documents. Everyone has a copy."}},
+      {6,{"Widzisz ten jasny pas? To nie lampa. Ja też przez chwilę myślałem, że trzeba ją wymienić.","See that bright strip? It isn't a lamp. For a moment I also thought we'd have to replace it."}}};
+  }
+}
+inline std::vector<DialogueLine> task_thanks(int quest) {
+  switch(quest) {
+  case 0:return {{0,{"Ten list leżał w wodzie czternaście lat. Adresat nadal mieszka naprzeciwko. Nie pytaj, jak to wpisać w termin doręczenia.","This letter spent fourteen years in the water. The recipient still lives opposite. Don't ask how to enter that in the delivery schedule."}},
+    {0,{"Weź szalik. Został w okienku, kiedy ostatni raz ktoś przyszedł tu bez pośpiechu. Teraz wybierzesz go w ustawieniach stroju.","Take this scarf. It was left at the counter the last time someone came here without rushing. You can select it in the outfit settings now."}}};
+  case 1:return {{1,{"Wszystkie trzy puszczają. Słyszysz? Nic nie gwiżdże. Najładniejszy dźwięk w tej robocie.","All three are releasing. Hear that? Nothing's whistling. Best sound in this job."}},
+    {1,{"Otworzyłem ci wejście serwisowe na początku odcinków ciepłowni. Ominiesz kilka pomostów, kiedy będziesz wracać.","I opened the service entrance at the start of the heating works routes. You can skip a few landings when you return."}}};
+  case 2:return {{2,{"Zielone światło. Po tylu latach wygląda jak błąd. Zaraz puszczę kurs między dzielnicami; wybierzesz przystanek na mapie.","A green light. After all these years it looks like an error. I'll start the inter-district service; choose a stop on the map."}},
+    {2,{"Bilet zachowaj. Nie dlatego, że sprawdzam. Po prostu jest na nim dzisiejsza data.","Keep the ticket. Not because I'll check. It just has today's date on it."}}};
+  case 3:return {{3,{"Trzy mieszkania, trzy nazwiska. Formularz nie przewiduje takiego sukcesu. Dopiszę rubrykę ręcznie.","Three apartments, three names. The form doesn't allow for this much success. I'll add a field by hand."}},
+    {3,{"Klucz do dachu jest twój. Pelargonie proszę omijać. Nawet podczas bohaterskiego czynu.","The roof key is yours. Please avoid the geraniums. Even during heroic acts."}}};
+  case 4:return {{4,{"W jednej teczce była prośba o dodatkowy koc. Podpisano ją po dacie rzekomej ewakuacji. Zostawiłam odpis w twoim dzienniku.","One file contained a request for an extra blanket. It was signed after the supposed evacuation. I left a copy in your journal."}},
+    {4,{"Dziękuję, że przyniosłeś papier, a nie odpowiedź, którą najłatwiej byłoby nam przyjąć.","Thank you for bringing the paper, rather than the answer we'd find easiest to accept."}}};
+  case 5:return {{5,{"Trzy kapsuły. Na pierwszej napiszę: cebula. Na drugiej: fasola. Na trzeciej: nie wyrzucać, nawet jeśli wygląda jak błąd.","Three capsules. I'll label the first: onion. The second: beans. The third: do not discard, even if it looks like a mistake."}},
+    {5,{"Helena dała mi skrawek nabrzeża. Posadzimy tam mały ogród. A dla ciebie mam zielony płaszcz, żebyś nie straszył sadzonek.","Helena gave me a little patch of quay. We'll plant a garden there. I have a green coat for you, so you don't frighten the seedlings."}}};
+  case 6:return {{6,{"Dobra. Oficjalnie jesteś szybki. Nieoficjalnie byłem szybszy, kiedy nikt nie patrzył.","Fine. Officially, you're fast. Unofficially, I was faster when nobody was looking."}},
+    {6,{"Próby mistrzowskie masz w menu. Osobno liczymy czas, powroty i znajdźki. Nie musisz robić wszystkiego w jednym biegu.","Mastery trials are in the menu. Time, retries, and treasures have separate records. You don't have to do everything in one run."}}};
+  default:return {{7,{"TEST ZAKOŃCZONY. GŁOŚNIKI SPRAWNE. DODATKOWY KOMUNIKAT: DZISIEJSZE DZIAŁANIE POMOGŁO LUDZIOM. BRAK FORMULARZA DLA TEGO KOMUNIKATU.","TEST COMPLETE. SPEAKERS OPERATIONAL. ADDITIONAL NOTICE: TODAY'S ACTION HELPED PEOPLE. NO FORM EXISTS FOR THIS NOTICE."}},
+    {7,{"DZIĘKUJĘ. TO SŁOWO BYŁO W PAMIĘCI OD DAWNA. NIE MIAŁEM WŁAŚCIWEJ OKAZJI.","THANK YOU. THAT WORD HAS BEEN IN MEMORY FOR A LONG TIME. I HADN'T FOUND THE RIGHT OCCASION."}}};
+  }
 }
 }
