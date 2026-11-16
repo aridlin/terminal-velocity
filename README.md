@@ -1,8 +1,8 @@
 # Terminal Velocity
 
-**A Ghostty-first platformer. Real keyboard input. Fixed 120 Hz physics.**
+**A terminal mountain climb with saved chapters, live ghosts and an atmospheric soundtrack.**
 
-Run, jump, wall-jump and dash through seeded courses with moving platforms, springs and patrols. The original **JP2: Sztafeta Wolności** course lives on as a special Polish Independence Day event.
+Climb from a quiet valley to the final ridge through three authored chapters. Replay for a clean run, hidden treasures and personal bests, or race live ghosts through seeded courses and the precision trial. The original **JP2: Sztafeta Wolności** course lives on as a special Polish Independence Day event.
 
 The terminal is the main game. The SDL window is a debug frontend for comparing the same physics and collisions.
 
@@ -67,12 +67,64 @@ If your account cannot read the keyboard device, `play.sh` asks for sudo in the 
 
 Prefer not to use that helper? `./play.sh --ssh` also works locally through the terminal keyboard protocol.
 
+## Play on Windows
+
+Extract **terminal-velocity-windows-x64.zip** and run `play.cmd` from Windows Terminal (Windows 10/11 x64). The portable ZIP includes `terminal_velocity.exe`, the C++ runtime and the audio assets; no MSYS2, SDL or administrator access is needed to play. Use a font with Braille/block glyphs, such as Cascadia Mono, and a terminal of at least 76×24 (110×34 recommended).
+
+```powershell
+.\terminal_velocity.exe --summit
+.\terminal_velocity.exe --seed 73 --connect HOST:27888 --room friends
+# Windows can host the same relay too:
+.\terminal_velocity.exe --relay 27888
+```
+
+The Windows build uses native console key-down/key-up records for simultaneous movement, jump and dash. It shares the 120 Hz simulation and UDP wire format with Linux, so Windows/Linux players can race together. Console modes and code pages are restored on normal exit. Windows is a native terminal build; the SDL debug frontend and Linux keyboard helper are not included. For SSH play, run the Linux game on the remote Linux host from your terminal.
+
+To build on Windows, install MSYS2, open its **UCRT64** shell, then:
+
+```sh
+pacman -S --needed make mingw-w64-ucrt-x86_64-gcc
+git clone https://github.com/aridlin/terminal-velocity.git
+cd terminal-velocity
+make windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=windres
+./physics_tests.exe
+./extension_tests.exe
+./multiplayer_tests.exe
+./windows_input_tests.exe
+```
+
+On Linux with MinGW-w64 installed: `make windows windows-tests`. GitHub Actions builds, tests and uploads a Windows ZIP on every push/PR. Automated Windows tests cover simulation, UDP networking and native input handling; physical Windows Terminal/keyboard feel still needs user testing.
+
+## The climb
+
+The default run is a three-chapter campaign: **Zacisze → Przełęcz → Ostatnia Grań**. Finishing a chapter unlocks the next one; Enter on the result screen continues the journey. Chapters have their own terrain colors, safe checkpoint bays and optional upper treasure routes. Select an unlocked chapter with **4 / 5 / 6**, or use `--chapter 1`, `--chapter 2` or `--chapter 3` for direct practice.
+
+Each chapter has three independent stars: reach the end, finish without falls/checkpoint retries, and collect every treasure. Your fastest time, best clean-run result, collection record and stars are saved separately, so a slower collection run does not erase a faster time. **N** starts a fresh attempt; **R** returns to the checkpoint and counts as a retry. Dash trails, landing dust, pickup bursts and dash-refill feedback are visual effects only; physics and ghost collisions remain unchanged.
+
+Progress lives in `$XDG_STATE_HOME/terminal-velocity/progress.dat` (or `~/.local/state/terminal-velocity/progress.dat`) on Linux and `%LOCALAPPDATA%/TerminalVelocity/progress.dat` on Windows. `TV_PROGRESS_FILE` overrides the location for isolated tests/profiles. A save error preserves the current session and reports the problem. Demos and previews do not write campaign records.
+
+![Campaign chapters and persistent star challenges](docs/media/campaign-menu.png)
+
+## Music and sound
+
+Both the terminal and SDL frontend play **downloaded recordings**, through the same bundled miniaudio playback engine. No synthesized beeps, generated music, shell players, SDL runtime dependency for the TUI, or microphone access.
+
+- **Music:** “Dreams Become Real” (piano/ambient) and “Ascending the Vale” (harp/choir/flute), by [Kevin MacLeod / Incompetech](https://incompetech.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Effects:** cloth movement, a dash swish, soft impacts, snow footsteps, glass/pluck pickups and interface confirmations from Kenney's [Impact Sounds](https://kenney.nl/assets/impact-sounds), [RPG Audio](https://kenney.nl/assets/rpg-audio) and [Interface Sounds](https://kenney.nl/assets/interface-sounds), under CC0.
+
+Music crossfades between the valley and ascent; pause lowers the music and focus loss silences output. Effects overlap instead of cutting one another off. Assets are normalized with peak headroom, softened effects and conservative playback levels. **U** mutes/unmutes everything; `--mute` starts without opening an audio device. SSH is quiet by default: `--audio` enables playback on the **remote game host**, not audio streaming to the SSH client. Relay, smoke and preview commands do not open an audio device.
+
+Keep **assets/audio/** next to the executable. Assets are resolved relative to the executable, so launch from any working directory. Full track/source/license details, modifications and hashes: [audio credits](assets/audio/CREDITS.txt), [manifest](assets/audio/manifest.json). Playback library: miniaudio 0.11.26, with its [bundled license](vendor/MINIAUDIO-LICENSE). Original synthesized SDL tones have been removed.
+
 ## Pick a run
 
 | Key | Action |
 | --- | --- |
+| **4 / 5 / 6** | Select an unlocked campaign chapter |
+| **U** | Mute/unmute audio |
 | **1** | Original JP2 / 11 Listopada event |
 | **2** | Procedural expedition |
+| **3** | Summit: six authored precision rooms |
 | **Enter** | Start or resume |
 | **N** | Retry the same level and seed |
 | **G** | Generate the next seed |
@@ -81,6 +133,7 @@ Prefer not to use that helper? `./play.sh --ssh` also works locally through the 
 ```sh
 ./play.sh --seed 73    # Repeatable procedural course
 ./play.sh --event      # Original Independence Day course
+./play.sh --summit     # Precision course with checkpoints before each room
 ```
 
 Procedural courses combine eight bounded sections, safe checkpoint bays and optional upper routes. Seeded maps include:
@@ -88,7 +141,8 @@ Procedural courses combine eight bounded sections, safe checkpoint bays and opti
 - **Moving platforms:** ride them, jump through from below, or drop through with S.
 - **Springs:** a higher launch and a fresh dash charge.
 - **Patrols:** defeat them with a stomp or dash; touching their side resets to your checkpoint.
-- **Crystals:** optional pickups that recharge dash. The event uses kremówki instead.
+- **Treasures `▰`:** optional one-time pickups that recharge dash. The event uses kremówki instead.
+- **Dash refills `◆`:** reusable airborne crystals. A spent crystal becomes `◇` and returns after 2.5 seconds. Retrying a checkpoint restores all refill crystals immediately.
 
 The same seed produces the same layout in this generator version. The tests complete 100 seeds using ordinary inputs without deaths; this is not an exhaustive proof across every possible seed.
 
@@ -109,7 +163,34 @@ The same seed produces the same layout in this generator version. The tests comp
 
 Landing or collecting a new pickup refreshes dash. Death preserves collected items and defeated patrols within the current run. **N resets the run.**
 
-The movement keeps coyote time, jump buffering, variable jump height, air braking and a protected wall-jump impulse. Simulation runs at **120 Hz**, independently of the terminal's **60 Hz** drawing.
+The player body is **yellow when dash is available** and white after spending it. The separate `@` marker is gone.
+
+The movement keeps coyote time, jump buffering, variable jump height, air braking and a protected wall-jump impulse. Wall jumps also accept a press within 100 ms of leaving a wall. Simulation runs at **120 Hz**, independently of the terminal's **60 Hz** drawing.
+
+## Live multiplayer ghosts
+
+Run a lightweight relay on one reachable machine (Linux example; on Windows use `terminal_velocity.exe`):
+
+```sh
+make terminal_velocity
+./terminal_velocity --relay 27888
+```
+
+Each player connects to it, choosing the same room and course:
+
+```sh
+./play.sh --summit --connect HOST:27888 --room friends
+# Or race the same procedural seed:
+./play.sh --seed 73 --connect HOST:27888 --room friends
+```
+
+Replace `HOST` with the relay machine's hostname/IP (`127.0.0.1` for local testing). The relay listens on **UDP** port 27888; remote players need that port reachable through the host firewall/router. The relay needs no interactive terminal, graphics libraries, keyboard devices or administrator access. `terminal-velocity --relay 27888` also runs headlessly through the installed launcher. Stop it with Ctrl+C.
+
+Cyan ghosts show other players live, with 30 snapshots/second and smoothed motion. Physics stays local at 120 Hz: ghosts cannot push, kill, collect items or change your checkpoints. Rooms, course type and procedural seed filter who appears; use the same build for matching layouts. Up to 32 clients can share a relay. Paused/menu players hide their ghost, respawns snap to their new location, and disconnected ghosts disappear after three seconds. There is no replay storage or shared authoritative world. If the relay is unavailable, solo play continues and the ghost count falls to zero.
+
+Room names are 1–23 letters, digits, `-` or `_`. This relay is intended for friends/LAN play: room names filter traffic; they are not passwords, and UDP snapshots are not encrypted or authenticated. SSH input and ghost networking are independent: with SSH, `HOST` is resolved/reached by the game on the SSH server. The SDL debug frontend accepts the same `--connect`, `--room` and `--summit` flags.
+
+![Two real terminal sessions: yellow local player and cyan live ghost](docs/media/live-ghosts.png)
 
 ## Play over SSH
 
@@ -139,14 +220,17 @@ Both modes were exercised through an actual localhost OpenSSH connection and rem
 
 ```sh
 make                  # TUI, keyboard helper, and SDL debug frontend
-make test             # Physics, seeded courses, mechanics, SSH parser, SDL smoke
+make test             # Physics, campaign/save/audio mix, UDP ghosts, SSH parser, SDL smoke
+python tools/test_tui.py  # Two actual TUI PTYs + relay (requires pyte)
 ./terminal_velocity --demo --seed 73
 ./terminal_velocity --demo --event
 ```
 
 The TUI and helper need C++20 and standard Linux headers. The debug GUI additionally needs SDL2, FreeType and pkg-config. On Debian/Ubuntu, the corresponding build packages are `g++ make pkg-config libsdl2-dev libfreetype6-dev`.
 
-Tests cover resting contacts, acceleration/braking, jump height, identical simulation at 30/60/144 Hz, short taps, normalized dash speed, collision tunnelling, coyote time, jump buffers, wall jumps, checkpoints, the original event route, moving-platform carry, drop-through, springs, patrol combat and 100 procedural seeds. SSH parser tests cover fragmented sequences, simultaneous keys, releases, short taps and focus changes.
+Campaign tests complete all three chapters with ordinary controls, verify stars/unlocks/save recovery, decode every bundled audio asset, and check overlapping mixes, mute, track crossfade and focus silence without an audio device.
+
+Tests cover resting contacts, acceleration/braking, jump height, identical simulation at 30/60/144 Hz, short taps, normalized dash speed, collision tunnelling, coyote time, jump buffers, wall jumps, checkpoints, the original event route, moving-platform carry, drop-through, springs, patrol combat and 100 procedural seeds. SSH parser tests cover fragmented sequences, simultaneous keys, releases, short taps and focus changes. Multiplayer tests use real localhost UDP sockets to verify room/course/seed isolation, assigned identities, stale/oversized packet rejection, smoothing, respawns and expiry/rejoin. The six-room Summit route completes using ordinary inputs with zero deaths. PTY tests verify the visible yellow player, removed marker, live cyan ghost, menu selection and terminal restoration. Internet/LAN latency and physical keyboard play are not established by these automated checks.
 
 ### SDL: debugging only
 
@@ -155,7 +239,7 @@ Tests cover resting contacts, acceleration/braking, jump height, identical simul
 ./terminal_velocity_sdl --event
 ```
 
-Both frontends share [`main.cpp`](main.cpp). In the GUI, F3 shows hitboxes and motion data, F11 toggles fullscreen, M toggles sound, and Ctrl+R resets the run. Select 1/2/G from its menu or pause screen. Its event-to-tick timer is not a hardware input-latency measurement.
+Both frontends share [`main.cpp`](main.cpp). In the GUI, F3 shows hitboxes and motion data, F11 toggles fullscreen, M toggles sound, and Ctrl+R resets the run. Select 1/2/3/G from its menu or pause screen. Its event-to-tick timer is not a hardware input-latency measurement.
 
 ## Design references and event sources
 

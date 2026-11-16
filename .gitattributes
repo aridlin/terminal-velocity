@@ -1,0 +1,4 @@
+vendor/miniaudio.h linguist-vendored -whitespace
+*.mp3 binary
+*.wav binary
+*.ico binary

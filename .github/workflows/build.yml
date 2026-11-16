@@ -13,3 +13,34 @@ jobs:
         run: make -j2 all test
       - name: Validate launchers
         run: sh -n play.sh ghostty-play.sh
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+      - name: Build native Windows terminal and tests
+        shell: msys2 {0}
+        run: make -j2 windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=windres
+      - name: Run native Windows tests
+        shell: msys2 {0}
+        run: |
+          ./physics_tests.exe
+          ./extension_tests.exe
+          ./multiplayer_tests.exe
+          ./campaign_tests.exe
+          TV_TEST_CONSOLE=1 ./windows_input_tests.exe
+          ./terminal_velocity.exe --smoke
+      - name: Package portable Windows game
+        shell: pwsh
+        run: Compress-Archive -Path terminal_velocity.exe,play.cmd,README.md,README.pl.md,assets -DestinationPath terminal-velocity-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: terminal-velocity-windows-x64
+          path: terminal-velocity-windows-x64.zip
+          if-no-files-found: error

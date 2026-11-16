@@ -8,7 +8,7 @@ if [ -n "${SSH_CONNECTION:-}" ] || [ -n "${SSH_TTY:-}" ]; then
 fi
 for arg in "$@"; do
     case "$arg" in
-        --ssh|--ssh-basic|--demo|--help|--preview|--smoke|--input-test|--input)
+        --relay|--ssh|--ssh-basic|--demo|--help|--preview|--smoke|--input-test|--input)
             exec ./terminal_velocity "$@" ;;
     esac
 done

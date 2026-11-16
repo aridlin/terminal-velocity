@@ -1,0 +1,142 @@
+[
+  {
+    "file": "dreams.mp3",
+    "source": "Dreams Become Real.mp3",
+    "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dreams%20Become%20Real.mp3",
+    "author": "Kevin MacLeod",
+    "license": "CC-BY-4.0",
+    "source_sha256": "a8ea5df5f969ed8d898af7fe07eb4712233f03e9d83f7ebcc88d1c851f3171b0",
+    "changes": "Loudness normalized to -18 LUFS, peak limited to -2 dBTP; 0.8 s fade-in; resampled/re-encoded MP3 at 44.1 kHz, 160 kbps.",
+    "sha256": "c41efd60c7ab459192915d86d9bf2b7fd6e13bfa6bedcd62cef36b25e8a6381a"
+  },
+  {
+    "file": "ascent.mp3",
+    "source": "Ascending the Vale.mp3",
+    "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ascending%20the%20Vale.mp3",
+    "author": "Kevin MacLeod",
+    "license": "CC-BY-4.0",
+    "source_sha256": "a0ab3aae9a942d797c381df8d914dfef453e7e455c1c6333d1916d59ba005353",
+    "changes": "Loudness normalized to -18 LUFS, peak limited to -2 dBTP; 0.8 s fade-in; resampled/re-encoded MP3 at 44.1 kHz, 160 kbps.",
+    "sha256": "9af3e3ff1512005ea5354e20cc48858cfa61c8d3d229ab6a3fd988593ef2f162"
+  },
+  {
+    "file": "jump.wav",
+    "source": "Audio/cloth1.ogg",
+    "source_url": "https://kenney.nl/assets/rpg-audio",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "ddb93a3671233f95da0e0b10367f082f7eb42fa6caaddcf776410aa8833c747d",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "08f981fb3a914fe5a6b3642c645eac1a0bde9c1aa0a8b4661e8725e13a2486ed"
+  },
+  {
+    "file": "dash.wav",
+    "source": "Audio/knifeSlice2.ogg",
+    "source_url": "https://kenney.nl/assets/rpg-audio",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "6c2064d0ef988d1ec3d56868e823ea8823a5cac00f2742560052633529407def",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "b1914c0716736174985aa84eefae6571565ff8ad716b63936f8e7ed1093b26e2"
+  },
+  {
+    "file": "pickup.wav",
+    "source": "Audio/glass_001.ogg",
+    "source_url": "https://kenney.nl/assets/interface-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "183eebee20eb0a532b0b85104d139cbf2673eb66d95c3cc733ac9ea98362e7e8",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "e152ba5ba7c6040c317e40b3b33b2fc7f23622b0cf3a3ec48d7a0a9f9fbe575e"
+  },
+  {
+    "file": "death.wav",
+    "source": "Audio/impactSoft_heavy_000.ogg",
+    "source_url": "https://kenney.nl/assets/impact-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "49e7ca88743fca974bb8676ea138b751cfd8f9033b5e7af8736c2a215d6edbc1",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "f4b8e92b866a1858d8ffeaa05e88c86b73218122cf153a56a6c44ba9105d8ed1"
+  },
+  {
+    "file": "checkpoint.wav",
+    "source": "Audio/confirmation_001.ogg",
+    "source_url": "https://kenney.nl/assets/interface-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "063564703b6094d70718a3e787a55cc9141611e4ecd6b6637f8828f79b4a8c3a",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "b8b256838428862f8a1b07e2acb15f54c23eff303a72aff5d54694f439197817"
+  },
+  {
+    "file": "land.wav",
+    "source": "Audio/footstep_snow_000.ogg",
+    "source_url": "https://kenney.nl/assets/impact-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "c05fa4a9dc9a7aabc04996466fb589537e49af76de9998d8f9e6270ec92dcef7",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "18d246ab0eaff059b9badcd03e9dab500fce17d200df48f1549e84423c70bb99"
+  },
+  {
+    "file": "step1.wav",
+    "source": "Audio/footstep_snow_001.ogg",
+    "source_url": "https://kenney.nl/assets/impact-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "980fb9a1c9227aed7995067b0357f373053337f2416316db8ea0438418542fb4",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "fe35d8cb4e2efbd96689241e3006df66810a857e562422cd7f5194a7b6164506"
+  },
+  {
+    "file": "step2.wav",
+    "source": "Audio/footstep_snow_003.ogg",
+    "source_url": "https://kenney.nl/assets/impact-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "68272e3f1cabcabd02d328fd344454d7c04cb58b5a86972fcdd858f845e3d007",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "7572214ce4630c799c30271979a29bb3d12d06fae5f2a81e1c0c213734130451"
+  },
+  {
+    "file": "refill.wav",
+    "source": "Audio/pluck_002.ogg",
+    "source_url": "https://kenney.nl/assets/interface-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "c977fe249ff42d1c93a552b33abc13a8399df3879fa510475426e5c4bbac1da9",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "b412c612401f8e377900294804ebc8e62ec4a77bd496d810cdd05640c20a7cd3"
+  },
+  {
+    "file": "spring.wav",
+    "source": "Audio/cloth4.ogg",
+    "source_url": "https://kenney.nl/assets/rpg-audio",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "e7ab9a6c4466dea874196c61f59bf1da05cfe58748f42fadd695d441a154a99b",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "f3c1a65e629baaef2ed9dbef820ab5954724ee9af2d2962b11211dec23a9feb3"
+  },
+  {
+    "file": "menu.wav",
+    "source": "Audio/click_002.ogg",
+    "source_url": "https://kenney.nl/assets/interface-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "adcd1f4adc35f1b41bc1b5bbefeff7aa44f2f3f0d96d3199b544140c7c1e761c",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "628f38bdc4146b2899358c034636d1322f6bfb1432e107bae792c1019004ad70"
+  },
+  {
+    "file": "win.wav",
+    "source": "Audio/confirmation_004.ogg",
+    "source_url": "https://kenney.nl/assets/interface-sounds",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "568967a3d9f8a8f6af54ea01729c4882284308f2a27d78c07ffd7ee0d6951661",
+    "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
+    "sha256": "f45d031f9f9652ffcfdff2cda1690dae7d77e8d391978a5d849f542af9a16bc6"
+  }
+]

@@ -1,3 +1,7 @@
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o physics_tests physics_tests.cpp audio.o -ldl -lpthread
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o extension_tests extension_tests.cpp audio.o -ldl -lpthread
+g++ -std=c++20 -O2 -Wall -Wextra -pedantic -o multiplayer_tests multiplayer_tests.cpp audio.o -ldl -lpthread
+./physics_tests
 PASS stable resting contact
 PASS run speed reaches target
 PASS release stops ground motion
@@ -15,6 +19,7 @@ PASS safe checkpoint activates
 PASS death respawns at checkpoint
 Route x=176.172 deaths=0 jumps=13 dashes=5 cp=2
 PASS entire course beatable with ordinary inputs and zero deaths
+./extension_tests
 PASS seeds repeat exactly and different seeds vary
 PASS lands on moving one-way platform
 PASS platform carries rider without jitter or drift
@@ -35,6 +40,71 @@ PASS SSH short tap survives same packet release
 PASS SSH focus loss clears controls
 PASS SSH focus regain
 PASS 100 seeded routes completed using normal controls; max deaths=0
+./multiplayer_tests
+PASS snapshot roundtrip, signed coordinates
+PASS reject incompatible protocol
+PASS reject out-of-bounds positions
+PASS reject hidden room bytes
+PASS sequence wrap and reordering
+PASS two real UDP clients exchange ghosts; rooms isolated
+PASS relay assigns identity and carries positions
+PASS remote movement smoothed between snapshots
+PASS respawn snaps immediately
+PASS paused players hide their ghost
+PASS changing seed clears old ghosts
+PASS silent peers expire after three seconds
+PASS clients rejoin after relay expiry
+PASS different courses isolated
+PASS raw UDP test endpoint connects
+PASS relay ignores client-supplied identity
+PASS relay rejects stale UDP snapshot
+PASS relay rejects oversized datagrams
+PASS airborne refill restores dash without cancelling momentum
+PASS refill cooldown prevents infinite immediate recharge
+PASS refill becomes available again
+PASS checkpoint retry restores refill route
+PASS wall jump accepted just after leaving wall
+PASS six-room precision course completable with normal controls
+summit deaths=0 dashes=6
+./campaign_tests
+PASS separate completion, clean-run and collection goals
+chapter=1 x=135.147 deaths=0 time=9.58333
+PASS authored chapter completed with normal jump/dash inputs
+PASS campaign ghost course identity isolated
+chapter=2 x=143.138 deaths=0 time=10.4917
+PASS authored chapter completed with normal jump/dash inputs
+PASS campaign ghost course identity isolated
+chapter=3 x=185.19 deaths=0 time=14.8
+PASS authored chapter completed with normal jump/dash inputs
+PASS campaign ghost course identity isolated
+PASS checkpoint retries count toward the clean-run challenge
+PASS new profile starts at chapter one
+PASS completion saves and unlocks next chapter
+PASS clean-run star earned independently of collecting treasures
+PASS slower replay preserves faster time
+PASS best time, clean run and collection stars preserved independently
+PASS second local profile writer saves
+PASS progress persists and merges across local game clients
+PASS result recorded once and exposes earned stars
+PASS win screen does not repeatedly rewrite records
+PASS malformed profile safely ignored
+PASS save failure retains session result without stopping play
+PASS all sourced music and effect voices decode offline
+PASS music and overlapping effects mix from real recordings
+audio peak=0.8901 rms=0.0676967
+PASS conservative overlapping audio mix leaves headroom
+PASS muted mix renders
+PASS mute silences music and already-playing effects
+PASS second music track crossfades
+PASS focus loss silences audio immediately
+PASS --mute does not open an audio device or load assets
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./terminal_velocity_sdl --smoke
 SDL smoke: key edges, focus pause, held input, renderer; x=12.3351 result=0
-Previously verified integration: actual localhost OpenSSH + remote PTY in --ssh and --ssh-basic modes; successful exits and terminal restoration.
-CachyOS PC installation: rebuilt natively and passed the full make test suite on 2026-11-15.
+
+2026-11-15 presentation/audio integration:
+PASS actual TUI PTYs: visible yellow/white dash state, live cyan ghosts, menu, saved campaign unlocks, blocked locked chapters, clean exits and terminal restoration.
+PASS actual TUI audio playback captured through a temporary isolated PulseAudio sink (no speakers): peak 0.2270, RMS 0.0257; temporary sink removed afterwards.
+PASS worst-case offline mix with all 24 SFX voices: peak 0.8901, finite samples and no clipping; mute, track crossfade, focus-loss silence.
+PASS all 14 bundled sourced audio files match manifest SHA-256 hashes; source/license/processing records bundled.
+PASS MinGW-w64 Windows game and tests built with the same audio/campaign code.
+Physical keyboard feel and Windows speaker playback remain unverified; native Windows offline-audio and console tests run in CI.
