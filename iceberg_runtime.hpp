@@ -34,7 +34,7 @@ public:
         profile.trials[size_t(d)]={};
       }
     }
-    profile.content_version=iceberg::ContentVersion;run_district=std::min(o.district,iceberg::AuthoredDistrictCount-1);
+    profile.content_version=iceberg::ContentVersion;run_district=std::min(o.district,expedition_unlocked());
     if (!profile.started) profile.seed = o.seed;
     if (o.language_override) profile.language = o.language;
     district = profile.district; stage = profile.stage; room = profile.room;
@@ -95,7 +95,7 @@ public:
     ghosts::Snapshot snapshot;
     snapshot.room=options.ghost_room;
     snapshot.level=ghosts::adventure_level(iceberg::ContentVersion,grid.district,int(mode),grid.template_id);
-    snapshot.seed=grid.seed;
+    snapshot.seed=grid.seed?grid.seed:mode==iceberg::Mode::Campaign?profile.seed:run_seed;
     // Optional unlocked geometry is part of course identity too.
     if(grid.district==2&&profile.quests[3]==3)snapshot.seed^=0x72574f46u;
     if(snapshot.level!=previous_course||network_deaths!=state.deaths)++network_epoch;
@@ -144,6 +144,8 @@ public:
       grid.interactions.insert(grid.interactions.begin(),{{grid.spawn_x-2,grid.spawn_y-1,1,3},InteractionKind::Return,0,{"Wróć do osady","Return to settlement"}});
     } else if(mode==iceberg::Mode::Campaign && profile.visit_district>=0) {
       grid=iceworld::build_settlement(profile.visit_district);
+    } else if(mode==iceberg::Mode::Trial&&room==iceberg::RoomsPerLeg-1) {
+      grid=iceworld::build_mastery_course(district);grid.seed=run_seed;
     } else if(mode==iceberg::Mode::Campaign && profile.interlude) {
       grid=iceworld::build_harbor_mission(stage==2?0:stage==4?1:2);
     } else if(mode==iceberg::Mode::Campaign && (stage==0 || stage==3 || stage==5)) {
@@ -265,7 +267,8 @@ public:
       auto previous=profile;
       auto language=profile.language;
       float music=profile.music_volume,effects=profile.effects_volume,ambience=profile.ambience_volume;
-      profile={};profile.language=language;profile.seed=run_seed;
+      profile={};profile.language=language;
+      profile.seed=options.seed_override||!previous.started?options.seed:iceberg::mix(previous.seed+1);
       profile.records=previous.records;profile.trials=previous.trials;profile.challenges=previous.challenges;
       profile.expeditions=previous.expeditions;profile.endless_best=previous.endless_best;
       profile.cosmetics=previous.cosmetics;profile.outfit=previous.outfit;
@@ -285,7 +288,7 @@ public:
     if(next==iceberg::Mode::Trial&&profile.quests[6]!=3&&!(profile.cosmetics&(1u<<7))&&!profile.finished&&!profile.at_content_boundary) {
       notice(t("Porozmawiaj z Kubą i pokaż trzy skoki ze zrywu.","Talk to Kuba and demonstrate three dash jumps."),6);return;
     }
-    persist();mode=next;
+    persist();mode=next;run_district=std::min(run_district,expedition_unlocked());
     auto &e=profile.expeditions[next==iceberg::Mode::Endless?0:1];
     uint32_t requested_seed=options.seed_override?options.seed:iceberg::mix(0x54495241u+unsigned(run_district)*7919u);
     bool resume=e.active&&!fresh&&e.district==run_district&&
@@ -421,7 +424,7 @@ public:
         ++profile.quest_counts[size_t(node.id)];
         if(profile.quests[size_t(node.id)]==1 && profile.quest_counts[size_t(node.id)]>=unsigned(iceberg::Quests[size_t(node.id)].required))profile.quests[size_t(node.id)]=2;
         notice(iceberg::Quests[size_t(node.id)].title.get(profile.language)+"  "+std::to_string(profile.quest_counts[size_t(node.id)])+"/3");
-        audio.play(AudioCue::Pickup);persist();
+        audio.play(node.id==1||node.id==2?AudioCue::Valve:node.id==7?AudioCue::Voice:AudioCue::Pickup);persist();
       } else notice(t("Już zabrane. Wróć do zleceniodawcy.","Already collected. Return to the task giver."));
     } else if(node.kind==InteractionKind::Note) {
       if(node.id>=10) {
@@ -510,8 +513,8 @@ public:
       }
       if(c.navigate){int n=v.map?iceberg::DistrictCount:8;v.selected=(v.selected+c.navigate+n)%n;}
       if(c.confirm && v.map && mode==iceberg::Mode::Campaign && profile.hidden_room<0 &&
-          v.selected<=profile.unlocked && v.selected!=district && ((profile.story&(uint64_t(1)<<8))||profile.quests[2]==3||profile.finished||profile.at_content_boundary)) {
-        persist();profile.visit_district=v.selected;load_room();persist();
+          !profile.revisit.active && v.selected<=profile.unlocked && (v.selected!=district||profile.visit_district>=0) && ((profile.story&(uint64_t(1)<<8))||profile.quests[2]==3||profile.finished||profile.at_content_boundary)) {
+        persist();profile.visit_district=v.selected==district?-1:v.selected;load_room(profile.visit_district<0);persist();
       } else if(c.confirm){state.journal=false;v.map=false;}
     }
     bool blocked=state.paused||state.journal||v.map||columns<76||rows<24;

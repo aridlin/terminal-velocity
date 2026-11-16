@@ -17,7 +17,8 @@ uint64_t motion_key(const GameState &s) {
   return h;
 }
 struct MotionPath {bool reached=false;int expanded=0,states=0;double nearest=0;std::vector<Controls> actions;};
-inline MotionPath find_motion_path(const EngineGrid &grid,const GameState &initial,Rect goal) {
+inline MotionPath find_motion_path(const EngineGrid &grid,const GameState &initial,Rect goal,
+    const std::function<bool(const GameState &)> &accept={}) {
   auto distance=[&](const GameState &s){auto r=s.player.rect();double dx=std::max({goal.x-r.right(),r.x-goal.right(),0.});
     double dy=std::max({goal.y-r.bottom(),r.y-goal.bottom(),0.});return std::hypot(dx,dy*1.3);};
   std::vector<SearchNode> nodes;nodes.reserve(100000);nodes.push_back({initial,-1,{},0});
@@ -35,7 +36,7 @@ inline MotionPath find_motion_path(const EngineGrid &grid,const GameState &initi
     int index=open.top().node;open.pop();
     // Copy before emplacing into the vector, which can invalidate references.
     auto current=nodes[size_t(index)];++expanded;
-    if(current.state.player.rect().intersects(goal)){winner=index;break;}
+    if(current.state.player.rect().intersects(goal)&&(!accept||accept(current.state))){winner=index;break;}
     if(current.depth>400)continue;
     for(auto action:actions) {
       const auto &p=current.state.player;

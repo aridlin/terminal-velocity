@@ -136,7 +136,7 @@ public:
   bool load(Profile &p) {
     recovered = false;protected_future=false;
     {std::error_code ec;auto bytes=std::filesystem::file_size(path_,ec);
-      std::ifstream header; if(!ec&&bytes<=65536)header.open(path_);
+      std::ifstream header; if(!ec&&bytes<=65536)header.open(path_,std::ios::binary);
       std::string magic;uint64_t hash;unsigned version=0;
       if(header>>magic>>hash) {
         header.get();std::string payload((std::istreambuf_iterator<char>(header)),{});std::istringstream body(payload);

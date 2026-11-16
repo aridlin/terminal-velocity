@@ -28,3 +28,8 @@ iceberg_save_crash_tests
 iceberg_story_playtest
 
 iceberg_text_tests
+
+iceberg_mastery_tests
+/.build-windows/
+/SDL2.dll
+/iceberg_branch_tests

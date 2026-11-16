@@ -150,6 +150,13 @@ private:
     }
     if (k == 'x' || k == 'k' || k == 57441 || k == 57447)
       edges_.dash_pressed = true;
+    // Explicit vertical dash edges keep the full traversal vocabulary usable
+    // on terminals without key-release events. A/D still supplies diagonals;
+    // S then I/O produces a vertical dash without changing the latched run.
+    if (!protocol && (k == 'i' || k == 'o')) {
+      edges_.dash_pressed = true;
+      edges_.aim_y = k == 'i' ? -1 : 1;
+    }
     if (k == 'q' || k == 3)
       edges_.quit = true;
     if (k == 'r')

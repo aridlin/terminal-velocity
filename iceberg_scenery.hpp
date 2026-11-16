@@ -34,6 +34,26 @@
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     const auto &art=landmarks[size_t(id)];
     world_art(pad.x-1.,pad.y-double(art.size())*aspect_*scale_-.3,art,d.stone);
+    // The route is built into occupied infrastructure. Muted walls and
+    // supports stay below the bright, collidable walking surfaces.
+    for(size_t i=0;i<pattern.path.size();++i) {
+      const auto &deck=pattern.path[i];
+      if(deck.kind=='m')continue;
+      if(grid_.district==0) {
+        if(i%3==0)world_art(deck.x+1.,deck.y+1.7,{
+          "╟──┬──────────┬──╢", "║  │ ▤▤  ▤▤   │  ║", "║  │          │  ║",
+          "╟──┴──────────┴──╢", "║ ╲            ╱ ║", "║  ╲          ╱  ║", "║   ╲        ╱   ║"},d.shadow);
+        else world_art(deck.x+1.,deck.y+1.7,{
+          "╥════════════╥", "║ ╲        ╱ ║", "║  ╲      ╱  ║", "║   ╲    ╱   ║", "║    ╲  ╱    ║", "║     ╳      ║"},d.shadow);
+        if(i%4==1)world_art(deck.x+1.,deck.y-2.2,{
+          "╭──╮ ╭──╮", "│╳ │ │╳ │", "╰──╯ ╰──╯"},d.stone);
+      } else if(grid_.district==1) {
+        world_art(deck.x+1.,deck.y+1.7,{
+          "╠══╤═══════╤══╣", "║  ║       ║  ║", "╚══╣       ╠══╝", "   ║       ║", "   ╚═══╦═══╝", "       ║"},d.shadow);
+        if(i%4==0)world_art(deck.x+2.,deck.y-3.2,{
+          "╭─────────╮", "│  ◴   ◷  │", "╰──┬───┬──╯", "   ║   ║"},d.stone);
+      }
+    }
     // A small, common service plate gives the authored location a human scale.
     auto first=pattern.path.front();
     world_art(first.x+2.,first.y-5.5,{"╭──────╮","│  ▱▱  │","╰──┬───╯","   │"},d.stone);

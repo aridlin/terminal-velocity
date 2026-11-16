@@ -990,6 +990,18 @@ int terminal_window_main(int argc,char **argv) {
       options.no_save=args.smoke||!screenshot.empty();options.mute|=options.no_save;
       AdventureSession session(options);
       if(scene=="play")session.state.menu=false;
+      if(options.no_save&&(scene.rfind("room:",0)==0||scene.rfind("mission:",0)==0)) {
+        bool mission=scene.rfind("mission:",0)==0;
+        int id=std::atoi(scene.c_str()+(mission?8:5));
+        if(mission)session.grid=iceworld::build_harbor_mission(std::clamp(id,0,2));
+        else {id=std::clamp(id,0,int(iceworld::patterns().size())-1);session.grid=verified_room(id,73,id/12);}
+        session.district=session.grid.district;session.stage=2;session.state=new_state(session.grid);session.state.menu=false;
+        if(scene.find(":mid")!=std::string::npos&&!session.grid.checkpoint_points.empty()) {
+          auto [x,y]=session.grid.checkpoint_points[session.grid.checkpoint_points.size()/2];
+          session.state.player.x=x;session.state.player.y=y;
+        }
+        update_camera(session.state,session.grid,110,27,2,10);session.sync_view();
+      }
       if(options.no_save&&scene=="heat") {
         session.profile.started=true;session.district=1;session.stage=0;session.load_room();session.state.menu=false;
       }

@@ -188,6 +188,7 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
 
 #include "iceberg_sequences.hpp"
 #include "iceberg_missions.hpp"
+#include "iceberg_mastery.hpp"
 
 inline EngineGrid build_authored(int district, bool finale) {
   if(district==1)return build_heatworks_sequence(finale);

@@ -114,7 +114,7 @@
       return;
     }
     if(grid_.template_id==300) {
-      if(!(grid_.switch_flags&2))world_art(137,37,{"    ╭────────────────────────╮","    │ ▯▯  ▯▯  ▯▯  ▯▯  ▯▯    │","    ├────────────────────────┤","    │   T R A M W A J   02   │","    ╰───◉───────────────◉────╯","══════════════════════════════════"},d.accent);
+      if(!(grid_.switch_flags&2))world_art(137,40,{"    ╭────────────────────────╮","    │ ▯▯  ▯▯  ▯▯  ▯▯  ▯▯    │","    ├────────────────────────┤","    │   T R A M W A J   02   │","    ╰───◉───────────────◉────╯","══════════════════════════════════"},d.accent);
       else world_art(137,42,{"══════════════════════════════════","  ·   ·   ·   ·   ·   ·   ·   ·"},d.stone);
       world_art(94,29,{"     ╭───╮","═════╡ ◉ ╞═════","     ╰─┬─╯","       │","       │"},d.stone);
     } else if(grid_.template_id==301) {
@@ -137,7 +137,7 @@
         "  ║  │ ░░ │  │ ░░ │  │ ░░ │   ║", "  ║  ╰────╯  ╰────╯  ╰────╯   ║", "  ╠═══════════════════════════╣",
         "  ║         P O C Z T A        ║", "  ║  ╭────╮  ╔════╗  ╭────╮   ║", "  ║  │ ▤▤ │  ║    ║  │ ▤▤ │   ║",
         "  ║  ╰────╯  ║  ○ ║  ╰────╯   ║", "  ╚══════════╩════╩═══════════╝"},d.stone);
-      world_art(22,34,{"  ╭────────────╮","  │  11½   ▯   │","  │ ░░░░░░░░░░ │","  ╰──┬──────┬──╯","     │      │"},d.stone);
+      world_art(22,38,{"  ╭────────────╮","  │  11½   ▯   │","  │ ░░░░░░░░░░ │","  ╰──┬──────┬──╯","     │      │"},d.stone);
       world_art(38,33,{"         ╱╲", "   ┌────╱──╲────┐", "   │  ▤▤    ▤▤  │", "   ├────────────┤", "   │  ╭──╮  ▤▤  │", "   │  │  │      │", "   └──┴──┴──────┘"},d.stone);
       world_art(58,38,{"  ╭──────────────╮","  │ ░░░░  ░░░░   │","  │ ░░░░  ░░░░   │","  ├──────────────┤","  │    ○   ▤▤    │","  ╰──────────────╯"},d.stone);
       world_art(31,32,{"┬─────────┬─────────┬─────────┬","│ ▒▒  ▒▒  │ ▒▒▒ ▒▒  │ ▒▒▒ ▒▒ │","  ▒▒  ▒▒    ▒▒▒ ▒▒    ▒▒▒ ▒▒"},0x6d6170);
@@ -202,10 +202,11 @@
         if(node.kind==InteractionKind::Rescue&&(grid_.switch_flags&2))continue;
         auto rgb=iceberg::Npcs[size_t(node.id)].color;
         static const char *heads[]={"▄█▄","▟█▙","▔█▔","▟▓▙","▄▣▄","♣█▄","▄▓▙","┌▣┐"};
-        auto [sx,sy]=screen(x,y);
+        static const char *poses[]={"▐█▱","╶█┐","▐█╴","▐▓▤","▐█▥","♧█▌","╴▓▌","│▤│"};
+        auto [sx,sy]=screen(x,y-.001);++sy;
         if(sy-3>=4&&sy<rows_-2) {
           paint_text(sy-3,sx,heads[node.id],rgb);
-          paint_text(sy-2,sx,node.id==7?"│▤│":"▐█▌",rgb);
+          paint_text(sy-2,sx,int(state_.elapsed*.7+node.id)%4==0?poses[node.id]:node.id==7?"│▤│":"▐█▌",rgb);
           paint_text(sy-1,sx,node.id==7?"└┬┘":int(state_.elapsed*.7+node.id)%4==0?"╱ │":"│ ╲",rgb);
         }
       } else if(node.kind==InteractionKind::Carry) {
@@ -220,7 +221,7 @@
       else if(node.kind==InteractionKind::Task) {
         static const char *icons[]={"▣","─⊗─","┌◉┐","▤","▥","♧","▣","▤▤"};
         bool done=state_.adventure.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64));
-        world_text(x,y-1.3,icons[node.id],done?d.shadow:d.accent);
+        world_text(x,y-1.3,node.id==1&&done?"─◉─":icons[node.id],done?d.shadow:d.accent);
       } else if(node.kind==InteractionKind::Shortcut||node.kind==InteractionKind::Replay||node.kind==InteractionKind::Return)world_text(x,y-2,"╭↶─╮",d.accent);
       else if(node.kind==InteractionKind::Secret&&node.id==1)world_art(x,y-2,{"╭─╮","│▥│","╰┬╯"},d.stone);
       else if(node.kind==InteractionKind::Secret&&node.id==2)world_art(x,y-3,{"┌──┐","│ 7│","└──┘"},d.stone);
@@ -229,10 +230,13 @@
     const auto &p=state_.player;
     static const uint32_t coats[]={0xe4ad68,0xdab0d5,0x88d3d9,0xc9bb85,0xabbcf4,0xb8dfb7,0xe99462,0xdce9ef};
     uint32_t coat=coats[std::clamp(state_.adventure.outfit,0,7)];
-    world_text(p.x,p.y,p.facing>0?"▟▀▙":"▟▀▙",coat);
-    world_text(p.x,p.y+.8,p.facing>0?"▐█▖":"▗█▌",p.dash_available?0xf5cd79:0x83c5ce);
-    if(state_.adventure.cosmetics&0x3f0000u)world_text(p.x+.4,p.y+.8,"✦",0xf3ce82);
-    world_text(p.x,p.y+1.6,!p.grounded?"╱╲":std::abs(p.vx)>2&&int(state_.elapsed*12)%2?"▗ ▖":"▐ ▌",coat);
+    auto [px,feet]=screen(p.x,p.y+kPlayerHeight-.001);++feet;
+    if(feet-3>=4&&feet<rows_-2) {
+      paint_text(feet-3,px,"▟▀▙",coat);
+      paint_text(feet-2,px,p.facing>0?"▐█▖":"▗█▌",p.dash_available&&!grid_.dash_locked()?0xf5cd79:0x83c5ce);
+      if(state_.adventure.cosmetics&0x3f0000u)paint_text(feet-2,px+1,"✦",0xf3ce82);
+      paint_text(feet-1,px,!p.grounded?"╱╲":std::abs(p.vx)>2&&int(state_.elapsed*12)%2?"▗ ▖":"▐ ▌",coat);
+    }
     if(std::abs(p.vx)>8)world_text(p.x+(p.facing>0?-.9:.9),p.y+.6,int(state_.elapsed*16)%2?"╴∽":"╶∼",coat);
     if(grid_.dash_locked())world_text(p.x+.8,p.y-.7,"▱",d.accent);
     auto goal=grid_.goal;
@@ -385,7 +389,7 @@
       (state_.multiplayer?"   ◌ "+std::to_string(state_.ghosts.size()):""),0xb3c3c8);
     for(int x=0;x<cols_;++x)paint_text(3,x,"─",d.stone);
     fill(rows_-3,0,cols_,3,Color::Default);
-    text(rows_-3,2,state_.ssh_basic?tr("A/D bieg  S stop  SPACJA skok  X zryw  E rozmowa","A/D run  S stop  SPACE jump  X dash  E interact"):
+    text(rows_-3,2,state_.ssh_basic?tr("A/D bieg S stop SPACJA skok X zryw I/O ↑/↓ E rozmowa","A/D run S stop SPACE jump X dash I/O ↑/↓ E interact"):
       tr("A/D ruch  SPACJA skok  SHIFT/X zryw  E rozmowa","A/D move  SPACE jump  SHIFT/X dash  E interact"),Color::Player);
     text(rows_-2,2,tr("R powrót  TAB dziennik  J mapa  P pauza  M menu  U dźwięk","R retry  TAB journal  J map  P pause  M menu  U sound"));
     if(v.save_error)text(rows_-1,2,tr("Błąd zapisu — postęp pozostaje w tej sesji.","Save error — progress remains in this session."),Color::Hazard);

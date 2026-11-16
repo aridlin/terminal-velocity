@@ -92,6 +92,16 @@ int main() {
             "SSH basic does not depend on autorepeat");
     legacy.feed("s");
     require(legacy.consume(.01).move == 0, "SSH basic stop is explicit");
+    legacy.feed("i");
+    auto vertical=legacy.consume(.01);
+    require(vertical.dash_pressed&&vertical.aim_y==-1&&vertical.move==0,
+            "SSH basic has an explicit upward dash for wall bounces");
+    require(legacy.consume(.01).aim_y==0&&!legacy.consume(.01).dash_pressed,
+            "SSH basic vertical dash is an edge, not a latched repeat");
+    legacy.feed("do");vertical=legacy.consume(.01);
+    require(vertical.dash_pressed&&vertical.aim_y==1&&vertical.move==1,
+            "SSH basic combines latched direction with a downward diagonal dash");
+    legacy.feed("s");legacy.consume(.01);
     legacy.feed("1\r");
     auto ui = legacy.consume(.01);
     require(ui.select_level == 1 && ui.confirm, "SSH legacy menu controls");

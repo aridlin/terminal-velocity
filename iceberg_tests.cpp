@@ -42,6 +42,17 @@ int main(int argc,char **argv) {
     check(failures==0,"distributed generated routes traversed with ordinary inputs");
     EngineGrid flat(80,60);flat.adventure_level=true;flat.event_level=false;
     flat.add_solid_rect(0,50,80,10);flat.spawn_x=4;flat.spawn_y=50-kPlayerHeight;flat.goal={75,45,2,5};
+    auto objective=flat;objective.goal={4,46,3,4};objective.goal_requires=1;
+    auto locked_goal=new_state(objective);FixedStepper objective_step;objective_step.advance(locked_goal,objective,{},1./120);
+    check(!locked_goal.won,"climbing over a locked gate cannot bypass its story objective");
+    objective.switch_flags=1;objective_step.advance(locked_goal,objective,{},1./120);
+    check(locked_goal.won,"completing the objective enables its exit");
+    auto parcel=flat;parcel.dash_lock=1;parcel.dash_unlock=2;parcel.switch_flags=1;
+    auto courier=new_state(parcel);FixedStepper parcel_step;parcel_step.advance(courier,parcel,{},1./120);
+    Controls dash;dash.move=1;dash.dash_pressed=true;parcel_step.advance(courier,parcel,dash,1./120);
+    check(courier.player.dash_time_left==0&&courier.player.dash_available,"upright delivery restriction is enforced by shared physics");
+    parcel.switch_flags=3;parcel_step.advance(courier,parcel,dash,1./120);
+    check(courier.player.dash_time_left>0,"delivery restores the ordinary dash immediately");
     auto jumping=new_state(flat);FixedStepper physics;Controls input;
     physics.advance(jumping,flat,input,1./120);input.move=1;input.dash_pressed=true;
     physics.advance(jumping,flat,input,1./120);input.dash_pressed=false;input.jump_pressed=true;input.jump_held=true;
@@ -142,6 +153,9 @@ int main(int argc,char **argv) {
       check(!session.state.adventure.trials[0].complete,"new custom seed never displays another route's default record");
       session.begin_campaign(true);
       check(session.stage==0&&session.room==0&&session.profile.story==0,"new story resets progression without copying old room state");
+      check(session.profile.seed==9999,"an explicit new campaign seed survives switching from an expedition");
+      session.options.seed_override=false;session.begin_campaign(true);
+      check(session.profile.seed!=9999,"a fresh unseeded journey assembles a new campaign itinerary");
     }
     std::filesystem::remove(path);std::filesystem::remove(backup);
     return 0;
