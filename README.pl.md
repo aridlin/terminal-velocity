@@ -1,124 +1,106 @@
-# Terminal Velocity — Ghostty first
+# Terminal Velocity — Pod powierzchnią
 
-Gra platformowa C++ z fizyką 120 Hz, grana w Ghostty. SDL jest wyłącznie frontendem debugowania i używa tego samego silnika, map oraz mechanik.
+Platformówka o kurierze w mieście zbudowanym wewnątrz ogromnej góry lodowej. Poczta nie dochodzi, ciepło ucieka, a ktoś musi wejść tam, gdzie administracja dawno przestała zaglądać.
 
-## Windows 10/11 x64
+**Terminal jest właściwą grą.** Sceneria, portrety i animowane postacie korzystają z Unicode: bloków, Braille’a, ramek i liter. Wersja okienkowa pokazuje **ten sam obraz z komórek**, używając dołączonych fontów. Nie jest osobnym opracowaniem graficznym.
 
-Rozpakuj `terminal-velocity-windows-x64.zip` i uruchom `play.cmd` w Windows Terminal. Przenośny `terminal_velocity.exe` zawiera runtime C++; nie wymaga MSYS2, SDL ani administratora. Zalecane 110×34 i font z Braille, np. Cascadia Mono.
+[English guide](README.md) · [Trasy klasyczne](docs/LEGACY.pl.md) · [Rozwój gry](DEVELOPMENT.md)
 
-```powershell
-.\terminal_velocity.exe --summit
-.\terminal_velocity.exe --seed 73 --connect HOST:27888 --room friends
-.\terminal_velocity.exe --relay 27888
-```
+## Co można zagrać
 
-Natywne zdarzenia konsoli Windows obsługują naciśnięcia i zwolnienia klawiszy. Fizyka, mapy i protokół duchów są wspólne z Linuxem — można grać razem. Po zwykłym wyjściu przywracane są tryby i strony kodowe konsoli. W paczce nie ma debugowania SDL ani linuksowego pomocnika klawiatury. SSH: uruchom linuksową grę na zdalnym serwerze.
+Otwarcie obejmuje **Dolną Przystań** i **Ciepłownię Łazarz**: dwie osady, 24 zaprojektowane szablony tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Cztery zadania mieszkańców dają dostęp do listów, skrótu serwisowego, strojów i prób mistrzowskich.
 
-Budowanie w MSYS2 UCRT64: `pacman -S --needed make mingw-w64-ucrt-x86_64-gcc`, następnie `make windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=windres`. Cross-build na Linuxie z MinGW-w64: `make windows windows-tests`. CI buduje, testuje i udostępnia ZIP. Testy automatyczne nie potwierdzają odczuć na fizycznej klawiaturze Windows.
+Przywrócenie dolnych obiegów zamyka bieżącą awarię. Dalsza wspinaczka przez górne dzielnice jest przeznaczona na kolejne wydanie. To otwarcie celuje w około 20 minut z rozmowami i eksploracją. Automatyczne przejście z szacowanym czasem czytania daje około 18 minut — **nie jest to zmierzony czas pierwszego gracza**. Pełna dwugodzinna kampania nie jest jeszcze gotowa.
 
-## Wspinaczka i dźwięk
+Po zakończeniu można wrócić do mieszkańców i stałych tras, ruszyć na wyprawę bez końca albo sprawdzić się w dwóch próbach mistrzowskich. Każda składa się z siedmiu trudniejszych sal i egzaminu ruchowego. Rekord czasu, najmniejsza liczba powrotów i najlepszy zbiór zapisują się niezależnie. Własne seedy mają osobne rekordy. Ukończenie próby daje odznakę widoczną na postaci i strój.
 
-Domyślna gra to trzyetapowa wyprawa: **Zacisze → Przełęcz → Ostatnia Grań**. Ukończenie odblokowuje kolejny etap, Enter na podsumowaniu prowadzi dalej. **4/5/6** wybiera odblokowany etap; `--chapter 1..3` pozwala ćwiczyć wybraną trasę.
+Język polski jest domyślny. **L** w menu przełącza całą główną grę na angielski. Warto rozglądać się uważnie, ale dodatkowe odkrycia nie blokują zwykłej historii.
 
-Każdy etap ma trzy gwiazdki: meta, przejście bez upadków/resetów checkpointu i komplet znajdziek. Rekord czasu, najlepszy wynik zbierania i gwiazdki zapisują się niezależnie. **N** zaczyna świeżą próbę; **R** wraca do checkpointu i liczy się jako ponowna próba. Postęp: `~/.local/state/terminal-velocity/progress.dat` (lub `$XDG_STATE_HOME`) na Linuxie, `%LOCALAPPDATA%/TerminalVelocity/progress.dat` na Windows. `TV_PROGRESS_FILE` wybiera inny profil. Demo nie zapisuje wyników.
+## Uruchamianie
 
-Muzyka to pobrane nagrania Kevina MacLeoda: **Dreams Become Real** (fortepian/ambient) i **Ascending the Vale** (harfa/chór/flet), CC BY 4.0. Efekty Kenney (CC0): szelest ubrania, świst zrywu, miękkie uderzenia, kroki po śniegu i delikatne szklane/dźwięczne znajdźki. Usunięto generowane tony SDL. Nie ma syntezy muzyki ani efektów przez kod.
-
-Muzyka przechodzi płynnie między etapami; pauza ją ścisza, utrata fokusu wycisza wszystko. Efekty mogą grać jednocześnie. **U** wycisza/włącza dźwięk; `--mute` nie otwiera urządzenia audio. SSH domyślnie milczy: `--audio` odtwarza na zdalnym komputerze z grą, nie przesyła audio do klienta SSH. Trzymaj `assets/audio/` obok pliku wykonywalnego. Źródła, licencje i modyfikacje: [CREDITS.txt](assets/audio/CREDITS.txt), [manifest](assets/audio/manifest.json).
-
-## Start i wybór poziomu
-
-Uruchom `terminal-velocity` (launcher jest w `~/.local/bin`) albo `./ghostty-play.sh`. W istniejącym Ghostty możesz użyć `./play.sh`.
-
-- **1 — event JP2 / 11 listopada:** zachowana oryginalna Sztafeta Wolności z Wadowic do Warszawy, 15 kremówek i dziennik niepodległości.
-- **3 — Szczyt:** sześć zaprojektowanych etapów precyzji, przepaście, ściany, odnawialne kryształy i checkpoint przed każdym etapem. `terminal-velocity --summit`.
-- **2 — ekspedycja proceduralna:** osiem losowanych sekcji, opcjonalne górne trasy, kryształy, windy, sprężyny i patrole.
-- **Enter:** start; **M:** powrót do menu; **N:** ponów tę samą mapę; **G:** kolejny seed proceduralny.
-
-Każda mapa proceduralna pokazuje swój seed. Uruchom ponownie konkretną mapę: `terminal-velocity --seed 73`. Oryginalny event bez wybierania w menu: `terminal-velocity --event`.
-
-Generator dobiera ograniczone skoki, szerokości przerw i moduły z bezpiecznymi zatokami. Trudniejsze przeszkody i nagrody są na dodatkowych trasach. Testy przechodzą 100 seedów zwykłymi wejściami bez teleportowania ani wyłączania kolizji; nie jest to dowód dla wszystkich 2³² seedów. Mapa pozostaje identyczna dla tego samego seedu w tej wersji generatora.
-
-## Sterowanie i mechaniki
-
-- A/D lub strzałki: ruch. SPACJA/W/góra: skok; przytrzymanie zwiększa wysokość.
-- Shift/X + kierunek: zryw w ośmiu kierunkach. Lądowanie i nowa znajdźka odnawiają zryw.
-- Postać jest żółta, gdy zryw jest gotowy, i biała po jego zużyciu. Usunięto osobny znak `@`.
-- `◆`: odnawialny kryształ zrywu; po użyciu zmienia się w `◇` i wraca po 2,5 s. Retry checkpointu przywraca kryształy od razu. Znajdźki `▰` pozostają jednorazowe.
-- Skok od ściany działa też do 100 ms po utracie kontaktu.
-- S/dół: szybkie opadanie; na ruchomej platformie — zejście przez nią.
-- Przy ścianie: skok od ściany. Zachowane coyote time, bufor skoku i kontrola w powietrzu.
-- `===`: ruchome platformy przenoszą postać; można przez nie skoczyć od dołu.
-- `^^`: sprężyny automatycznie wybijają w górę i odnawiają zryw.
-- `[!]`: patrol. Skok na głowę lub zryw pokonuje go; kontakt z boku resetuje do checkpointu.
-- R: ostatni punkt zapisu. N resetuje bieg, przeciwników i znajdźki; śmierć zachowuje zebrane znajdźki i pokonane patrole w tym biegu.
-- TAB: historia eventu albo pomoc mechanik. ESC/P: pauza. F3/V (V w SSH): diagnostyka. Q: koniec.
-
-Zalecany terminal 110 × 34, minimum 76 × 24. Przełączenie fokusu pauzuje grę; Enter wznawia. Lokalne renderowanie do 60 Hz, wejście odczytywane w pętli ok. 1 ms. Zmiany kolorów i obrazu są synchronizowane w Ghostty.
-
-## Wejście lokalne — poza terminalem
-
-Domyślnie evdev dostarcza rzeczywiste key-down/key-up. Autorepeat terminala nie steruje postacią. Jeśli użytkownik nie ma dostępu do klawiatury, `play.sh` poprosi o hasło sudo **lokalnie w terminalu**. `keyboard_launcher` otwiera urządzenia klawiatury, trwale porzuca root i uruchamia grę jako pierwotny użytkownik. Nie zmienia ACL, grup, udev ani ustawień konta i nie jest instalowany setuid. Dostęp kończy się wraz z grą. Klawisze nie są zapisywane.
-
-## Duchy multiplayer na żywo
-
-Na osiągalnym komputerze Linux uruchom `./terminal_velocity --relay 27888`. Każdy gracz łączy się poleceniem:
+Linux, w terminalu:
 
 ```sh
-./play.sh --summit --connect HOST:27888 --room friends
-# Albo ta sama mapa proceduralna u wszystkich:
-./play.sh --seed 73 --connect HOST:27888 --room friends
+./play.sh
+./play.sh --ssh                 # bez pomocnika evdev
+./play.sh --terminal-view       # te same znaki i grafika w oknie SDL
+./ghostty-play.sh               # nowe okno Ghostty
 ```
 
-`HOST` to adres komputera z relayem. Potrzebny jest osiągalny port **UDP** 27888 (lokalnie można użyć `127.0.0.1`). Relay nie wymaga terminala, SDL, evdev ani sudo; Ctrl+C kończy pracę. Zainstalowany launcher obsługuje `terminal-velocity --relay 27888` bez otwierania Ghostty.
+Minimum to **76×24 komórki**, zalecane **110×34**. Okno można skalować; **F11** przełącza pełny ekran. Utrata fokusu pauzuje grę; **Enter/P** wznawia.
 
-Turkusowe duchy pokazują pozycje innych graczy z 30 aktualizacjami/s i wygładzaniem. Każdy ma własną fizykę, znajdźki i checkpointy; duchy nie mają kolizji. Ten sam pokój, trasa i seed łączą graczy; używajcie tej samej wersji gry. Limit relaya: 32 klientów. Pauza/menu ukrywa ducha, respawn przeskakuje od razu, rozłączenie usuwa ducha po 3 s. Brak relaya nie blokuje gry solo. Nie ma zapisu powtórek ani wspólnego stanu świata.
+Windows 10/11 x64: rozpakuj całą paczkę, uruchom **play.cmd** w Windows Terminal albo **play-window.cmd** dla wersji okienkowej. Zachowaj katalog `assets/` obok plików wykonywalnych. Wersja okienkowa potrzebuje też dołączonego `SDL2.dll`; terminalowa nie potrzebuje SDL. Administrator nie jest wymagany.
 
-Pokój: 1–23 litery/cyfry/`-`/`_`. Relay do gry ze znajomymi/LAN: nazwa pokoju nie jest hasłem, a pakiety UDP nie mają szyfrowania ani uwierzytelniania. Przy SSH to komputer z uruchomioną grą łączy się z `HOST`. GUI debugowania obsługuje te same flagi.
+Domyślne wejście linuksowe używa zdarzeń naciśnięcia i zwolnienia klawiszy z evdev. Jeżeli urządzenie nie jest dostępne, launcher pyta lokalnie o sudo: pomocnik otwiera klawiaturę, trwale porzuca uprawnienia i uruchamia grę jako zwykły użytkownik. Nie zmienia grup ani praw urządzeń. `--ssh` i wersja okienkowa nie używają tego pomocnika.
 
-## SSH — bez sudo, bez GUI, bez evdev
+## Sterowanie
 
-Skopiuj folder źródłowy na serwer Linux i zbuduj tylko terminal:
+| Klawisz | Działanie |
+| --- | --- |
+| A/D lub lewo/prawo | Ruch |
+| Spacja, W lub góra | Skok; przytrzymanie zwiększa wysokość |
+| X lub Shift + kierunek | Zryw |
+| S/dół | Szybkie opadanie; zejście przez ruchomą platformę |
+| E/F | Rozmowa, obsługa maszyny, zabranie przedmiotu zadania |
+| E/Enter | Dalsza rozmowa albo przejście po ukończeniu sali |
+| R | Szybki powrót do lampy |
+| Tab | Dziennik; E przy ukończonym zadaniu otwiera jego nagrodę |
+| J | Mapa; W/S wybiera, Enter podróżuje, gdy przejazd jest dostępny |
+| P/Escape | Pauza lub zamknięcie panelu |
+| M | Menu główne |
+| U | Wyciszenie |
+| Q | Zapis i wyjście |
+
+Złoty tułów oznacza gotowy zryw, niebieski — zużyty albo chwilowo ograniczony przez przesyłkę. Jasnoturkusowe **✦** odnawiają zryw; ciepłe **◆** są opcjonalnymi znajdźkami. Lampy wyznaczają punkty powrotu. Jasne krawędzie platform są fizyczne, przygaszona architektura jest tłem. Zryw nie chroni przed czerwonym zagrożeniem.
+
+Trzy techniki: **zryw po ziemi i natychmiastowy skok** zachowuje rozpęd; **zryw w górę przy ścianie, potem skok** wybija od ściany; **skok z wznoszącej się windy** przejmuje jej prędkość. Lekcje mają bliskie punkty powrotu, a trasy mistrzowskie łączą te ruchy.
+
+W menu wybierzesz kontynuację, nową historię, wyprawę bez końca, próbę, ustawienia lub klasyczne trasy. **J** przy wyprawie/próbie zmienia odblokowaną dzielnicę. **Enter** wznawia zapisany bieg; **R/N** zaczyna świeży. Nowa historia wymaga potwierdzenia i zastępuje postęp fabularny; zachowuje rekordy, stroje oraz osobne wyprawy.
+
+## Seedy i zapis
 
 ```sh
-make terminal_velocity
-./play.sh --ssh --seed 73
+./play.sh --expedition --seed 73
+./play.sh --trial --seed 73 --district 2
+./play.sh --campaign --language en
+./play.sh --legacy --summit
 ```
 
-Można uruchomić przez połączenie z wymuszonym PTY:
+Dzielnice odblokowuje historia. Próby odblokowuje zadanie Kuby albo koniec dostępnego otwarcia. Nowa wyprawa bez jawnego seedu dostaje nowy układ; `--seed` pozwala powtarzać dokładnie to wyzwanie. Dla zgodności **samo `--seed` nadal wybiera dawną ekspedycję proceduralną** — dodaj `--campaign`, `--expedition` lub `--trial`, aby wybrać górę lodową.
+
+Śmierć i kontynuacja nie losują terenu ponownie. Wracasz do ostatniej lampy; postęp rozmów i zadań pozostaje. Kampania, wyprawa i próba mają osobne punkty kontynuacji. Zapis jest sprawdzany i zastępowany atomowo, z kopią odzyskiwania.
+
+- Linux: `$XDG_STATE_HOME/terminal-velocity/progress.dat.iceberg`, zwykle `~/.local/state/terminal-velocity/progress.dat.iceberg`.
+- Windows: `%LOCALAPPDATA%/TerminalVelocity/progress.dat.iceberg`.
+- `TV_ICEBERG_FILE` wybiera osobny profil. `TV_PROGRESS_FILE` zmienia ścieżkę dawnych rekordów i domyślną ścieżkę towarzyszącego pliku `.iceberg`.
+
+Stary `progress.dat` pozostaje nienaruszony. Kopiuj oba pliki przy robieniu kopii zapasowej. Gra nie nadpisuje zapisu z nowszej wersji. Zapis na końcu otwarcia będzie mógł kontynuować podróż po dodaniu dalszych dzielnic.
+
+## Dźwięk i SSH
+
+Nagrania muzyczne, woda przystani, maszyny ciepłowni, kroki po różnych materiałach i sygnały postaci używają wspólnego silnika audio. W ustawieniach **1/2/3** zmienia poziom muzyki/efektów/otoczenia, **4** wybiera odblokowany strój. Źródła, licencje, modyfikacje i sumy kontrolne są w [credits](assets/audio/CREDITS.txt) i [manifeście](assets/audio/manifest.json).
+
+SSH domyślnie milczy. `--audio` odtwarza dźwięk na zdalnym komputerze z grą, nie przesyła go do klienta. `--mute` uruchamia bez dźwięku.
+
+`--ssh` negocjuje zdarzenia klawiatury kitty, w tym zwolnienia i kombinacje. W trybie podstawowym **A/D rozpoczyna bieg, S zatrzymuje, Spacja skacze, X robi zryw**. **I/O** robi zryw w górę/dół; bieżący kierunek biegu daje skos, więc przed pionowym zrywem naciśnij S. Skok ma stały czas przytrzymania. `--ssh-basic` wymusza ten wariant.
+
+## Duchy na żywo
 
 ```sh
-ssh -tt user@host '/sciezka/do/terminal-velocity-polska/play.sh --ssh --seed 73'
+./terminal_velocity --relay 27888
+./play.sh --expedition --seed 73 --connect HOST:27888 --room friends
 ```
 
-`play.sh` wykrywa też `SSH_CONNECTION`/`SSH_TTY` i sam wybiera SSH. `terminal-velocity --ssh` działa w bieżącym terminalu, nie otwiera okna Ghostty. Gra i kompilator muszą być na serwerze; lokalny launcher nie przesyła plików automatycznie.
+Używajcie tej samej wersji gry, dzielnicy, trybu i seedu. Duchy pokazują się tylko na zgodnych trasach, nie mają kolizji i znikają w menu, rozmowie oraz po utracie fokusu. Góra lodowa wymaga aktualnego relaya; klasyczne trasy pozostają osobne. Relay używa UDP. Nazwa pokoju grupuje graczy, nie jest hasłem. Nie ma wspólnego stanu fabuły ani nagranych powtórek.
 
-**Tryb rozszerzony:** `--ssh` negocjuje protokół klawiatury kitty (np. lokalny Ghostty). Przesyła naciśnięcia i zwolnienia przez SSH, dzięki czemu działają jednoczesne klawisze. Parser zachowuje sekwencje rozdzielone pomiędzy pakietami. Po wyjściu przywraca protokół i ustawienia terminala.
+## Budowanie i testy
 
-**Tryb podstawowy:** gdy terminal nie obsługuje rozszerzenia lub wybierzesz `--ssh-basic`, **A/D ustawia kierunek biegu, S zatrzymuje, SPACJA skacze, X robi zryw**. To świadomie inne sterowanie, które nie wymaga key-up ani zgadywania czasu autorepeat. Menu, pauza, wybór poziomu i reset nadal działają. Używaj P do pauzy. W tym trybie zryw jest poziomy, a skok ma ustalony czas przytrzymania; zejdź z platformy jej krawędzią.
+C++20 i make wystarczą do `make terminal_velocity`. Cała gra: `make -j2 all` — okno wymaga dodatkowo SDL2 i FreeType. Pakiety Debian/Ubuntu: `g++ make pkg-config libsdl2-dev libfreetype6-dev`; Arch/CachyOS: `base-devel pkgconf sdl2-compat freetype2`.
 
-SSH odświeża obraz do 30 Hz przy fizyce 120 Hz i wysyła różnice komórek. Opóźnienie sieci nadal wpływa na reakcję. Przy problemach z przechwytywaniem sekwencji przez tmux/screen użyj połączenia bez multipleksera albo wymuś `--ssh-basic`.
+`make test` sprawdza dawną fizykę i sieć, 10 000 seedów strukturalnie, 1000 tras zwykłymi wejściami, postęp historii i zadań, boczne drogi, próby, polskie/angielskie dialogi w 76×24, przerwane zapisy oraz oba frontendy SDL. `python tools/test_iceberg_tui.py` (pyte) sprawdza prawdziwy TUI w PTY. Dodatkowo: `./iceberg_tests 10000 1000 expert` i `./iceberg_branch_tests 2`.
 
-## Debug GUI i testy
+Windows w MSYS2 UCRT64: `make windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=windres`. Dla okna zainstaluj pakiety SDL2/FreeType UCRT64 i zbuduj `make terminal_velocity_sdl.exe MINGW_CXX=g++`. Cross-build na Linuxie z MinGW-w64: `tools/build_windows_sdl.sh`, z przypiętymi i sprawdzanymi zależnościami. [Licencje bibliotek](THIRD_PARTY.md).
 
-`./terminal_velocity_sdl --seed 73` albo `--event`. Te same wybory 1/2/3/G w menu lub pauzie. F3: hitbox, prędkości, FPS. R: checkpoint, Ctrl+R: reset, M: dźwięk, F11: pełny ekran. Czas „zdarzenie → tick” nie mierzy pełnej latencji sprzętu.
+CI testuje Linux i natywną logikę/terminal Windows. Jego dotychczasowy artefakt Windows zawiera terminal; osobno przygotowana paczka okienkowa zawiera też SDL EXE i DLL. Okno Windows sprawdzono przez cross-build i Wine; fizyczna klawiatura/GPU Windows wymagają osobnego sprawdzenia.
 
-Budowanie wszystkiego: `make` (C++20; SDL2 i FreeType są potrzebne tylko dla GUI). Budowanie na serwerze bez bibliotek graficznych: `make terminal_velocity`.
-
-`python tools/test_tui.py` (wymaga pyte) sprawdza dwie prawdziwe sesje TUI w PTY z relayem: menu, kolory, duchy i przywrócenie terminala.
-
-`make test` obejmuje testy UDP relaya, odnawialnych kryształów, okna skoku od ściany, przejścia Szczytu oraz pierwotne testy ruchu i eventu, deterministyczność seedów, 100 przejść proceduralnych, platformy, sprężyny, starcia z patrolami i parser SSH. `./terminal_velocity --demo --seed 73` pokazuje automatyczne przejście bez klawiatury evdev; `--demo --event` odtwarza event. Demo jest testem, nie alternatywnym wejściem.
-
-## Inspiracje
-
-- [Celeste & Forgiveness, Maddy Makes Games](https://www.mattmakesgames.com/articles/celeste_and_forgiveness/index.html): coyote time, bufor skoku i wybaczające okna sterowania. Zachowano istniejące, dobrze odbierane parametry ruchu; platformy dodają przenoszenie postaci, nie pełną implementację „lift momentum” z Celeste.
-- [Spelunky, Mossmouth](https://spelunkyworld.com/whatis.html): świeże losowane przebiegi, dodatkowe trasy, ryzyko i nagrody. Generator tutaj jest prostszy i oparty na ośmiu sekcjach.
-- [Oficjalny protokół klawiatury kitty](https://sw.kovidgoyal.net/kitty/keyboard-protocol/): negocjacja flag i zdarzenia press/repeat/release przez PTY.
-
-## Event edukacyjny: 11 listopada
-
-JP2 jest żartobliwym przewodnikiem po kulturze i pamięci, a nie uczestnikiem wydarzeń 1918 roku. Miasta są symbolicznymi odcinkami. Event zachowuje biało-czerwone akcenty i papieskie złoto.
-
-Źródła dziennika: [Sejm RP — Narodowe Święto Niepodległości](https://www.sejm.gov.pl/sejm10.nsf/komunikat.xsp?documentId=DE27C0547C515309C1258D3B003FDE4F) oraz [Watykan — biografia Jana Pawła II](https://www.vatican.va/content/john-paul-ii/en/biografia/documents/hf_jp-ii_spe_20190722_biografia.html).
-
-Font GUI: `assets/FONT-LICENSE.txt`. Kod bazuje na wcześniejszym prototypie Terminal Velocity.
+`--diagnostic` zachowuje dawny graficzny frontend. Event JP2, górskie rozdziały i Szczyt są w **Trasach klasycznych**; opisuje je [dawna instrukcja](docs/LEGACY.pl.md).

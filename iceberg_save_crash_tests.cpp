@@ -19,11 +19,19 @@ int main() {
     pid_t child=fork();
     if(child<0)return 2;
     if(child==0) {
-      close(ready[0]);char byte='!';if(write(ready[1],&byte,1)!=1)_exit(2);close(ready[1]);
-      bool okay=store.save(next);_exit(okay?0:1);
+      close(ready[0]);char byte='!';int phase=attempt%5;
+      // Explicit before/after barriers guarantee coverage independently of
+      // filesystem speed; the other 120 cases interrupt at varying offsets.
+      if(phase!=1&&write(ready[1],&byte,1)!=1)_exit(2);
+      if(phase==0)for(;;)pause();
+      if(!store.save(next))_exit(1);
+      if(phase==1&&write(ready[1],&byte,1)!=1)_exit(2);
+      close(ready[1]);for(;;)pause();
     }
     close(ready[1]);char byte=0;if(read(ready[0],&byte,1)!=1)return 2;close(ready[0]);
-    usleep(unsigned(attempt%20)*75);kill(child,SIGKILL);int status=0;waitpid(child,&status,0);
+    if(attempt%5>=2)usleep(unsigned(attempt%20)*75);
+    kill(child,SIGKILL);int status=0;waitpid(child,&status,0);
+    if(!WIFSIGNALED(status)||WTERMSIG(status)!=SIGKILL)return 2;
     iceberg::Profile recovered;iceberg::SaveStore after_crash(path);
     if(!after_crash.load(recovered)||recovered.story!=uint64_t(recovered.seed)*3||
        (recovered.seed!=previous.seed&&recovered.seed!=next.seed)||recovered.challenges.size()!=128) {
