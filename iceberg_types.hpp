@@ -1,0 +1,151 @@
+#pragma once
+#include <array>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+namespace iceberg {
+inline constexpr unsigned ContentVersion = 1;
+inline constexpr int DistrictCount = 6;
+inline constexpr int RoomsPerLeg = 8;
+enum class Language { Polish, English };
+enum class Mode { Campaign, Endless, Trial };
+enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret };
+enum class Rhythm { Flow, Precision, Vertical, Timing, Explore, Recovery };
+enum class Mechanic { None, Current, Steam, Conveyor, Echo, Growth, Wind };
+struct Text {
+  const char *pl = "";
+  const char *en = "";
+  std::string get(Language language) const {
+    return language == Language::English && en && *en ? en : pl;
+  }
+};
+struct District {
+  Text name, subtitle, objective;
+  uint32_t stone, light, shadow, accent;
+  Mechanic mechanic;
+};
+inline const std::array<District, DistrictCount> Districts{{
+  {{"DOLNA PRZYSTAŃ", "LOWER HARBOR"},
+   {"Pod oceanem też jest poniedziałek.", "It is Monday below the ocean, too."},
+   {"Połącz odcięte dzielnice z siecią ciepła.", "Reconnect the isolated districts to the heat network."},
+   0x345866, 0x9dd4dd, 0x142b36, 0xe4ad68, Mechanic::Current},
+  {{"CIEPŁOWNIA ŁAZARZ", "LAZARUS HEATING WORKS"},
+   {"Ciepło wspólne. Odpowiedzialność indywidualna.", "Shared heating. Individual responsibility."},
+   {"Uruchom obieg awaryjny bez stopienia fundamentów.", "Restore the emergency loop without melting the foundations."},
+   0x675143, 0xf0c990, 0x2e252b, 0xe99462, Mechanic::Steam},
+  {{"OSIEDLE PARAPET", "WINDOWSILL ESTATE"},
+   {"Widok na przyszłość. Winda nieczynna.", "A view of the future. Lift out of order."},
+   {"Przywróć komunikację między zawieszonymi ulicami.", "Reconnect the suspended streets."},
+   0x66566e, 0xd2bedc, 0x292636, 0xe5bc66, Mechanic::Conveyor},
+  {{"ARCHIWUM CISZY", "ARCHIVE OF SILENCE"},
+   {"Nie znaleziono mieszkańca. Proszę nie powtarzać.", "Resident not found. Please do not repeat."},
+   {"Odszukaj oryginalny plan sieci i brakujące nazwiska.", "Find the original network plans and the missing names."},
+   0x526978, 0xc7e4ed, 0x1a283d, 0x9fb6f6, Mechanic::Echo},
+  {{"OGRODY PODSZRONU", "UNDERFROST GARDENS"},
+   {"Słońce zastępcze. Pomidory prawdziwe.", "Artificial sun. Real tomatoes."},
+   {"Poprowadź ciepło przez żywe kanały ogrodu.", "Route the heat through the garden's living channels."},
+   0x45665b, 0xb8dfb7, 0x182e2c, 0xd7cb79, Mechanic::Growth},
+  {{"KORONA", "THE CROWN"},
+   {"Dalej nie ma już sufitu.", "There is no ceiling beyond this point."},
+   {"Otwórz latarnię i połącz wszystkie dzielnice.", "Open the beacon and unite the districts."},
+   0x6c7b8d, 0xf0edf0, 0x263347, 0xf3ce82, Mechanic::Wind}
+}};
+
+struct Record {
+  double best_seconds = 0;
+  int best_deaths = -1;
+  int best_treasures = 0;
+  bool complete = false;
+};
+struct Expedition {
+  bool active = false;
+  uint32_t seed = 1;
+  int district = 0, room = 0, depth = 0, checkpoint = 0;
+  uint64_t collected = 0, switches = 0;
+  double room_seconds = 0, seconds = 0;
+  int room_deaths = 0, deaths = 0, treasures = 0;
+  std::vector<int> itinerary;
+};
+struct Profile {
+  Language language = Language::Polish;
+  bool started = false, finished = false;
+  uint32_t seed = 1;
+  unsigned content_version = ContentVersion;
+  int district = 0, stage = 0, room = 0;
+  int unlocked = 0;
+  uint64_t story = 0;
+  std::array<unsigned, 8> quests{};
+  std::array<unsigned, 8> quest_counts{};
+  std::array<uint64_t, 2> task_items{};
+  uint32_t discoveries = 0, cosmetics = 0;
+  int outfit = 0;
+  int hidden_room = -1, visit_district = -1;
+  double campaign_seconds = 0;
+  int campaign_deaths = 0;
+  double district_seconds = 0;
+  int district_deaths = 0, district_treasures = 0;
+  std::array<Record, DistrictCount> records{};
+  std::array<Record, DistrictCount> trials{};
+  int endless_best = 0;
+  std::array<Expedition, 2> expeditions;
+  // Persist the assembled itinerary as well as its seed: content additions
+  // cannot silently reroll an expedition that somebody has already started.
+  std::vector<int> itinerary;
+  int checkpoint = 0;
+  uint64_t collected = 0, switches = 0;
+  double room_seconds = 0;
+  int room_deaths = 0;
+  float music_volume = .65f, effects_volume = .75f, ambience_volume = .55f;
+};
+
+struct DialogueLine { int speaker = 0; Text text; };
+struct Dialogue {
+  std::vector<DialogueLine> lines;
+  size_t page = 0;
+  int action = 0;
+  bool active() const { return page < lines.size(); }
+};
+struct View {
+  Language language = Language::Polish;
+  Mode mode = Mode::Campaign;
+  int district = 0, stage = 0, room = 0, depth = 0, selected = 0;
+  int unlocked = 0, outfit = 0;
+  int hidden_room = -1, visit_district = -1;
+  uint32_t cosmetics = 0;
+  bool map = false, settings = false, confirm_new = false, finished = false;
+  bool save_error = false, can_continue = false;
+  bool endless_resume = false, trial_resume = false;
+  uint64_t switches = 0;
+  uint32_t discoveries = 0;
+  std::array<unsigned, 8> quests{};
+  std::array<unsigned, 8> quest_counts{};
+  std::array<Record, DistrictCount> records{}, trials{};
+  Dialogue dialogue;
+  std::string prompt, notice, room_name;
+  double notice_left = 0;
+  float music_volume = .65f, effects_volume = .75f, ambience_volume = .55f;
+};
+struct SessionOptions {
+  uint32_t seed = 1;
+  Language language = Language::Polish;
+  bool language_override = false, mute = false, remote_audio = false;
+  bool remote = false, no_save = false, seed_override = false;
+  Mode mode = Mode::Campaign;
+  int district = 0;
+};
+inline std::string tr(Language l, const char *pl, const char *en) {
+  return l == Language::English ? en : pl;
+}
+inline uint32_t mix(uint32_t x) {
+  x ^= x >> 16; x *= 0x7feb352d; x ^= x >> 15; x *= 0x846ca68b;
+  return x ^ (x >> 16);
+}
+// Specified RNG output, unlike uniform_int_distribution, is stable across
+// standard-library implementations and the Windows/Linux release builds.
+struct Random {
+  uint32_t value;
+  uint32_t next() { value += 0x9e3779b9u; return mix(value); }
+  int below(int n) { return int(next() % unsigned(n)); }
+};
+} // namespace iceberg

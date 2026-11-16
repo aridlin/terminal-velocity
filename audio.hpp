@@ -17,6 +17,8 @@ enum class AudioCue {
   Spring,
   Menu,
   Win,
+  Wood1, Wood2, Metal1, Metal2, Stone1, Stone2,
+  Valve, Voice, Paper, Bounce,
   Count
 };
 enum class AudioScene { Menu, Play, Paused, Win };
@@ -27,6 +29,9 @@ class GameAudio {
   std::filesystem::path directory_;
   bool attempted_ = false, offline_ = false;
   bool ensure_ready();
+  float music_gain_ = 1, effects_gain_ = 1, ambience_gain_ = 1;
+  int environment_ = -1;
+  bool silence_ = false;
 
 public:
   bool muted = false;
@@ -38,6 +43,8 @@ public:
             bool initially_muted = false, bool offline = false);
   void update(AudioScene scene, int track, double dt, bool focused = true);
   void play(AudioCue cue);
+  void set_mix(float music, float effects, float ambience);
+  void set_environment(int district, bool silence = false);
   bool ready() const;
   std::string error() const;
   size_t loaded_clips() const;

@@ -1,0 +1,184 @@
+#pragma once
+#include "iceberg_types.hpp"
+#include "progress.hpp"
+#include <iomanip>
+#include <sstream>
+#ifndef _WIN32
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
+namespace iceberg {
+class SaveStore {
+  std::filesystem::path path_;
+  static bool sync_file(const std::filesystem::path &file) {
+#ifdef _WIN32
+    HANDLE handle=CreateFileW(file.c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+    if(handle==INVALID_HANDLE_VALUE)return false;
+    bool okay=FlushFileBuffers(handle)!=0;CloseHandle(handle);return okay;
+#else
+    int fd=::open(file.c_str(),O_RDONLY);if(fd<0)return false;
+    bool okay=::fsync(fd)==0;::close(fd);return okay;
+#endif
+  }
+  static bool replace_file(const std::filesystem::path &from,const std::filesystem::path &to) {
+#ifdef _WIN32
+    return MoveFileExW(from.c_str(),to.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)!=FALSE;
+#else
+    std::error_code ec;std::filesystem::rename(from,to,ec);if(ec)return false;
+    auto parent=to.parent_path();if(parent.empty())parent=".";
+    int fd=::open(parent.c_str(),O_RDONLY|O_DIRECTORY);if(fd<0)return false;
+    bool okay=::fsync(fd)==0;::close(fd);return okay;
+#endif
+  }
+  static uint64_t checksum(const std::string &s) {
+    uint64_t h = 1469598103934665603ull;
+    for (unsigned char c : s) { h ^= c; h *= 1099511628211ull; }
+    return h;
+  }
+  static bool record_valid(const Record &r) {
+    return std::isfinite(r.best_seconds) && r.best_seconds >= 0 &&
+      r.best_seconds < 1e9 && r.best_deaths >= -1 && r.best_deaths < 10000000 &&
+      r.best_treasures >= 0 && r.best_treasures < 10000000;
+  }
+  static bool read(const std::filesystem::path &file, Profile &p) {
+    std::ifstream in(file, std::ios::binary);
+    std::string magic;
+    uint64_t hash = 0;
+    if (!(in >> magic >> hash) || magic != "TVICE2") return false;
+    in.get();
+    std::string payload((std::istreambuf_iterator<char>(in)), {});
+    if (payload.size() > 65536 || checksum(payload) != hash) return false;
+    std::istringstream data(payload);
+    Profile q;
+    int language = 0;
+    size_t count = 0;
+    if (!(data >> q.content_version >> language >> q.started >> q.finished >>
+      q.seed >> q.district >> q.stage >> q.room >> q.unlocked >> q.story >>
+      q.discoveries >> q.cosmetics >> q.outfit >> q.campaign_seconds >>
+      q.campaign_deaths >> q.endless_best >> q.checkpoint >> q.collected >>
+      q.switches >> q.room_seconds >> q.room_deaths >> q.music_volume >>
+      q.effects_volume >> q.ambience_volume)) return false;
+    if (q.content_version != ContentVersion || language < 0 || language > 1 ||
+      q.district < 0 || q.district >= DistrictCount || q.stage < 0 || q.stage > 7 ||
+      q.room < 0 || q.room >= RoomsPerLeg || q.unlocked < 0 || q.unlocked >= DistrictCount ||
+      q.checkpoint < 0 || q.checkpoint > 64 || q.outfit < 0 || q.outfit > 7 ||
+      q.campaign_deaths < 0 || q.campaign_deaths > 10000000 ||
+      q.room_deaths < 0 || q.room_deaths > 10000000 ||
+      q.endless_best < 0 || q.endless_best > 10000000 ||
+      !std::isfinite(q.campaign_seconds) || q.campaign_seconds < 0 || q.campaign_seconds > 1e9 ||
+      !std::isfinite(q.room_seconds) || q.room_seconds < 0 || q.room_seconds > 1e9)
+      return false;
+    for (float v : {q.music_volume, q.effects_volume, q.ambience_volume})
+      if (!std::isfinite(v) || v < 0 || v > 1) return false;
+    for (auto &quest : q.quests) if (!(data >> quest) || quest > 3) return false;
+    for (auto &n : q.quest_counts) if (!(data >> n) || n > 10000) return false;
+    for (auto &n : q.task_items) if (!(data >> n)) return false;
+    if (!(data >> q.district_seconds >> q.district_deaths >> q.district_treasures) ||
+      !std::isfinite(q.district_seconds) || q.district_seconds < 0 || q.district_seconds > 1e9 ||
+      q.district_deaths < 0 || q.district_treasures < 0) return false;
+    for (auto *records : {&q.records, &q.trials})
+      for (auto &r : *records)
+        if (!(data >> r.best_seconds >> r.best_deaths >> r.best_treasures >> r.complete) ||
+          !record_valid(r)) return false;
+    if (!(data >> count) || count > 512) return false;
+    q.itinerary.resize(count);
+    for (int &id : q.itinerary) if (!(data >> id) || id < 0 || id >= 72) return false;
+    if (!(data >> q.hidden_room >> q.visit_district) || q.hidden_room < -1 || q.hidden_room > 2 || q.visit_district < -1 || q.visit_district >= DistrictCount) return false;
+    for (auto &e : q.expeditions) {
+      if (!(data >> e.active >> e.seed >> e.district >> e.room >> e.depth >> e.checkpoint >>
+        e.collected >> e.switches >> e.room_seconds >> e.seconds >> e.room_deaths >> e.deaths >> e.treasures >> count)) return false;
+      if (e.district < 0 || e.district >= DistrictCount || e.room < 0 || e.room >= RoomsPerLeg ||
+        e.depth < 0 || e.depth > 10000000 || e.checkpoint < 0 || e.checkpoint > 64 ||
+        e.room_deaths < 0 || e.deaths < 0 || e.treasures < 0 ||
+        !std::isfinite(e.room_seconds) || e.room_seconds < 0 || e.room_seconds > 1e9 ||
+        !std::isfinite(e.seconds) || e.seconds < 0 || e.seconds > 1e9 || count > 512) return false;
+      e.itinerary.resize(count);
+      for (int &id : e.itinerary) if (!(data >> id) || id < 0 || id >= 72) return false;
+    }
+    data >> std::ws;
+    if (!data.eof()) return false;
+    q.language = Language(language);
+    p = std::move(q);
+    return true;
+  }
+public:
+  bool recovered = false;
+  explicit SaveStore(std::filesystem::path path = default_file()) : path_(std::move(path)) {}
+  static std::filesystem::path default_file() {
+    if (const char *v = std::getenv("TV_ICEBERG_FILE")) return v;
+    // Keep legacy progress.dat untouched, including its TV_PROGRESS_FILE override.
+    auto p = ProgressStore::default_file();
+    if (p.empty()) return {};
+    p += ".iceberg";
+    return p;
+  }
+  bool load(Profile &p) {
+    recovered = false;
+    if (read(path_, p)) return true;
+    auto backup = path_; backup += ".bak";
+    if (read(backup, p)) { recovered = true; return true; }
+    return false;
+  }
+  bool save(const Profile &p) {
+    if (path_.empty()) return false;
+    std::ostringstream body;
+    body << std::setprecision(17) << p.content_version << ' ' << int(p.language) << ' '
+      << p.started << ' ' << p.finished << ' ' << p.seed << ' ' << p.district << ' '
+      << p.stage << ' ' << p.room << ' ' << p.unlocked << ' ' << p.story << ' '
+      << p.discoveries << ' ' << p.cosmetics << ' ' << p.outfit << ' '
+      << p.campaign_seconds << ' ' << p.campaign_deaths << ' ' << p.endless_best << ' '
+      << p.checkpoint << ' ' << p.collected << ' ' << p.switches << ' '
+      << p.room_seconds << ' ' << p.room_deaths << ' ' << p.music_volume << ' '
+      << p.effects_volume << ' ' << p.ambience_volume << '\n';
+    for (auto q : p.quests) body << q << ' ';
+    body << '\n';
+    for (auto n : p.quest_counts) body << n << ' ';
+    for (auto n : p.task_items) body << n << ' ';
+    body << p.district_seconds << ' ' << p.district_deaths << ' ' << p.district_treasures << '\n';
+    for (const auto *records : {&p.records, &p.trials})
+      for (auto r : *records)
+        body << r.best_seconds << ' ' << r.best_deaths << ' ' << r.best_treasures << ' ' << r.complete << '\n';
+    body << p.itinerary.size() << '\n';
+    for (int id : p.itinerary) body << id << ' ';
+    body << '\n';
+    body << p.hidden_room << ' ' << p.visit_district << '\n';
+    for (const auto &e : p.expeditions) {
+      body << e.active << ' ' << e.seed << ' ' << e.district << ' ' << e.room << ' ' << e.depth << ' ' << e.checkpoint << ' '
+        << e.collected << ' ' << e.switches << ' ' << e.room_seconds << ' ' << e.seconds << ' ' << e.room_deaths << ' '
+        << e.deaths << ' ' << e.treasures << ' ' << e.itinerary.size() << '\n';
+      for (int id : e.itinerary) body << id << ' ';
+      body << '\n';
+    }
+    auto payload = body.str();
+    std::error_code ec;
+    if (!path_.parent_path().empty()) std::filesystem::create_directories(path_.parent_path(), ec);
+    if (ec) return false;
+    auto temp = path_;
+#ifdef _WIN32
+    temp += "." + std::to_string(GetCurrentProcessId()) + ".tmp";
+#else
+    temp += "." + std::to_string(::getpid()) + ".tmp";
+#endif
+    {
+      std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+      out << "TVICE2 " << checksum(payload) << '\n' << payload;
+      out.close();
+      if (!out) return false;
+    }
+    Profile verified;
+    if (!sync_file(temp) || !read(temp, verified)) { std::filesystem::remove(temp, ec); return false; }
+    Profile current;
+    // Never replace a healthy recovery copy with a damaged primary save.
+    if (read(path_, current)) {
+      auto backup = path_; backup += ".bak";
+      auto backup_temp=temp;backup_temp+=".backup";
+      std::filesystem::copy_file(path_, backup_temp, std::filesystem::copy_options::overwrite_existing, ec);
+      if (ec || !sync_file(backup_temp) || !replace_file(backup_temp,backup)) { std::filesystem::remove(temp, ec); return false; }
+    }
+    bool ok=replace_file(temp,path_);
+    if (!ok) std::filesystem::remove(temp, ec);
+    return ok;
+  }
+};
+} // namespace iceberg

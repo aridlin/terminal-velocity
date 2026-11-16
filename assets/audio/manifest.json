@@ -138,5 +138,175 @@
     "source_sha256": "568967a3d9f8a8f6af54ea01729c4882284308f2a27d78c07ffd7ee0d6951661",
     "changes": "Decoded from original OGG, low-pass at 6.5 kHz, loudness normalized with -6 dBTP ceiling, 3 ms fade-in; 48 kHz mono PCM WAV.",
     "sha256": "f45d031f9f9652ffcfdff2cda1690dae7d77e8d391978a5d849f542af9a16bc6"
+  },
+  {
+    "file": "wood1.wav",
+    "source": "sfx100v2_footstep_wood_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "52465eeb853a8fa3cd9f4e218dc0b28bdcb3bb52da72f5bece5d47cae2523a20",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "6a58fa70470715137e3c6ccfd4a40aaca7bb620dca61f3a913930d40ea20ca8e"
+  },
+  {
+    "file": "wood2.wav",
+    "source": "sfx100v2_footstep_wood_02.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "e6c35ceaabd50775ba222d8c9566e807b876debf066443626a0a4906849982d4",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "fec34aa7c638369d944f90b7652a124ef31204c9e33f2c5b1a96e2eae3422ddb"
+  },
+  {
+    "file": "metal1.wav",
+    "source": "sfx100v2_metal_hit_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "ad7167446b3d2fe0f5bb9009c4c4c6bca583107d4525549239782a22d84a5db0",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "05962392f43c70642ea05bf47eb286d12fb997ff40116b42f72468bd56506f51"
+  },
+  {
+    "file": "metal2.wav",
+    "source": "sfx100v2_metal_hit_02.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "5ea1f077585fb655220a19bcd5cfaf44d60151652339cdcecc86b1fc3b4fe94d",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "522116b571113f380b49a4982f11f3d0be358f835fc15283448116084104b2a0"
+  },
+  {
+    "file": "stone1.wav",
+    "source": "sfx100v2_footstep_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "007a96c62d6c335df0d292bdc5cf44fef768b7e2f14378759d03673be6be7ec6",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "4ec79336f98ee6800dbe99ff96866dbc85e8a7d8bce9a758618edc3d1c0d4703"
+  },
+  {
+    "file": "stone2.wav",
+    "source": "sfx100v2_footstep_02.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "8b478a7245bbe358fcddaa5047f8f4e29c8eca52ff79c25d489b5f378747228c",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "d4f92f4992a42eb25053b75896267c06b114b2d1cdaa2ed77137f2d11d61ff68"
+  },
+  {
+    "file": "valve.wav",
+    "source": "sfx100v2_switch_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "fa2c8ebd6361394762e9964698a0be2e31ae62dc91510f81c716c0ef8cf5741d",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "04262cedff85ebe9074c6d6864d5e58851c4ab127df474c5c9ed005fcb35f065"
+  },
+  {
+    "file": "harbor.wav",
+    "source": "sfx100v2_loop_water_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "955a367cf87f150f7868e2ecf5745ef13cec2c78a29304eda27e74f1fea06c57",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Loop timing preserved.",
+    "sha256": "883c38fc12ff18e40c63a91cad59aa75cbf4f662e74197b79a8b99bda8d11f4b"
+  },
+  {
+    "file": "works.wav",
+    "source": "sfx100v2_loop_machine_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "18aa96bda8feb81ffa4158545749a4fddbd419124025832d0014bb0ddfaecc8a",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Loop timing preserved.",
+    "sha256": "9595023ea29945ce1a4d27170f340a7f0c876d9492a1d51b846278faaad27041"
+  },
+  {
+    "file": "streets.wav",
+    "source": "sfx100v2_loop_ambient_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "da300375993cd5b807c497523a05ec8e9ee0912ea3500efd733eb5d4c4614fc6",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Loop timing preserved.",
+    "sha256": "ee4ae131843f4a33ee28d507b94e6e7edab88ff1d57b8ff9af1b04932bfd0db2"
+  },
+  {
+    "file": "gardens.wav",
+    "source": "sfx100v2_loop_water_02.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "32bc3462ebd2376d9b84e8f602969f8c2a475f589adee9804207e19116cda768",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Loop timing preserved.",
+    "sha256": "da02261e1a3c01090c2c16d47e5fe2e06bbcbf387557283927311a56a6240a19"
+  },
+  {
+    "file": "crown.wav",
+    "source": "sfx100v2_loop_ambient_03.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "313ed49a7c84406f388aefa6d107f3fb08efda584dfc0f337dfe8900a90f1b85",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Loop timing preserved.",
+    "sha256": "76f974a14387e4bcadc7ab0e52d4305916abbe2ab8ffdaeae251d6226c806537"
+  },
+  {
+    "file": "voice.wav",
+    "source": "bell_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "b29cf8f3885eb2a266a16455227288dd3e004ea0414d2823b1a8677915f862d1",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "d2530533440387d7de86bec5136065e4cbe271f6018dc07ab46909992f5a0a88"
+  },
+  {
+    "file": "paper.wav",
+    "source": "paper_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "b2b2b55e44761c7a45283bce0196f41f72207180fb08c970d7dcf93b705d280c",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "234b3577bb8162eee4bae5ccc896ae485deac90b06d73fc1a5dd5df55ad435fa"
+  },
+  {
+    "file": "bounce.wav",
+    "source": "spring_01.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "d672b3d444685f29dab4229c2d09bb5f59e0f31e92ceac8773e24beddf506155",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Low-pass at 6.5 kHz.",
+    "sha256": "f8570cb7f29b21783ceb2f749beba0cd87cd3ed190a67ddf8e3a2d55fc1d6b2b"
+  },
+  {
+    "file": "archive.wav",
+    "source": "underwater.wav",
+    "source_url": "https://opengameart.org/content/underwater-ambient-pad",
+    "author": "isaiah658",
+    "license": "CC0-1.0",
+    "source_sha256": "803fc7f2640e62bd2e433af2f7014bc6ba75f4c1991cdf16dce40b907a3c2f13",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Loop timing preserved.",
+    "sha256": "3c8e9ff5a59d3ff7fe3fb25f0f6223631c5ac86ee1a5e1d239980474943aba81"
+  },
+  {
+    "file": "snow.mp3",
+    "source": "Snow Theme/BGM_Snow_Theme_Loop.wav",
+    "source_url": "https://opengameart.org/content/snow-theme",
+    "author": "Cleyton Kauffman",
+    "license": "CC0-1.0",
+    "source_sha256": "8e955a0f2d0d456e69c6dd3cfdb1dfea144cff7b96bf2904cfca7e61a7cf3806",
+    "changes": "Decoded and normalized with true peak headroom; high-pass filtered; 24 kHz mono. Loop timing preserved.",
+    "sha256": "980c9aa74593ce6321d3c36d10ef85711100f17689f078a5d43f0b663e74388b"
   }
 ]

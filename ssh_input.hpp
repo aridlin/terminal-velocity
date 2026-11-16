@@ -168,6 +168,11 @@ private:
       edges_.select_level = int(k - '0');
     if (k == 'u')
       edges_.mute_audio = true;
+    if (k == 'e' || k == 'f') edges_.interact = true;
+    if (k == 'j') edges_.map = true;
+    if (k == 'l') edges_.language = true;
+    if (k == 's') edges_.navigate = 1;
+    if (k == 'w') edges_.navigate = -1;
     if (k == 13 || k == 10)
       edges_.confirm = true;
     if (k == 27 || k == 'p')

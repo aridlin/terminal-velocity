@@ -1,12 +1,14 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++20 -O2 -Wall -Wextra -pedantic
 SDL_FLAGS = $(shell pkg-config --cflags --libs sdl2 freetype2)
+ICEBERG_HEADERS = $(wildcard iceberg_*.hpp)
 .PHONY: all run test smoke clean
 all: terminal_velocity keyboard_launcher terminal_velocity_sdl
 terminal_velocity_sdl: sdl_frontend.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio.o
 	$(CXX) $(CXXFLAGS) -o $@ sdl_frontend.cpp audio.o $(SDL_FLAGS) -ldl -lpthread
 terminal_velocity: main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio.o
 	$(CXX) $(CXXFLAGS) -o $@ main.cpp audio.o -ldl -lpthread
+terminal_velocity terminal_velocity_sdl terminal_velocity.exe physics_tests extension_tests multiplayer_tests campaign_tests: $(ICEBERG_HEADERS)
 keyboard_launcher: keyboard_launcher.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 physics_tests: physics_tests.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio.o
@@ -17,12 +19,16 @@ multiplayer_tests: multiplayer_tests.cpp main.cpp ssh_input.hpp ghost_net.hpp ne
 	$(CXX) $(CXXFLAGS) -o $@ multiplayer_tests.cpp audio.o -ldl -lpthread
 campaign_tests: campaign_tests.cpp main.cpp progress.hpp audio.hpp audio.o
 	$(CXX) $(CXXFLAGS) -o $@ campaign_tests.cpp audio.o -ldl -lpthread
-test: physics_tests extension_tests multiplayer_tests campaign_tests terminal_velocity_sdl
+iceberg_tests: iceberg_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ iceberg_tests.cpp audio.o -ldl -lpthread
+test: physics_tests extension_tests multiplayer_tests campaign_tests iceberg_tests terminal_velocity_sdl
 	./physics_tests
 	./extension_tests
 	./multiplayer_tests
 	./campaign_tests
+	./iceberg_tests
 	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./terminal_velocity_sdl --smoke
+	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./terminal_velocity_sdl --terminal-view --smoke
 smoke: test
 run: terminal_velocity keyboard_launcher
 	./play.sh
@@ -37,7 +43,7 @@ WINDOWS_FLAGS = -std=c++20 -O2 -Wall -Wextra -pedantic -static -static-libgcc -s
 windows: terminal_velocity.exe
 terminal_velocity.exe: main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio_windows.o windows_icon.o
 	$(MINGW_CXX) $(WINDOWS_FLAGS) -o $@ main.cpp windows_icon.o audio_windows.o -lws2_32
-windows-tests: physics_tests.exe extension_tests.exe multiplayer_tests.exe windows_input_tests.exe campaign_tests.exe
+windows-tests: physics_tests.exe extension_tests.exe multiplayer_tests.exe windows_input_tests.exe campaign_tests.exe iceberg_tests.exe iceberg_campaign_tests.exe
 %_tests.exe: %_tests.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio_windows.o
 	$(MINGW_CXX) $(WINDOWS_FLAGS) -o $@ $< audio_windows.o -lws2_32
 
@@ -48,3 +54,11 @@ audio.o: audio.cpp audio.hpp vendor/miniaudio.h
 	$(CXX) $(CXXFLAGS) -c audio.cpp -o $@
 audio_windows.o: audio.cpp audio.hpp vendor/miniaudio.h
 	$(MINGW_CXX) $(WINDOWS_FLAGS) -c audio.cpp -o $@
+
+iceberg_campaign_tests: iceberg_campaign_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ iceberg_campaign_tests.cpp audio.o -ldl -lpthread
+
+# Native MSYS2 SDL fallback. Linux cross builds can keep the standalone TUI
+# target; Windows CI builds this against its native UCRT64 SDL/FreeType packages.
+terminal_velocity_sdl.exe: sdl_frontend.cpp main.cpp $(ICEBERG_HEADERS) audio_windows.o windows_icon.o
+	$(MINGW_CXX) $(CXXFLAGS) -static-libgcc -static-libstdc++ -o $@ sdl_frontend.cpp audio_windows.o windows_icon.o $(SDL_FLAGS) -lws2_32

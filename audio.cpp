@@ -18,10 +18,13 @@ struct GameAudio::Impl {
     ma_sound sound{};
     bool loaded = false;
   };
-  std::array<Clip, 2> music;
+  std::array<Clip, 3> music;
+  std::array<Clip, 6> ambience;
+  std::array<double, 6> ambience_quiet{};
+  std::array<float, size_t(AudioCue::Count)> effect_levels{};
   std::array<std::array<Clip, 2>, size_t(AudioCue::Count)> effects;
   std::array<unsigned, size_t(AudioCue::Count)> next{};
-  std::array<double, 2> quiet_time{};
+  std::array<double, 3> quiet_time{};
   int current_track = -1;
   AudioScene current_scene = AudioScene::Menu;
   bool was_muted = false, was_focused = true;
@@ -35,6 +38,8 @@ struct GameAudio::Impl {
     for (auto &track : music)
       if (track.loaded)
         ma_sound_uninit(&track.sound);
+    for (auto &track : ambience)
+      if (track.loaded) ma_sound_uninit(&track.sound);
     for (auto &voices : effects)
       for (auto &clip : voices)
         if (clip.loaded)
@@ -104,8 +109,8 @@ bool GameAudio::ensure_ready() {
   impl_->initialized = true;
   ma_engine_set_volume(&impl_->engine, .60f);
   auto flags = MA_SOUND_FLAG_NO_SPATIALIZATION | MA_SOUND_FLAG_WAIT_INIT;
-  const char *tracks[] = {"dreams.mp3", "ascent.mp3"};
-  for (size_t i = 0; i < 2; ++i) {
+  const char *tracks[] = {"dreams.mp3", "ascent.mp3", "snow.mp3"};
+  for (size_t i = 0; i < impl_->music.size(); ++i) {
     if (impl_->load(
             impl_->music[i], directory_ / tracks[i],
             flags | (offline_ ? MA_SOUND_FLAG_DECODE : MA_SOUND_FLAG_STREAM))) {
@@ -114,11 +119,20 @@ bool GameAudio::ensure_ready() {
       ma_sound_set_fade_in_milliseconds(&impl_->music[i].sound, 0, 0, 1);
     }
   }
+  const char *environments[] = {"harbor.wav", "works.wav", "streets.wav", "archive.wav", "gardens.wav", "crown.wav"};
+  for (size_t i = 0; i < impl_->ambience.size(); ++i)
+    if (impl_->load(impl_->ambience[i], directory_ / environments[i], flags | MA_SOUND_FLAG_DECODE)) {
+      ma_sound_set_looping(&impl_->ambience[i].sound, MA_TRUE);
+      ma_sound_set_volume(&impl_->ambience[i].sound, 0);
+    }
   const char *names[] = {"jump",       "dash",   "pickup", "death",
                          "checkpoint", "land",   "step1",  "step2",
-                         "refill",     "spring", "menu",   "win"};
+                         "refill", "spring", "menu", "win",
+    "wood1", "wood2", "metal1", "metal2", "stone1", "stone2", "valve", "voice", "paper", "bounce"};
   const float volumes[] = {.45f, .4f,  .35f, .4f, .4f,  .3f,
-                           .17f, .17f, .35f, .4f, .22f, .45f};
+                           .17f, .17f, .35f, .4f, .22f, .45f,
+    .2f,.2f,.17f,.17f,.2f,.2f,.35f,.2f,.25f,.3f};
+  std::copy(std::begin(volumes), std::end(volumes), impl_->effect_levels.begin());
   for (size_t i = 0; i < size_t(AudioCue::Count); ++i)
     for (auto &voice : impl_->effects[i])
       if (impl_->load(voice, directory_ / (std::string(names[i]) + ".wav"),
@@ -129,12 +143,19 @@ bool GameAudio::ensure_ready() {
 void GameAudio::play(AudioCue cue) {
   if (muted || !ensure_ready())
     return;
+  if (environment_ >= 0 && (cue == AudioCue::Step1 || cue == AudioCue::Step2 || cue == AudioCue::Land)) {
+    bool second = cue == AudioCue::Step2;
+    if (environment_ == 0 || environment_ == 2) cue = second ? AudioCue::Wood2 : AudioCue::Wood1;
+    else if (environment_ == 1 || environment_ == 3) cue = second ? AudioCue::Metal2 : AudioCue::Metal1;
+    else cue = second ? AudioCue::Stone2 : AudioCue::Stone1;
+  }
   size_t i = size_t(cue);
   if (i >= impl_->effects.size())
     return;
   auto &voice = impl_->effects[i][impl_->next[i]++ % 2];
   if (!voice.loaded)
     return;
+  ma_sound_set_volume(&voice.sound, impl_->effect_levels[i] * effects_gain_);
   ma_sound_seek_to_pcm_frame(&voice.sound, 0);
   ma_sound_start(&voice.sound);
 }
@@ -143,17 +164,18 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
     return; // --mute never opens an audio device
   if (!ensure_ready())
     return;
-  track = std::clamp(track, 0, 1);
+  track = std::clamp(track, 0, int(impl_->music.size())-1);
   bool changed = track != impl_->current_track ||
                  scene != impl_->current_scene || muted != impl_->was_muted ||
                  focused != impl_->was_focused;
   // Master mute is immediate and also silences already-playing effects.
   ma_engine_set_volume(&impl_->engine, muted || !focused ? 0.f : .60f);
-  for (size_t i = 0; i < 2; ++i) {
+  for (size_t i = 0; i < impl_->music.size(); ++i) {
     auto &music = impl_->music[i];
     if (!music.loaded)
       continue;
-    bool selected = int(i) == track && !muted && focused;
+    bool selected = int(i) == track && !muted && focused && !silence_;
+    ma_sound_set_volume(&music.sound, .55f * music_gain_);
     if (selected) {
       impl_->quiet_time[i] = 0;
       if (!ma_sound_is_playing(&music.sound))
@@ -171,6 +193,17 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
       ma_sound_set_fade_in_milliseconds(&music.sound, -1, gain, 800);
     }
   }
+  for (size_t i = 0; i < impl_->ambience.size(); ++i) {
+    auto &clip = impl_->ambience[i];
+    if (!clip.loaded) continue;
+    bool selected = int(i) == environment_ && !muted && focused && !silence_ && scene != AudioScene::Menu;
+    float gain = selected ? .35f * ambience_gain_ * (scene == AudioScene::Paused ? .25f : 1.f) : 0.f;
+    ma_sound_set_volume(&clip.sound, gain);
+    if (selected) {
+      impl_->ambience_quiet[i] = 0;
+      if (!ma_sound_is_playing(&clip.sound)) ma_sound_start(&clip.sound);
+    } else if ((impl_->ambience_quiet[i] += std::clamp(dt, 0., .1)) > .9) ma_sound_stop(&clip.sound);
+  }
   impl_->current_track = track;
   impl_->current_scene = scene;
   impl_->was_muted = muted;
@@ -183,4 +216,18 @@ bool GameAudio::render(float *stereo, size_t frames) {
   return offline_ && ready() &&
          ma_engine_read_pcm_frames(&impl_->engine, stereo, frames, nullptr) ==
              MA_SUCCESS;
+}
+
+void GameAudio::set_mix(float music, float effects, float ambience) {
+  music_gain_ = std::clamp(music, 0.f, 1.f);
+  effects_gain_ = std::clamp(effects, 0.f, 1.f);
+  ambience_gain_ = std::clamp(ambience, 0.f, 1.f);
+  if (impl_) for (size_t i=0;i<impl_->effects.size();++i)
+    for (auto &clip:impl_->effects[i]) if (clip.loaded)
+      ma_sound_set_volume(&clip.sound, impl_->effect_levels[i] * effects_gain_);
+}
+void GameAudio::set_environment(int district, bool silence) {
+  environment_ = std::clamp(district, -1, 5);
+  if (silence_ != silence && impl_) impl_->current_track = -1;
+  silence_ = silence;
 }

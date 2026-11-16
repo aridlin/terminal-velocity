@@ -1,5 +1,6 @@
 #define TERMINAL_VELOCITY_NO_TUI_MAIN
 #include "main.cpp"
+#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -127,6 +128,22 @@ public:
   }
   void center(const std::string &s, int y, int size, RGBA c = cream) {
     text(s, (W - width(s, size)) / 2, y, size, c);
+  }
+  void cell(const Cell &c, int x, int y, int cell_w, int cell_h) {
+    if(c.glyph.empty()||c.glyph==" ")return;
+    uint32_t rgb=cell_color(c);
+    RGBA fg{Uint8(rgb>>16),Uint8(rgb>>8),Uint8(rgb),255};
+    if(c.glyph=="█"){box(x,y,cell_w,cell_h,fg);return;}
+    auto codepoints=utf8(c.glyph);
+    if(codepoints.empty())return;
+    auto &g=glyph(cell_h-3,codepoints.front());
+    if(!g.texture)return;
+    SDL_SetTextureColorMod(g.texture,fg.r,fg.g,fg.b);
+    SDL_SetTextureAlphaMod(g.texture,255);
+    double scale=std::min(1.,double(cell_w)/std::max(1,g.w));
+    int width=std::max(1,int(g.w*scale)),height=std::max(1,int(g.h*scale));
+    SDL_Rect rect{x+(cell_w-width)/2,y+cell_h-4-int(g.top*scale),width,height};
+    SDL_RenderCopy(ren,g.texture,nullptr,&rect);
   }
   ~Font() {
     for (auto &[key, g] : cache)
@@ -898,7 +915,107 @@ void pause_or_win(App &a, Font &f) {
   }
 }
 } // namespace
-int main(int argc, char **argv) {
+
+int terminal_window_main(int argc,char **argv) {
+  const Args args=parse_args(argc,argv,true);
+  if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_TIMER)!=0)return 1;
+  SDL_Window *window=SDL_CreateWindow("Terminal Velocity • Unicode",SDL_WINDOWPOS_CENTERED,
+    SDL_WINDOWPOS_CENTERED,1100,680,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
+  if(!window){SDL_Quit();return 1;}
+  ren=SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
+  if(!ren)ren=SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE);
+  if(!ren){SDL_DestroyWindow(window);SDL_Quit();return 1;}
+  int result=0;
+  {
+    Font font;
+    auto font_file=audio_directory().parent_path()/"font.ttf";
+    if(!font.init(font_file.string())){std::cerr<<"Cannot load bundled font\n";result=1;}
+    else {
+      auto options=adventure_options(args);
+      std::string screenshot,scene="menu";int maxframes=0;
+      for(int i=1;i<argc;++i) {
+        std::string a=argv[i];
+        if(a=="--screenshot"&&i+1<argc)screenshot=argv[++i];
+        else if(a=="--scene"&&i+1<argc)scene=argv[++i];
+        else if(a=="--frames"&&i+1<argc)maxframes=std::atoi(argv[++i]);
+      }
+      options.no_save=args.smoke||!screenshot.empty();options.mute|=options.no_save;
+      AdventureSession session(options);
+      if(scene=="play")session.state.menu=false;
+      if(scene=="dialogue"){session.state.menu=false;session.talk(iceberg::introduction(0));}
+      if(args.smoke){session.state.menu=false;maxframes=120;}
+      std::array<bool,SDL_NUM_SCANCODES> held{};
+      bool focused=true,fullscreen=false;
+      cell_frame_sink=[&](const CellFrame &frame){
+        color(ink);SDL_RenderClear(ren);
+        for(size_t y=0;y<frame.size();++y)for(size_t x=0;x<frame[y].size();++x)
+          font.cell(frame[y][x],int(x)*10,int(y)*20,10,20);
+      };
+      auto last=std::chrono::steady_clock::now(),render_at=last;
+      int frames=0;
+      while(session.running) {
+        Controls c;
+        SDL_Event event;
+        while(SDL_PollEvent(&event)) {
+          if(event.type==SDL_QUIT)c.quit=true;
+          if(event.type==SDL_WINDOWEVENT) {
+            if(event.window.event==SDL_WINDOWEVENT_FOCUS_LOST){focused=false;held.fill(false);}
+            if(event.window.event==SDL_WINDOWEVENT_FOCUS_GAINED)focused=true;
+          }
+          if(event.type==SDL_KEYUP)held[event.key.keysym.scancode]=false;
+          if(event.type!=SDL_KEYDOWN||event.key.repeat||!focused)continue;
+          auto key=event.key.keysym.scancode;held[key]=true;
+          c.jump_pressed|=key==SDL_SCANCODE_SPACE||key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP;
+          c.dash_pressed|=key==SDL_SCANCODE_X||key==SDL_SCANCODE_LSHIFT||key==SDL_SCANCODE_RSHIFT;
+          c.interact|=key==SDL_SCANCODE_E||key==SDL_SCANCODE_F;
+          c.confirm|=key==SDL_SCANCODE_RETURN;
+          c.restart|=key==SDL_SCANCODE_R;c.new_run|=key==SDL_SCANCODE_N;
+          c.pause|=key==SDL_SCANCODE_P||key==SDL_SCANCODE_ESCAPE;
+          c.menu_request|=key==SDL_SCANCODE_M;c.journal|=key==SDL_SCANCODE_TAB;
+          c.map|=key==SDL_SCANCODE_J;c.language|=key==SDL_SCANCODE_L;
+          c.mute_audio|=key==SDL_SCANCODE_U;c.debug|=key==SDL_SCANCODE_F3;
+          c.quit|=key==SDL_SCANCODE_Q;
+          if(key>=SDL_SCANCODE_1&&key<=SDL_SCANCODE_6)c.select_level=int(key-SDL_SCANCODE_1)+1;
+          if(key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP)c.navigate=-1;
+          if(key==SDL_SCANCODE_S||key==SDL_SCANCODE_DOWN)c.navigate=1;
+          if(key==SDL_SCANCODE_F11){fullscreen=!fullscreen;SDL_SetWindowFullscreen(window,fullscreen?SDL_WINDOW_FULLSCREEN_DESKTOP:0);}
+        }
+        c.move=int(held[SDL_SCANCODE_D]||held[SDL_SCANCODE_RIGHT])-int(held[SDL_SCANCODE_A]||held[SDL_SCANCODE_LEFT]);
+        c.jump_held=held[SDL_SCANCODE_SPACE]||held[SDL_SCANCODE_W]||held[SDL_SCANCODE_UP];
+        c.fast_fall=held[SDL_SCANCODE_S]||held[SDL_SCANCODE_DOWN];
+        c.aim_y=int(c.fast_fall)-int(held[SDL_SCANCODE_W]||held[SDL_SCANCODE_UP]);
+        if(args.smoke){c.move=1;c.jump_held=true;}
+        int w,h;SDL_GetRendererOutputSize(ren,&w,&h);
+        int cols=std::clamp(w/10,1,240),rows=std::clamp(h/20,1,100);
+        auto now=std::chrono::steady_clock::now();
+        double dt=args.smoke?1./120:std::chrono::duration<double>(now-last).count();last=now;
+        bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused;
+        if(c.debug)session.state.debug=!session.state.debug;
+        session.tick(c,dt,focused,cols,rows,2);
+        bool blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused;
+        if(was_blocked!=blocked)held.fill(false);
+        if(now>=render_at||args.smoke||!screenshot.empty()) {
+          RenderGrid(session.grid,session.state,rows,cols,2).draw();
+          if(!screenshot.empty()) {
+            SDL_Surface *surface=SDL_CreateRGBSurfaceWithFormat(0,w,h,32,SDL_PIXELFORMAT_ARGB8888);
+            if(SDL_RenderReadPixels(ren,nullptr,surface->format->format,surface->pixels,surface->pitch)!=0||
+              SDL_SaveBMP(surface,screenshot.c_str())!=0)result=2;
+            SDL_FreeSurface(surface);session.running=false;
+          }
+          SDL_RenderPresent(ren);++frames;
+          render_at=now+std::chrono::microseconds(16667);
+          if(maxframes&&frames>=maxframes)session.running=false;
+        }
+        if(!args.smoke)SDL_Delay(1);
+      }
+      session.persist();cell_frame_sink={};
+      if(session.legacy_requested)result=10;
+      if(args.smoke){std::cout<<"SDL cell view smoke x="<<session.state.player.x<<'\n';if(session.state.player.x<10)result=3;}
+    }
+  }
+  SDL_DestroyRenderer(ren);ren=nullptr;SDL_DestroyWindow(window);SDL_Quit();return result;
+}
+int diagnostic_window_main(int argc, char **argv) {
   bool smoke = false;
   std::string screenshot, scene = "menu";
   int maxframes = 0;
@@ -1020,8 +1137,10 @@ int main(int argc, char **argv) {
     while (a.running) {
       SDL_Event e;
       while (SDL_PollEvent(&e)) {
-        if (!smoke && screenshot.empty())
-          a.event(e, window);
+        if (!smoke && screenshot.empty()) {
+          if(a.mode==App::Menu&&e.type==SDL_KEYDOWN&&e.key.keysym.scancode==SDL_SCANCODE_V){result=10;a.running=false;}
+          else a.event(e, window);
+        }
       }
       auto now = std::chrono::steady_clock::now();
       double dt = std::chrono::duration<double>(now - last).count();
@@ -1035,8 +1154,9 @@ int main(int argc, char **argv) {
         if (render_dt > .001)
           a.fps += (1 / render_dt - a.fps) * .1;
         world(a, f);
-        if (a.mode == App::Menu)
-          menu(a, f);
+        if (a.mode == App::Menu) {
+          menu(a, f);f.center("V — kampania / identyczny widok terminalowy", 685, 16, gold);
+        }
         else {
           hud(a, f);
           if (a.mode == App::Journal)
@@ -1080,4 +1200,20 @@ int main(int argc, char **argv) {
   SDL_DestroyWindow(window);
   SDL_Quit();
   return result;
+}
+
+int main(int argc,char **argv) {
+  SDL_SetMainReady();
+  bool cells=true,explicit_cells=false;
+  for(int i=1;i<argc;++i) {
+    std::string arg=argv[i];
+    if(arg=="--terminal-view")explicit_cells=true;
+    if(arg=="--diagnostic"||arg=="--legacy"||arg=="--smoke"||arg=="--scene")cells=false;
+  }
+  cells|=explicit_cells;
+  for(;;) {
+    int result=cells?terminal_window_main(argc,argv):diagnostic_window_main(argc,argv);
+    if(result!=10)return result;
+    cells=!cells;
+  }
 }

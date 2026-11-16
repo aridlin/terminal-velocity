@@ -104,7 +104,7 @@ int main() {
 
     GameAudio sound;
     sound.init("assets/audio", false, true);
-    check(sound.ready() && sound.loaded_clips() == 26 && sound.error().empty(),
+    check(sound.ready() && sound.loaded_clips() == 9 + 2 * size_t(AudioCue::Count) && sound.error().empty(),
           "all sourced music and effect voices decode offline");
     sound.update(AudioScene::Play, 0, .02);
     for (int voice = 0; voice < 2; ++voice)
@@ -124,6 +124,14 @@ int main() {
               << " rms=" << std::sqrt(energy / frames.size()) << '\n';
     check(peak < .98 && energy > .001,
           "conservative overlapping audio mix leaves headroom");
+    sound.set_mix(0,0,1);sound.set_environment(0);
+    sound.update(AudioScene::Play,0,.02);sound.render(frames.data(),48000);
+    check(std::any_of(frames.begin(),frames.end(),[](float x){return std::abs(x)>.0001f;}),
+      "ambience is audible with music and effects channels at zero");
+    sound.set_mix(0,0,0);sound.update(AudioScene::Play,0,.02);sound.render(frames.data(),48000);
+    check(std::all_of(frames.begin(),frames.end(),[](float x){return std::abs(x)<1e-7f;}),
+      "independent channel volumes silence all playing recordings");
+    sound.set_mix(1,1,1);sound.set_environment(-1);
     sound.muted = true;
     sound.update(AudioScene::Play, 0, .02);
     check(sound.render(frames.data(), 48000), "muted mix renders");

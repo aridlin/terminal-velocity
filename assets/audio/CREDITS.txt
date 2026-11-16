@@ -94,3 +94,21 @@ rpg-audio
 
 	Follow on Twitter for updates:
 	@KenneyNL
+
+ICEBERG EXPANSION (2026-11-16)
+Through the Snow — Cleyton Kauffman — CC0 1.0
+https://opengameart.org/content/snow-theme
+https://soundcloud.com/cleytonkauffman
+
+Underwater Ambient Pad — isaiah658 — CC0 1.0
+https://opengameart.org/content/underwater-ambient-pad
+
+100 CC0 SFX and 100 CC0 SFX #2 — rubberduck — CC0 1.0
+https://opengameart.org/content/100-cc0-sfx
+https://opengameart.org/content/100-cc0-sfx-2
+Used for material footsteps, machinery, dialogue/paper cues, and environment loops.
+
+CC0: https://creativecommons.org/publicdomain/zero/1.0/
+Exact source filenames, transformations, and source/output SHA-256 hashes are
+recorded in manifest.json. Original recordings were decoded and normalized;
+no runtime sound synthesis is used.

@@ -1,0 +1,377 @@
+#pragma once
+// Session owns progression and interaction, not a frontend. SDL and TUI feed
+// identical Controls and read the same GameState and rendered cell frame.
+class AdventureSession {
+public:
+  iceberg::Profile profile;
+  iceberg::SaveStore saves;
+  iceberg::SessionOptions options;
+  EngineGrid grid;
+  GameState state;
+  FixedStepper stepper;
+  GameAudio audio;
+  iceberg::Mode mode = iceberg::Mode::Campaign;
+  bool running = true, legacy_requested = false;
+  int district = 0, stage = 0, room = 0, depth = 0;
+  uint32_t run_seed = 1;
+  double autosave_left = 15, run_seconds = 0;
+  int run_deaths = 0, run_treasures = 0;
+  bool previous_focus = true;
+  bool run_active = false;
+
+  explicit AdventureSession(const iceberg::SessionOptions &o,
+      const std::filesystem::path &save_file = iceberg::SaveStore::default_file())
+    : saves(save_file), options(o), grid(iceworld::build_settlement(0)), mode(o.mode), run_seed(o.seed) {
+    saves.load(profile);
+    if (!profile.started) profile.seed = o.seed;
+    if (o.language_override) profile.language = o.language;
+    district = profile.district; stage = profile.stage; room = profile.room;
+    run_seed = profile.seed;
+    if (mode != iceberg::Mode::Campaign) {
+      district = o.district; stage = 2; room = 0; run_seed = o.seed;
+    }
+    audio.init(audio_directory(), o.mute || (o.remote && !o.remote_audio));
+    load_room(true);
+    state.menu = true;
+    sync_view();
+  }
+  ~AdventureSession() = default;
+  std::string t(const char *pl,const char *en) const { return iceberg::tr(profile.language,pl,en); }
+  void notice(const std::string &text, double seconds=3) {
+    state.adventure.notice=text;state.adventure.notice_left=seconds;
+  }
+  void sync_view() {
+    auto &v=state.adventure;
+    v.language=profile.language;v.mode=mode;v.district=grid.district;v.stage=stage;v.room=room;v.depth=depth;
+    v.unlocked=profile.unlocked;v.finished=profile.finished;v.can_continue=profile.started;
+    v.endless_resume=profile.expeditions[0].active;v.trial_resume=profile.expeditions[1].active;
+    v.hidden_room=profile.hidden_room;v.visit_district=profile.visit_district;v.cosmetics=profile.cosmetics;
+    v.outfit=profile.outfit;v.quests=profile.quests;v.quest_counts=profile.quest_counts;
+    v.records=profile.records;v.trials=profile.trials;v.discoveries=profile.discoveries;
+    v.switches=grid.switch_flags;v.room_name=grid.room_name.get(profile.language);
+    v.music_volume=profile.music_volume;v.effects_volume=profile.effects_volume;v.ambience_volume=profile.ambience_volume;
+    state.audio_muted=audio.muted;state.audio_error=audio.error();
+  }
+  void persist() {
+    if (options.no_save) return;
+    if (mode == iceberg::Mode::Campaign && profile.started && profile.hidden_room<0 && profile.visit_district<0) {
+      profile.district=district;profile.stage=stage;profile.room=room;
+      profile.checkpoint=state.checkpoint;profile.switches=grid.switch_flags;
+      profile.collected=0;
+      for(size_t i=0;i<state.collected.size() && i<64;++i)
+        if(state.collected[i])profile.collected|=uint64_t(1)<<i;
+      profile.room_seconds=state.elapsed;profile.room_deaths=state.deaths;
+    }
+    if(mode!=iceberg::Mode::Campaign && run_active) {
+      auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
+      e.active=true;e.seed=run_seed;e.district=district;e.room=room;e.depth=depth;e.checkpoint=state.checkpoint;
+      e.collected=0;for(size_t i=0;i<state.collected.size()&&i<64;++i)if(state.collected[i])e.collected|=uint64_t(1)<<i;
+      e.switches=grid.switch_flags;e.room_seconds=state.elapsed;e.room_deaths=state.deaths;
+      e.seconds=run_seconds;e.deaths=run_deaths;e.treasures=run_treasures;
+    }
+    state.adventure.save_error=!saves.save(profile);
+    autosave_left=15;
+  }
+  void clear_room_record() {
+    profile.checkpoint=0;profile.switches=profile.collected=0;
+    profile.room_seconds=0;profile.room_deaths=0;
+  }
+  void load_room(bool resume=false) {
+    if(mode==iceberg::Mode::Campaign && profile.hidden_room>=0) {
+      grid=iceworld::build_hidden(profile.hidden_room);
+    } else if(mode==iceberg::Mode::Campaign && profile.visit_district>=0) {
+      grid=iceworld::build_settlement(profile.visit_district);
+    } else if(mode==iceberg::Mode::Campaign && (stage==0 || stage==3 || stage==5)) {
+      grid=iceworld::build_settlement(district);
+    } else if(mode==iceberg::Mode::Campaign && (stage==1 || stage==7)) {
+      grid=iceworld::build_authored(district,stage==7);
+    } else {
+      if(mode==iceberg::Mode::Campaign) {
+        if(profile.itinerary.size()!=size_t(iceberg::RoomsPerLeg*3))
+          profile.itinerary=iceworld::make_itinerary(profile.seed,district);
+        int leg=stage==2?0:stage==4?1:2;
+        grid=verified_room(profile.itinerary[size_t(leg*iceberg::RoomsPerLeg+room)],
+          iceberg::mix(profile.seed ^ unsigned(district*104729+leg*31+room)),district);
+      } else {
+        auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
+        if(e.itinerary.size()!=iceberg::RoomsPerLeg)e.itinerary=iceworld::make_itinerary(run_seed,district,iceberg::RoomsPerLeg);
+        grid=verified_room(e.itinerary[size_t(room % iceberg::RoomsPerLeg)],
+          iceberg::mix(run_seed+unsigned(depth)),district,mode==iceberg::Mode::Trial);
+      }
+    }
+    auto old_view=state.adventure;
+    state=new_state(grid);state.adventure=std::move(old_view);
+    state.adventure.dialogue={};state.adventure.map=false;state.adventure.prompt.clear();
+    state.ssh=options.remote;
+    if(resume && mode==iceberg::Mode::Campaign && profile.hidden_room<0 && profile.visit_district<0) {
+      grid.switch_flags=profile.switches;
+      for(size_t i=0;i<state.collected.size() && i<64;++i)state.collected[i]=(profile.collected>>i)&1;
+      if(size_t(profile.checkpoint)<grid.checkpoint_points.size()) {
+        state.checkpoint=profile.checkpoint;
+        auto [x,y]=grid.checkpoint_points[size_t(state.checkpoint)];
+        state.spawn_x=x;state.spawn_y=y;state.player.x=x;state.player.y=y;
+      }
+      state.elapsed=profile.room_seconds;state.deaths=profile.room_deaths;
+    }
+    if(resume && mode!=iceberg::Mode::Campaign && run_active) {
+      const auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
+      grid.switch_flags=e.switches;
+      for(size_t i=0;i<state.collected.size()&&i<64;++i)state.collected[i]=(e.collected>>i)&1;
+      if(size_t(e.checkpoint)<grid.checkpoint_points.size()) {
+        state.checkpoint=e.checkpoint;auto [x,y]=grid.checkpoint_points[size_t(e.checkpoint)];
+        state.spawn_x=x;state.spawn_y=y;state.player.x=x;state.player.y=y;
+      }
+      state.elapsed=e.room_seconds;state.deaths=e.room_deaths;
+    }
+    stepper={};sync_view();
+    update_camera(state,grid,110,27,2,10);
+  }
+  void talk(std::vector<iceberg::DialogueLine> lines,int action=0) {
+    state.adventure.dialogue={std::move(lines),0,action};stepper={};
+    state.player.vx=0;audio.play(AudioCue::Voice);
+  }
+  void dialogue_next() {
+    auto &dialogue=state.adventure.dialogue;
+    if(!dialogue.active())return;
+    ++dialogue.page;
+    if(dialogue.active()){audio.play(AudioCue::Paper);return;}
+    int action=dialogue.action;
+    dialogue={};
+    if(action==1) {
+      profile.story|=uint64_t(1)<<district;
+    } else if(action==2) {
+      complete_district();
+    } else if(action>=100 && action<108) {
+      int quest=action-100;
+      profile.quests[size_t(quest)]=profile.quest_counts[size_t(quest)]>=unsigned(iceberg::Quests[size_t(quest)].required)?2:1;
+    } else if(action>=200 && action<208) {
+      int quest=action-200;profile.quests[size_t(quest)]=3;
+      profile.cosmetics|=1u<<(quest%7+1);
+      notice(t("ZADANIE UKOŃCZONE — nagroda w dzienniku","TASK COMPLETE — reward in journal"));
+      audio.play(AudioCue::Win);
+    }
+    persist();sync_view();
+  }
+  static void merge_record(iceberg::Record &record,double seconds,int deaths,int treasures) {
+    if(!record.complete || seconds<record.best_seconds)record.best_seconds=seconds;
+    if(record.best_deaths<0 || deaths<record.best_deaths)record.best_deaths=deaths;
+    record.best_treasures=std::max(record.best_treasures,treasures);record.complete=true;
+  }
+  void complete_district() {
+    merge_record(profile.records[size_t(district)],profile.district_seconds,
+      profile.district_deaths,profile.district_treasures);
+    profile.story|=uint64_t(1)<<(district+8);
+    profile.district_seconds=0;profile.district_deaths=profile.district_treasures=0;
+    profile.itinerary.clear();
+    if(district+1<iceberg::DistrictCount) {
+      ++district;profile.unlocked=std::max(profile.unlocked,district);
+    } else {profile.finished=true;profile.cosmetics|=1u<<7;}
+    stage=0;room=0;clear_room_record();load_room();persist();
+  }
+  void begin_campaign(bool fresh) {
+    persist();
+    if(fresh) {
+      auto language=profile.language;
+      float music=profile.music_volume,effects=profile.effects_volume,ambience=profile.ambience_volume;
+      profile={};profile.language=language;profile.seed=run_seed;
+      profile.music_volume=music;profile.effects_volume=effects;profile.ambience_volume=ambience;
+    }
+    run_active=false;
+    profile.started=true;mode=iceberg::Mode::Campaign;
+    district=profile.district;stage=profile.stage;room=profile.room;
+    load_room(true);state.menu=false;persist();
+  }
+  void begin_run(iceberg::Mode next,bool fresh=false) {
+    persist();mode=next;
+    auto &e=profile.expeditions[next==iceberg::Mode::Endless?0:1];
+    bool resume=e.active&&!fresh&&(!options.seed_override||e.seed==options.seed);
+    if(resume) {
+      district=e.district;room=e.room;depth=e.depth;run_seed=e.seed;
+      run_seconds=e.seconds;run_deaths=e.deaths;run_treasures=e.treasures;
+    } else {
+      district=std::min(profile.unlocked,district);room=depth=0;
+      run_seed=options.seed_override?options.seed:iceberg::mix(run_seed+1);
+      run_seconds=0;run_deaths=run_treasures=0;e={};
+    }
+    stage=2;run_active=true;load_room(resume);state.menu=false;persist();
+    notice(resume?t("WZNOWIONO WYPRAWĘ — ta sama droga","EXPEDITION RESUMED — the same route"):
+      next==iceberg::Mode::Endless?t("WYPRAWA BEZ KOŃCA — każda brama to nowa droga","ENDLESS EXPEDITION — every gate is a new route"):
+      t("PRÓBA MISTRZOWSKA — osiem sal, jeden rekord","MASTERY TRIAL — eight rooms, one record"));
+  }
+  void advance_room() {
+    if(mode!=iceberg::Mode::Campaign) {
+      ++room;++depth;profile.endless_best=std::max(profile.endless_best,depth);
+      if(mode==iceberg::Mode::Trial && room>=iceberg::RoomsPerLeg) {
+        merge_record(profile.trials[size_t(district)],run_seconds,run_deaths,run_treasures);
+        profile.cosmetics|=1u<<district;
+        run_active=false;profile.expeditions[1].active=false;
+        persist();state.menu=true;state.won=false;room=0;
+        notice(t("PRÓBA UKOŃCZONA — rekord zapisany","TRIAL COMPLETE — record saved"),6);
+      } else {
+        if(room>=iceberg::RoomsPerLeg){room=0;run_seed=iceberg::mix(run_seed+1);profile.expeditions[0].itinerary.clear();}
+        load_room();persist();
+      }
+      return;
+    }
+    if(profile.hidden_room>=0 || profile.visit_district>=0) {
+      profile.hidden_room=profile.visit_district=-1;load_room(true);persist();return;
+    }
+    if(grid.room_role==iceberg::RoomRole::Settlement) {
+      if(profile.finished) {begin_run(iceberg::Mode::Endless);return;}
+      if(!(profile.story&(uint64_t(1)<<district))) {
+        talk(iceberg::introduction(district),1);return;
+      }
+      stage=stage==0?1:stage==3?4:6;room=0;
+    } else if(stage==1) {stage=2;room=0;}
+    else if(stage==7) {talk(iceberg::conclusion(district),2);return;}
+    else if(++room>=iceberg::RoomsPerLeg) {
+      room=0;stage=stage==2?3:stage==4?5:7;
+    }
+    clear_room_record();load_room();persist();
+  }
+  int near_interaction() const {
+    auto p=state.player.rect();p.x-=1.6;p.y-=1.;p.w+=3.2;p.h+=2.;
+    for(size_t i=0;i<grid.interactions.size();++i)
+      if(p.intersects(grid.interactions[i].area))return int(i);
+    return -1;
+  }
+  void interact() {
+    int at=near_interaction();if(at<0)return;
+    const auto node=grid.interactions[size_t(at)];
+    if(node.kind==InteractionKind::Npc) {
+      if(mode==iceberg::Mode::Campaign && profile.visit_district<0 && stage==0 && !(profile.story&(uint64_t(1)<<district))) {
+        talk(iceberg::introduction(district),1);return;
+      }
+      int quest=-1;
+      for(size_t i=0;i<iceberg::Quests.size();++i)if(iceberg::Quests[i].owner==node.id){quest=int(i);break;}
+      if(quest>=0 && profile.quests[size_t(quest)]==2)
+        talk({{node.id,{"Masz wszystko. Dziękuję. Ta sprawa nie trafi do wielkiej historii, ale komuś zmieni dzień.","You have everything. Thank you. This won't make the history books, but it will change somebody's day."}}},200+quest);
+      else talk(iceberg::small_talk(node.id,quest<0?0:profile.quests[size_t(quest)]),quest>=0&&profile.quests[size_t(quest)]==0?100+quest:0);
+    } else if(node.kind==InteractionKind::Return) {
+      advance_room();return;
+    } else if(node.kind==InteractionKind::Secret) {
+      if(mode!=iceberg::Mode::Campaign || profile.visit_district>=0)return;
+      if(node.id>0 && !(profile.discoveries&(1u<<(node.id-1))))return;
+      persist();profile.hidden_room=node.id;load_room();persist();return;
+    } else if(node.kind==InteractionKind::Board) {
+      advance_room();
+    } else if(node.kind==InteractionKind::Valve) {
+      grid.switch_flags|=uint64_t(1)<<node.id;
+      audio.play(AudioCue::Valve);notice(t("OBIEG OTWARTY","CIRCUIT OPEN"));persist();
+    } else if(node.kind==InteractionKind::Task) {
+      int bit=node.detail;auto mask=uint64_t(1)<<(bit%64);
+      if(!(profile.task_items[size_t(bit/64)]&mask)) {
+        profile.task_items[size_t(bit/64)]|=mask;
+        ++profile.quest_counts[size_t(node.id)];
+        if(profile.quests[size_t(node.id)]==1 && profile.quest_counts[size_t(node.id)]>=unsigned(iceberg::Quests[size_t(node.id)].required))profile.quests[size_t(node.id)]=2;
+        notice(iceberg::Quests[size_t(node.id)].title.get(profile.language)+"  "+std::to_string(profile.quest_counts[size_t(node.id)])+"/3");
+        audio.play(AudioCue::Pickup);persist();
+      } else notice(t("Już zabrane. Wróć do zleceniodawcy.","Already collected. Return to the task giver."));
+    } else if(node.kind==InteractionKind::Note) {
+      if(node.id>=10) {
+        profile.discoveries|=1u<<(node.id-10);
+        talk(iceberg::hidden_testimony(node.id-10));persist();return;
+      }
+      static const iceberg::Text signs[]{
+        {"A/D: ruch. Spacja: skok. Przytrzymaj, żeby skoczyć wyżej. Czerwone krawędzie są niebezpieczne. Lampy zapisują miejsce powrotu.","A/D: move. Space: jump. Hold for a higher jump. Red edges are dangerous. Lamps save your return point."},
+        {"Zryw: X albo Shift z kierunkiem. Żółta postać ma gotowy zryw. Na ziemi: zryw, potem szybko skok — zachowasz rozpęd.","Dash: X or Shift with a direction. A yellow character has a dash ready. On the ground: dash, then quickly jump to keep your momentum."},
+        {"Przy ścianie zrób zryw w górę, a potem skocz. Na windzie skacz w chwili ruchu w górę. Górna znajdźka jest opcjonalna.","Dash upward beside a wall, then jump. On a lift, jump as it rises. The upper treasure is optional."}
+      };
+      talk({{6,signs[std::clamp(node.id,0,2)]}});
+    }
+    sync_view();
+  }
+  void menu(Controls c) {
+    auto &v=state.adventure;
+    if(v.settings) {
+      float *volume=c.select_level==1?&profile.music_volume:
+        c.select_level==2?&profile.effects_volume:c.select_level==3?&profile.ambience_volume:nullptr;
+      if(volume){*volume=std::round((*volume+.1f)*10)/10;if(*volume>1)*volume=0;persist();}
+      if(c.select_level==4) {
+        for(int i=0;i<8;++i){profile.outfit=(profile.outfit+1)%8;if(profile.outfit==0||(profile.cosmetics&(1u<<profile.outfit)))break;}
+        persist();
+      }
+      if(c.language){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
+      if(c.confirm||c.pause){v.settings=false;v.selected=4;}
+      return;
+    }
+    if(v.confirm_new) {
+      if(c.confirm){v.confirm_new=false;begin_campaign(true);}
+      if(c.pause||c.menu_request)v.confirm_new=false;
+      return;
+    }
+    if(c.navigate)v.selected=(v.selected+c.navigate+6)%6;
+    if(c.select_level>=1&&c.select_level<=6)v.selected=c.select_level-1;
+    if(c.language){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
+    if((c.restart||c.new_run) && (v.selected==2||v.selected==3)){begin_run(v.selected==2?iceberg::Mode::Endless:iceberg::Mode::Trial,true);return;}
+    if(!c.confirm)return;
+    int selected=v.selected;
+    if(selected==0)begin_campaign(false);
+    if(selected==1){if(profile.started)v.confirm_new=true;else begin_campaign(true);}
+    if(selected==2)begin_run(iceberg::Mode::Endless);
+    if(selected==3)begin_run(iceberg::Mode::Trial);
+    if(selected==4){v.settings=!v.settings;}
+    if(selected==5){persist();legacy_requested=true;running=false;}
+  }
+  void tick(Controls c,double dt,bool focused=true,int columns=110,int rows=34,double aspect=2) {
+    dt=clamp(dt,0.,.1);
+    audio.set_mix(profile.music_volume,profile.effects_volume,profile.ambience_volume);
+    audio.set_environment(grid.district,grid.room_role==iceberg::RoomRole::Secret);
+    if(c.quit){persist();running=false;return;}
+    if(c.mute_audio)audio.muted=!audio.muted;
+    if(!focused && previous_focus){state.paused=true;stepper={};}
+    previous_focus=focused;
+    if(!focused)c={};
+    auto &v=state.adventure;
+    v.notice_left=std::max(0.,v.notice_left-dt);
+    if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,district==0||district==4?2:district>=1?1:0,dt,focused);return;}
+    if(c.menu_request){persist();state.menu=true;v.dialogue={};stepper={};sync_view();return;}
+    if(v.dialogue.active()) {
+      if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
+      audio.update(AudioScene::Paused,district==0||district==4?2:district>=1?1:0,dt,focused);sync_view();return;
+    }
+    if(c.journal){state.journal=!state.journal;v.map=false;stepper={};}
+    if(c.map){v.map=!v.map;state.journal=false;stepper={};}
+    if(c.pause){if(state.journal||v.map){state.journal=false;v.map=false;}else state.paused=!state.paused;stepper={};}
+    if(state.paused&&c.confirm)state.paused=false;
+    if(state.journal||v.map) {
+      if(c.navigate){int n=v.map?iceberg::DistrictCount:8;v.selected=(v.selected+c.navigate+n)%n;}
+      if(c.confirm && v.map && mode==iceberg::Mode::Campaign && profile.hidden_room<0 &&
+          v.selected<=profile.unlocked && v.selected!=district && (profile.quests[2]==3||profile.finished)) {
+        persist();profile.visit_district=v.selected;load_room();persist();
+      } else if(c.confirm){state.journal=false;v.map=false;}
+    }
+    bool blocked=state.paused||state.journal||v.map||columns<76||rows<24;
+    audio.update(blocked?AudioScene::Paused:AudioScene::Play,district==0||district==4?2:district>=1?1:0,dt,focused);
+    if(blocked){sync_view();return;}
+    if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}
+    if(state.won) {
+      if(c.restart||c.new_run){state.won=false;reset_player(state);stepper={};}
+      if(c.confirm||c.interact)advance_room();
+      sync_view();return;
+    }
+    if(c.new_run){c.restart=true;}
+    Player before=state.player;
+    int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
+    double old_elapsed=state.elapsed;
+    stepper.advance(state,grid,c,dt);
+    feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,dt,audio);
+    double active=state.elapsed-old_elapsed;
+    int deaths=state.deaths-old_deaths,pickups=state.sweets_count()-old_pickups;
+    if(mode==iceberg::Mode::Campaign) {
+      profile.campaign_seconds+=active;profile.district_seconds+=active;
+      profile.campaign_deaths+=deaths;profile.district_deaths+=deaths;
+      profile.district_treasures+=pickups;
+    } else {run_seconds+=active;run_deaths+=deaths;run_treasures+=pickups;}
+    if(state.player.dash_jump_left>before.dash_jump_left && profile.quest_counts[6]<3) {
+      ++profile.quest_counts[6];
+      if(profile.quest_counts[6]>=3 && profile.quests[6]==1)profile.quests[6]=2;
+    }
+    int at=near_interaction();
+    v.prompt=at>=0&&grid.interactions[size_t(at)].kind!=InteractionKind::Secret?"[E] "+grid.interactions[size_t(at)].label.get(profile.language):"";
+    autosave_left-=dt;
+    if(old_cp!=state.checkpoint||state.won||autosave_left<=0)persist();
+    update_camera(state,grid,columns,std::max(1,rows-7),aspect,dt);
+    sync_view();
+  }
+};

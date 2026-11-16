@@ -28,7 +28,7 @@ class Terminal:
         self.slave = slave
         self.process = subprocess.Popen(
             [str(ROOT / 'terminal_velocity'), '--ssh-basic', '--mute', *(course or ['--summit']),
-             '--connect', f'127.0.0.1:{port}', '--room', 'pty-test'],
+             *(['--connect', f'127.0.0.1:{port}', '--room', 'pty-test'] if port is not None else [])],
             stdin=slave, stdout=slave, stderr=slave, start_new_session=True,
             env=dict(os.environ, **({'TV_PROGRESS_FILE': str(profile)} if profile else {})))
         self.screen = pyte.Screen(110, 34)

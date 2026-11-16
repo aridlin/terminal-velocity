@@ -13,3 +13,6 @@ __pycache__/
 *.zip
 
 /campaign_tests
+/iceberg_tests
+
+/iceberg_campaign_tests
