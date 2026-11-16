@@ -20,3 +20,11 @@ __pycache__/
 /iceberg_access_tests
 
 /iceberg_quest_tests
+
+iceberg_metrics
+
+iceberg_save_crash_tests
+
+iceberg_story_playtest
+
+iceberg_text_tests

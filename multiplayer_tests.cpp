@@ -33,6 +33,13 @@ int main() {
     check(!decode(packet, decoded), "reject hidden room bytes");
     check(newer(0, UINT32_MAX) && !newer(3, 4) && !newer(4, 4),
           "sequence wrap and reordering");
+    auto adventure=a;adventure.level=adventure_level(1,0,0,7);
+    check(decode(encode(adventure),decoded),"adventure identity roundtrips on the relay protocol");
+    for(auto identity:{adventure_level(2,0,0,7),adventure_level(1,1,0,7),adventure_level(1,0,1,7),adventure_level(1,0,0,8)}) {
+      auto incompatible=adventure;incompatible.level=identity;
+      check(!same_course(adventure,incompatible),"content, district, mode and template isolate incompatible ghosts");
+    }
+    check(!same_course(a,adventure),"legacy and adventure ghosts are always separate");
     Relay relay(0);
     Client first, second, outsider;
     auto port = std::to_string(relay.port());
@@ -51,6 +58,7 @@ int main() {
       second.tick(b, .001, time + .001);
       outsider.tick(other, .001, time + .001);
     };
+    a.level=b.level=adventure_level(1,0,0,7);
     pump(100);
     pump(100.04);
     check(first.visible().size() == 1 && second.visible().size() == 1 &&

@@ -8,7 +8,7 @@ int main() {
   RoutePilot pilot;std::string last;
   double played=0;int rooms=0,previous_district=0;
   for(int tick=0;tick<120*60*60&&!game.profile.finished&&!game.profile.at_content_boundary;++tick) {
-    std::string identity=std::to_string(game.district)+":"+std::to_string(game.stage)+":"+std::to_string(game.room);
+    std::string identity=std::to_string(game.district)+":"+std::to_string(game.stage)+":"+std::to_string(game.room)+":"+std::to_string(game.profile.interlude);
     if(identity!=last){pilot={};pilot.predictive=game.grid.verification_policy;last=identity;++rooms;}
     Controls c;
     if(game.state.adventure.dialogue.active())c.confirm=true;
@@ -24,7 +24,7 @@ int main() {
     } else {
       c=pilot.controls(game.grid,game.state);
       int at=game.near_interaction();
-      if(at>=0&&game.grid.interactions[size_t(at)].kind==InteractionKind::Valve)c.interact=true;
+      if(at>=0&&(game.grid.interactions[size_t(at)].kind==InteractionKind::Valve||game.grid.interactions[size_t(at)].kind==InteractionKind::Rescue||game.grid.interactions[size_t(at)].kind==InteractionKind::Carry||game.grid.interactions[size_t(at)].kind==InteractionKind::Deliver))c.interact=true;
     }
     game.tick(c,1./120);
     played+=1./120;

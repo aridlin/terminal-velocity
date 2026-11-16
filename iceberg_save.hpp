@@ -47,7 +47,7 @@ class SaveStore {
     std::ifstream in(file, std::ios::binary);
     std::string magic;
     uint64_t hash = 0;
-    if (!(in >> magic >> hash) || (magic != "TVICE2" && magic != "TVICE3")) return false;
+    if (!(in >> magic >> hash) || (magic != "TVICE2" && magic != "TVICE3" && magic != "TVICE4")) return false;
     in.get();
     std::string payload((std::istreambuf_iterator<char>(in)), {});
     if (payload.size() > 65536 || checksum(payload) != hash) return false;
@@ -86,7 +86,7 @@ class SaveStore {
     if (!(data >> count) || count > 512) return false;
     q.itinerary.resize(count);
     for (int &id : q.itinerary) if (!(data >> id) || id < 0 || id >= 72) return false;
-    if (magic=="TVICE3" && !(data >> q.at_content_boundary))return false;
+    if (magic!="TVICE2" && !(data >> q.at_content_boundary))return false;
     if (!(data >> q.hidden_room >> q.visit_district) || q.hidden_room < -1 || q.hidden_room > 2 || q.visit_district < -1 || q.visit_district >= DistrictCount) return false;
     for (auto &e : q.expeditions) {
       if (!(data >> e.active >> e.seed >> e.district >> e.room >> e.depth >> e.checkpoint >>
@@ -99,7 +99,7 @@ class SaveStore {
       e.itinerary.resize(count);
       for (int &id : e.itinerary) if (!(data >> id) || id < 0 || id >= 72) return false;
     }
-    if(magic=="TVICE3") {
+    if(magic!="TVICE2") {
       if(!(data>>count)||count>128)return false;
       q.challenges.resize(count);
       for(auto &challenge:q.challenges) {
@@ -108,6 +108,14 @@ class SaveStore {
           challenge.district<0||challenge.district>=DistrictCount||challenge.version==0||challenge.version>65535||!record_valid(r))return false;
       }
     }
+    if(magic=="TVICE4") {
+      auto &r=q.revisit;
+      if(!(data>>r.active>>r.district>>r.scene>>r.checkpoint>>r.deaths>>r.collected>>r.switches>>r.seconds)||
+        r.district<0||r.district>=DistrictCount||r.scene<0||r.scene>1||r.checkpoint<0||r.checkpoint>64||
+        r.deaths<0||r.deaths>10000000||!std::isfinite(r.seconds)||r.seconds<0||r.seconds>1e9)return false;
+      for(auto &e:q.expeditions)if(!(data>>e.origin_seed))return false;
+      if(!(data>>q.interlude))return false;
+    } else for(auto &e:q.expeditions)e.origin_seed=e.seed;
     data >> std::ws;
     if (!data.eof()) return false;
     q.language = Language(language);
@@ -132,7 +140,7 @@ public:
       std::string magic;uint64_t hash;unsigned version=0;
       if(header>>magic>>hash) {
         header.get();std::string payload((std::istreambuf_iterator<char>(header)),{});std::istringstream body(payload);
-        if(checksum(payload)==hash&&(body>>version))protected_future=(magic.rfind("TVICE",0)==0&&magic!="TVICE2"&&magic!="TVICE3")||version>ContentVersion;
+        if(checksum(payload)==hash&&(body>>version))protected_future=(magic.rfind("TVICE",0)==0&&magic!="TVICE2"&&magic!="TVICE3"&&magic!="TVICE4")||version>ContentVersion;
       }
     }
     if (read(path_, p)) return true;
@@ -173,6 +181,10 @@ public:
     body<<p.challenges.size()<<'\n';
     for(const auto &challenge:p.challenges){auto r=challenge.record;
       body<<challenge.seed<<' '<<challenge.district<<' '<<challenge.version<<' '<<r.best_seconds<<' '<<r.best_deaths<<' '<<r.best_treasures<<' '<<r.complete<<'\n';}
+    const auto &r=p.revisit;
+    body<<r.active<<' '<<r.district<<' '<<r.scene<<' '<<r.checkpoint<<' '<<r.deaths<<' '<<r.collected<<' '<<r.switches<<' '<<r.seconds<<'\n';
+    for(const auto &e:p.expeditions)body<<e.origin_seed<<' ';
+    body<<p.interlude<<'\n';
     auto payload = body.str();
     std::error_code ec;
     if (!path_.parent_path().empty()) std::filesystem::create_directories(path_.parent_path(), ec);
@@ -185,7 +197,7 @@ public:
 #endif
     {
       std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-      out << "TVICE3 " << checksum(payload) << '\n' << payload;
+      out << "TVICE4 " << checksum(payload) << '\n' << payload;
       out.close();
       if (!out) return false;
     }

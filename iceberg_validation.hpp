@@ -35,7 +35,10 @@ struct RoutePilot {
     double ahead=p.x+(c.move>0?kPlayerWidth+.25:-.25);
     bool gap=!g.solid_at(int(std::floor(ahead)),foot);
     bool rise=g.solid_at(int(std::floor(ahead)),foot-1);
-    if(p.support>=0)gap=true;
+    if(p.support>=0) {
+      auto platform=g.platforms[size_t(p.support)].at(s.elapsed);
+      gap=platform.w>=12?(c.move>0?p.x+kPlayerWidth>=platform.right()-.3:p.x<=platform.x+.3):true;
+    }
     if(p.grounded&&target<g.route_points.size())
       c.jump_pressed=(gap||rise)&&std::abs(dx)>1;
     if(p.grounded){launched=c.jump_pressed;takeoff_y=p.y+kPlayerHeight;}
@@ -59,6 +62,13 @@ struct RoutePilot {
     double drop=ty-p.y-kPlayerHeight;
     double flight=drop>0?(std::sqrt(p.vy*p.vy+2*kGravity*drop)-p.vy)/kGravity+.06:0;
     double edge_distance=dx>=0?landing_left-p.x-kPlayerWidth:p.x-landing_right;
+    if(p.grounded&&p.support>=0) {
+      const auto &platform=g.platforms[size_t(p.support)];auto r=platform.at(s.elapsed);
+      double deck_left=c.move>0?r.right()-p.x-kPlayerWidth:p.x-r.x;
+      if(std::abs(platform.dx)>2&&deck_left<1.5&&edge_distance>11.5) {
+        c.move=0;c.jump_pressed=c.dash_pressed=false;return c;
+      }
+    }
     bool needs_range=edge_distance>std::abs(p.vx)*flight-.6;
     if(!p.grounded&&p.dash_available&&p.dash_time_left<=0&&p.vy>=-5&&
        p.vy<8&&p.y+kPlayerHeight<ty-.25&&(predictive?(std::abs(dx)>4&&needs_range):std::abs(dx)>9))

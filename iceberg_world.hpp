@@ -187,6 +187,7 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
 }
 
 #include "iceberg_sequences.hpp"
+#include "iceberg_missions.hpp"
 
 inline EngineGrid build_authored(int district, bool finale) {
   if(district==1)return build_heatworks_sequence(finale);
@@ -209,6 +210,7 @@ inline EngineGrid build_authored(int district, bool finale) {
   auto p=pads.back();g.goal={p.x+p.w-3.,p.y-4.,2,4};
   g.add_hazard_rect(0,62,g.width(),2);
   if (finale) {
+    g.goal_requires=1;
     g.interactions.push_back({{58,42,3,4},InteractionKind::Valve,0,{"Otwórz obieg","Open circuit"}});
     g.gates.push_back({{134,29,1,5},1});
     if(district==0||district==4)g.enemies.push_back({60,64,45,1.4});

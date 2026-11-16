@@ -61,12 +61,21 @@ int main(int argc,char **argv) {
     iceberg::SaveStore old_save("tests/fixtures/iceberg-v2.dat");iceberg::Profile migrated;
     check(old_save.load(migrated)&&migrated.story==291&&migrated.room==4&&migrated.expeditions[0].seed==821,
       "published TVICE2 campaign migrates without losing story or expedition state");
+    iceberg::SaveStore v3_save("tests/fixtures/iceberg-v3.dat");iceberg::Profile v3;
+    check(v3_save.load(v3)&&v3.challenges.size()==2&&v3.expeditions[0].origin_seed==821&&!v3.revisit.active,
+      "TVICE3 preserves challenge records and migrates expedition origin identity");
+    iceberg::Record independent;
+    AdventureSession::merge_record(independent,50,3,7);
+    AdventureSession::merge_record(independent,70,0,12);
+    check(independent.best_seconds==50&&independent.best_deaths==0&&independent.best_treasures==12,
+      "time, clean completion and collection keep independent personal records");
     auto path=std::filesystem::temp_directory_path()/"terminal-velocity-iceberg-test.dat";
     iceberg::SaveStore save(path);iceberg::Profile profile;
     profile.started=true;profile.seed=73;profile.stage=2;profile.room=4;
     profile.itinerary=iceworld::make_itinerary(73,0);
     profile.story=0x123;profile.quests[0]=2;profile.quest_counts[0]=3;profile.task_items[0]=7;
     profile.checkpoint=2;profile.collected=17;
+    profile.revisit={true,0,1,2,3,5,1,42.5};profile.interlude=true;
     profile.challenges.push_back({73,0,iceberg::ContentVersion,{99,0,12,true}});
     profile.challenges.push_back({74,0,iceberg::ContentVersion,{88,1,14,true}});
     auto &exp=profile.expeditions[0];exp.active=true;exp.seed=821;exp.depth=13;exp.room=5;exp.seconds=100;
@@ -77,16 +86,17 @@ int main(int argc,char **argv) {
       "route, story, task and checkpoint survive reload");
     check(loaded.expeditions[0].seed==821&&loaded.expeditions[0].depth==13&&loaded.expeditions[0].itinerary==exp.itinerary,
       "expedition identity and checkpoint stored independently");
+    check(loaded.revisit.active&&loaded.revisit.scene==1&&loaded.revisit.seconds==42.5&&loaded.revisit.switches==1&&loaded.interlude,"revisited story route persists its separate checkpoint and machinery");
     check(loaded.challenges.size()==2&&loaded.challenges[0].record.best_seconds==99&&loaded.challenges[1].seed==74,"seeded challenge records stay isolated by route identity");
     // A correctly checksummed save from a later release must not be replaced,
     // including when an older healthy backup happens to be available.
-    {std::ifstream in(path);std::string bytes((std::istreambuf_iterator<char>(in)),{});
+    {std::ifstream in(path,std::ios::binary);std::string bytes((std::istreambuf_iterator<char>(in)),{});
       auto future=bytes;future.replace(0,6,"TVICE9");
-      {std::ofstream out(path);out<<future;}
+      {std::ofstream out(path,std::ios::binary);out<<future;}
       iceberg::SaveStore newer(path);iceberg::Profile ignored;
       newer.load(ignored);
       check(newer.protected_future&&!newer.save(profile),"unknown future format is protected against overwrite");
-      {std::ofstream out(path);out<<bytes;}
+      {std::ofstream out(path,std::ios::binary);out<<bytes;}
     }
     profile.room=5;check(save.save(profile),"replacement save retains recovery copy");
     {std::ofstream out(path);out<<"damaged";}
@@ -109,6 +119,27 @@ int main(int argc,char **argv) {
       check(session.grid.room_role==iceberg::RoomRole::Secret&&session.profile.room==3,"hidden room keeps ordinary route checkpoint intact");
       session.advance_room();
       check(session.profile.hidden_room==-1&&session.grid.template_id==campaign_template&&session.room==3,"hidden exit returns to the original route");
+      session.profile.revisit={true,0,0,2,0,0,1,12.};session.load_room(true);session.persist();
+      auto replay_template=session.grid.template_id;int replay_checkpoint=session.state.checkpoint;
+      session.profile.hidden_room=1;session.load_room();session.persist();session.advance_room();
+      check(session.profile.revisit.active&&session.grid.template_id==replay_template&&session.state.checkpoint==replay_checkpoint&&session.grid.switch_flags==1,
+        "hidden exit restores the revisited scene checkpoint without overwriting the journey");
+      session.advance_room();
+      check(!session.profile.revisit.active&&session.grid.template_id==campaign_template&&session.room==3,
+        "revisited scene returns to original journey checkpoint");
+      session.options.seed_override=true;session.options.seed=73;session.begin_run(iceberg::Mode::Endless,true);
+      for(int i=0;i<9;++i)session.advance_room();
+      auto continued_seed=session.run_seed;int continued_depth=session.depth;
+      session.begin_campaign(false);session.begin_run(iceberg::Mode::Endless);
+      check(session.depth==continued_depth&&session.run_seed==continued_seed&&session.profile.expeditions[0].origin_seed==73,
+        "seeded endless resume survives rotation into the next room library bag");
+      session.profile.unlocked=1;session.run_district=1;session.begin_run(iceberg::Mode::Endless,true);
+      session.depth=17;session.room=3;session.load_room();session.persist();session.begin_campaign(false);
+      session.state.menu=true;session.state.adventure.selected=0;session.run_district=0;
+      Controls choose_endless;choose_endless.select_level=3;choose_endless.confirm=true;session.tick(choose_endless,1./120);
+      check(session.district==1&&session.depth==17&&session.room==3,"menu resume selects the saved expedition district rather than replacing the run");
+      session.profile.trials[0]={20,0,5,true};session.options.seed=9999;session.sync_view();
+      check(!session.state.adventure.trials[0].complete,"new custom seed never displays another route's default record");
       session.begin_campaign(true);
       check(session.stage==0&&session.room==0&&session.profile.story==0,"new story resets progression without copying old room state");
     }

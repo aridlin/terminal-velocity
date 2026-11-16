@@ -25,6 +25,7 @@ inline EngineGrid build_heatworks_sequence(bool finale) {
   auto exit=path.back();g.goal={exit.x+exit.w-3.,exit.y-4.,2,4};
   g.add_hazard_rect(0,62,g.width(),2);
   if(finale) {
+    g.goal_requires=3;
     g.interactions.push_back({{62,43,3,4},InteractionKind::Valve,0,{"Otwórz zasilanie","Open supply"}});
     g.interactions.push_back({{131,31,3,4},InteractionKind::Valve,1,{"Otwórz powrót","Open return"}});
     g.gates.push_back({{39,12,1,5},3});

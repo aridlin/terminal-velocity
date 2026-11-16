@@ -327,7 +327,7 @@ struct Patrol {
     return {left + (z < w ? z : 2 * w - z), y, 1.1, 1.0};
   }
 };
-enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut };
+enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver };
 struct Interaction {
   Rect area;
   InteractionKind kind;
@@ -438,7 +438,8 @@ public:
   std::vector<AirField> air_fields;
   std::vector<PulseHazard> pulses;
   std::vector<Gate> gates;
-  uint64_t switch_flags = 0;
+  uint64_t switch_flags = 0, goal_requires = 0, dash_lock = 0, dash_unlock = 0;
+  bool dash_locked() const {return (switch_flags&dash_lock)&&!(switch_flags&dash_unlock);}
   bool summit = false;
   int chapter = 0;
   uint32_t seed = 0;
@@ -758,7 +759,7 @@ void update_step(GameState &state, const EngineGrid &grid,
   if (controls.jump_pressed) {
     player.jump_buffer_left = kJumpBuffer;
   }
-  if (controls.dash_pressed) {
+  if (controls.dash_pressed && !grid.dash_locked()) {
     player.dash_buffer_left = kDashBuffer;
   }
 
@@ -836,8 +837,9 @@ void update_step(GameState &state, const EngineGrid &grid,
       reset_player(state);
       return;
     }
-    if (grid.event_level || grid.adventure_level ? rect.intersects(grid.goal)
-                         : rect.right() >= grid.goal.x) {
+    if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires &&
+        (grid.event_level || grid.adventure_level ? rect.intersects(grid.goal)
+                         : rect.right() >= grid.goal.x)) {
       state.won = true;
     }
     return;
@@ -931,8 +933,9 @@ void update_step(GameState &state, const EngineGrid &grid,
     reset_player(state);
     return;
   }
-  if (grid.event_level || grid.adventure_level ? rect.intersects(grid.goal)
-                       : rect.right() >= grid.goal.x) {
+  if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires &&
+      (grid.event_level || grid.adventure_level ? rect.intersects(grid.goal)
+                       : rect.right() >= grid.goal.x)) {
     state.won = true;
   }
 }
@@ -2052,7 +2055,7 @@ private:
         const auto &district=iceberg::Districts[size_t(grid_.district)];
         c.rgb=district.stone;
         // Sparse masonry/plate seams retain a solid collision silhouette.
-        if(solid==255 && (int(std::floor(wx*2))+int(std::floor(wy))*3)%17==0) {
+        if(solid==255 && (int(std::floor(wx*2))+int(std::floor(wy))*3)%47==0) {
           c.glyph=grid_.district==1?"▥":"▓";
         }
         return c;
@@ -2556,7 +2559,7 @@ std::filesystem::path audio_directory() {
 }
 
 struct Args {
-  bool adventure = true, explicit_adventure = false, terminal_view = false;
+  bool adventure = true, explicit_adventure = false, terminal_view = false, district_override = false;
   iceberg::Mode adventure_mode = iceberg::Mode::Campaign;
   iceberg::Language language = iceberg::Language::Polish;
   bool language_override = false;
@@ -2599,7 +2602,7 @@ struct Args {
     } else if(arg=="--district" && i+1<argc) {
       std::string value=argv[++i];
       if(value.size()!=1||value[0]<'1'||value[0]>'6'){std::cerr<<"District: 1..6\n";std::exit(2);}
-      args.district=value[0]-'1';
+      args.district=value[0]-'1';args.district_override=true;
     } else if (arg == "--event") {
       args.adventure=false;
       args.event_level = true;
@@ -2735,7 +2738,8 @@ struct Args {
 iceberg::SessionOptions adventure_options(const Args &args) {
   iceberg::SessionOptions o;
   o.seed=args.seed;o.seed_override=args.seed_override;o.language=args.language;o.language_override=args.language_override;
-  o.mode=args.adventure_mode;o.district=args.district;o.mute=args.mute;
+  o.mode=args.adventure_mode;o.district=args.district;o.district_override=args.district_override;o.mute=args.mute;
+  o.ghost_host=args.ghost_host;o.ghost_port=args.ghost_port;o.ghost_room=args.room;
   o.remote_audio=args.remote_audio;
   o.remote=args.input_mode==InputMode::Ssh||args.input_mode==InputMode::SshBasic;
   return o;

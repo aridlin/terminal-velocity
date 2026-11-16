@@ -56,6 +56,19 @@ int main() {
     Rect kuba{};for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Npc&&node.id==6)kuba=reach_area(node.area);
     walk_to(game,kuba);interact(game);finish_dialogue(game);
     require_quest(game.profile.quests[6]==3,"mastery task can be turned in on the upper settlement street");
+    game.profile.story|=(uint64_t(1)<<8)|(uint64_t(1)<<9);
+    for(int district=0;district<2;++district)for(int scene=0;scene<2;++scene) {
+      game.district=district;game.stage=3;game.room=0;game.profile.revisit={};
+      game.load_room();game.persist();
+      Rect door{};bool found=false;
+      for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Replay&&node.id==scene){door=reach_area(node.area);found=true;}
+      require_quest(found,"completed district exposes an authored route revisit");
+      walk_to(game,door);interact(game);
+      require_quest(game.profile.revisit.active&&game.grid.room_role==(scene?iceberg::RoomRole::Finale:iceberg::RoomRole::Lesson),"revisit door enters the chosen authored scene");
+      for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Return)door=reach_area(node.area);
+      walk_to(game,door);interact(game);
+      require_quest(!game.profile.revisit.active&&game.grid.room_role==iceberg::RoomRole::Settlement,"return door safely leaves the revisited scene");
+    }
     for(int id=0;id<3;++id) {
       game.profile.hidden_room=id;install_test_room(game,iceworld::build_hidden(id));
       Rect note{},door{};
@@ -67,6 +80,11 @@ int main() {
       // verified here and the campaign checkpoint restoration has its own test.
       game.profile.hidden_room=-1;
     }
+    game.state.journal=true;game.state.adventure.selected=0;game.profile.quests[0]=3;
+    double journal_x=game.state.player.x;interact(game);
+    require_quest(game.state.adventure.dialogue.lines.size()==3,"completed mail task unlocks actual letters through the journal controls");
+    finish_dialogue(game);
+    require_quest(game.state.journal&&game.state.player.x==journal_x,"reading the reward returns to the journal without moving the courier");
     return 0;
   }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
 }

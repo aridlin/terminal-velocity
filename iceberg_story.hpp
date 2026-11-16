@@ -204,3 +204,58 @@ inline std::vector<DialogueLine> task_thanks(int quest) {
   }
 }
 }
+
+namespace iceberg {
+inline std::vector<DialogueLine> task_record(int quest) {
+  switch(quest) {
+  case 0:return {
+    {-1,{"Pani Heleno, jeśli list dotrze po urodzinach, proszę powiedzieć mamie, że śnieg zatrzymał tramwaj. Nie trzeba dodawać, że pod ziemią. Ona wie, jak tu jest. — Antek", "Helena, if this arrives after the birthday, please tell Mum the snow stopped the tram. No need to add that it was underground. She knows what it's like here. — Antek"}},
+    {-1,{"Do lokalu 12: pożyczony garnek stoi pod drzwiami. Zupa została w środku. Nie jest to odsetka za opóźnienie; po prostu ugotowaliśmy za dużo. — sąsiedzi spod 15", "To flat 12: the borrowed pot is outside your door. The soup is still inside. It isn't interest on the delay; we simply made too much. — your neighbours at 15"}},
+    {-1,{"Dopisek Heleny: dwa listy doręczone. Trzeci ma adres zamazany wodą. Powiesiłam kopię w okienku. Ktoś rozpozna pismo. Pismo czasem pamięta więcej niż spis lokatorów.", "Helena's note: two letters delivered. Water erased the third address. I put a copy in the window. Someone will recognise the handwriting. Sometimes handwriting remembers more than a resident register."}}
+  };
+  case 1:return {{-1,{"Przepustka serwisowa, podpis: Witek. Na początku tras ciepłowni stoi teraz wejście z zawiniętą strzałką. Prowadzi trzy pomosty dalej. Proszę nie oddawać klucza administracji. Zrobią z niego procedurę.", "Service pass, signed Witek. A doorway with a curved arrow now stands at the start of heating works routes. It leads three landings ahead. Please don't give the key to administration. They'll turn it into a procedure."}}};
+  case 2:return {{-1,{"Bilet ważny do końca dzisiejszego dnia, niezależnie od tego, ile razy dziś zaczniemy od nowa. Przystanki wybiera się na mapie. Dopisek Bogdana: kontrola biletów zawieszona z powodu ogólnej przyzwoitości.", "Valid until the end of today, however many times we start today again. Choose stops on the map. Bogdan's note: ticket inspections suspended on grounds of general decency."}}};
+  case 3:return {{-1,{"Potwierdza się istnienie balkonów 4, 8 i 11. Potwierdza się istnienie osób, które na nich wieszają pranie. Nie wymaga się dalszych dowodów. Podpis: Grażyna. Dopisek: proszę tę wersję zostawić w obiegu.", "Balconies 4, 8 and 11 are confirmed to exist. So are the people hanging laundry on them. No further evidence is required. Signed: Grażyna. Note: please keep this version in circulation."}}};
+  case 4:return {{-1,{"Wniosek o dodatkowy koc. Data: trzy dni po zakończeniu ewakuacji. Uzasadnienie: córka śpi przy ścianie zewnętrznej. Adnotacja urzędowa: lokalu nie ma w wykazie. Dopisek Ireny: wykaz poprawiono. Wniosku już nie cofniemy.", "Request for an extra blanket. Date: three days after the evacuation ended. Reason: my daughter sleeps by the outer wall. Official annotation: apartment absent from the register. Irena's note: register corrected. We cannot undo the request."}}};
+  case 5:return {{-1,{"Przepis Celiny na wiosnę: trochę ziemi, trochę ciepła, coś do posadzenia. Nie czekać na zgodę komisji. Pierwszą fasolę oddać sąsiadom; wtedy reszta urośnie spokojniej, bo wszyscy będą pilnować.", "Celina's recipe for spring: some soil, some warmth, something to plant. Don't wait for the committee's permission. Give the first beans to the neighbours; the rest will grow more peacefully with everyone watching over them."}}};
+  case 6:return {
+    {-1,{"Notatka Kuby: zryw po ziemi, potem skok. Rozpęd poniesie cię przez niski przelot. Przy ścianie: zryw w górę, potem skok odbijający. Na windzie: skok, gdy jedzie w górę. Nie wszystko naraz. Najpierw znajdź bezpieczny pomost.", "Kuba's note: dash along the ground, then jump. Momentum carries you through a low crossing. Beside a wall: dash up, then jump away. On a lift: jump while it rises. Not all at once. Find a safe landing first."}},
+    {-1,{"W próbie liczymy trzy osobne rzeczy: najlepszy czas, najmniej powrotów i najwięcej znajdziek. Zrób spokojny bieg bez upadku, potem szybki, potem poszukaj bocznych dróg. Jeden rekord nie kasuje pozostałych.", "Trials track three separate things: best time, fewest retries, and most treasures. Try a calm clean run, then a fast one, then explore the branches. One record doesn't erase the others."}}
+  };
+  default:return {
+    {7,{"ARCHIWUM KOMUNIKATÓW, WPIS 184. PROSIMY NIE SUSZYĆ SKARPET NA MANOMETRZE. CIŚNIENIE POWINNO BYĆ WIDOCZNE TAKŻE W DNI NIEPARZYSTE.", "ANNOUNCEMENT ARCHIVE, ENTRY 184. PLEASE DO NOT DRY SOCKS ON THE PRESSURE GAUGE. PRESSURE MUST REMAIN VISIBLE ON ODD-NUMBERED DAYS TOO."}},
+    {7,{"WPIS 185. WSZYSCY MIESZKAŃCY OPUŚCILI ODCINEK PÓŁNOCNY. WERYFIKACJA: PRZENIESIONA DO NASTĘPNEGO PROTOKOŁU. NASTĘPNY PROTOKÓŁ: BRAK ZAŁĄCZNIKA.", "ENTRY 185. ALL RESIDENTS HAVE LEFT THE NORTHERN CIRCUIT. VERIFICATION: DEFERRED TO THE NEXT REPORT. NEXT REPORT: ATTACHMENT MISSING."}},
+    {7,{"WPIS 186. ZNALEZIONO KOTA. KOT NIE POTWIERDZA, ŻE SIĘ ZGUBIŁ. ODBIÓR W CIEPŁOWNI, PRZY NAJCIEPLEJSZEJ RURZE.", "ENTRY 186. A CAT HAS BEEN FOUND. THE CAT DOES NOT CONFIRM IT WAS LOST. COLLECTION AT THE HEATING WORKS, BESIDE THE WARMEST PIPE."}}
+  };
+}
+}
+} // namespace iceberg
+
+namespace iceberg {
+inline std::vector<DialogueLine> mission_arrival(int mission) {
+  if(mission==0)return {
+    {0,{"Bogdan utknął w tramwaju pod nabrzeżem. Twierdzi, że to postój techniczny. Od dwóch godzin. Uruchom wyciąg przy czerwonej korbie, a potem daj mu znać.", "Bogdan is stranded in the tram below the quay. He calls it a technical stop. It's been two hours. Start the winch at the red crank, then let him know."}},
+    {2,{"Słyszę was. Proszę bez paniki. Rozkład dopuszcza opóźnienia wynikające z obecności oceanu. Z powrotem idź dolnym pomostem; górne przejście się zapadło.", "I can hear you. Please stay calm. The timetable allows for delays caused by the presence of an ocean. Take the lower boardwalk back; the upper passage has collapsed."}}
+  };
+  if(mission==1)return {
+    {0,{"Witek potrzebuje starego termometru wzorcowego. Nowe pokazują temperaturę zgodną z planem. Ten pokazuje prawdziwą. Weź skrzynkę przy wejściu i zanieś do śluzy pocztowej.", "Witek needs the old reference thermometer. The new ones show the planned temperature. This one shows the real one. Take the box by the entrance to the postal airlock."}},
+    {0,{"Trzymaj pionowo. Ze skrzynką nie zrobisz zrywu, ale skakać możesz. Droga ma krótkie odstępy. Lampy nadal działają; po potknięciu przesyłka wraca razem z tobą.", "Keep it upright. You can't dash with the box, but you can jump. The route has short gaps. Return lamps still work; if you fall, the parcel returns with you."}}
+  };
+  return {
+    {1,{"Znalazłem stare śluzy. W dokumentacji są opisane jako nieczynne od zawsze. Silniki są jeszcze ciepłe. Otwórz oba obiegi i przejdź na drugi brzeg.", "I found the old sluices. The paperwork calls them permanently inactive. The motors are still warm. Open both circuits and cross to the other bank."}},
+    {6,{"Barki same jeżdżą między pomostami. Przejdź po pokładzie i skocz z końca, kiedy jesteś blisko brzegu. Nie musisz rzucać się od razu po lądowaniu.", "The barges move between the landings by themselves. Walk along the deck and jump from its end when you're near the bank. You don't have to leap the moment you land."}}
+  };
+}
+inline std::vector<DialogueLine> rescued_conductor() {
+  return {
+    {2,{"Jest zasilanie. Mogę wyjechać. Miałem na pokładzie jedną pasażerkę i osiemnaście pustych doniczek. Pasażerka wysiadła godzinę temu. Doniczki wykazują większą cierpliwość.", "Power's back. I can get out. I had one passenger and eighteen empty flowerpots aboard. The passenger got off an hour ago. The flowerpots have been more patient."}},
+    {2,{"Dziękuję. Spotkamy się na Parapecie. Zachowałem stary plan torów; może się przydać, jeśli będziesz szukać drogi, której urzędowo nie ma.", "Thank you. We'll meet at Windowsill. I kept the old track map; it may help if you ever need a route that officially doesn't exist."}}
+  };
+}
+inline std::vector<DialogueLine> parcel_delivered() {
+  return {
+    {1,{"Mam go. Osiem stopni różnicy. Przez cały dzień grzaliśmy zgodnie z papierem, a ludzie marzli zgodnie z rzeczywistością. Dobrze, że ktoś jeszcze dostarcza rzeczy osobiście.", "Got it. Eight degrees off. All day we've heated according to the paperwork while people froze according to reality. Good thing someone still delivers things in person."}},
+    {0,{"Przesyłka doręczona. Podpis odbiorcy: plama smaru. Przyjmuję. Znam ten charakter pisma.", "Parcel delivered. Recipient's signature: a grease stain. Accepted. I recognise the handwriting."}}
+  };
+}
+}

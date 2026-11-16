@@ -47,7 +47,7 @@ terminal_velocity.exe: main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp win
 	$(MINGW_CXX) $(WINDOWS_FLAGS) -o $@ main.cpp windows_icon.o audio_windows.o -lws2_32
 windows-tests: physics_tests.exe extension_tests.exe multiplayer_tests.exe windows_input_tests.exe campaign_tests.exe iceberg_tests.exe iceberg_campaign_tests.exe
 	@if [ -n "$$MSYSTEM" ]; then ./iceberg_tests.exe 1000 100 && ./iceberg_campaign_tests.exe; fi
-%_tests.exe: %_tests.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio_windows.o
+%_tests.exe: %_tests.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp $(ICEBERG_HEADERS) audio_windows.o
 	$(MINGW_CXX) $(WINDOWS_FLAGS) -o $@ $< audio_windows.o -lws2_32
 
 windows_icon.o: windows_icon.rc assets/terminal-velocity.ico
@@ -71,3 +71,15 @@ iceberg_access_tests: iceberg_access_tests.cpp main.cpp $(ICEBERG_HEADERS) audio
 
 iceberg_quest_tests: iceberg_quest_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
 	$(CXX) $(CXXFLAGS) -o $@ iceberg_quest_tests.cpp audio.o -ldl -lpthread
+
+iceberg_metrics: iceberg_metrics.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ iceberg_metrics.cpp audio.o -ldl -lpthread
+
+iceberg_save_crash_tests: iceberg_save_crash_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ iceberg_save_crash_tests.cpp audio.o -ldl -lpthread
+
+iceberg_story_playtest: iceberg_story_playtest.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ iceberg_story_playtest.cpp audio.o -ldl -lpthread
+
+iceberg_text_tests: iceberg_text_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ iceberg_text_tests.cpp audio.o -ldl -lpthread

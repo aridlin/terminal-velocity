@@ -5,14 +5,14 @@
 #include <vector>
 
 namespace iceberg {
-inline constexpr unsigned ContentVersion = 1;
+inline constexpr unsigned ContentVersion = 2;
 inline constexpr int DistrictCount = 6;
 // Content registry boundary: increment when another district is fully authored.
 inline constexpr int AuthoredDistrictCount = 2;
 inline constexpr int RoomsPerLeg = 8;
 enum class Language { Polish, English };
 enum class Mode { Campaign, Endless, Trial };
-enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret };
+enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret, Interlude };
 enum class Rhythm { Flow, Precision, Vertical, Timing, Explore, Recovery };
 enum class Mechanic { None, Current, Steam, Conveyor, Echo, Growth, Wind };
 struct Text {
@@ -54,6 +54,16 @@ inline const std::array<District, DistrictCount> Districts{{
    0x6c7b8d, 0xf0edf0, 0x263347, 0xf3ce82, Mechanic::Wind}
 }};
 
+inline Text route_title(int district,int stage) {
+  int leg=stage<=3?0:stage<=5?1:2;
+  static const Text routes[2][3]={
+    {{"Kanał odpływowy","Drainage channel"},{"Pomosty przepompowni","Pumping station boardwalks"},{"Rurociąg do Łazarza","Pipeline to Lazarus"}},
+    {{"Dopływ pary","Steam supply"},{"Obieg mieszkań","Residential circuit"},{"Powrót awaryjny","Emergency return"}}
+  };
+  if(stage==3)leg=1;
+  if(stage==5)leg=2;
+  return district<2?routes[district][leg]:Districts[size_t(district)].objective;
+}
 struct Record {
   double best_seconds = 0;
   int best_deaths = -1;
@@ -63,16 +73,22 @@ struct Record {
 struct SeedRecord {uint32_t seed=1;int district=0;unsigned version=ContentVersion;Record record;};
 struct Expedition {
   bool active = false;
-  uint32_t seed = 1;
+  uint32_t seed = 1, origin_seed = 1;
   int district = 0, room = 0, depth = 0, checkpoint = 0;
   uint64_t collected = 0, switches = 0;
   double room_seconds = 0, seconds = 0;
   int room_deaths = 0, deaths = 0, treasures = 0;
   std::vector<int> itinerary;
 };
+struct Revisit {
+  bool active=false;
+  int district=0, scene=0, checkpoint=0, deaths=0;
+  uint64_t collected=0,switches=0;
+  double seconds=0;
+};
 struct Profile {
   Language language = Language::Polish;
-  bool started = false, finished = false, at_content_boundary = false;
+  bool started = false, finished = false, at_content_boundary = false, interlude = false;
   uint32_t seed = 1;
   unsigned content_version = ContentVersion;
   int district = 0, stage = 0, room = 0;
@@ -92,6 +108,7 @@ struct Profile {
   std::array<Record, DistrictCount> trials{};
   int endless_best = 0;
   std::array<Expedition, 2> expeditions;
+  Revisit revisit;
   std::vector<SeedRecord> challenges;
   // Persist the assembled itinerary as well as its seed: content additions
   // cannot silently reroll an expedition that somebody has already started.
@@ -117,6 +134,7 @@ struct View {
   int unlocked = 0, outfit = 0;
   int hidden_room = -1, visit_district = -1;
   int run_district = 0, endless_best = 0;
+  bool revisit = false;
   uint32_t seed = 1;
   uint32_t cosmetics = 0;
   bool map = false, settings = false, confirm_new = false, finished = false, at_content_boundary = false;
@@ -136,9 +154,10 @@ struct View {
 struct SessionOptions {
   uint32_t seed = 1;
   Language language = Language::Polish;
-  bool language_override = false, mute = false, remote_audio = false;
+  bool language_override = false, district_override = false, mute = false, remote_audio = false;
   bool remote = false, no_save = false, seed_override = false;
   Mode mode = Mode::Campaign;
+  std::string ghost_host,ghost_port="27888",ghost_room="default";
   int district = 0;
 };
 inline std::string tr(Language l, const char *pl, const char *en) {
