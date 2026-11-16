@@ -28,6 +28,9 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         expect(t,'ROZPOCZNIJ PODRÓŻ')
         t.send('l');expect(t,'BEGIN JOURNEY')
         t.send('\r');expect(t,'LOWER HARBOR')
+        t.send('i');pump([t],.07)
+        assert any(c.fg=='83c5ce' for row in t.screen.buffer.values() for c in row.values()),'Basic SSH upward dash did not spend the dash'
+        t.send('r');pump([t],.12)
         t.send('d');pump([t],.30);t.send('s');pump([t],.05)
         t.send('e');expect(t,'HELENA')
         assert 'You' in screen(t),screen(t)
@@ -35,6 +38,7 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         t.send('\t');expect(t,"COURIER'S JOURNAL")
         t.send('\t');pump([t],.10)
         t.send('j');expect(t,'DISTRICTS OF THE ICEBERG')
+        t.send('w');expect(t,'▸ LAZARUS HEATING WORKS')
         t.send('j');pump([t],.10)
         t.send('m');expect(t,'CONTINUE JOURNEY')
         t.send('5\r');expect(t,'Music:')
@@ -55,4 +59,4 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         t.send('\r');expect(t,'LOWER HARBOR')
         t.send('p');expect(t,'A MOMENT TO BREATHE')
     finally:t.close()
-print('PASS actual PTY: bilingual menu, dialogue, journal/map, settings, resize, endless, continue, terminal restoration')
+print('PASS actual PTY: bilingual menu, basic vertical dash, dialogue, journal/map, settings, resize, endless, continue, terminal restoration')

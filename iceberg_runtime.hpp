@@ -511,7 +511,7 @@ public:
       if(state.journal&&c.interact&&profile.quests[size_t(std::clamp(v.selected,0,7))]==3) {
         talk(iceberg::task_record(v.selected));sync_view();return;
       }
-      if(c.navigate){int n=v.map?iceberg::DistrictCount:8;v.selected=(v.selected+c.navigate+n)%n;}
+      if(c.navigate){int n=v.map?iceberg::DistrictCount:8;v.selected=(v.selected+(v.map?-c.navigate:c.navigate)+n)%n;}
       if(c.confirm && v.map && mode==iceberg::Mode::Campaign && profile.hidden_room<0 &&
           !profile.revisit.active && v.selected<=profile.unlocked && (v.selected!=district||profile.visit_district>=0) && ((profile.story&(uint64_t(1)<<8))||profile.quests[2]==3||profile.finished||profile.at_content_boundary)) {
         persist();profile.visit_district=v.selected==district?-1:v.selected;load_room(profile.visit_district<0);persist();

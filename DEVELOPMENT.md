@@ -56,3 +56,5 @@ Generation tries normal variation, then stable timing, then a verified recovery 
 `tools/build_windows_sdl.sh` pins official SDL and FreeType archives by SHA-256. Set `TV_WINDOWS_BUILD_DIR` to reuse an external dependency directory. The portable window edition needs both executables, `SDL2.dll`, launchers, `assets/`, and `THIRD_PARTY.md`.
 
 Audio source URLs, source/output hashes, processing and licenses live alongside the recordings. Font and rendering-library notices must accompany packages. Keep debug scene screenshots and simulations from writing real player profiles.
+
+For release packaging, first build and verify the binaries, commit the reviewed tree, then run `python tools/package_release.py DESTINATION --windows`. It creates Linux and Windows archives, an archive of the exact committed source, per-bundle build identity files and SHA-256 checksums. It refuses a dirty working tree and does not touch player profiles or install anything. Run smoke tests from extracted archives before installing a release.
