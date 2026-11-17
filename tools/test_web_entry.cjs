@@ -253,11 +253,19 @@ const server=http.createServer((req,res)=>{
   assert.deepEqual(await takeTouchControlEdges(),[1<<4],'a touch tap still sends Jump once');
   await page.evaluate(()=>window.restoreTouchControlTick());
   console.log('PASS compact game controls activate with keyboard and touch');
-  for(const size of [{width:390,height:844},{width:844,height:390},{width:760,height:600},{width:1920,height:1080}]){
+  for(const size of [{width:280,height:653},{width:360,height:260},{width:390,height:844},{width:844,height:390},{width:760,height:600},{width:1920,height:1080}]){
    await page.setViewportSize(size);await page.waitForTimeout(100);
    const ratio=await page.locator('#game').evaluate(c=>({bitmap:c.width/c.height,display:c.getBoundingClientRect().width/c.getBoundingClientRect().height}));
    assert.ok(Math.abs(ratio.bitmap-ratio.display)<.01,'canvas aspect preserved '+JSON.stringify(size));
    assert.equal(await page.locator('[data-language="en"]').isVisible(),true,'entry language visible '+JSON.stringify(size));
+   if(size.width<=360){
+    const controls=await page.locator('#touch').evaluate(pad=>({
+     page:document.documentElement.scrollWidth,
+     overflow:[...pad.querySelectorAll('button:not([hidden])')].some(button=>button.scrollWidth>button.clientWidth)
+    }));
+    assert.equal(controls.page,size.width,'touch controls leave the narrow viewport at actual size');
+    assert.equal(controls.overflow,false,'touch labels fit their buttons');
+   }
   }
   for(const fallback of [false,true]){
    if(fallback)await page.evaluate(()=>{
