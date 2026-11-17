@@ -155,3 +155,14 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   if(result.complete){candidate.verification_policy=result.policy;candidate.generation_fallback=1;return candidate;}
   return recovery_room_for(candidate);
 }
+
+inline void add_expedition_steam(EngineGrid &room) {
+  if(room.district!=1||(room.template_id!=18&&room.template_id!=22))return;
+  if(room.template_id==18)room.air_fields.push_back({{59.2,29.,2.6,19.},0.,-165.,4.8,0.});
+  else room.air_fields.push_back({{75.2,31.,2.6,14.},0.,-165.,4.8,.5});
+
+  // Preserve the already selected room and its checkpoint geometry.
+  auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.air_fields.pop_back();
+}

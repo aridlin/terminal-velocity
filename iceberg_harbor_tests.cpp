@@ -60,6 +60,23 @@ int main() {
     rising.player.y=plume.area.bottom()-3;double y=rising.player.y;
     for(int tick=0;tick<96;++tick)world_step(rising,boiler,{},1./120);
     check_harbor(y-rising.player.y>7,"the pressure plume lifts an airborne courier without a jump or dash");
+    for(int id:{18,22}) {
+      auto chimney=verified_room(id,73,1);
+      add_expedition_steam(chimney);
+      check_harbor(chimney.air_fields.size()==1&&verify_route(chimney).complete,
+        "the Heatworks expedition has an optional steam chute and a verified through-route");
+      const auto &jet=chimney.air_fields[0];
+      auto pressure=new_state(chimney),idle=pressure;
+      pressure.elapsed=jet.phase==0?1.2:3.6;
+      idle.elapsed=pressure.elapsed+2.4;
+      pressure.player.x=idle.player.x=jet.area.x+.7;
+      pressure.player.y=idle.player.y=jet.area.bottom()-4.;
+      for(int tick=0;tick<48;++tick){
+        world_step(pressure,chimney,{},1./120);
+        world_step(idle,chimney,{},1./120);
+      }
+      check_harbor(pressure.player.y+4<idle.player.y,"full pressure lifts the courier faster than the quiet cycle");
+    }
     start_harbor_mission(s,0);
     auto rescue=s.grid.interactions.front();s.harbor_interact(rescue);
     check_harbor(!(s.grid.switch_flags&8),"Bogdan cannot depart before the physical power contacts");
