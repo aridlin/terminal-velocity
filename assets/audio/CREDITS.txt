@@ -112,3 +112,8 @@ CC0: https://creativecommons.org/publicdomain/zero/1.0/
 Exact source filenames, transformations, and source/output SHA-256 hashes are
 recorded in manifest.json. Original recordings were decoded and normalized;
 no runtime sound synthesis is used.
+
+Machinery responses (motor.wav, rumble.wav, spark.wav): rubberduck,
+100 CC0 SFX 2, https://opengameart.org/content/100-cc0-sfx-2, CC0-1.0.
+Edited recorded machine loops and a metal contact transient; filtering,
+normalization, fades and excerpts. Exact source hashes and edits: manifest.json.

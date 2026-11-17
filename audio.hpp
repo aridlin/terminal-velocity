@@ -18,7 +18,7 @@ enum class AudioCue {
   Menu,
   Win,
   Wood1, Wood2, Metal1, Metal2, Stone1, Stone2,
-  Valve, Voice, Paper, Bounce, Door, Steam, Lift, Cloth,
+  Valve, Voice, Paper, Bounce, Door, Steam, Lift, Cloth, Motor, Rumble, Spark,
   Count
 };
 enum class AudioScene { Menu, Play, Paused, Win };

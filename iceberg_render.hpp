@@ -191,6 +191,7 @@
         world_art(55,32,{"      ╭──────────────╮","══════╡ ▓▓▓▓▓▓▓▓▓▓▓▓ ╞══════","      │   ╭────╮     │","      │   │ ◉  │     │","      │   ╰────╯     │","      ╰───┬────┬─────╯","          │    │","          │    │"},d.stone);
     }
   }
+#include "iceberg_effects.hpp"
   void draw_iceberg_world() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     for(int y=0;y<play_rows_;++y)for(int x=0;x<cols_;++x) {
@@ -219,9 +220,18 @@
     for(size_t i=0;i<grid_.checkpoint_points.size();++i) {
       auto [x,y]=grid_.checkpoint_points[i];
       prop_art(x,y+kPlayerHeight,{"╭─╮",int(i)<=state_.checkpoint?"│▣│":"│□│","╰┬╯"," │ "},int(i)<=state_.checkpoint?d.accent:d.stone);
+      if(int(i)==state_.checkpoint&&state_.adventure.lamp_left>0) {
+        double radius=(.8-state_.adventure.lamp_left)*5;
+        world_text(x-radius,y-1.2,"·",d.light);world_text(x+radius,y-1.2,"·",d.light);
+        world_text(x,y-1.2-radius*.5,"⠂",d.light);
+      }
     }
-    for(const auto &gate:grid_.gates)if((grid_.switch_flags&gate.flag)!=gate.flag)
-      for(double y=gate.area.y;y<gate.area.bottom();y+=.6)world_text(gate.area.x,y,"▒▒▒",d.accent);
+    for(const auto &gate:grid_.gates) {
+      bool closed=(grid_.switch_flags&gate.flag)!=gate.flag;
+      const auto &v=state_.adventure;
+      double left=closed?1.:((gate.flag&v.machinery_changed)&&v.machinery_left>0?std::max(0.,1-(v.machinery_duration-v.machinery_left)/.7):0.);
+      for(double y=gate.area.y;y<gate.area.y+gate.area.h*left;y+=.6)world_text(gate.area.x,y,"▒▒▒",d.accent);
+    }
     for(const auto &pulse:grid_.pulses) {
       bool hot=pulse.active(state_.elapsed),warn=pulse.warning(state_.elapsed);
       world_text(pulse.area.x-.3,pulse.area.bottom()-.2,"╧╧╧",warn?0xf1c66f:0x886b5b);
@@ -254,6 +264,7 @@
       else if(node.kind==InteractionKind::Secret&&node.id==1)world_art(x,y-2,{"╭─╮","│▥│","╰┬╯"},d.stone);
       else if(node.kind==InteractionKind::Secret&&node.id==2)world_art(x,y-3,{"┌──┐","│ 7│","└──┘"},d.stone);
     }
+    draw_machinery_reaction();
     // A small readable courier silhouette, with a scarf that follows motion.
     const auto &p=state_.player;
     static const uint32_t coats[]={0xe4ad68,0xdab0d5,0x88d3d9,0xc9bb85,0xabbcf4,0xb8dfb7,0xe99462,0xdce9ef};
@@ -273,17 +284,24 @@
         world_text(v.pickup_x,v.pickup_y+.4,int(progress*8)%2?"╱│╲":" ╵ ",d.accent);
       } else {
         double travel=std::clamp((progress-.25)/.75,0.,1.);
-        double x=v.pickup_x+(p.x+.3-v.pickup_x)*travel;
-        double y=v.pickup_y+(p.y+.5-v.pickup_y)*travel-std::sin(travel*3.14159)*1.4;
+        double fraction=v.pickup_kind==9?1-travel:travel;
+        double x=v.pickup_x+(p.x+.3-v.pickup_x)*fraction;
+        double y=v.pickup_y+(p.y+.5-v.pickup_y)*fraction-std::sin(travel*3.14159)*1.4;
         if(progress<.85){world_text(x-.4,y-.8,"╭─╮",d.accent);world_text(x-.4,y,"╰╳╯",d.accent);}
         else {world_text(x-.4,y-.8,"╲ ╱",d.accent);world_text(x-.4,y,"╱ ╲",d.accent);}
       }
     }
     auto goal=grid_.goal;
-    world_text(goal.x,goal.y,"╭────╮",d.accent);
-    for(double y=goal.y+.6;y<goal.bottom();y+=.6)world_text(goal.x,y,"│    │",d.accent);
-    world_text(goal.x+.6,goal.y+1.8,(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires?"↑":"⊗",d.light);
-    for(const auto &m:state_.motes)world_text(m.x,m.y,"·",m.gold?d.accent:d.light);
+    double opening=state_.adventure.door_open;
+    bool unlocked=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
+    double center=goal.x+goal.w*.5,door_feet=goal.bottom();
+    if(!unlocked)prop_art(center,door_feet,{"╔═══════╗","║┌──┬──┐║","║│  │  │║","║│ ▪│▪ │║","║│  │  │║","╚╧══╧══╧╝"},d.stone);
+    if(unlocked) {
+      const char *face=opening>.66?"║       ║":opening>.2?"║│     │║":"║│ ▪│▪ │║";
+      prop_art(center,door_feet,{"╔═══════╗",face,face,face,"║       ║","╚═══════╝"},d.accent);
+      if(opening>.66)world_text(center-.5,goal.y+1.6,"▱",d.light);
+    }
+
   }
   void draw_iceberg_inspection() {
     const auto &v=state_.adventure;
@@ -466,6 +484,7 @@
 #include "iceberg_compact_render.hpp"
   void draw_iceberg() {
     draw_iceberg_world();
+    draw_room_shutter();
     if(cols_<76||rows_<24){draw_iceberg_compact();return;}
     const auto &v=state_.adventure;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
@@ -497,10 +516,8 @@
       center(14,tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."));
     }
     if(state_.won&&!v.dialogue.active()) {
-      frame(8,5,cols_-10,8,d.accent);
-      center(10,tr("DROGA OTWARTA","THE WAY IS OPEN"),Color::Gold);
-      center(12,tr("E / ENTER przejdź dalej","E / ENTER continue"));
-      center(14,tr("R wróć do lampy, jeśli coś zostało z tyłu.","R returns to the lamp if you left something behind."));
+      paint_text(rows_-3,2,tr("E / ENTER — przejdź przez drzwi","E / ENTER — go through the door"),d.accent,true);
+      paint_text(rows_-2,2,tr("R — wróć do lampy","R — return to the lamp"),d.light);
     }
     draw_iceberg_dialogue();
     if(v.inspecting)draw_iceberg_inspection();

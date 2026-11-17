@@ -57,10 +57,14 @@
       paint_text(rows_-3,2,v.map?tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"):tr("↑↓ wybór · E czytaj","↑↓ select · E read"),d.light);
       paint_text(rows_-2,2,tr("P wróć","P return"),d.light);
     }
-    if(state_.paused||state_.won) {
+    if(state_.paused) {
       panel(state_.paused?tr("CHWILA ODDECHU","A MOMENT TO BREATHE"):tr("DROGA OTWARTA","THE WAY IS OPEN"));
       y=6;compact_paragraph(y,state_.paused?tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."):tr("R wróć do lampy, jeśli coś zostało z tyłu.","R returns to the lamp if you left something behind."),rows_-3);
       paint_text(rows_-2,2,tr("ENTER dalej · M menu","ENTER continue · M menu"),d.accent);
+    }
+    if(state_.won&&!state_.paused&&!v.dialogue.active()) {
+      paint_text(rows_-3,2,tr("E / ENTER — przejdź dalej","E / ENTER — pass through"),d.accent);
+      paint_text(rows_-2,2,tr("R — wróć do lampy","R — return to the lamp"),d.light);
     }
     if(v.dialogue.active()) {
       const auto &line=v.dialogue.lines[v.dialogue.page];const auto &npc=iceberg::Npcs[size_t(std::clamp(line.speaker,0,7))];

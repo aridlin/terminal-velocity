@@ -348,5 +348,35 @@
     "source_sha256": "4d0c68b367bd3fbdf9817e764908e5524b2cad6536eb0911fc74f6ab4f60c50a",
     "changes": "Recorded excerpt up to 0.65s; 65 Hz high-pass and 7 kHz low-pass; -22 LUFS target, -7 dBTP ceiling; short edge fades; 24 kHz mono PCM.",
     "sha256": "0fa656f4b15114788ba4109c5c688d44c31cd01e4edf1cf95f3b0a6001555d88"
+  },
+  {
+    "file": "motor.wav",
+    "source": "sfx100v2_loop_machine_02.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "098f3c6ea71eef9ccd1667f36e9bd8cfd51857603ff56f649ab742dd75d8fe98",
+    "changes": "Recorded excerpt/loop up to 2.8s; highpass=f=75,lowpass=f=2600; -23 LUFS / -8 dBTP; edge fades; 24 kHz mono PCM.",
+    "sha256": "18037ae265bdc340184a6fc9f72fe9ff022e8e9f0b4c9c03d53a2121b40e21cd"
+  },
+  {
+    "file": "rumble.wav",
+    "source": "sfx100v2_loop_machine_04.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "a704a39b52999a767e88416fd26cb6d43124b965d4fffd3c37272447bc6382c7",
+    "changes": "Recorded excerpt/loop up to 2.5s; highpass=f=35,lowpass=f=180; -23 LUFS / -8 dBTP; edge fades; 24 kHz mono PCM.",
+    "sha256": "839e5afbcbb46ccf278ae4c6257b1ae3b1d86d03a2d7440944945d7ae5c08a4c"
+  },
+  {
+    "file": "spark.wav",
+    "source": "sfx100v2_metal_hit_02.ogg",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": "5ea1f077585fb655220a19bcd5cfaf44d60151652339cdcecc86b1fc3b4fe94d",
+    "changes": "Recorded excerpt/loop up to 0.55s; highpass=f=1400,lowpass=f=7000; -23 LUFS / -8 dBTP; edge fades; 24 kHz mono PCM.",
+    "sha256": "c1c2b04645fd763b257d930db2bc54ec138678498f2e54252b4637dae0191350"
   }
 ]

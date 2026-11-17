@@ -22,7 +22,7 @@
     static const uint32_t hair[]={0x654b46,0xd79743,0x394a69,0x8b8990,0xd2c5a8,0x665544,0x433d49};
     static const uint32_t clothes[]={0x93717c,0x76838a,0x537b93,0x8f829b,0x698c8b,0x769768,0x5ba6ae};
     uint32_t h=hair[id],coat=clothes[id],skin=0xd9ac89,leg=0x55616f,boot=0xa3abb0;
-    bool gesture=int(state_.elapsed*.65+id)%5==0;
+    bool gesture=(state_.adventure.reacting_npc==id&&state_.adventure.npc_reaction_left>0)||int(state_.adventure.presentation_time*.65+id)%5==0;
     pixel_sprite(feet-3,x,{{0,h,h,0},{0,skin,h,0},
       {gesture?skin:0,coat,coat,0},{gesture?0:skin,coat,npc.color,skin},
       {0,leg,leg,0},{boot,0,boot,0}});

@@ -1014,9 +1014,14 @@ int terminal_window_main(int argc,char **argv) {
         if(scene.find(":mid")!=std::string::npos){session.state.player.x=110;session.state.player.y=24-kPlayerHeight;}
         session.sync_view();update_camera(session.state,session.grid,110,27,2,10);
       }
-      if(options.no_save&&(scene=="estate"||scene=="estate:finale")) {
+      if(options.no_save&&(scene=="estate"||scene=="estate:finale"||scene=="estate:tram")) {
         session.grid=scene=="estate"?iceworld::build_estate_settlement():iceworld::build_estate_sequence(true);
         session.district=2;session.state=new_state(session.grid);session.state.menu=false;session.sync_view();
+        if(scene=="estate:tram") {
+          session.state.player.x=130;session.state.player.y=23-kPlayerHeight;session.grid.switch_flags=3;
+          Controls use;use.interact=true;session.tick(use,1./120);
+          for(int i=0;i<108;++i)session.tick({},1./120);
+        }
         update_camera(session.state,session.grid,110,27,2,10);
       }
       if(options.no_save&&scene=="heat") {

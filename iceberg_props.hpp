@@ -24,7 +24,12 @@
     switch(node.id) {
     case 0:prop_art(x,y,{" ╭▥╮ ","╭┴─┴╮","│╲ ╱│","╰───╯"},color);break;
     case 1:valve_art(x,y,done);break;
-    case 2:prop_art(x,y,{"╭─╮",done?"│○│":"│●│",done?"│●│":"│○│","╰┬╯"," │ "},color);break;
+    case 2:{
+      const auto &v=state_.adventure;
+      bool warming=done&&v.machinery_kind==1&&v.machinery_left>.35&&std::abs(v.machinery_x-x)<2;
+      bool lit=done&&(!warming||int(v.presentation_time*12)%2);
+      prop_art(x,y,{"╭─╮",lit?"│○│":"│●│",lit?"│●│":"│○│","╰┬╯"," │ "},warming?0xe4ad68:lit?0xb8dfb7:color);break;
+    }
     case 3:prop_art(x,y,{"╔═══╗","║ "+std::to_string(11+node.detail%3)+"║","╚═╤═╝"},color);break;
     case 4:prop_art(x,y,{"┌┄┐ ","│≋└┐","│≋≋│","└──┘"},color);break;
     case 5:prop_art(x,y,{" ╭╮ ","╭┤├╮","│❧ │","╰──╯"},color);break;

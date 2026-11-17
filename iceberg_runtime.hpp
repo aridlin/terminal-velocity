@@ -203,6 +203,8 @@ public:
     auto old_view=state.adventure;
     state=new_state(grid);state.adventure=std::move(old_view);
     state.adventure.dialogue={};state.adventure.map=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
+    state.adventure.door_left=.42;state.adventure.door_open=0;state.adventure.machinery_left=0;
+    state.adventure.lamp_left=0;state.adventure.npc_reaction_left=0;
     state.ssh=options.remote;
     if(resume && mode==iceberg::Mode::Campaign && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       grid.switch_flags=profile.switches;
@@ -404,6 +406,14 @@ public:
     v.pickup_y=node.area.bottom()-1.3;v.pickup_kind=kind;
     if(kind==0){audio.play(AudioCue::Paper);audio.play(AudioCue::Cloth);}
   }
+  void activate_machinery(const Interaction &node,bool tram=false) {
+    auto &v=state.adventure;v.machinery_duration=tram?2.8:1.05;
+    v.machinery_left=v.machinery_duration;v.machinery_kind=tram?2:node.kind==InteractionKind::Task&&node.id==2?1:0;
+    v.machinery_x=node.area.x+node.area.w*.5;v.machinery_y=node.area.bottom();
+    v.machinery_changed=node.kind==InteractionKind::Valve?uint64_t(1)<<node.id:0;
+    audio.play(AudioCue::Motor,tram?1.f:.6f);audio.play(AudioCue::Rumble,tram?1.f:.45f);
+    if(tram||v.machinery_kind==1)audio.play(AudioCue::Spark,.65f);
+  }
   void inspect_nearby() {
     auto &v=state.adventure;
     v.inspect_page=0;v.inspect_detail=0;
@@ -470,6 +480,7 @@ public:
     int at=near_interaction();if(at<0)return;
     const auto node=grid.interactions[size_t(at)];
     if(node.kind==InteractionKind::Npc) {
+      state.adventure.reacting_npc=node.id;state.adventure.npc_reaction_left=1.2;
       if(mode==iceberg::Mode::Campaign && profile.visit_district<0 && stage==0 && !(profile.story&(uint64_t(1)<<district))) {
         talk(iceberg::introduction(district),1);return;
       }
@@ -489,7 +500,7 @@ public:
       }
     } else if(node.kind==InteractionKind::Deliver) {
       if(!(grid.switch_flags&1)){notice(t("Najpierw zabierz skrzynkę przy wejściu.","First collect the box by the entrance."),5);return;}
-      if(!(grid.switch_flags&2)){grid.switch_flags|=2;talk(iceberg::parcel_delivered());audio.play(AudioCue::Win);persist();}
+      if(!(grid.switch_flags&2)){animate_pickup(node,9);grid.switch_flags|=2;talk(iceberg::parcel_delivered());audio.play(AudioCue::Cloth);audio.play(AudioCue::Win);persist();}
     } else if(node.kind==InteractionKind::Replay) {
       audio.play(AudioCue::Door);persist();profile.revisit={};profile.revisit.active=true;
       profile.revisit.district=grid.district;profile.revisit.scene=node.id;
@@ -509,13 +520,16 @@ public:
       if(grid.template_id==303&&node.id>0&&!(grid.switch_flags&(uint64_t(1)<<(node.id-1)))) {
         notice(t("Najpierw odłącz wcześniejszy obieg. Strzałki prowadzą od fontanny do mieszkań.","Disconnect the preceding circuit first. Follow the arrows from fountain to homes."),5);return;
       }
-      if(!(grid.switch_flags&(uint64_t(1)<<node.id)))animate_pickup(node,1);
+      if(grid.switch_flags&(uint64_t(1)<<node.id)){notice(t("Obieg już pracuje.","The circuit is already running."));return;}
+      animate_pickup(node,1);
       grid.switch_flags|=uint64_t(1)<<node.id;
+      activate_machinery(node,grid.template_id==77&&grid.switch_flags==7);
       audio.play(AudioCue::Valve);notice(t("OBIEG OTWARTY","CIRCUIT OPEN"));persist();
     } else if(node.kind==InteractionKind::Task) {
       int bit=node.detail;auto mask=uint64_t(1)<<(bit%64);
       if(!(profile.task_items[size_t(bit/64)]&mask)) {
         animate_pickup(node,node.id);
+        if(node.id==1||node.id==2||node.id==7)activate_machinery(node);
         profile.task_items[size_t(bit/64)]|=mask;
         ++profile.quest_counts[size_t(node.id)];
         if(profile.quests[size_t(node.id)]==1 && profile.quest_counts[size_t(node.id)]>=unsigned(iceberg::Quests[size_t(node.id)].required))profile.quests[size_t(node.id)]=2;
@@ -587,6 +601,11 @@ public:
     if(!focused)c={};
     auto &v=state.adventure;
     v.notice_left=std::max(0.,v.notice_left-dt);
+    if(focused&&!state.paused&&!state.menu&&!v.inspecting&&!state.journal&&!v.map) {
+      v.presentation_time+=dt;v.npc_reaction_left=std::max(0.,v.npc_reaction_left-dt);
+      v.machinery_left=std::max(0.,v.machinery_left-dt);v.lamp_left=std::max(0.,v.lamp_left-dt);
+      if(v.dialogue.active()&&v.pickup_kind==9)v.pickup_left=std::max(0.,v.pickup_left-dt);
+    }
     if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request){persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};sync_view();return;}
     if(v.inspecting) {
@@ -622,6 +641,8 @@ public:
     audio.update(blocked?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
     if(blocked){sync_view();return;}
     v.pickup_left=std::max(0.,v.pickup_left-dt);
+    v.door_left=std::max(0.,v.door_left-dt);
+    if(state.won)v.door_open=std::min(1.,v.door_open+dt*3.5);
     if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
     if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}
     if(state.won) {
@@ -634,6 +655,7 @@ public:
     double old_elapsed=state.elapsed;
     stepper.advance(state,grid,c,dt);
     feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,dt,audio);
+    if(state.checkpoint!=old_cp)v.lamp_left=.8;
     // Spatially restrained machinery cues follow actual motion/timing.
     if(state.elapsed>old_elapsed&&state.deaths==old_deaths) {
       if(state.player.support>=0&&before.support!=state.player.support)audio.play(AudioCue::Lift,.7f);

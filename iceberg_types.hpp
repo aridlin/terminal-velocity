@@ -156,6 +156,12 @@ struct View {
   int inspect_detail=0, inspect_page=0;
   double pickup_left=0, pickup_x=0, pickup_y=0;
   int pickup_kind=0;
+  double door_left=0, door_open=0;
+  double machinery_left=0, machinery_duration=0, machinery_x=0, machinery_y=0;
+  int machinery_kind=0;
+  uint64_t machinery_changed=0;
+  double presentation_time=0, npc_reaction_left=0, lamp_left=0;
+  int reacting_npc=-1;
   Dialogue dialogue;
   std::string prompt, notice, room_name;
   double notice_left = 0;
