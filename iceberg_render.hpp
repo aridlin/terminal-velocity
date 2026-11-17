@@ -126,6 +126,7 @@
   }
 #include "iceberg_revision_scenery.hpp"
 #include "iceberg_scenery.hpp"
+#include "iceberg_expedition_scenery.hpp"
 #include "iceberg_sprites.hpp"
 #include "iceberg_props.hpp"
 #include "iceberg_jubilee_scenery.hpp"
@@ -216,6 +217,7 @@
       buffer_[y+4][x]=std::move(cell);
     }
     draw_iceberg_landmarks();
+    draw_expedition_infrastructure();
     if(grid_.template_id==74)for(const auto &jet:grid_.air_fields) {
       double x=jet.area.x, bottom=jet.area.bottom(), strength=jet.strength(state_.elapsed);
       world_art(x,bottom,{"╔╧╧╧╧╧╗","╚══╤══╝","╭──┴──╮","│ ◴   │","╞═════╡","│░░░░░│","╰─┬─┬─╯"},d.accent);
@@ -407,7 +409,7 @@
     std::array<std::string,6> labels{
       v.can_continue?tr("KONTYNUUJ PODRÓŻ","CONTINUE JOURNEY"):tr("ROZPOCZNIJ PODRÓŻ","BEGIN JOURNEY"),
       tr("NOWA HISTORIA","NEW STORY"),v.endless_resume?tr("WZNÓW WYPRAWĘ BEZ KOŃCA","RESUME ENDLESS EXPEDITION"):tr("WYPRAWA BEZ KOŃCA","ENDLESS EXPEDITION"),
-      v.trial_resume?tr("WZNÓW PRÓBĘ MISTRZOWSKĄ","RESUME MASTERY TRIAL"):tr("PRÓBA MISTRZOWSKA","MASTERY TRIAL"),tr("DŹWIĘK I JĘZYK","SOUND AND LANGUAGE"),
+      v.trial_resume?tr("WZNÓW PRÓBĘ MISTRZOWSKĄ","RESUME MASTERY TRIAL"):tr("PRÓBA MISTRZOWSKA","MASTERY TRIAL"),tr("USTAWIENIA","SETTINGS"),
       tr("TRASY KLASYCZNE","CLASSIC COURSES")};
     auto menu_line=[&](int row,const std::string &line,Color color=Color::Text){
       if(wide)text(row,cols_/2+1,line,color);else center(row,line,color);
@@ -431,12 +433,14 @@
     }
     if(v.settings) {
       frame(8,5,cols_-10,12,d.accent);
-      center(10,tr("DŹWIĘK I JĘZYK","SOUND AND LANGUAGE"),Color::Gold);
+      center(10,tr("USTAWIENIA","SETTINGS"),Color::Gold);
       center(12,tr("1  Muzyka: ","1  Music: ")+std::to_string(int(v.music_volume*100))+"%");
       center(13,tr("2  Efekty: ","2  Effects: ")+std::to_string(int(v.effects_volume*100))+"%");
       center(14,tr("3  Otoczenie: ","3  Ambience: ")+std::to_string(int(v.ambience_volume*100))+"%");
       center(15,tr("4  Strój: ","4  Outfit: ")+std::to_string(v.outfit+1));
-      center(16,tr("L  Język: POLSKI","L  Language: ENGLISH"));
+      center(16,tr("5  Pauza po utracie fokusu ","5  Pause on focus loss ")+
+        (v.pause_on_focus_loss?tr("wł.","on"):tr("wył.","off")));
+      center(17,tr("L  Język: POLSKI","L  Language: ENGLISH"));
       center(18,tr("1/2/3 zmień głośność  ENTER wróć","1/2/3 cycle volume  ENTER return"));
     }
   }

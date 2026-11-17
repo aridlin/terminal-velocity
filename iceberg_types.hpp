@@ -128,6 +128,7 @@ struct Profile {
   double room_seconds = 0;
   int room_deaths = 0;
   float music_volume = .65f, effects_volume = .75f, ambience_volume = .55f;
+  bool pause_on_focus_loss = true;
 };
 
 struct DialogueLine { int speaker = 0; Text text; };
@@ -193,6 +194,7 @@ struct View {
   std::string prompt, notice, room_name;
   double notice_left = 0;
   float music_volume = .65f, effects_volume = .75f, ambience_volume = .55f;
+  bool pause_on_focus_loss = true;
 };
 struct SessionOptions {
   uint32_t seed = 1;

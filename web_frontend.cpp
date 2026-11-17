@@ -25,7 +25,8 @@ void send_web_ui() {
   const auto &s=web_game->state;const auto &v=s.adventure;
   int flags=int(s.menu)|(int(s.paused)<<1)|(int(v.dialogue.active())<<2)|(int(v.inspecting)<<3)|
     (int(v.settings)<<4)|(int(v.confirm_new)<<5)|(int(s.journal)<<6)|(int(v.map)<<7)|
-    (int(v.can_continue)<<8)|(int(v.language==iceberg::Language::English)<<9)|(int(s.won)<<10);
+    (int(v.can_continue)<<8)|(int(v.language==iceberg::Language::English)<<9)|(int(s.won)<<10)|
+    (int(v.map_route)<<11)|(int(v.pause_on_focus_loss)<<12);
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }

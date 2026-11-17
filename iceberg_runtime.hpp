@@ -111,6 +111,7 @@ public:
     v.switches=grid.switch_flags;v.room_name=(grid.room_role==iceberg::RoomRole::Settlement&&grid.template_id!=330?
       iceberg::Districts[size_t(grid.district)].subtitle:grid.room_name).get(profile.language);
     v.music_volume=profile.music_volume;v.effects_volume=profile.effects_volume;v.ambience_volume=profile.ambience_volume;
+    v.pause_on_focus_loss=profile.pause_on_focus_loss;
     state.audio_muted=audio.muted;state.audio_error=audio.error();
     v.current_objective=iceworld::harbor_objective(grid.template_id,grid.switch_flags).get(profile.language);
     sync_route_view();
@@ -225,6 +226,7 @@ public:
     }
     if(grid.room_role==iceberg::RoomRole::Settlement)for(auto &node:grid.interactions)if(node.kind==InteractionKind::Board)
       node.label=profile.visit_district>=0?iceberg::Text{"Wróć na swoją trasę","Return to your route"}:iceberg::route_title(grid.district,stage);
+    grid.protect_exit();
     configure_route_room();
     auto old_view=state.adventure;
     state=new_state(grid);state.adventure=std::move(old_view);
@@ -364,6 +366,7 @@ public:
       profile.expeditions=previous.expeditions;profile.endless_best=previous.endless_best;
       profile.cosmetics=previous.cosmetics;profile.outfit=previous.outfit;
       profile.music_volume=music;profile.effects_volume=effects;profile.ambience_volume=ambience;
+      profile.pause_on_focus_loss=previous.pause_on_focus_loss;
     }
     run_active=false;
     profile.started=true;mode=iceberg::Mode::Campaign;
@@ -427,9 +430,18 @@ public:
       profile.hidden_room=-1;load_room(true);persist();return;
     }
     if(profile.revisit.active) {
+      const int scene=profile.revisit.scene;
       bool jubilee=profile.revisit.scene==2&&state.won&&!(profile.story&(uint64_t(1)<<40));
       if(jubilee){profile.story|=uint64_t(1)<<40;profile.cosmetics|=1u<<3;}
       profile.revisit={};load_room(true);
+      const auto entrance=std::find_if(grid.interactions.begin(),grid.interactions.end(),[scene](const auto &node){
+        return node.kind==InteractionKind::Replay&&node.id==scene;
+      });
+      if(entrance!=grid.interactions.end()) {
+        state.player.x=entrance->area.x+(entrance->area.w-kPlayerWidth)*.5;
+        state.player.y=entrance->area.bottom()-kPlayerHeight;
+        update_camera(state,grid,last_columns,last_rows-7,last_aspect,10);
+      }
       if(jubilee){talk(iceberg::jubilee_complete());audio.play(AudioCue::Win);}
       persist();return;
     }
@@ -670,6 +682,7 @@ public:
         for(int i=0;i<8;++i){profile.outfit=(profile.outfit+1)%8;if(profile.outfit==0||(profile.cosmetics&(1u<<profile.outfit)))break;}
         persist();
       }
+      if(c.select_level==5){profile.pause_on_focus_loss=!profile.pause_on_focus_loss;persist();}
       if(c.language){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
       if(c.confirm||c.pause){v.settings=false;v.selected=4;}
       return;
@@ -714,12 +727,15 @@ public:
     if(c.quit){persist();running=false;return;}
     if(c.mute_audio)audio.muted=!audio.muted;
     if(c.language&&!state.menu){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;if(state.adventure.dialogue.active()){state.adventure.dialogue.segment=0;state.adventure.dialogue.reset_reveal();frame_dialogue();}persist();}
-    if(!focused && previous_focus){state.paused=true;stepper={};}
+    if(!focused && previous_focus){
+      if(profile.pause_on_focus_loss)state.paused=true;
+      stepper={};
+    }
     previous_focus=focused;
     if(!focused)c={};
     auto &v=state.adventure;
     v.notice_left=std::max(0.,v.notice_left-dt);
-    if(focused&&!state.paused&&!state.menu&&!v.inspecting&&!state.journal&&!v.map) {
+    if(!state.paused&&!state.menu&&!v.inspecting&&!state.journal&&!v.map) {
       v.presentation_time+=dt;v.npc_reaction_left=std::max(0.,v.npc_reaction_left-dt);
       v.machinery_left=std::max(0.,v.machinery_left-dt);v.lamp_left=std::max(0.,v.lamp_left-dt);
       for(auto &bridge:grid.growth)if((grid.switch_flags&bridge.flag)==bridge.flag)bridge.amount=std::min(1.,bridge.amount+dt/1.15);
@@ -741,7 +757,7 @@ public:
     if(v.dialogue.active()) {
       if(state.paused&&(c.confirm||c.interact)){state.paused=false;audio.update(AudioScene::Paused,music_track(),dt,focused);return;}
       if(c.pause)state.paused=!state.paused;
-      if(focused&&!state.paused) {
+      if(!state.paused) {
         if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
         else tick_dialogue(dt);
       }

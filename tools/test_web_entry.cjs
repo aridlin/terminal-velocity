@@ -22,11 +22,19 @@ const server=http.createServer((req,res)=>{
   const loadingContext=await browser.newContext({locale:'en-US'}),loadingPage=await loadingContext.newPage();
   let resumeModule;const moduleGate=new Promise(resolve=>resumeModule=resolve);
   await loadingPage.route('**/terminal-velocity.js',async route=>{await moduleGate;await route.continue();});
+  await loadingPage.route('**/language.php',route=>route.fulfill({json:{language:'en'}}));
   await loadingPage.goto(url,{waitUntil:'commit'});await loadingPage.waitForFunction(()=>typeof selectLanguage==='function');
   await loadingPage.locator('[data-language="pl"]').click();resumeModule();
   await loadingPage.waitForFunction(()=>!document.querySelector('#start').disabled);
   assert.equal(await loadingPage.locator('html').getAttribute('lang'),'pl','explicit choice during loading wins');
   await loadingContext.close();console.log('PASS explicit language choice during module loading');
+  const located=await browser.newPage({locale:'en-US'});
+  await located.route('**/language.php',route=>route.fulfill({json:{language:'pl'}}));
+  await located.goto(url);
+  await located.waitForFunction(()=>!document.querySelector('#start').disabled);
+  assert.equal(await located.locator('html').getAttribute('lang'),'pl','a fresh browser uses approximate country');
+  await located.close();
+  console.log('PASS country-based first-run language with manual override');
   }
   for(const [locale,expected] of (visualOnly?[['en-US','en']]:[['en-US','en'],['pl-PL','pl'],['de-DE','en']])){
    const context=await browser.newContext({locale,viewport:{width:1280,height:900}}),page=await context.newPage();page.on('pageerror',e=>errors.push(String(e)));
@@ -211,6 +219,14 @@ const server=http.createServer((req,res)=>{
     assert.equal(await button.count(),1,'fullscreen keeps Map and Quests in reach');
     await button.tap();
     await page.waitForFunction(flag=>!!(uiFlags&flag),flag);
+    if(flag===128) {
+     const route=page.locator('#touch-inspect');
+     const showingRoute=await page.evaluate(()=>!!(uiFlags&2048));
+     assert.equal(await route.innerText(),showingRoute?'Districts':'Route');
+     await route.tap();
+     await page.waitForFunction(before=>!!(uiFlags&2048)!==before,showingRoute);
+     assert.equal(await route.innerText(),showingRoute?'Route':'Districts');
+    }
     await button.tap();
     await page.waitForFunction(flag=>!(uiFlags&flag),flag);
    }
@@ -240,12 +256,22 @@ const server=http.createServer((req,res)=>{
    const oldVolume=await page.evaluate(()=>window.volumeLine);
    await settings.locator('[data-tap="20"]').tap();
    await page.waitForFunction(old=>window.volumeLine&&window.volumeLine!==old,oldVolume);
+   const focusPause=settings.locator('#focus-pause');
+   const initialFocusPause=await focusPause.getAttribute('aria-pressed');
+   if(initialFocusPause==='true')await focusPause.tap();
+   await page.waitForFunction(()=>!(uiFlags&4096));
    await page.screenshot({path:path.join(out,fallback?"web-settings-fallback.png":"web-settings-fullscreen.png")});
    await page.locator('#touch-use').tap();
    await page.waitForFunction(()=>!(uiFlags&16));
    await page.keyboard.press('Digit1');
    await page.locator('#touch-use').tap();
    await page.waitForFunction(()=>!(uiFlags&1));
+   const paused=await page.evaluate(()=>{
+    window.dispatchEvent(new Event('blur'));
+    window.dispatchEvent(new Event('focus'));
+    return !!(uiFlags&2);
+   });
+   assert.equal(paused,false,'turning off focus pause keeps the game running');
    await page.locator('#leave-fullscreen').tap();
    await page.waitForFunction(()=>!expanded());
    await page.locator("footer #settings-keys").waitFor({state:"attached"});

@@ -81,10 +81,16 @@ int main(){try{
  for(int i=0;i<20&&game.stage==0;i++)game.tick(move,.1);
  require_reaction(game.stage==1,"holding forward still walks through the opening exit");
  game.stage=2;game.room=2;game.load_room();
- game.state.player.x=game.grid.goal.x;
+ game.state.player.x=game.grid.goal.x-1.4;
  game.state.player.y=game.grid.goal.bottom()-kPlayerHeight;
- game.tick({},.1);
- require_reaction(game.state.won,"a later exit recognizes the courier on arrival");
+ const auto deaths=game.state.deaths;
+ Controls door_dash;door_dash.move=1;door_dash.dash_pressed=true;
+ game.tick(door_dash,.1);
+ for(int i=0;i<10;i++)game.tick(move,.1);
+ const int wall=int(std::ceil(game.grid.goal.right()))+1;
+ require_reaction(game.grid.solid_at(wall,int(game.grid.goal.bottom())-2)&&
+   game.state.player.rect().right()<=wall+.001&&game.state.won&&game.state.deaths==deaths,
+   "dashing through a later doorway stops at its wall and stays in exit range");
  game.tick(use,.1);
  require_reaction(game.stage==2&&game.room==3,"interacting still advances a later exit");
  game.grid=iceworld::build_harbor_lesson_v4();

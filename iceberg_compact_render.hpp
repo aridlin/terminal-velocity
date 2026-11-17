@@ -21,19 +21,21 @@
         paint_text(rows_-2,2,tr("ENTER tak · P anuluj","ENTER yes · P cancel"),d.light);return;
       }
       if(v.settings) {
-        paint_text(4,2,tr("DŹWIĘK I JĘZYK","SOUND AND LANGUAGE"),d.accent);
+        paint_text(4,2,tr("USTAWIENIA","SETTINGS"),d.accent);
         paint_text(7,2,tr("1 Muzyka: ","1 Music: ")+std::to_string(int(v.music_volume*100))+"%",d.light);
         paint_text(9,2,tr("2 Efekty: ","2 Effects: ")+std::to_string(int(v.effects_volume*100))+"%",d.light);
         paint_text(11,2,tr("3 Otoczenie: ","3 Ambience: ")+std::to_string(int(v.ambience_volume*100))+"%",d.light);
         paint_text(13,2,tr("4 Strój: ","4 Outfit: ")+std::to_string(v.outfit+1),d.light);
-        paint_text(15,2,tr("L Język: POLSKI","L Language: ENGLISH"),d.light);
+        paint_text(15,2,tr("5 Pauza po utracie fokusu ","5 Pause on focus loss ")+
+          (v.pause_on_focus_loss?tr("wł.","on"):tr("wył.","off")),d.light);
+        paint_text(16,2,tr("L Język: POLSKI","L Language: ENGLISH"),d.light);
         paint_text(rows_-2,2,tr("ENTER wróć","ENTER return"),d.accent);return;
       }
       paint_text(3,2,tr("POD POWIERZCHNIĄ","BENEATH THE SURFACE"),d.light);
       const std::array<std::string,6> labels{
         v.can_continue?tr("Kontynuuj podróż","Continue journey"):tr("Rozpocznij podróż","Begin journey"),
         tr("Nowa historia","New story"),tr("Wyprawa bez końca","Endless expedition"),tr("Próba mistrzowska","Mastery trial"),
-        tr("Dźwięk i język","Sound and language"),tr("Trasy klasyczne","Classic courses")};
+        tr("Ustawienia","Settings"),tr("Trasy klasyczne","Classic courses")};
       for(int i=0;i<6;++i)paint_text((rows_<24?4+i:5+i*2),2,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+" "+labels[size_t(i)],v.selected==i?d.accent:0xc8bbb8);
       if(v.selected==2||v.selected==3){y=rows_<24?12:18;compact_paragraph(y,"J: "+iceberg::Districts[size_t(v.run_district)].name.get(v.language),rows_-3,d.light);}
       if(v.notice_left>0){y=rows_<24?14:20;compact_paragraph(y,v.notice,rows_-3,d.accent);}

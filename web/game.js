@@ -4,10 +4,23 @@ const stage=document.querySelector('#stage'),start=document.querySelector('#star
 const mobile=()=>matchMedia('(pointer:coarse)').matches||innerWidth<760||(innerHeight<500&&innerWidth<1100);
 const languageKey='terminal-velocity.language',pendingLanguageKey='terminal-velocity.pending-language';
 let pendingBootLanguage=null;
+let hasStoredLanguage=false;
 let preferredLanguage=(navigator.languages?.[0]||navigator.language||'en').toLowerCase().split('-')[0]==='pl'?'pl':'en';
-try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en')preferredLanguage=saved;const pending=localStorage.getItem(pendingLanguageKey);if(pending==='pl'||pending==='en')preferredLanguage=pendingBootLanguage=pending;}catch{}
+try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en'){preferredLanguage=saved;hasStoredLanguage=true;}const pending=localStorage.getItem(pendingLanguageKey);if(pending==='pl'||pending==='en')preferredLanguage=pendingBootLanguage=pending;}catch{}
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastUI='',lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootStatus='',explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
+async function suggestLanguage(){
+ if(hasStoredLanguage||explicitBootLanguage)return null;
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),1200);
+ try {
+  const response=await fetch('language.php',{cache:'no-store',signal:controller.signal});
+  const result=response.ok?await response.json():null;
+  return ['pl','en'].includes(result?.language)?result.language:null;
+ } catch {return null;}
+ finally {clearTimeout(timeout);}
+}
+const locationLanguage=suggestLanguage();
 const pointers=new Map(),keyboard=new Set(),tiles=new Map();
 let dashShift='';
 let storageFlushQueued=false;
@@ -53,6 +66,8 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
  document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  document.querySelector('#touch-use').textContent=lastBlocked?'↵':tr('Użyj','Use');
+ if(uiFlags&128)document.querySelector('#touch-inspect').textContent=uiFlags&2048?tr('Dzielnice','Districts'):tr('Trasa','Route');
+ document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
  if(!started){start.textContent=ready?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');saveStatus.textContent=ready?tr('Gotowe','Ready'):tr('Ładowanie gry…','Loading game…');}
 }
 function selectLanguage(language){
@@ -296,10 +311,17 @@ canvas.onclick=()=>{if(!started)start.click();else if(!accounts.active&&(uiFlags
 addEventListener('keydown',e=>{
  if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
 });
-var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mount(Module.IDBFS,{},'/persist');Module.FS.syncfs(true,error=>{
+var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mount(Module.IDBFS,{},'/persist');Module.FS.syncfs(true,async error=>{
  // A valid game save is authoritative even before the player presses Start.
  // An explicit selection made while loading takes precedence over that save.
- if(!explicitBootLanguage){const saved=Module._web_saved_language();if(saved===0||saved===1)english=saved===1;}
+ if(!explicitBootLanguage){
+  const saved=Module._web_saved_language();
+  if(saved===0||saved===1)english=saved===1;
+  else {
+   const nearbyLanguage=await locationLanguage;
+   if(!explicitBootLanguage&&nearbyLanguage)english=nearbyLanguage==='en';
+  }
+ }
  try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}
  ready=true;start.disabled=false;translateUI();
  if(error)saveStatus.textContent=tr('Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups');

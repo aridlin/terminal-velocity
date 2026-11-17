@@ -134,15 +134,16 @@
     for(const auto &belt:grid_.sorting_belts) {
       const double row=aspect_*scale_;
       const int count=std::max(3,int(belt.width/scale_));
-      world_art(belt.speed>0?belt.x:belt.x+belt.width-3,belt.y-6*row,
-        {"▌     ▐","╲     ╱"," ╲   ╱","  ║ ║","  ╚═╝"},0x7e9297);
+      const double loading_end=belt.speed>0?belt.x:belt.x+belt.width-5*scale_;
+      world_art(loading_end-scale_,belt.y-6*row,
+        {"╔═════╗","║╲   ╱║","║ ╲ ╱ ║","║  ▄  ║","║     ║","╨     ╨"},0x7e9297);
       const int travel=int(std::floor(state_.elapsed*belt.speed/scale_));
       std::string tread="◉";
-      for(int i=2;i<count;++i)tread+=(i-travel)%5==0?(belt.speed>0?"›":"‹"):"─";
+      for(int i=2;i<count;++i)tread+=(i-travel)%5==0?(belt.speed>0?"▶":"◀"):"─";
       world_text(belt.x,belt.y+row,tread+"◉",0xab946f);
       double pos=std::fmod(state_.elapsed*std::abs(belt.speed),belt.width-2);
       if(belt.speed<0)pos=belt.width-2-pos;
-      world_art(belt.x+pos,belt.y-3*row,{"┏━┯━┓","┃╲│╱┃","┗━┷━┛"},0xc6a078);
+      world_art(belt.x+pos,belt.y-3*row,{"┏━┯━┓","┃╲│╱┃","▙▄▄▄▟"},0xc6a078);
     }
   }
   void draw_dock_worker(double x,double feet,double phase) {

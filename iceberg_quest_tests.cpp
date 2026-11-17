@@ -108,9 +108,11 @@ int main() {
       require_quest(found,"completed district exposes an authored route revisit");
       walk_to(game,door);interact(game);
       require_quest(game.profile.revisit.active&&game.grid.room_role==(scene?iceberg::RoomRole::Finale:iceberg::RoomRole::Lesson),"revisit door enters the chosen authored scene");
-      for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Return)door=reach_area(node.area);
-      walk_to(game,door);interact(game);
-      require_quest(!game.profile.revisit.active&&game.grid.room_role==iceberg::RoomRole::Settlement,"return door safely leaves the revisited scene");
+      Rect departure{};
+      for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Return)departure=reach_area(node.area);
+      walk_to(game,departure);interact(game);
+      require_quest(!game.profile.revisit.active&&game.grid.room_role==iceberg::RoomRole::Settlement&&
+        game.state.player.rect().intersects(door),"return door places the courier back at the original entrance");
     }
     for(int id=0;id<3;++id) {
       game.profile.hidden_room=id;install_test_room(game,iceworld::build_hidden(id));

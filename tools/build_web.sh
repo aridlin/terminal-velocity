@@ -10,6 +10,7 @@ mkdir -p web/dist
   -o web/dist/terminal-velocity.js
 
 cp web/index.html web/game.css web/game.js web/accounts.js web/dist/
+cp web/server/language.php web/server/pl-address-ranges.bin web/dist/
 cp assets/cell-font.ttf web/dist/
 cp assets/audio/CREDITS.txt web/dist/AUDIO-CREDITS.txt
 cp assets/audio/manifest.json web/dist/audio-manifest.json

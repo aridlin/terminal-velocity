@@ -38,7 +38,10 @@ int main() {
     iceberg::SessionOptions options;options.mute=true;options.seed=73;options.seed_override=true;
     AdventureSession s(options,file);
     auto sorting=iceworld::build_room(503,73,0);
-    for(const auto &belt:sorting.sorting_belts) {
+    check_harbor(sorting.sorting_belts.size()==5,"the sorting office has five powered treads");
+    for(size_t i=0;i<sorting.sorting_belts.size();++i) {
+      const auto &belt=sorting.sorting_belts[i];
+      check_harbor((belt.speed>0)==(i%2==0),"neighboring sorting treads run in opposite directions");
       auto rider=new_state(sorting);rider.player.x=belt.x+belt.width*.5;
       rider.player.y=belt.y-kPlayerHeight;rider.player.grounded=true;
       double x=rider.player.x;

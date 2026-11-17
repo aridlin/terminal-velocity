@@ -405,6 +405,31 @@ public:
     return solid_[index(col, row)];
   }
 
+  void protect_exit() {
+    if (!adventure_level || goal.x < 0) return;
+    const int floor = int(std::lround(goal.bottom()));
+    const int edge = int(std::ceil(goal.right()));
+    const int wall = edge + 1;
+    if (floor < 5 || floor >= height_ || wall >= width_ || width_ - edge > 16 ||
+        !solid_at(int(std::floor(goal.x + goal.w * .5)), floor)) return;
+    bool drop = false;
+    for (int x = edge; x < std::min(width_, edge + 8); ++x)
+      drop = drop || !solid_at(x, floor);
+    if (!drop) return;
+    for (int y = floor - 5; y <= floor; ++y)
+      if (hazard_at(wall, y) || hazard_at(edge, y)) return;
+    add_solid_rect(edge, floor, 2, 1);
+    add_solid_rect(wall, floor - 5, 1, 5);
+    exit_wall_x_ = wall;
+  }
+
+  bool touches_exit(const Rect &rect) const {
+    if (!event_level && !adventure_level) return rect.right() >= goal.x;
+    Rect entrance = goal;
+    if (exit_wall_x_ >= 0) entrance.w = exit_wall_x_ - entrance.x;
+    return rect.intersects(entrance);
+  }
+
   bool hazard_at(int col, int row) const {
     if (!inside(col, row)) {
       return false;
@@ -476,6 +501,7 @@ public:
   Rect goal{173.0, 13.0, 3.0, 5.0};
 
 private:
+  int exit_wall_x_ = -1;
   bool inside(int col, int row) const {
     return col >= 0 && col < width_ && row >= 0 && row < height_;
   }
@@ -860,8 +886,7 @@ void update_step(GameState &state, const EngineGrid &grid,
       return;
     }
     if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires &&
-        (grid.event_level || grid.adventure_level ? rect.intersects(grid.goal)
-                         : rect.right() >= grid.goal.x)) {
+        grid.touches_exit(rect)) {
       state.won = true;
     }
     return;
@@ -956,8 +981,7 @@ void update_step(GameState &state, const EngineGrid &grid,
     return;
   }
   if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires &&
-      (grid.event_level || grid.adventure_level ? rect.intersects(grid.goal)
-                       : rect.right() >= grid.goal.x)) {
+      grid.touches_exit(rect)) {
     state.won = true;
   }
 }
