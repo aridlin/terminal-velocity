@@ -63,7 +63,16 @@ window.tvFrame=(data,w,h)=>{
  if(!sameGrid)previous=new Uint32Array(data.length);
  previous.set(data);
 };
-const tap=(...keys)=>{for(const k of keys)pressed|=1<<k;};
+let completedPresses=0;
+const tap=(...keys)=>{for(const k of keys){completedPresses|=1<<k;pressed|=1<<k;}};
+function pointerPress(pointer){
+ pointer.pending|=1<<pointer.key;
+ pressed|=1<<pointer.key;
+}
+function clearPresses(){
+ pressed=completedPresses=0;
+ for(const pointer of pointers.values())pointer.pending=0;
+}
 function translateUI(){
  document.documentElement.lang=english?'en':'pl';
  document.title='Terminal Velocity — '+tr('Pod powierzchnią','Below the surface');
@@ -144,8 +153,9 @@ for(const button of document.querySelectorAll('[data-key]')){
   const key=button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;
   button.setPointerCapture(e.pointerId);
   const canSlide=e.pointerType==='touch'&&button.matches(horizontalTouchControls);
-  pointers.set(e.pointerId,{key,button,canSlide});
-  button.classList.add('held');tap(key);recompute();
+  const pointer={key,button,canSlide,pending:0};
+  pointers.set(e.pointerId,pointer);
+  button.classList.add('held');pointerPress(pointer);recompute();
  });
  button.addEventListener('pointermove',e=>{
   const pointer=pointers.get(e.pointerId);
@@ -157,19 +167,23 @@ for(const button of document.querySelectorAll('[data-key]')){
   pointer.button=next;
   pointer.key=next?+next.dataset.key:null;
   releaseHighlight(previous);
-  if(next){next.classList.add('held');tap(pointer.key);}
+  if(next){next.classList.add('held');pointerPress(pointer);}
   recompute();
  });
  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>{
   const pointer=pointers.get(e.pointerId);
   if(!pointer)return;
   pointers.delete(e.pointerId);
+  if(type==='pointerup')completedPresses|=pointer.pending;
+  // A cancelled contact must not erase other inputs of the same action.
+  pressed=completedPresses;
+  for(const active of pointers.values())pressed|=active.pending;
   releaseHighlight(pointer.button);
   recompute();
  });
 }
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{tap(+b.dataset.tap);canvas.focus();};
-function clearInput(){keyboard.clear();pointers.clear();dashShift='';held=pressed=0;document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
+function clearInput(){keyboard.clear();pointers.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function flushBrowserStorage(){
  if(syncing){storageFlushQueued=true;return;}
  syncing=true;
@@ -329,7 +343,7 @@ saveFile.onchange=async()=>{
   finishImport();
  }
 };
-function frame(now){if(accounts.active)accounts.draw();else if(started&&!importPending){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);pressed=0;}last=now;requestAnimationFrame(frame);}
+function frame(now){if(accounts.active)accounts.draw();else if(started&&!importPending){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);clearPresses();}last=now;requestAnimationFrame(frame);}
 start.onclick=()=>{
  if(!ready||started)return;
  try {
