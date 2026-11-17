@@ -148,10 +148,17 @@ function releaseHighlight(button){
  if(button&&![...pointers.values()].some(pointer=>pointer.button===button))button.classList.remove('held');
 }
 for(const button of document.querySelectorAll('[data-key]')){
+ const action=()=>button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;
+ button.addEventListener('click',e=>{
+  // Pointer clicks already sent their input on pointerdown.
+  if(e.detail!==0||accounts.active||!started)return;
+  canvas.focus();
+  tap(action());
+ });
  button.addEventListener('pointerdown',e=>{
   if(accounts.active||!started)return;
   e.preventDefault();
-  const key=button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;
+  const key=action();
   button.setPointerCapture(e.pointerId);
   const canSlide=e.pointerType==='touch'&&button.matches(horizontalTouchControls);
   const pointer={key,button,canSlide,pending:0};

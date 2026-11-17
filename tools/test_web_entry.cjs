@@ -226,6 +226,33 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>held===0&&!document.querySelector('#touch .held'));
   await touchSession.detach();
   console.log('PASS a touch slide reverses direction and releases without triggering a jump');
+  await page.evaluate(()=>{
+   window.touchControlEdges=[];
+   const tick=Module._web_tick;
+   window.restoreTouchControlTick=()=>{Module._web_tick=tick;};
+   Module._web_tick=(dt,held,pressed,...rest)=>{
+    if(pressed)window.touchControlEdges.push(pressed);
+    return tick(dt,held,pressed,...rest);
+   };
+  });
+  const dashControl=page.locator('#touch [data-key="5"]'),jumpControl=page.locator('#touch [data-key="4"]');
+  const takeTouchControlEdges=()=>page.evaluate(async()=>{
+   for(let i=0;i<4;i++)await new Promise(requestAnimationFrame);
+   return window.touchControlEdges.splice(0);
+  });
+  await dashControl.focus();
+  await page.keyboard.press('Tab');
+  assert.equal(await jumpControl.evaluate(button=>button===document.activeElement),true);
+  await page.keyboard.press('Space');
+  assert.deepEqual(await takeTouchControlEdges(),[1<<4],'Space activates the focused Jump button');
+  assert.equal(await page.evaluate(()=>document.activeElement===canvas),true);
+  await dashControl.focus();
+  await page.keyboard.press('Enter');
+  assert.deepEqual(await takeTouchControlEdges(),[1<<5],'Enter activates the focused Dash button');
+  await jumpControl.tap();
+  assert.deepEqual(await takeTouchControlEdges(),[1<<4],'a touch tap still sends Jump once');
+  await page.evaluate(()=>window.restoreTouchControlTick());
+  console.log('PASS compact game controls activate with keyboard and touch');
   for(const size of [{width:390,height:844},{width:844,height:390},{width:760,height:600},{width:1920,height:1080}]){
    await page.setViewportSize(size);await page.waitForTimeout(100);
    const ratio=await page.locator('#game').evaluate(c=>({bitmap:c.width/c.height,display:c.getBoundingClientRect().width/c.getBoundingClientRect().height}));
