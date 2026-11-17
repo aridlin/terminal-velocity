@@ -27,7 +27,7 @@ Linux, w terminalu:
 ./ghostty-play.sh               # nowe okno Ghostty
 ```
 
-Minimum to **76×24 komórki**, zalecane **110×34**. Okno można skalować; **F11** przełącza pełny ekran. Utrata fokusu pauzuje grę; **Enter/P** wznawia.
+Minimum to **76×24 komórki**, zalecane **110×34**. Okno można skalować; **F11** przełącza pełny ekran. **Ctrl +/−** zmienia wielkość komórek, a **Ctrl 0** ją resetuje; ekrany o dużej gęstości pikseli skalują się automatycznie. Utrata fokusu pauzuje grę; **Enter/P** wznawia.
 
 Windows 10/11 x64: rozpakuj całą paczkę, uruchom **play.cmd** w Windows Terminal albo **play-window.cmd** dla wersji okienkowej. Zachowaj katalog `assets/` obok plików wykonywalnych. Wersja okienkowa potrzebuje też dołączonego `SDL2.dll`; terminalowa nie potrzebuje SDL. Administrator nie jest wymagany.
 

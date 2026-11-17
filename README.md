@@ -27,7 +27,7 @@ Linux, inside a terminal:
 ./ghostty-play.sh                # open a new Ghostty window
 ```
 
-Use at least **76×24 cells**; **110×34** is recommended. The window can be resized; **F11** toggles fullscreen. Losing focus pauses play. **Enter/P** resumes.
+Use at least **76×24 cells**; **110×34** is recommended. The window can be resized; **F11** toggles fullscreen. **Ctrl +/−** changes cell size and **Ctrl 0** resets it; high-density displays scale automatically. Losing focus pauses play. **Enter/P** resumes.
 
 On Windows 10/11 x64, extract the whole package and run **play.cmd** in Windows Terminal, or **play-window.cmd** for the window edition. Keep `assets/` beside the executables. The window edition needs the included `SDL2.dll`; the terminal executable does not. No administrator access is needed on Windows.
 
