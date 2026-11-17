@@ -790,7 +790,7 @@ public:
         // finish before advancing, including after Helena's first briefing.
         bool first_exit=mode==iceberg::Mode::Campaign&&district==0&&stage<=1&&
           profile.hidden_room<0&&profile.visit_district<0&&!profile.revisit.active;
-        if(c.confirm||c.interact||(first_exit&&v.door_open>=1.))advance_room();
+        if(c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))advance_room();
         sync_view();return;
       }
     }
