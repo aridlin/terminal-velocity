@@ -49,7 +49,7 @@
       paint_text(rows_-2,2,tr("R nowa wyprawa · L język","R new expedition · L language"),d.light);return;
     }
     if(state_.journal||v.map)draw_iceberg_journal();
-    if(state_.paused) {
+    else if(state_.paused) {
       panel(state_.paused?tr("CHWILA ODDECHU","A MOMENT TO BREATHE"):tr("DROGA OTWARTA","THE WAY IS OPEN"));
       y=6;compact_paragraph(y,state_.paused?tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."):tr("R wróć do lampy, jeśli coś zostało z tyłu.","R returns to the lamp if you left something behind."),rows_-3);
       paint_text(rows_-2,2,tr("ENTER dalej · M menu","ENTER continue · M menu"),d.accent);

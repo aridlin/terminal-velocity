@@ -74,7 +74,7 @@ function clearPresses(){
  pressed=completedPresses=0;
  for(const pointer of pointers.values())pointer.pending=0;
 }
-const routeMapOpen=()=>(uiFlags&(2|128|2048))===(128|2048);
+const routeMapOpen=()=>(uiFlags&(128|2048))===(128|2048);
 function translateUI(){
  document.documentElement.lang=english?'en':'pl';
  document.title='Terminal Velocity — '+tr('Pod powierzchnią','Below the surface');
@@ -133,7 +133,8 @@ function recompute(){
 addEventListener('keydown',e=>{
  const shiftKey=e.code==='ShiftLeft'||e.code==='ShiftRight';
  if(!shiftKey&&!e.repeat)dashShift='';
- if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||(uiFlags&2)))return;
+ const pauseScreen=(uiFlags&(2|64|128))===2;
+ if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
  if(accounts.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();

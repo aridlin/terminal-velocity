@@ -540,7 +540,7 @@
     size_t remaining=dialogue.visible_characters;int first=std::clamp(dialogue.segment,0,layout.pages-1)*layout.text_rows;
     for(int i=first;i<std::min(first+layout.text_rows,int(layout.body.size()));++i)
       paint_text(layout.text_y+i-first,layout.text_x,dialogue_fragment(layout.body[size_t(i)],remaining),0xeee7d6);
-    paint_text(layout.top+layout.height-2,layout.text_x,state_.paused?tr("E/ENTER wznów","E/ENTER resume"):dialogue.revealing?tr("E/ENTER: tekst od razu","E/ENTER: instant text"):tr("E/ENTER: dalej","E/ENTER: continue"),npc.color);
+    paint_text(layout.top+layout.height-2,layout.text_x,state_.paused&&!state_.journal?tr("E/ENTER wznów","E/ENTER resume"):dialogue.revealing?tr("E/ENTER: tekst od razu","E/ENTER: instant text"):tr("E/ENTER: dalej","E/ENTER: continue"),npc.color);
   }
 #include "iceberg_compact_render.hpp"
   void draw_iceberg() {
@@ -570,7 +570,7 @@
     if(state_.debug)text(5,2,"vx "+fixed(state_.player.vx)+" vy "+fixed(state_.player.vy)+" 120 Hz",Color::Gold);
     if(state_.menu){draw_iceberg_menu();return;}
     if(state_.journal||v.map)draw_iceberg_journal();
-    if(state_.paused) {
+    else if(state_.paused) {
       frame(8,5,cols_-10,9,d.stone);
       center(10,tr("CHWILA ODDECHU","A MOMENT TO BREATHE"),Color::Gold);
       center(12,tr("ENTER / P wznów   M menu","ENTER / P resume   M menu"));

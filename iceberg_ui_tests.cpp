@@ -21,6 +21,34 @@ int main(){try {
     }
     game.tick(tab,1./120);ui_check(game.state.adventure.map&&game.state.adventure.map_route,"B switches to room route without closing map");game.tick(tab,1./120);
   }
+  AdventureSession paused(options,"/tmp/tv-ui-paused-overlays-unused");paused.begin_campaign(true);
+  paused.profile.language=iceberg::Language::English;
+  paused.profile.quests[2]=3;paused.sync_view();
+  Controls pause;pause.pause=true;
+  paused.tick(pause,1./120);paused.tick(map,1./120);
+  const auto overlay_visible=[&](const char *title) {
+    for(auto size:{std::pair{110,34},std::pair{38,28},std::pair{60,20}}) {
+      RenderGrid(paused.grid,paused.state,size.second,size.first,2).draw();
+      const auto text=ui_text(frame);
+      if(text.find(title)==std::string::npos||text.find("A MOMENT TO BREATHE")!=std::string::npos)return false;
+    }
+    return true;
+  };
+  ui_check(paused.state.paused&&overlay_visible("JOURNEY MAP"),"the map is readable over pause on wide and compact screens");
+  paused.state.adventure.selected=1;paused.tick(enter,1./120);
+  ui_check(paused.state.paused&&paused.state.adventure.map,"confirm on a locked district preserves pause");
+  paused.tick(pause,1./120);
+  ui_check(paused.state.paused&&!paused.state.adventure.map,"close the map before resuming the world");
+  paused.tick(book,1./120);
+  ui_check(paused.state.paused&&overlay_visible("QUEST BOOK"),"the quest book is readable while the world is paused");
+  paused.tick(tab,1./120);paused.tick(enter,1./120);
+  ui_check(paused.state.paused&&paused.state.adventure.dialogue.active(),"read a completed task record without resuming the world");
+  paused.tick(enter,1./120);
+  ui_check(paused.state.paused&&!paused.state.adventure.dialogue.revealing,"confirm reveals the record while the world stays paused");
+  paused.tick(pause,1./120);
+  ui_check(paused.state.paused&&paused.state.journal&&!paused.state.adventure.dialogue.active(),"back closes the record to the paused quest book");
+  paused.tick(book,1./120);paused.tick(enter,1./120);
+  ui_check(!paused.state.paused&&!paused.state.journal,"confirm resumes play from the bare pause screen");
   game.profile.unlocked=1;game.profile.story|=uint64_t(1)<<8;game.sync_view();game.state.adventure.selected=1;
   game.tick(enter,1./120);ui_check(!game.state.adventure.map&&game.grid.district==1&&game.profile.visit_district==1,"unlocked district travel enters the named settlement");
   ui_check(game.state.adventure.notice.find("ARRIVED")!=std::string::npos&&game.state.adventure.door_left>0,"allowed travel has arrival feedback and door animation");

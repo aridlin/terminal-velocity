@@ -124,6 +124,17 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('F2');
     await page.waitForFunction(()=>!accounts.active&&(uiFlags&2)&&canvas===document.activeElement);
     console.log('PASS account keyboard traversal returns to both fields and F2 returns to the paused game');
+    await page.keyboard.press('j');
+    await page.waitForFunction(()=>!!(uiFlags&128)&&entryFrame.includes('JOURNEY MAP'));
+    assert.equal(await page.evaluate(()=>entryFrame.includes('A MOMENT TO BREATHE')),false);
+    await page.keyboard.press('p');
+    await page.waitForFunction(()=>(uiFlags&(2|128))===2&&entryFrame.includes('A MOMENT TO BREATHE'));
+    await page.locator('footer [data-tap="10"]').click();
+    await page.waitForFunction(()=>!!(uiFlags&64)&&entryFrame.includes('QUEST BOOK'));
+    assert.equal(await page.evaluate(()=>entryFrame.includes('A MOMENT TO BREATHE')),false);
+    await page.keyboard.press('Tab');
+    await page.waitForFunction(()=>(uiFlags&(2|64))===2);
+    console.log('PASS map and quests stay readable over pause and close back to the paused game');
     await page.keyboard.press('Enter');
     await page.waitForFunction(()=>!(uiFlags&2));
 

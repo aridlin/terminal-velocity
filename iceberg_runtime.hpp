@@ -774,11 +774,17 @@ public:
       inspect_nearby();sync_view();if(v.inspecting)return;
     }
     if(v.dialogue.active()) {
-      if(state.paused&&(c.confirm||c.interact)){state.paused=false;audio.update(AudioScene::Paused,music_track(),dt,focused);return;}
-      if(c.pause)state.paused=!state.paused;
-      if(!state.paused) {
+      const bool reading_journal=state.journal;
+      if(!reading_journal&&state.paused&&(c.confirm||c.interact)){
+        state.paused=false;audio.update(AudioScene::Paused,music_track(),dt,focused);return;
+      }
+      if(c.pause) {
+        if(reading_journal)v.dialogue={};
+        else state.paused=!state.paused;
+      }
+      if(v.dialogue.active()&&(!state.paused||reading_journal)) {
         if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
-        else tick_dialogue(dt);
+        else if(focused||!profile.pause_on_focus_loss)tick_dialogue(dt);
       }
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
@@ -788,7 +794,7 @@ public:
       if(mode!=iceberg::Mode::Campaign)v.map_route=true;
     }
     if(c.pause){if(state.journal||v.map){state.journal=false;v.map=false;}else state.paused=!state.paused;stepper={};}
-    if(state.paused&&c.confirm)state.paused=false;
+    if(state.paused&&c.confirm&&!state.journal&&!v.map)state.paused=false;
     if(state.journal) {
       if(c.inspect){v.journal_tab=(v.journal_tab+1)%3;v.selected=0;}
       auto entries=iceberg::journal_entries(v);
