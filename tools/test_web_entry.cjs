@@ -76,8 +76,44 @@ const server=http.createServer((req,res)=>{
     fs.writeFileSync(path.join(out,'browser-current-v6.iceberg'),currentRoundtrip.exported);
     console.log('PASS genuine current TVICE6 browser export/import preserves byte-exact progress and language with rollback');
     if(visualOnly){await context.close();continue;}
+    // Hold completion of a real IndexedDB write after it has committed. The
+    // language change and account metadata then arrive during that flush.
+    await page.waitForFunction(()=>!syncing);
+    const queued=await page.evaluate(async()=>{
+      const fs=Module.FS,original=fs.syncfs,results=[];
+      let release,requests=0;
+      const firstCommitted=new Promise(resolve=>{
+        fs.syncfs=function(populate,done) {
+          ++requests;
+          return original.call(fs,populate,error=>{
+            results.push(error?String(error):null);
+            if(results.length===1){release=()=>done(error);resolve();}
+            else done(error);
+          });
+        };
+      });
+      syncSave();
+      await firstCommitted;
+      const marker={active:false,revision:42};
+      selectLanguage('pl');
+      accounts.entries.fixture=marker;
+      accounts.remember();
+      const writesBeforeRelease=requests;
+      release();
+      while(syncing)await new Promise(resolve=>setTimeout(resolve,10));
+      fs.syncfs=original;
+      return {results,writesBeforeRelease};
+    });
+    assert.equal(queued.writesBeforeRelease,1,'game and account storage share one active flush');
+    assert.deepEqual(queued.results,[null,null],'one follow-up persist for both overlapping requests');
+    await page.evaluate(()=>localStorage.removeItem('terminal-velocity.language'));
+    await page.reload();await page.waitForFunction(()=>!document.querySelector('#start').disabled);
+    assert.equal(await page.evaluate(()=>Module._web_saved_language()),0,'the queued language must reach IndexedDB before the next timer');
+    assert.equal(await page.evaluate(()=>JSON.parse(Module.FS.readFile('/persist/accounts.json',{encoding:'utf8'})).fixture.revision),42);
+    console.log('PASS overlapping autosave and account metadata flush persist in order across reload');
+    await page.locator('#start').click();
     await page.locator('[data-language="pl"]').click();
-    await page.evaluate(()=>new Promise((resolve,reject)=>{Module._web_save();Module.FS.syncfs(false,e=>e?reject(e):resolve());}));
+    await page.waitForFunction(()=>!syncing);
     await page.evaluate(()=>localStorage.removeItem('terminal-velocity.language'));
     await page.reload();await page.waitForFunction(()=>!document.querySelector('#start').disabled);
     assert.equal(await page.locator('html').getAttribute('lang'),'pl','saved Polish beats English browser even without localStorage');
@@ -87,7 +123,7 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.evaluate(()=>Module._web_saved_language()),0,'pre-start choice did not replace game progress');
     console.log('PASS explicit pre-start language survives reload over an existing save without replacing its progress');
     await page.locator('#start').click();await page.waitForFunction(()=>localStorage.getItem('terminal-velocity.pending-language')===null);
-    await page.evaluate(()=>new Promise((resolve,reject)=>{Module._web_save();Module.FS.syncfs(false,e=>e?reject(e):resolve());}));
+    await page.waitForFunction(()=>!syncing);
     await page.reload();await page.waitForFunction(()=>!document.querySelector('#start').disabled);
     assert.equal(await page.locator('html').getAttribute('lang'),'en','explicit English persists across reload');
     await page.locator('#start').click();await page.waitForTimeout(100);

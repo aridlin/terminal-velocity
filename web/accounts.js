@@ -13,7 +13,7 @@ window.TVAccounts=class {
  tr(pl,en){return this.host.english()?en:pl;}
  read(path){try{return Module.FS.readFile(path,{encoding:'utf8'});}catch{return '';}}
  local(){Module._web_save();return this.read('/persist/progress.dat.iceberg');}
- remember(){Module.FS.writeFile('/persist/accounts.json',JSON.stringify(this.entries));Module.FS.syncfs(false,()=>{});}
+ remember(){Module.FS.writeFile('/persist/accounts.json',JSON.stringify(this.entries));this.host.flush();}
  async request(action,method='GET',data){
   const base=document.querySelector('meta[name="tv-account-api"]')?.content||'api.php';
   const response=await fetch(new URL(base,location.href)+'?action='+action,{method,signal:AbortSignal.timeout(12000),credentials:'same-origin',cache:'no-store',headers:method==='GET'?{}:{'Content-Type':'application/json','X-TV-CSRF':this.csrf},body:data?JSON.stringify(data):undefined});
@@ -39,7 +39,7 @@ window.TVAccounts=class {
   }catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
  }
  openChoice(){if(!this.active)Module._web_account_pause();this.active=true;document.body.classList.add('account-open');this.host.clear();this.mode='choose';this.message=this.tr('Masz dwa zapisy. Który kontynuujesz?','You have two saves. Which will you continue?');this.draw();}
- apply(save){Module.FS.writeFile('/persist/import.iceberg',save);if(!Module._web_import_save())throw Error('save_invalid');Module.FS.unlink('/persist/import.iceberg');Module.FS.syncfs(false,()=>{});}
+ apply(save){Module.FS.writeFile('/persist/import.iceberg',save);if(!Module._web_import_save())throw Error('save_invalid');Module.FS.unlink('/persist/import.iceberg');this.host.flush();}
  ensureGuest(){if(!this.user&&!this.read('/persist/guest.iceberg'))Module.FS.writeFile('/persist/guest.iceberg',this.local());}
  bind(name,revision,synced){
   this.user=name;this.revision=revision;this.synced=synced;
@@ -57,7 +57,7 @@ window.TVAccounts=class {
   try{await this.upload(save);this.message=this.tr('Zapisano na koncie.','Saved to your account.');}catch(e){this.message=this.error(e);if(e.message==='save_conflict'){this.pendingUser=this.user;this.candidate=save;this.remote=await this.request('save').catch(()=>null);if(this.remote)this.openChoice();}}finally{this.busy=false;if(this.active)this.draw();}
  }
  async logout(){if(this.busy)return;this.busy=true;
-  try{this.entries[this.user]={revision:this.revision,synced:this.synced,local:this.local(),active:false};this.remember();const result=await this.request('logout','POST',{});this.csrf=result.csrf;this.user=null;const guest=this.read('/persist/guest.iceberg');if(guest){this.apply(guest);Module.FS.unlink('/persist/guest.iceberg');}else Module._web_guest_profile();this.mode='login';this.message=this.tr('Wylogowano. Niewysłany zapis konta zachowano w tej przeglądarce.','Signed out. Any unsent account save stays in this browser.');}catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
+  try{this.entries[this.user]={revision:this.revision,synced:this.synced,local:this.local(),active:false};this.remember();const result=await this.request('logout','POST',{});this.csrf=result.csrf;this.user=null;const guest=this.read('/persist/guest.iceberg');if(guest){this.apply(guest);Module.FS.unlink('/persist/guest.iceberg');}else Module._web_guest_profile();this.host.flush();this.mode='login';this.message=this.tr('Wylogowano. Niewysłany zapis konta zachowano w tej przeglądarce.','Signed out. Any unsent account save stays in this browser.');}catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
  }
  draw(){if(!this.active)return;const landscape=innerHeight<500, narrow=innerWidth<760,w=landscape?60:narrow?38:76,h=landscape?20:28;const nameRow=landscape?5:7,passRow=landscape?8:10,submitRow=landscape?11:13,otherRow=landscape?13:16,messageRow=landscape?15:21;this.width=w;this.height=h;this.buttons=[];
   const cells=new Uint32Array(w*h*4);for(let i=0;i<w*h;i++){cells[i*4]=32;cells[i*4+1]=0xc8bbb8;cells[i*4+2]=0x101923;}

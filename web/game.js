@@ -9,6 +9,7 @@ try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en')
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastUI='',lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootStatus='',explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
 const pointers=new Map(),keyboard=new Set(),tiles=new Map();
+let storageFlushQueued=false;
 let cellPixels=10;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
 function tile(code,fg,bg,bold){
@@ -55,9 +56,9 @@ function translateUI(){
 }
 function selectLanguage(language){
  english=language==='en';explicitBootLanguage=true;
- try{localStorage.setItem(languageKey,english?'en':'pl');if(!started)localStorage.setItem(pendingLanguageKey,english?'en':'pl');}catch{}
+ try{localStorage.setItem(languageKey,english?'en':'pl');localStorage.setItem(pendingLanguageKey,english?'en':'pl');}catch{}
  translateUI();
- if(started){Module._web_set_language(english?1:0);syncSave();canvas.focus();}
+ if(started){Module._web_set_language(english?1:0);flushBrowserStorage();canvas.focus();}
  else drawBoot();
 }
 for(const b of document.querySelectorAll('[data-language]'))b.onclick=()=>selectLanguage(b.dataset.language);
@@ -106,7 +107,27 @@ for(const button of document.querySelectorAll('[data-key]')){
 }
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{tap(+b.dataset.tap);canvas.focus();};
 function clearInput(){keyboard.clear();pointers.clear();held=pressed=0;document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
-function syncSave(){if(!started||syncing)return;Module._web_save();syncing=true;Module.FS.syncfs(false,error=>{syncing=false;if(!error)try{localStorage.removeItem(pendingLanguageKey);}catch{}saveStatus.textContent=error?(english?'Save failed — download a copy':'Błąd zapisu — pobierz kopię'):(english?'Saved in this browser ✓':'Zapis w tej przeglądarce ✓');});}
+function flushBrowserStorage(){
+ if(syncing){storageFlushQueued=true;return;}
+ syncing=true;
+ Module.FS.syncfs(false,error=>{
+  syncing=false;
+  if(storageFlushQueued){
+   storageFlushQueued=false;
+   flushBrowserStorage();
+   return;
+  }
+  if(!error)try{localStorage.removeItem(pendingLanguageKey);}catch{}
+  saveStatus.textContent=error
+   ?tr('Błąd zapisu — pobierz kopię','Save failed — download a copy')
+   :tr('Zapis w tej przeglądarce ✓','Saved in this browser ✓');
+ });
+}
+function syncSave(){
+ if(!started)return;
+ Module._web_save();
+ flushBrowserStorage();
+}
 addEventListener('blur',()=>{focused=false;clearInput();syncSave();});addEventListener('focus',()=>{focused=true;last=performance.now();});
 document.addEventListener('visibilitychange',()=>{focused=!document.hidden;if(!focused){clearInput();syncSave();}last=performance.now();});
 function resize(){
@@ -172,7 +193,7 @@ var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mou
  if(error)saveStatus.textContent=tr('Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups');
  drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
  });}catch(e){bootStatus=tr('Błąd uruchamiania: ','Startup failed: ')+String(e);drawBoot();}},setStatus(text){if(!text)bootStatus='';drawBoot();},onAbort(error){bootStatus=tr('Błąd uruchamiania: ','Startup failed: ')+error;drawBoot();}};
-const accounts=new TVAccounts({english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame});
+const accounts=new TVAccounts({english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame,flush:flushBrowserStorage});
 document.querySelector('#account').onclick=()=>accounts.open();
 document.querySelector('#account-fullscreen').onclick=()=>accounts.open();
 setInterval(syncSave,5000);
