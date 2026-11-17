@@ -27,6 +27,7 @@ int main(int argc,char **argv) {
    auto npc=std::find_if(game.grid.interactions.begin(),game.grid.interactions.end(),[](const auto &n){return n.kind==InteractionKind::Npc;});
    if(npc!=game.grid.interactions.end()){game.state.player.x=npc->area.x;game.state.player.y=npc->area.bottom()-kPlayerHeight;}
   }
+  if(scene=="dock-worker"){game.state.player.x=86;game.state.player.y=48-kPlayerHeight;}
   if(scene=="storefront"){game.state.player.x=63;game.state.player.y=43-kPlayerHeight;}
   if(scene=="archive:finale"){game.state.player.x=174;game.state.player.y=32-kPlayerHeight;game.grid.switch_flags=3;}
   if(scene=="hoist"||scene=="ferry"||scene=="sorting"||scene=="pipe"||scene=="boiler"){

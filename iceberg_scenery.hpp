@@ -59,6 +59,15 @@
       world_art(belt.x+pos,belt.y-3*row,{"┏━┯━┓","┃╲│╱┃","┗━┷━┛"},0xc6a078);
     }
   }
+  void draw_dock_worker(double x,double feet,double phase) {
+    const double row=aspect_*scale_;
+    const double top=feet-4*row;
+    world_art(x,top,{" ▄▄▄ ","  ▐▌ "},0xb98b64);
+    world_art(x,top+2*row,{" ▐██▌"," ▐▌▐▌"},0x7d91a5);
+    world_art(x+4*scale_,top+2*row,{phase<.45?"▄":"╶"},0xb98b64);
+    world_art(x+5*scale_,feet-2*row,{"┌─┬─┐","└─┴─┘"},0x897253);
+  }
+
   void draw_harbor_landmarks() {
     const auto &d=iceberg::Districts[0];const int id=grid_.template_id;
     const double time=state_.adventure.presentation_time;
@@ -94,7 +103,7 @@
       world_art(59,43-5*aspect_*scale_,{"╭───────────────────╮",tr("│ KAWA • NAPRAWY    │","│ COFFEE • REPAIRS  │"),"├───────────────────┤","│ ▤▤ ▤▤   ╭────╮    │","╰─────────┴────┴────╯"},0x5f777b,true);
       draw_quay_hoist();
       world_art(106,48-6*aspect_*scale_,{" ╱▔▔╲╱▔▔╲╱▔▔╲╱▔▔╲","│                 │","│  ♧  ▰  ♧  ▰    │","├─────────────────┤","│                 │","╰───┬─────────┬───╯"},d.stone);
-      world_art(94+std::sin(time*.7)*1.5,48-3*aspect_*scale_,{" ▄ ",int(time*2)%2?"╭▤╯":"╰▤╮","╱ ╲"},0x728b8b);
+      draw_dock_worker(94,48,std::fmod(time,2.4));
       for(int x=83;x<123;x+=12)world_art(x,58,{"║","║","╨"},d.stone);
       world_art(112,48-8*aspect_*scale_,{"╭─────╮","│  ◷  │","╰──┬──╯","   │","   │"},d.accent);
       return;
@@ -125,8 +134,7 @@
         }
         if(i%3==0) {
           world_art(a.x+a.w-7,a.y-5*aspect_*scale_,{"╭──╮","│▥▥│","╰┬─╯"," │ "," │ "},d.stone);
-          if(i>0)world_art(a.x+4+std::sin(time*.7+i)*1.4,a.y-3*aspect_*scale_,
-            {" ▄ ",int(time*2)%2?"╭▤╯":"╰▤╮","╱ ╲"},0x6a8587);
+          if(i>0)draw_dock_worker(a.x+4,a.y,std::fmod(time+i,2.4));
         }
       }
       const auto &middle=p.path[p.path.size()/2];
