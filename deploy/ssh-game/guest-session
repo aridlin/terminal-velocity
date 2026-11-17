@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+[ -t 0 ] && [ -t 1 ] || exit 1
+umask 077
+session_dir=$(/usr/bin/mktemp -d /tmp/player.XXXXXXXX) || exit 1
+trap '/usr/bin/rm -rf -- "$session_dir"' EXIT
+trap 'exit 0' HUP INT TERM
+cd /game
+# No client command, environment or path is executed. A fresh private profile
+# gives anonymous visitors independent progress for the lifetime of a visit.
+/usr/bin/env -i PATH=/usr/bin:/bin TERM="${TERM:-xterm-256color}" \
+  LANG=C.UTF-8 LC_ALL=C.UTF-8 SSH_TTY=guest \
+  TV_PROGRESS_FILE="$session_dir/progress" TV_ICEBERG_FILE="$session_dir/campaign" \
+  /usr/bin/timeout --signal=TERM --kill-after=5s 2h \
+  /game/terminal_velocity --campaign --ssh --mute
