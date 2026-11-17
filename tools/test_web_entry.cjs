@@ -211,6 +211,21 @@ const server=http.createServer((req,res)=>{
   const page=await mobile.newPage();page.on('pageerror',e=>errors.push(String(e)));await page.goto(url);await page.waitForFunction(()=>!document.querySelector('#start').disabled);
   await page.locator('[data-language="en"]').click();await page.locator('#start').click();await page.waitForTimeout(150);
   await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);await page.screenshot({path:path.join(out,'web-mobile-opening.png')});
+  const touchSession=await mobile.newCDPSession(page);
+  const [left,up,right]=await Promise.all([0,2,1].map(async key=>{
+   const box=await page.locator('#touch [data-key="'+key+'"]').boundingBox();
+   return {x:box.x+box.width/2,y:box.y+box.height/2,id:1};
+  }));
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[left]});
+  await page.waitForFunction(()=>held===1);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[up]});
+  await page.waitForFunction(()=>held===0);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[right]});
+  await page.waitForFunction(()=>held===2);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForFunction(()=>held===0&&!document.querySelector('#touch .held'));
+  await touchSession.detach();
+  console.log('PASS a touch slide reverses direction and releases without triggering a jump');
   for(const size of [{width:390,height:844},{width:844,height:390},{width:760,height:600},{width:1920,height:1080}]){
    await page.setViewportSize(size);await page.waitForTimeout(100);
    const ratio=await page.locator('#game').evaluate(c=>({bitmap:c.width/c.height,display:c.getBoundingClientRect().width/c.getBoundingClientRect().height}));

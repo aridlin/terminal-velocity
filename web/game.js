@@ -112,7 +112,7 @@ const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:
 function recompute(){
  held=0;
  for(const code of keyboard)held|=1<<keyMap[code];
- for(const {key} of pointers.values())held|=1<<key;
+ for(const {key} of pointers.values())if(key!==null)held|=1<<key;
 }
 addEventListener('keydown',e=>{
  const shiftKey=e.code==='ShiftLeft'||e.code==='ShiftRight';
@@ -133,18 +133,38 @@ addEventListener('keyup',e=>{
  if(e.code===dashShift){dashShift='';tap(5);}
  if(keyboard.delete(e.code))recompute();
 });
+const horizontalTouchControls='#touch .directions :is(button[data-key="0"], button[data-key="1"])';
+function releaseHighlight(button){
+ if(button&&![...pointers.values()].some(pointer=>pointer.button===button))button.classList.remove('held');
+}
 for(const button of document.querySelectorAll('[data-key]')){
  button.addEventListener('pointerdown',e=>{
   if(accounts.active||!started)return;
   e.preventDefault();
   const key=button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;
   button.setPointerCapture(e.pointerId);
-  pointers.set(e.pointerId,{key,button});
+  const canSlide=e.pointerType==='touch'&&button.matches(horizontalTouchControls);
+  pointers.set(e.pointerId,{key,button,canSlide});
   button.classList.add('held');tap(key);recompute();
  });
+ button.addEventListener('pointermove',e=>{
+  const pointer=pointers.get(e.pointerId);
+  if(!pointer?.canSlide)return;
+  // Passing over the jump button while sliding horizontally leaves movement neutral.
+  const next=document.elementFromPoint(e.clientX,e.clientY)?.closest(horizontalTouchControls)??null;
+  if(pointer.button===next)return;
+  const previous=pointer.button;
+  pointer.button=next;
+  pointer.key=next?+next.dataset.key:null;
+  releaseHighlight(previous);
+  if(next){next.classList.add('held');tap(pointer.key);}
+  recompute();
+ });
  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>{
+  const pointer=pointers.get(e.pointerId);
+  if(!pointer)return;
   pointers.delete(e.pointerId);
-  if(![...pointers.values()].some(pointer=>pointer.button===button))button.classList.remove('held');
+  releaseHighlight(pointer.button);
   recompute();
  });
 }
