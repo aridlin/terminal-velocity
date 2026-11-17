@@ -367,7 +367,8 @@ struct PulseHazard {
   double period=4,phase=0;
   double cycle(double t) const {return std::fmod(t/period+phase,1.);}
   bool active(double t) const {return cycle(t)<.24;}
-  bool warning(double t) const {return cycle(t)>.82;}
+  static constexpr double warning_start=.82;
+  bool warning(double t) const {return cycle(t)>warning_start;}
 };
 class EngineGrid {
 public:

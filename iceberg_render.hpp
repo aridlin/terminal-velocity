@@ -267,13 +267,7 @@
       double left=closed?1.:((gate.flag&v.machinery_changed)&&v.machinery_left>0?std::max(0.,1-(v.machinery_duration-v.machinery_left)/.7):0.);
       for(double y=gate.area.y;y<gate.area.y+gate.area.h*left;y+=.6)world_text(gate.area.x,y,"▒▒▒",d.accent);
     }
-    for(const auto &pulse:grid_.pulses) {
-      bool hot=pulse.active(state_.elapsed),warn=pulse.warning(state_.elapsed);
-      world_text(pulse.area.x-.3,pulse.area.bottom()-.2,"╧╧╧",warn?0xf1c66f:0x886b5b);
-      if(hot)for(double y=pulse.area.y;y<pulse.area.bottom();y+=.6)
-        world_text(pulse.area.x,y,int(state_.elapsed*18+y)%2?"♨┊":"┊♨",0xeb6a74);
-      else if(warn)world_text(pulse.area.x,pulse.area.bottom()-.9,"···",0xf1c66f);
-    }
+    for(const auto &pulse:grid_.pulses)draw_pulse_vent(pulse);
     for(size_t i=0;i<grid_.enemies.size();++i)if(!state_.defeated[i]) {
       auto p=grid_.enemies[i].at(state_.elapsed);prop_art(p.x+p.w*.5,p.bottom(),{" ▄▄▄ ","◢▐▣▌◣"," ╱ ╲ "},0xeb6a74);
     }

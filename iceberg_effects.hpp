@@ -47,6 +47,39 @@
       }
     }
   }
+  void draw_pulse_vent(const PulseHazard &vent) {
+    const auto &area=vent.area;
+    const auto [left,top]=screen(area.x,area.y);
+    const auto [right,bottom]=screen(area.right()-.001,area.bottom()-.001);
+    if(right<0||left>=cols_||bottom<4||top>=rows_-3)return;
+
+    const double time=state_.elapsed;
+    const bool active=vent.active(time),warning=vent.warning(time);
+    const uint32_t amber=0xf1c66f,red=0xeb6a74;
+    const int middle=(left+right)/2;
+    const int steam_rows=bottom-top;
+    const double pressure=(vent.cycle(time)-PulseHazard::warning_start)/(1-PulseHazard::warning_start);
+    const int pressure_rows=warning?std::min(steam_rows,1+int(pressure*steam_rows)):0;
+    const int ripple=int(time*14);
+    for(int y=std::max(4,top);y<std::min(bottom,rows_-3);++y) {
+      if(active) {
+        for(int x=std::max(0,left);x<=std::min(right,cols_-1);++x) {
+          const bool core=x==middle;
+          const char *steam=core?((y+ripple)%2?"∿":"│"):x==left?"▐":x==right?"▌":"░";
+          put(y,x,{steam,Color::Text,false,false,0,core?0xffb7a4:red});
+        }
+      } else if(y>=bottom-pressure_rows) {
+        put(y,middle,{"↑",Color::Text,false,false,0,amber});
+      }
+    }
+    if(bottom<rows_-3) {
+      for(int x=std::max(0,left);x<=std::min(right,cols_-1);++x) {
+        const char *grate=x==middle?"╧":x==left?"╞":x==right?"╡":"═";
+        put(bottom,x,{grate,Color::Text,false,false,0,active?red:warning?amber:0x987b6c});
+      }
+    }
+  }
+
   void draw_room_shutter() {
     const auto &v=state_.adventure;
     if(v.door_left<=0||state_.menu||state_.paused||v.inspecting||v.dialogue.active())return;

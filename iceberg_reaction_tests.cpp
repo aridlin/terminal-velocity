@@ -143,5 +143,21 @@ int main(){try{
    }
    require_reaction(foam>=2,"ferry leaves visible foam behind it in either direction");
  }
+ const auto heatworks=iceworld::build_room(15,73,1);
+ const auto &vent=heatworks.pulses.front();
+ auto guard=new_state(heatworks);
+ guard.camera_x=27.;guard.camera_y=32.;
+ for(double phase:{.40,.84,.98,.10}) {
+   guard.elapsed=(1.+phase-vent.phase)*vent.period;
+   RenderGrid(heatworks,guard,34,110,2).draw();
+   int arrows=0,plume=0;
+   for(size_t y=4;y<frame.size()-3;++y)for(const auto &cell:frame[y]) {
+     arrows+=cell.glyph=="↑"&&cell.rgb==0xf1c66f;
+     plume+=cell.rgb==0xffb7a4;
+   }
+   const int expected_arrows=phase==.84?1:phase==.98?3:0;
+   require_reaction(arrows==expected_arrows&&(plume>0)==vent.active(guard.elapsed),
+     "vent pressure rises visibly before the damaging steam appears");
+ }
  return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}
