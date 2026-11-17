@@ -2,7 +2,7 @@
    native inputs provide mobile keyboards and password-manager support. */
 window.TVAccounts=class {
  constructor(host){
-  this.host=host;this.active=false;this.user=null;this.csrf='';this.revision=0;this.synced='';this.busy=false;this.mode='login';this.message='';this.fields=[];this.buttons=[];this.selected=0;this.entries=Object.create(null);
+  this.host=host;this.active=false;this.user=null;this.csrf='';this.revision=0;this.synced='';this.busy=false;this.mode='login';this.message='';this.fields=[];this.buttons=[];this.lastDraw=null;this.selected=0;this.entries=Object.create(null);
   const input=(type,autocomplete,label)=>{const e=document.createElement('input');e.type=type;e.autocomplete=autocomplete;e.setAttribute('aria-label',label);e.className='cell-input';e.hidden=true;e.spellcheck=false;document.querySelector('#stage').append(e);e.addEventListener('input',()=>this.draw());e.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Tab'){event.preventDefault();if(e===this.name&&!event.shiftKey)this.pass.focus();else if(e===this.pass&&event.shiftKey)this.name.focus();else{document.querySelector('#game').focus();this.selected=0;this.draw();}}if(event.key==='Enter'){event.preventDefault();if(e===this.name)this.pass.focus();else this.authenticate();}if(event.key==='Escape')this.close();});return e;};
   this.name=input('text','username','Nazwa użytkownika / Username');this.name.maxLength=24;
   this.pass=input('password','current-password','Hasło / Password');this.pass.maxLength=72;
@@ -25,7 +25,7 @@ window.TVAccounts=class {
   try{const session=await this.request('session');this.csrf=session.csrf;if(session.username){this.pendingUser=session.username;const entry=this.entries[session.username];if(entry?.active){const remote=await this.request('save');this.candidate=this.local();this.remote=remote;if(remote.revision===entry.revision){this.bind(session.username,entry.revision,entry.synced);return;}if(this.candidate===entry.synced&&remote.save){this.apply(remote.save);this.bind(session.username,remote.revision,remote.save);return;}this.openChoice();}}}catch{}
  }
  open(){if(!this.host.ready())return;if(!this.active)Module._web_account_pause();this.active=true;document.body.classList.add('account-open');this.host.clear();if(this.mode!=='choose'){this.mode=this.user?'account':'login';this.message='';}this.draw();if(this.mode==='login'||this.mode==='register')this.name.focus();else document.querySelector('#game').focus();}
- close(){if(this.busy)return;this.active=false;document.body.classList.remove('account-open');Module._web_account_resume();this.name.hidden=this.pass.hidden=true;this.pass.value='';this.host.clear();document.querySelector('#game').focus();}
+ close(){if(this.busy)return;this.active=false;this.lastDraw=null;document.body.classList.remove('account-open');Module._web_account_resume();this.name.hidden=this.pass.hidden=true;this.pass.value='';this.host.clear();document.querySelector('#game').focus();}
  async authenticate(){
   if(this.busy||!['login','register'].includes(this.mode))return;
   this.busy=true;this.message=this.tr('Łączenie…','Connecting…');this.draw();
@@ -59,17 +59,27 @@ window.TVAccounts=class {
  async logout(){if(this.busy)return;this.busy=true;
   try{this.entries[this.user]={revision:this.revision,synced:this.synced,local:this.local(),active:false};this.remember();const result=await this.request('logout','POST',{});this.csrf=result.csrf;this.user=null;const guest=this.read('/persist/guest.iceberg');if(guest){this.apply(guest);Module.FS.unlink('/persist/guest.iceberg');}else Module._web_guest_profile();this.host.flush();this.mode='login';this.message=this.tr('Wylogowano. Niewysłany zapis konta zachowano w tej przeglądarce.','Signed out. Any unsent account save stays in this browser.');}catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
  }
- draw(){if(!this.active)return;const landscape=innerHeight<500, narrow=innerWidth<760,w=landscape?60:narrow?38:76,h=landscape?20:28;const nameRow=landscape?5:7,passRow=landscape?8:10,submitRow=landscape?11:13,otherRow=landscape?13:16,messageRow=landscape?15:21;this.width=w;this.height=h;this.buttons=[];
+ draw(){
+  if(!this.active)return;
+  const landscape=innerHeight<500, narrow=innerWidth<760,w=landscape?60:narrow?38:76,h=landscape?20:28;
+  const form=this.mode==='login'||this.mode==='register';
+  // Autofill may change a native field without dispatching an input event.
+  const name=form?this.name.value.slice(-28):'',passwordLength=form?Math.min(28,this.pass.value.length):0;
+  const focus=document.activeElement;
+  const state=[w,h,devicePixelRatio,this.host.english(),this.mode,this.user,this.message,this.busy,
+   this.selected,name,passwordLength,focus===this.name,focus===this.pass];
+  if(this.lastDraw&&!this.host.needsRedraw()&&state.every((value,i)=>value===this.lastDraw[i]))return;
+  const nameRow=landscape?5:7,passRow=landscape?8:10,submitRow=landscape?11:13,otherRow=landscape?13:16,messageRow=landscape?15:21;this.width=w;this.height=h;this.buttons=[];
   const cells=new Uint32Array(w*h*4);for(let i=0;i<w*h;i++){cells[i*4]=32;cells[i*4+1]=0xc8bbb8;cells[i*4+2]=0x101923;}
   const text=(x,y,s,color=0xc8bbb8)=>{for(const ch of s){if(x>=w-2)break;let n=(y*w+x++)*4;cells[n]=ch.codePointAt(0);cells[n+1]=color;}};
   const wrap=(y,s)=>{let line='';for(const word of s.split(/\s+/)){if((line+' '+word).length>w-5){text(2,y++,line);line=word;}else line+=(line?' ':'')+word;}if(line)text(2,y++,line);return y;};
   const button=(y,label,fn)=>{text(2,y,(this.selected===this.buttons.length?'▸ ':'  ')+'[ '+label+' ]',0xe4ad68);this.buttons.push({x:2,y,w:w-4,fn});};
   for(let x=1;x<w-1;x++){text(x,0,'─',0x345866);text(x,h-1,'─',0x345866);}text(2,2,this.tr('POCZTA KURIERSKA — KONTO','COURIER POST — ACCOUNT'),0x9dd4dd);
-  this.name.hidden=this.pass.hidden=!['login','register'].includes(this.mode);
-  if(this.mode==='login'||this.mode==='register'){
+  this.name.hidden=this.pass.hidden=!form;
+  if(form){
    text(2,landscape?3:4,this.mode==='register'?this.tr('Nowe konto','Create account'):this.tr('Zaloguj się','Sign in'),0xe4ad68);
-   text(2,nameRow-1,this.tr('Nazwa użytkownika','Username'));text(2,nameRow,'▏'+this.name.value.slice(-28)+'_',document.activeElement===this.name?0xe4ad68:0xc8bbb8);
-   text(2,passRow-1,this.tr('Hasło','Password'));text(2,passRow,'▏'+'•'.repeat(Math.min(28,this.pass.value.length))+'_',document.activeElement===this.pass?0xe4ad68:0xc8bbb8);
+   text(2,nameRow-1,this.tr('Nazwa użytkownika','Username'));text(2,nameRow,'▏'+name+'_',focus===this.name?0xe4ad68:0xc8bbb8);
+   text(2,passRow-1,this.tr('Hasło','Password'));text(2,passRow,'▏'+'•'.repeat(passwordLength)+'_',focus===this.pass?0xe4ad68:0xc8bbb8);
    button(submitRow,this.busy?this.tr('Łączenie…','Connecting…'):this.mode==='register'?this.tr('Utwórz konto','Create account'):this.tr('Zaloguj','Sign in'),()=>this.authenticate());
    button(otherRow,this.mode==='register'?this.tr('Mam już konto','I have an account'):this.tr('Załóż konto','Create an account'),()=>{this.mode=this.mode==='register'?'login':'register';this.pass.autocomplete=this.mode==='register'?'new-password':'current-password';this.message='';this.draw();});
    if(!landscape)wrap(19,this.tr('Tylko login i hasło. Bez adresu e-mail.','Just a username and password. No email.'));
@@ -81,9 +91,10 @@ window.TVAccounts=class {
   }
   if(this.message&&this.mode!=='choose')wrap(messageRow,this.message);
   button(h-2,this.tr('Wróć do gry','Return to game'),()=>this.close());this.host.frame(cells,w,h);
-  if(this.mode==='login'||this.mode==='register'){
+  if(form){
    const r=document.querySelector('#game').getBoundingClientRect(),stage=document.querySelector('#stage').getBoundingClientRect();
    [this.name,this.pass].forEach((e,i)=>{e.hidden=false;Object.assign(e.style,{left:r.left-stage.left+2*r.width/w+'px',top:r.top-stage.top+(i?passRow:nameRow)*r.height/h+'px',width:(w-4)*r.width/w+'px',height:r.height/h+'px'});});
   }
+  this.lastDraw=state;
  }
 };

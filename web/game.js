@@ -392,7 +392,7 @@ var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mou
  if(error)saveStatus.textContent=tr('Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups');
  drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
  });}catch(e){bootStatus=tr('Błąd uruchamiania: ','Startup failed: ')+String(e);drawBoot();}},setStatus(text){if(!text)bootStatus='';drawBoot();},onAbort(error){bootStatus=tr('Błąd uruchamiania: ','Startup failed: ')+error;drawBoot();}};
-const accounts=new TVAccounts({english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame,flush:flushBrowserStorage});
+const accounts=new TVAccounts({english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame,needsRedraw:()=>previous.length===0,flush:flushBrowserStorage});
 document.querySelector('#account').onclick=()=>accounts.open();
 document.querySelector('#account-fullscreen').onclick=()=>accounts.open();
 setInterval(syncSave,5000);
