@@ -121,8 +121,11 @@
 #include "iceberg_revision_scenery.hpp"
 #include "iceberg_scenery.hpp"
 #include "iceberg_sprites.hpp"
+#include "iceberg_props.hpp"
+#include "iceberg_jubilee_scenery.hpp"
   void draw_iceberg_landmarks() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
+    if(grid_.template_id==303){draw_jubilee_monument();return;}
     bool secret=grid_.room_role==iceberg::RoomRole::Secret;
     if(secret) {
       if(grid_.template_id==200) {
@@ -195,10 +198,10 @@
     }
     draw_iceberg_landmarks();
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
-      auto [x,y]=grid_.sweets[i];world_text(x,y,"◆",d.accent);
+      auto [x,y]=grid_.sweets[i];token_art(x,y,d.accent);
     }
     for(size_t i=0;i<grid_.refills.size();++i) {
-      auto [x,y]=grid_.refills[i];world_text(x,y,state_.refill_cooldown[i]>0?"◇":"✦",0x8ee0dd);
+      auto [x,y]=grid_.refills[i];refill_art(x,y,state_.refill_cooldown[i]>0);
     }
     for(auto platform:grid_.platforms) {
       auto r=platform.at(state_.elapsed);std::string line;
@@ -213,8 +216,7 @@
     for(auto spring:grid_.springs)world_text(spring.x,spring.y-.5,"╱╲╱╲",0xd8cc87);
     for(size_t i=0;i<grid_.checkpoint_points.size();++i) {
       auto [x,y]=grid_.checkpoint_points[i];
-      world_text(x,y-1,"◈",int(i)<=state_.checkpoint?d.accent:d.stone);
-      world_text(x,y-.4,"╽",d.stone);
+      prop_art(x,y+kPlayerHeight,{"╭─╮",int(i)<=state_.checkpoint?"│▣│":"│□│","╰┬╯"," │ "},int(i)<=state_.checkpoint?d.accent:d.stone);
     }
     for(const auto &gate:grid_.gates)if((grid_.switch_flags&gate.flag)!=gate.flag)
       for(double y=gate.area.y;y<gate.area.bottom();y+=.6)world_text(gate.area.x,y,"▒▒▒",d.accent);
@@ -226,7 +228,7 @@
       else if(warn)world_text(pulse.area.x,pulse.area.bottom()-.9,"···",0xf1c66f);
     }
     for(size_t i=0;i<grid_.enemies.size();++i)if(!state_.defeated[i]) {
-      auto p=grid_.enemies[i].at(state_.elapsed);world_text(p.x,p.y,"◢▣◣",0xeb6a74);
+      auto p=grid_.enemies[i].at(state_.elapsed);prop_art(p.x+p.w*.5,p.bottom(),{" ▄▄▄ ","◢▐▣▌◣"," ╱ ╲ "},0xeb6a74);
     }
     for(const auto &node:grid_.interactions) {
       double x=node.area.x,y=node.area.bottom();
@@ -239,15 +241,13 @@
       } else if(node.kind==InteractionKind::Deliver) {
         world_art(x,y-3.2,{"╭─────╮","│ ▥▥▥ │","│  ▱  │","╰─────╯"},d.accent);
       } else if(node.kind==InteractionKind::Board) {
-        world_text(x,y-2.4,"╭────╮",d.accent);world_text(x,y-1.8,"│ ≋≋ │",d.accent);
-        world_text(x,y-1.2,"╰┬──┬╯",d.accent);
-      } else if(node.kind==InteractionKind::Valve)world_text(x,y-1.4,(grid_.switch_flags&(uint64_t(1)<<node.id))?"─◉─":"─⊗─",d.accent);
-      else if(node.kind==InteractionKind::Note)world_text(x,y-1.5,"▤",d.light);
+        prop_art(x+node.area.w*.5,y,{"╭─────╮","│ ≋≋≋ │","│ ≋≋  │","╰┬───┬╯"," │   │ "},d.accent);
+      } else if(node.kind==InteractionKind::Valve)valve_art(x+node.area.w*.5,y,bool(grid_.switch_flags&(uint64_t(1)<<node.id)));
+      else if(node.kind==InteractionKind::Note)sign_art(x+node.area.w*.5,y,node.id,d.light);
       else if(node.kind==InteractionKind::Task) {
-        static const char *icons[]={"▣","─⊗─","┌◉┐","▤","▥","♧","▣","▤▤"};
         bool done=state_.adventure.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64));
-        if(done&&node.id!=1&&node.id!=7)continue;
-        world_text(x,y-1.3,node.id==1&&done?"─◉─":icons[node.id],done?d.shadow:d.accent);
+        if(done&&node.id!=1&&node.id!=2&&node.id!=3&&node.id!=7)continue;
+        task_art(node,done);
       } else if(node.kind==InteractionKind::Shortcut||node.kind==InteractionKind::Replay||node.kind==InteractionKind::Return)world_text(x,y-2,"╭↶─╮",d.accent);
       else if(node.kind==InteractionKind::Secret&&node.id==1)world_art(x,y-2,{"╭─╮","│▥│","╰┬╯"},d.stone);
       else if(node.kind==InteractionKind::Secret&&node.id==2)world_art(x,y-3,{"┌──┐","│ 7│","└──┘"},d.stone);
@@ -259,16 +259,22 @@
     auto [px,feet]=screen(p.x,p.y+kPlayerHeight-.001);++feet;
     courier_sprite(px,feet,coat);
     if(std::abs(p.vx)>8)world_text(p.x+(p.facing>0?-.9:.9),p.y+.6,int(state_.elapsed*16)%2?"╴∽":"╶∼",coat);
-    if(grid_.dash_locked())world_text(p.x+.8,p.y-.7,"▱",d.accent);
+    if(grid_.dash_locked()){world_text(p.x+.5,p.y-.8,"╭─╮",d.accent);world_text(p.x+.5,p.y,"╰↑╯",d.accent);}
     if(state_.adventure.pickup_left>0) {
       const auto &v=state_.adventure;double progress=std::clamp(1-v.pickup_left/.65,0.,1.);
-      if(v.pickup_kind==1||v.pickup_kind==7) {
-        world_text(v.pickup_x,v.pickup_y-.5,int(progress*8)%2?"╱◉╲":"─◉─",d.accent);
+      if(v.pickup_kind==8) {
+        double y=p.y-1.-progress*1.7;
+        token_art(p.x+.5,y-.5,d.accent);
+      } else if(v.pickup_kind==1||v.pickup_kind==7) {
+        world_text(v.pickup_x,v.pickup_y-1.2,int(progress*8)%2?"╲│╱":" ╷ ",d.accent);
+        world_text(v.pickup_x,v.pickup_y-.4,int(progress*8)%2?"─◉─":"╶⊕╴",d.accent);
+        world_text(v.pickup_x,v.pickup_y+.4,int(progress*8)%2?"╱│╲":" ╵ ",d.accent);
       } else {
         double travel=std::clamp((progress-.25)/.75,0.,1.);
         double x=v.pickup_x+(p.x+.3-v.pickup_x)*travel;
         double y=v.pickup_y+(p.y+.5-v.pickup_y)*travel-std::sin(travel*3.14159)*1.4;
-        world_text(x,y,progress<.85?"▣":"✧",d.accent);
+        if(progress<.85){world_text(x-.4,y-.8,"╭─╮",d.accent);world_text(x-.4,y,"╰╳╯",d.accent);}
+        else {world_text(x-.4,y-.8,"╲ ╱",d.accent);world_text(x-.4,y,"╱ ╲",d.accent);}
       }
     }
     auto goal=grid_.goal;

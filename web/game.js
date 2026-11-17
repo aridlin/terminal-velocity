@@ -8,9 +8,14 @@ const colour=n=>'#'+n.toString(16).padStart(6,'0');
 function tile(code,fg,bg,bold){
  const key=[code,fg,bg,bold].join(':');if(tiles.has(key))return tiles.get(key);
  const c=document.createElement('canvas');c.width=10;c.height=20;const p=c.getContext('2d');p.fillStyle=colour(bg);p.fillRect(0,0,10,20);p.fillStyle=colour(fg);
- if(code===0x2588)p.fillRect(0,0,10,20);
+ if(code>=0x2581&&code<=0x2588){const h=Math.floor(20*(code-0x2580)/8);p.fillRect(0,20-h,10,h);}
  else if(code===0x2580)p.fillRect(0,0,10,10);
- else if(code===0x2584)p.fillRect(0,10,10,10);
+ else if(code>=0x2589&&code<=0x258f)p.fillRect(0,0,Math.floor(10*(0x2590-code)/8),20);
+ else if(code===0x2590)p.fillRect(5,0,5,20);
+ else if(code===0x2594)p.fillRect(0,0,10,2);
+ else if(code===0x2595)p.fillRect(9,0,1,20);
+ else if(code>=0x2591&&code<=0x2593){for(let y=0;y<20;y+=2)for(let x=0;x<10;x+=2)if((x/2+y/2*3)%4<code-0x2590)p.fillRect(x,y,1,1);}
+ else if(code>=0x2596&&code<=0x259f){const mask=[4,8,1,13,9,7,11,2,6,14][code-0x2596];for(let y=0;y<2;y++)for(let x=0;x<2;x++)if(mask&(1<<(y*2+x)))p.fillRect(x*5,y*10,5,10);}
  else if(code>=0x2800&&code<=0x28ff){const dots=[[1,8],[2,16],[4,32],[64,128]];for(let y=0;y<4;y++)for(let x=0;x<2;x++)if((code-0x2800)&dots[y][x])p.fillRect(x*5+1,y*5+1,2,2);}
  else{p.font=(bold?'bold ':'')+'17px Cell,monospace';p.textBaseline='alphabetic';p.fillText(String.fromCodePoint(code),0,16,10);}
  if(tiles.size>8192)tiles.clear();tiles.set(key,c);return c;

@@ -17,6 +17,7 @@ struct GameAudio::Impl {
   struct Clip {
     ma_sound sound{};
     bool loaded = false;
+    float strength = 1.f;
   };
   std::array<Clip, 3> music;
   std::array<Clip, 6> ambience;
@@ -136,10 +137,10 @@ bool GameAudio::ensure_ready() {
   const char *names[] = {"jump",       "dash",   "pickup", "death",
                          "checkpoint", "land",   "step1",  "step2",
                          "refill", "spring", "menu", "win",
-    "wood1", "wood2", "metal1", "metal2", "stone1", "stone2", "valve", "voice", "paper", "bounce"};
+    "wood1", "wood2", "metal1", "metal2", "stone1", "stone2", "valve", "voice", "paper", "bounce", "door", "steam", "lift", "cloth"};
   const float volumes[] = {.45f, .4f,  .35f, .4f, .4f,  .3f,
                            .17f, .17f, .35f, .4f, .22f, .45f,
-    .2f,.2f,.17f,.17f,.2f,.2f,.35f,.2f,.25f,.3f};
+    .38f,.38f,.32f,.32f,.4f,.4f,.55f,.3f,.42f,.4f, .32f,.22f,.25f,.2f};
   std::copy(std::begin(volumes), std::end(volumes), impl_->effect_levels.begin());
   for (size_t i = 0; i < size_t(AudioCue::Count); ++i)
     for (auto &voice : impl_->effects[i])
@@ -148,7 +149,7 @@ bool GameAudio::ensure_ready() {
         ma_sound_set_volume(&voice.sound, volumes[i]);
   return true;
 }
-void GameAudio::play(AudioCue cue) {
+void GameAudio::play(AudioCue cue, float strength) {
   if (muted || !ensure_ready())
     return;
   if (environment_ >= 0 && (cue == AudioCue::Step1 || cue == AudioCue::Step2 || cue == AudioCue::Land)) {
@@ -163,7 +164,8 @@ void GameAudio::play(AudioCue cue) {
   auto &voice = impl_->effects[i][impl_->next[i]++ % 2];
   if (!voice.loaded)
     return;
-  ma_sound_set_volume(&voice.sound, impl_->effect_levels[i] * effects_gain_);
+  voice.strength=std::clamp(strength,0.f,1.f);
+  ma_sound_set_volume(&voice.sound, impl_->effect_levels[i] * effects_gain_ * voice.strength);
   ma_sound_seek_to_pcm_frame(&voice.sound, 0);
   ma_sound_start(&voice.sound);
 }
@@ -183,7 +185,7 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
     if (!music.loaded)
       continue;
     bool selected = int(i) == track && !muted && focused && !silence_;
-    ma_sound_set_volume(&music.sound, .55f * music_gain_);
+    ma_sound_set_volume(&music.sound, .48f * music_gain_);
     if (selected) {
       impl_->quiet_time[i] = 0;
       if (!ma_sound_is_playing(&music.sound))
@@ -205,7 +207,7 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
     auto &clip = impl_->ambience[i];
     if (!clip.loaded) continue;
     bool selected = int(i) == environment_ && !muted && focused && !silence_ && scene != AudioScene::Menu;
-    float gain = selected ? .35f * ambience_gain_ * (scene == AudioScene::Paused ? .25f : 1.f) : 0.f;
+    float gain = selected ? .55f * ambience_gain_ * (scene == AudioScene::Paused ? .25f : 1.f) : 0.f;
     ma_sound_set_volume(&clip.sound, gain);
     if (selected) {
       impl_->ambience_quiet[i] = 0;
@@ -232,7 +234,7 @@ void GameAudio::set_mix(float music, float effects, float ambience) {
   ambience_gain_ = std::clamp(ambience, 0.f, 1.f);
   if (impl_) for (size_t i=0;i<impl_->effects.size();++i)
     for (auto &clip:impl_->effects[i]) if (clip.loaded)
-      ma_sound_set_volume(&clip.sound, impl_->effect_levels[i] * effects_gain_);
+      ma_sound_set_volume(&clip.sound, impl_->effect_levels[i] * effects_gain_ * clip.strength);
 }
 void GameAudio::set_environment(int district, bool silence) {
   environment_ = std::clamp(district, -1, 5);

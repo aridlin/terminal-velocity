@@ -111,7 +111,7 @@ class SaveStore {
     if(magic=="TVICE4"||magic=="TVICE5") {
       auto &r=q.revisit;
       if(!(data>>r.active>>r.district>>r.scene>>r.checkpoint>>r.deaths>>r.collected>>r.switches>>r.seconds)||
-        r.district<0||r.district>=DistrictCount||r.scene<0||r.scene>1||r.checkpoint<0||r.checkpoint>64||
+        r.district<0||r.district>=DistrictCount||r.scene<0||r.scene>2||(r.scene==2&&r.district!=1)||r.checkpoint<0||r.checkpoint>64||
         r.deaths<0||r.deaths>10000000||!std::isfinite(r.seconds)||r.seconds<0||r.seconds>1e9)return false;
       for(auto &e:q.expeditions)if(!(data>>e.origin_seed))return false;
       if(!(data>>q.interlude))return false;

@@ -156,7 +156,8 @@ public:
     if(mode==iceberg::Mode::Campaign && profile.hidden_room>=0) {
       grid=iceworld::build_hidden(profile.hidden_room);
     } else if(mode==iceberg::Mode::Campaign && profile.revisit.active) {
-      grid=iceworld::build_authored(profile.revisit.district,profile.revisit.scene==1);
+      grid=profile.revisit.scene==2?iceworld::build_jubilee():iceworld::build_authored(profile.revisit.district,profile.revisit.scene==1);
+      if(profile.revisit.scene==2&&(profile.story&(uint64_t(1)<<40)))grid.switch_flags=7;
       grid.interactions.insert(grid.interactions.begin(),{{grid.spawn_x-2,grid.spawn_y-1,1,3},InteractionKind::Return,0,{"Wróć do osady","Return to settlement"}});
     } else if(mode==iceberg::Mode::Campaign && profile.visit_district>=0) {
       grid=iceworld::build_settlement(profile.visit_district);
@@ -323,6 +324,7 @@ public:
       t("PRÓBA MISTRZOWSKA — osiem sal, jeden rekord","MASTERY TRIAL — eight rooms, one record"));
   }
   void advance_room() {
+    audio.play(AudioCue::Door);
     if(mode!=iceberg::Mode::Campaign) {
       ++room;++depth;if(mode==iceberg::Mode::Endless)profile.endless_best=std::max(profile.endless_best,depth);
       if(mode==iceberg::Mode::Trial && room>=iceberg::RoomsPerLeg) {
@@ -349,7 +351,11 @@ public:
       profile.hidden_room=-1;load_room(true);persist();return;
     }
     if(profile.revisit.active) {
-      profile.revisit={};load_room(true);persist();return;
+      bool jubilee=profile.revisit.scene==2&&state.won&&!(profile.story&(uint64_t(1)<<40));
+      if(jubilee){profile.story|=uint64_t(1)<<40;profile.cosmetics|=1u<<3;}
+      profile.revisit={};load_room(true);
+      if(jubilee){talk(iceberg::jubilee_complete());audio.play(AudioCue::Win);}
+      persist();return;
     }
     if(profile.visit_district>=0) {
       profile.visit_district=-1;load_room(true);persist();return;
@@ -394,14 +400,31 @@ public:
   void animate_pickup(const Interaction &node,int kind) {
     auto &v=state.adventure;v.pickup_left=.65;v.pickup_x=node.area.x;
     v.pickup_y=node.area.bottom()-1.3;v.pickup_kind=kind;
-    if(kind==0)audio.play(AudioCue::Paper);
+    if(kind==0){audio.play(AudioCue::Paper);audio.play(AudioCue::Cloth);}
   }
   void inspect_nearby() {
+    auto &v=state.adventure;
+    auto describe=[&](std::string title,std::string body,const char *icon) {
+      v.inspect_title=std::move(title);v.inspect_body=std::move(body);v.inspect_icon=icon;
+      v.inspecting=true;stepper={};audio.play(AudioCue::Paper);
+    };
     int at=near_interaction();
+    if(at<0) {
+      auto close=[&](double x,double y){return std::hypot(state.player.x+.45-x,state.player.y+.6-y)<2.8;};
+      for(size_t i=0;i<grid.sweets.size();++i)if(!state.collected[i]&&close(grid.sweets[i].first,grid.sweets[i].second)) {
+        describe(t("Żeton transportowy","Transit token"),t("Mosiężny krążek z pieczęcią poczty. Znajdźki liczą się osobno od czasu i powrotów — możesz szukać ich spokojnie albo zbierać podczas próby.","A brass token stamped by the postal service. Collection records are separate from time and retries — explore for them at your own pace or collect them during a trial."),"◉");return;
+      }
+      for(size_t i=0;i<grid.refills.size();++i)if(close(grid.refills[i].first,grid.refills[i].second)) {
+        describe(t("Ogniwo zrywu","Dash cell"),t("Szklana osłona chroni naładowany rdzeń. Dotknij go, żeby odzyskać zryw w powietrzu. Puste ogniwo odnowi się po chwili.","A glass casing protects a charged core. Touch it to restore an airborne dash. An empty cell recharges after a moment."),"▥");return;
+      }
+      for(auto [x,y]:grid.checkpoint_points)if(close(x,y)) {
+        describe(t("Lampa powrotna","Return lamp"),t("Światło zapamiętuje bezpieczne miejsce na trasie. Po upadku wrócisz tutaj. Listy, naprawy i sprawy mieszkańców zostają załatwione.","The light marks a safe place on your route. A fall returns you here. Collected letters, repairs and completed character tasks stay done."),"▣");return;
+      }
+    }
     if(at<0||grid.interactions[size_t(at)].kind==InteractionKind::Secret) {
       notice(t("Podejdź do przedmiotu lub postaci, żeby obejrzeć z bliska.","Approach an object or character to inspect it."));return;
     }
-    const auto &node=grid.interactions[size_t(at)];auto &v=state.adventure;
+    const auto &node=grid.interactions[size_t(at)];
     v.inspect_title=node.label.get(profile.language);v.inspect_icon="▤";
     switch(node.kind) {
     case InteractionKind::Npc:case InteractionKind::Rescue:
@@ -416,10 +439,20 @@ public:
       v.inspect_body=node.id==1?t("Mosiężne koło jest ciepłe. Biała kreska na rurze oznacza położenie otwarte. Przekręć zawór i zgłoś Witkowi przywrócony obieg.","The brass wheel is warm. A white mark on the pipe indicates the open position. Turn the valve and report the restored circuit to Witek."):
         node.id==7?t("Pod siatką ktoś wsunął kartkę z częstotliwością. Głośnik wciąż ma zasilanie; trzeba dostroić odbiornik, nie uderzać w obudowę.","Someone slipped a frequency note beneath the grille. The speaker still has power; its receiver needs tuning, not a hit on the casing."):
         t("Papier spuchł od wilgoci, ale sznurek trzyma. Pod pieczątką widać adres. Zabierz przesyłkę; Helena odnajdzie odbiorcę.","The paper has swollen with moisture, but the string holds. An address is visible beneath the stamp. Take the parcel; Helena can find its recipient.");
+      if(node.id==2)v.inspect_body=t("Latarnia sygnałowa tramwaju. Dolne światło wskazuje gotowy odcinek. Przywrócenie zasilania otworzy Bogdanowi drogę między przystankami.","A tram signal. Its lower light marks a ready section. Restoring power gives Bogdan a route between the stops.");
+      if(node.id==3)v.inspect_body=t("Emaliowana tabliczka jest starsza niż drzwi. Numer można odczytać pod nową warstwą farby. Grażyna prosiła o porównanie trzech takich adresów.","The enamel plaque is older than the door. Its number shows through a newer coat of paint. Grażyna asked you to compare three of these addresses.");
+      if(node.id==4)v.inspect_body=t("Związana teczka pęcznieje od wilgoci. Na brzegu widać ślady po usuniętych kartach. Irena potrzebuje całego pliku, razem z opisem na okładce.","The tied file is swollen with damp. Its edge shows where pages were removed. Irena needs the entire file, including the cover label.");
+      if(node.id==5)v.inspect_body=t("Nasiona przechowano w szklanej kapsule. W środku jest jeszcze sucho. Celina znajdzie dla nich miejsce na dole.","Seeds are stored in a glass capsule. The inside is still dry. Celina will find a place for them downstairs.");
       if(profile.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))v.inspect_body+=t("\nJuż załatwione.","\nAlready handled.");
       break;
     case InteractionKind::Valve:
       v.inspect_icon="⊗";v.inspect_body=t("Korba steruje pobliską maszyną. Ciemne koło jest zamknięte; jasny środek oznacza otwarty obieg. Stan mechanizmu pozostaje zapisany po powrocie do lampy.","The crank controls the nearby machinery. A dark wheel is closed; a bright centre marks an open circuit. The mechanism stays set after a checkpoint retry.");break;
+    case InteractionKind::Note:
+      v.inspect_title=node.id==30?t("Akt fundacyjny","Dedication"):t("Tablica informacyjna","Information sign");
+      if(node.id==30){auto lines=iceberg::jubilee_dedication();v.inspect_body=lines[0].text.get(profile.language)+" "+lines[1].text.get(profile.language);}
+      else if(node.id<10)v.inspect_body=iceberg::training_sign(node.id).get(profile.language);
+      else v.inspect_body=t("Kartka zachowała się za osłoną. Możesz odczytać ją w całości, naciskając E.","The sheet survived behind its cover. Press E to read the complete record.");
+      break;
     case InteractionKind::Board:
       v.inspect_body=iceberg::route_title(district,stage).get(profile.language);break;
     default:v.inspect_body=t("E — użyj. Możesz zamknąć ten widok bez wykonywania działania.","E — use. You can close this view without performing the action.");break;
@@ -451,9 +484,9 @@ public:
       if(!(grid.switch_flags&1)){notice(t("Najpierw zabierz skrzynkę przy wejściu.","First collect the box by the entrance."),5);return;}
       if(!(grid.switch_flags&2)){grid.switch_flags|=2;talk(iceberg::parcel_delivered());audio.play(AudioCue::Win);persist();}
     } else if(node.kind==InteractionKind::Replay) {
-      persist();profile.revisit={};profile.revisit.active=true;
+      audio.play(AudioCue::Door);persist();profile.revisit={};profile.revisit.active=true;
       profile.revisit.district=grid.district;profile.revisit.scene=node.id;
-      load_room();persist();return;
+      load_room();if(node.id==2&&!(profile.story&(uint64_t(1)<<40)))talk(iceberg::jubilee_arrival());persist();return;
     } else if(node.kind==InteractionKind::Shortcut) {
       room=std::min(iceberg::RoomsPerLeg-1,room+3);clear_room_record();load_room();persist();
       notice(t("WITEK: Uważaj na głowę. To nie był projekt dla ludzi.","WITEK: Mind your head. This wasn't designed for people."),5);return;
@@ -466,6 +499,10 @@ public:
     } else if(node.kind==InteractionKind::Board) {
       advance_room();
     } else if(node.kind==InteractionKind::Valve) {
+      if(grid.template_id==303&&node.id>0&&!(grid.switch_flags&(uint64_t(1)<<(node.id-1)))) {
+        notice(t("Najpierw odłącz wcześniejszy obieg. Strzałki prowadzą od fontanny do mieszkań.","Disconnect the preceding circuit first. Follow the arrows from fountain to homes."),5);return;
+      }
+      if(!(grid.switch_flags&(uint64_t(1)<<node.id)))animate_pickup(node,1);
       grid.switch_flags|=uint64_t(1)<<node.id;
       audio.play(AudioCue::Valve);notice(t("OBIEG OTWARTY","CIRCUIT OPEN"));persist();
     } else if(node.kind==InteractionKind::Task) {
@@ -479,19 +516,12 @@ public:
         audio.play(node.id==1||node.id==2?AudioCue::Valve:node.id==7?AudioCue::Voice:AudioCue::Pickup);persist();
       } else notice(t("Już zabrane. Wróć do zleceniodawcy.","Already collected. Return to the task giver."));
     } else if(node.kind==InteractionKind::Note) {
+      if(node.id==30){talk(iceberg::jubilee_dedication());return;}
       if(node.id>=10) {
         profile.discoveries|=1u<<(node.id-10);
         talk(iceberg::hidden_testimony(node.id-10));persist();return;
       }
-      static const iceberg::Text signs[]{
-        {"A/D: ruch. Spacja: skok. Przytrzymaj, żeby skoczyć wyżej. Czerwone krawędzie są niebezpieczne. Lampy zapisują miejsce powrotu.","A/D: move. Space: jump. Hold for a higher jump. Red edges are dangerous. Lamps save your return point."},
-        {"Zryw: X albo Shift z kierunkiem. Żółta postać ma gotowy zryw. Na ziemi: zryw, potem szybko skok — zachowasz rozpęd.","Dash: X or Shift with a direction. A yellow character has a dash ready. On the ground: dash, then quickly jump to keep your momentum."},
-        {"Przy ścianie zrób zryw w górę, a potem skocz. Na windzie skacz w chwili ruchu w górę. Górna znajdźka jest opcjonalna.","Dash upward beside a wall, then jump. On a lift, jump as it rises. The upper treasure is optional."},
-        {"Winda daje ci swój rozpęd. Skacz w chwili, gdy rusza w górę. Możesz zaczekać na pełnym pomoście. Boczne lampy nie są częścią obowiązkowej trasy.","A lift shares its momentum with you. Jump while it is rising. You can wait on the solid landings. Side lamps are not part of the required route."},
-        {"Żółte kropki oznaczają, że zawór zaraz wypuści parę. Czerwony słup parzy. Zaczekaj albo przeskocz nad nim; zryw nie chroni przed ciepłem.","Yellow dots mean a vent is about to release steam. The red column burns. Wait or jump over it; a dash doesn't protect against heat."},
-        {"Górne platformy są dla ciekawskich. Skok z wznoszącej windy, potem zryw w górę. Jeśli się nie uda, lampa jest tuż obok. Niczego nie tracisz.","The upper platforms are for the curious. Jump from a rising lift, then dash upward. If it doesn't work, the lamp is nearby. You lose nothing."}
-      };
-      talk({{6,signs[std::clamp(node.id,0,5)]}});
+      talk({{6,iceberg::training_sign(node.id)}});
     }
     sync_view();
   }
@@ -518,7 +548,7 @@ public:
     if(c.map && (v.selected==2||v.selected==3))run_district=(run_district+1)%(expedition_unlocked()+1);
     if(c.navigate)v.selected=(v.selected+c.navigate+6)%6;
     if(c.select_level>=1&&c.select_level<=6)v.selected=c.select_level-1;
-    if(v.selected!=old_selected)choose_saved_run_district(v.selected);
+    if(v.selected!=old_selected){choose_saved_run_district(v.selected);audio.play(AudioCue::Menu);}
     if(c.language){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
     if((c.restart||c.new_run) && (v.selected==2||v.selected==3)){begin_run(v.selected==2?iceberg::Mode::Endless:iceberg::Mode::Trial,true);return;}
     if(!c.confirm)return;
@@ -593,6 +623,18 @@ public:
     double old_elapsed=state.elapsed;
     stepper.advance(state,grid,c,dt);
     feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,dt,audio);
+    // Spatially restrained machinery cues follow actual motion/timing.
+    if(state.elapsed>old_elapsed&&state.deaths==old_deaths) {
+      if(state.player.support>=0&&before.support!=state.player.support)audio.play(AudioCue::Lift,.7f);
+      if(before.support>=0&&state.player.support<0&&state.player.vy<-10)audio.play(AudioCue::Lift,.45f);
+      for(const auto &vent:grid.pulses)if(vent.active(state.elapsed)&&!vent.active(old_elapsed)) {
+        double distance=std::hypot(vent.area.x-state.player.x,vent.area.y-state.player.y);
+        if(distance<22)audio.play(AudioCue::Steam,float(1-distance/22));
+      }
+    }
+    if(state.sweets_count()>old_pickups&&v.pickup_left<=0) {
+      v.pickup_kind=8;v.pickup_left=.65;v.pickup_x=state.player.x+.4;v.pickup_y=state.player.y-.8;
+    }
     double active=state.elapsed-old_elapsed;
     int deaths=state.deaths-old_deaths,pickups=state.sweets_count()-old_pickups;
     if(mode==iceberg::Mode::Campaign) {

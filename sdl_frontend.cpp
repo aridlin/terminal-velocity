@@ -1009,6 +1009,11 @@ int terminal_window_main(int argc,char **argv) {
         }
         update_camera(session.state,session.grid,110,27,2,10);session.sync_view();
       }
+      if(options.no_save&&scene.rfind("jubilee",0)==0) {
+        session.grid=iceworld::build_jubilee();session.state=new_state(session.grid);session.state.menu=false;
+        if(scene.find(":mid")!=std::string::npos){session.state.player.x=110;session.state.player.y=24-kPlayerHeight;}
+        session.sync_view();update_camera(session.state,session.grid,110,27,2,10);
+      }
       if(options.no_save&&scene=="heat") {
         session.profile.started=true;session.district=1;session.stage=0;session.load_room();session.state.menu=false;
       }

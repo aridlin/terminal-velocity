@@ -56,5 +56,6 @@ inline EngineGrid build_heatworks_settlement() {
   g.interactions.push_back({{11,48,4,4},InteractionKind::Npc,1,{"Porozmawiaj","Talk"}});
   g.interactions.push_back({{47,40,4,4},InteractionKind::Npc,7,{"Porozmawiaj","Talk"}});
   g.interactions.push_back({{82,48,4,4},InteractionKind::Board,1,{"Tablica wypraw","Expedition board"}});
+  g.interactions.push_back({{73,44,2,4},InteractionKind::Replay,2,{"Fontanna im. JP II","John Paul II fountain"}});
   return g;
 }

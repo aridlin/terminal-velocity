@@ -18,7 +18,7 @@ enum class AudioCue {
   Menu,
   Win,
   Wood1, Wood2, Metal1, Metal2, Stone1, Stone2,
-  Valve, Voice, Paper, Bounce,
+  Valve, Voice, Paper, Bounce, Door, Steam, Lift, Cloth,
   Count
 };
 enum class AudioScene { Menu, Play, Paused, Win };
@@ -42,7 +42,7 @@ public:
   void init(const std::filesystem::path &directory,
             bool initially_muted = false, bool offline = false);
   void update(AudioScene scene, int track, double dt, bool focused = true);
-  void play(AudioCue cue);
+  void play(AudioCue cue, float strength = 1.f);
   void set_mix(float music, float effects, float ambience);
   void set_environment(int district, bool silence = false);
   bool ready() const;

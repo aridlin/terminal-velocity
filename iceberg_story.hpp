@@ -43,12 +43,12 @@ inline const std::array<Quest,8> Quests{{
 inline std::vector<DialogueLine> introduction(int district) {
   switch (district) {
   case 0: return {
-    {0,{"Jesteś. Dobrze. Miałam wysłać po ciebie kuriera, ale to byś znowu był ty.","You're here. Good. I was going to send a courier for you, but that would be you again."}},
+    {0,{"Jesteś. Zostawiłam ci suchą kurtkę pod ladą. Tę z urwanym guzikiem — drugiej nie mamy.","You're here. I left a dry coat under the counter. The one with the missing button — we haven't got another."}},
     {0,{"Górne dzielnice milczą od rana. Witek twierdzi, że ciepło znika z rur, zanim dotrze do mieszkań.","The upper districts have been silent all morning. Witek says heat is disappearing from the pipes before it reaches the homes."}},
     {0,{"Na tablicy na końcu nabrzeża są trzy odcinki: odpływ, przepompownia i droga do ciepłowni. Sprawdź połączenia po kolei.","The board at the far end of the quay has three routes: the drain, the pumping station, and the heating works approach. Check the connections in order."}},
     {0,{"Nie musisz być szybki. Musisz wrócić. Na pomostach świecą lampy powrotne. R zabierze cię do ostatniej.","You don't need to be fast. You need to come back. Return lamps mark the boardwalks. R takes you to the last one."}},
     {6,{"A jeśli jednak będziesz szybki, nie mów Helenie, że ci pokazałem. Skok po zrywie niesie dalej niż sam zryw.","And if you do happen to be fast, don't tell Helena I showed you. A jump out of a dash carries you farther than the dash alone."}},
-    {0,{"Wszyscy mieszkamy w lodzie. Nie wszyscy musimy mieć lód w głowie. Idź ostrożnie.","We all live in ice. We don't all need ice in our heads. Take care."}}
+    {0,{"Zajrzyj też na boczne pomosty. Została tam poczta. Nie będę cię poganiać, ale ludzie czekają.","Check the side boardwalks too. There's mail out there. I won't rush you, but people are waiting."}}
   };
   case 1: return {
     {1,{"O, poczta. Rachunek? Jeśli tak, wrzuć do pieca. Przynajmniej da trochę ciepła.","Oh, mail. A bill? Put it in the furnace. At least it will give us some heat."}},
@@ -110,11 +110,11 @@ inline std::vector<DialogueLine> small_talk(int npc, unsigned quest_state) {
     };return {{npc,after[std::clamp(npc,0,7)]}};
   }
   switch(npc) {
-  case 0:return {{0,{"Trzy worki pocztowe zostały na bocznych pomostach. Suche listy są na wagę złota. Mokre też, tylko więcej ważą.","Three mailbags were left on the side boardwalks. Dry letters are worth their weight in gold. Wet ones too, but they weigh more."}}};
-  case 1:return {{1,{"Boczne zawory tkwią za głównymi pomostami. Otwórz trzy. Narzędzie uniwersalne? E. Wreszcie ktoś je ustandaryzował.","The side valves are beyond the main platforms. Open three. Universal tool? E. Someone finally standardized it."}}};
+  case 0:return {{0,{"Trzy worki zostały na bocznych pomostach. Jeden miał iść na jedenastkę. Od rana ktoś stamtąd pyta, czy jest wiadomość.","Three bags are still on the side boardwalks. One was for number eleven. Someone there has been asking all morning whether there's any news."}}};
+  case 1:return {{1,{"Za głównymi pomostami są trzy zawory bezpieczeństwa. Otwórz je. Po naprawie uruchomię ci wejście serwisowe — krótsza droga, mniej drabin.","There are three safety valves beyond the main platforms. Open them. Then I'll unlock the service entrance for you — a shorter route, fewer ladders."}}};
   case 2:return {{2,{"Nie potrzebuję nowego tramwaju. Potrzebuję, żeby trzy sygnalizatory przestały twierdzić, że jesteśmy na urlopie.","I don't need a new tram. I need three signals to stop claiming we're on holiday."}}};
   case 3:return {{3,{"Trzy balkony nie mają mieszkań w ewidencji. Mają za to pelargonie. Pelargonie nie kłamią w sprawie meldunku.","Three balconies have no registered apartments. They do have geraniums. Geraniums don't lie about residency."}}};
-  case 4:return {{4,{"Szukam trzech teczek. Nie błyszczą. Wiem, fatalna wada dokumentów w terenie.","I'm looking for three files. They don't glow. I know, a terrible flaw in field documentation."}}};
+  case 4:return {{4,{"Trzy teczki zostały na mokrych półkach. Weź je w całości. Kolejność kartek pozwoli nam ustalić, co zmieniono.","Three files are still on the wet shelves. Bring them intact. The order of the pages will help us establish what was changed."}}};
   case 5:return {{5,{"W górnych szklarniach zostały trzy kapsuły nasion. Na dole nie urosną od razu, ale to nie powód, żeby nie sadzić.","Three seed capsules remain in the upper greenhouses. They won't grow downstairs immediately, but that's no reason not to plant them."}}};
   case 6:return {{6,{"Zrób zryw po ziemi, a zaraz potem skocz. Zachowasz rozpęd. Trzy udane próby i uznam, że możesz mnie wyprzedzać legalnie.","Dash along the ground, then jump immediately. You'll keep the momentum. Three good attempts and I'll consider your overtaking legal."}}};
   default:return {{7,{"TEST MIKROFONU. Proszę dostroić trzy urządzenia boczne. Po zakończeniu testu cisza zostanie przywrócona do normy.","MICROPHONE TEST. Please tune three auxiliary units. Upon completion, silence will return to regulation levels."}}};
@@ -257,5 +257,21 @@ inline std::vector<DialogueLine> parcel_delivered() {
     {1,{"Mam go. Osiem stopni różnicy. Przez cały dzień grzaliśmy zgodnie z papierem, a ludzie marzli zgodnie z rzeczywistością. Dobrze, że ktoś jeszcze dostarcza rzeczy osobiście.", "Got it. Eight degrees off. All day we've heated according to the paperwork while people froze according to reality. Good thing someone still delivers things in person."}},
     {0,{"Przesyłka doręczona. Podpis odbiorcy: plama smaru. Przyjmuję. Znam ten charakter pisma.", "Parcel delivered. Recipient's signature: a grease stain. Accepted. I recognise the handwriting."}}
   };
+}
+}
+
+#include "iceberg_jubilee_story.hpp"
+
+namespace iceberg {
+inline const Text &training_sign(int id) {
+  static const std::array<Text,6> signs{{
+        {"A/D: ruch. Spacja: skok. Przytrzymaj, żeby skoczyć wyżej. Czerwone krawędzie są niebezpieczne. Lampy zapisują miejsce powrotu.","A/D: move. Space: jump. Hold for a higher jump. Red edges are dangerous. Lamps save your return point."},
+        {"Zryw: X albo Shift z kierunkiem. Żółta postać ma gotowy zryw. Na ziemi: zryw, potem szybko skok — zachowasz rozpęd.","Dash: X or Shift with a direction. A yellow character has a dash ready. On the ground: dash, then quickly jump to keep your momentum."},
+        {"Przy ścianie zrób zryw w górę, a potem skocz. Na windzie skacz w chwili ruchu w górę. Górna znajdźka jest opcjonalna.","Dash upward beside a wall, then jump. On a lift, jump as it rises. The upper treasure is optional."},
+        {"Winda daje ci swój rozpęd. Skacz w chwili, gdy rusza w górę. Możesz zaczekać na pełnym pomoście. Boczne lampy nie są częścią obowiązkowej trasy.","A lift shares its momentum with you. Jump while it is rising. You can wait on the solid landings. Side lamps are not part of the required route."},
+        {"Żółte kropki oznaczają, że zawór zaraz wypuści parę. Czerwony słup parzy. Zaczekaj albo przeskocz nad nim; zryw nie chroni przed ciepłem.","Yellow dots mean a vent is about to release steam. The red column burns. Wait or jump over it; a dash doesn't protect against heat."},
+        {"Górne platformy są dla ciekawskich. Skok z wznoszącej windy, potem zryw w górę. Jeśli się nie uda, lampa jest tuż obok. Niczego nie tracisz.","The upper platforms are for the curious. Jump from a rising lift, then dash upward. If it doesn't work, the lamp is nearby. You lose nothing."}
+  }};
+  return signs[size_t(std::clamp(id,0,5))];
 }
 }
