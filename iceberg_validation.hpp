@@ -156,6 +156,14 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   return recovery_room_for(candidate);
 }
 
+inline void add_expedition_drawers(EngineGrid &room) {
+  if(room.district!=3||room.template_id!=39)return;
+  room.interactions.push_back({{57,41,3,3},InteractionKind::Valve,0,
+    {"Wysuń szuflady","Extend the drawers"}});
+  room.growth.push_back({{59,40,12,1},1});
+  room.growth.push_back({{65,35,12,1},1});
+}
+
 inline void add_expedition_trams(EngineGrid &room) {
   if(room.district!=2||room.template_id!=24||room.platforms.size()!=3)return;
   auto original=room.platforms;

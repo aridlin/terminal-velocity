@@ -218,6 +218,7 @@
     }
     draw_iceberg_landmarks();
     draw_expedition_infrastructure();
+    if(grid_.district==3)draw_archive_drawers();
     if(grid_.district==1)for(const auto &jet:grid_.air_fields) {
       double x=jet.area.x, bottom=jet.area.bottom(), strength=jet.strength(state_.elapsed);
       world_art(x,bottom,{"╔╧╧╧╧╧╗","╚══╤══╝","╭──┴──╮","│ ◴   │","╞═════╡","│░░░░░│","╰─┬─┬─╯"},d.accent);

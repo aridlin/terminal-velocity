@@ -210,6 +210,7 @@ public:
         if(mode==iceberg::Mode::Endless&&e.layout_version>=4) {
           add_expedition_steam(grid);
           add_expedition_trams(grid);
+          add_expedition_drawers(grid);
         }
       }
     }
@@ -561,7 +562,13 @@ public:
       if(profile.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))v.inspect_body+=t("\nJuż załatwione.","\nAlready handled.");
       break;
     case InteractionKind::Valve:
-      v.inspect_art=Art::Valve;v.inspect_icon="⊗";v.inspect_body=t("Korba steruje pobliską maszyną. Ciemne koło jest zamknięte; jasny środek oznacza otwarty obieg. Stan mechanizmu pozostaje zapisany po powrocie do lampy.","The crank controls the nearby machinery. A dark wheel is closed; a bright centre marks an open circuit. The mechanism stays set after a checkpoint retry.");break;
+      v.inspect_art=Art::Valve;v.inspect_icon="⊗";
+      if(grid.district==3&&!grid.growth.empty()) {
+        v.inspect_body=t("Pociągnij za uchwyt, aby wysunąć dwie szuflady. Po nich wskoczysz na górne półki.",
+          "Pull the handle to slide out two drawers. Use them as steps to reach the upper shelves.");
+        break;
+      }
+      v.inspect_body=t("Korba steruje pobliską maszyną. Ciemne koło jest zamknięte; jasny środek oznacza otwarty obieg. Stan mechanizmu pozostaje zapisany po powrocie do lampy.","The crank controls the nearby machinery. A dark wheel is closed; a bright centre marks an open circuit. The mechanism stays set after a checkpoint retry.");break;
     case InteractionKind::Note:
       v.inspect_art=node.id==30?Art::Dedication:(node.id<10||node.id==20||node.id==21)?Art::Sign:Art::File;v.inspect_title=node.id==30?t("Akt fundacyjny","Dedication"):t("Tablica informacyjna","Information sign");
       if(node.id==40&&grid.template_id==312) {
@@ -653,7 +660,11 @@ public:
       grid.switch_flags|=uint64_t(1)<<node.id;
       for(auto &bridge:grid.growth)if(bridge.flag&(uint64_t(1)<<node.id))bridge.amount=0;
       activate_machinery(node,grid.template_id==77&&grid.switch_flags==7);
-      audio.play(AudioCue::Valve);notice(grid.district==3?t("ZASUWA OTWARTA","SHUTTER RELEASED"):t("OBIEG OTWARTY","CIRCUIT OPEN"));persist();
+      audio.play(AudioCue::Valve);
+      notice(grid.district==3
+        ?grid.growth.empty()?t("ZASUWA OTWARTA","SHUTTER RELEASED"):t("SZUFLADY WYSUNIĘTE","DRAWERS RELEASED")
+        :t("OBIEG OTWARTY","CIRCUIT OPEN"));
+      persist();
     } else if(node.kind==InteractionKind::Task) {
       int bit=node.detail;auto mask=uint64_t(1)<<(bit%64);
       if(!(profile.task_items[size_t(bit/64)]&mask)) {

@@ -21,6 +21,23 @@
     world_art(tram.x,tram.y+row,{windows+"│",sill+"╯"},0xc0a487,true);
   }
 
+  void draw_archive_drawers() {
+    const double row=aspect_*scale_;
+    for(const auto &drawer:grid_.growth) {
+      const auto &area=drawer.area;
+      const bool open=(grid_.switch_flags&drawer.flag)==drawer.flag;
+      const double width=open?std::floor(area.w*drawer.amount):0.;
+      world_art(area.x-2.8,area.y-3*row,
+        {"╔══════╤═╗","║ ▥▥▥  │ ║","╟──┬───┤ ║","║ ▱▱▱  ▐ ║","╚══════╧═╝"},0x859bab);
+      if(width<=0)continue;
+      const int cells=std::max(1,int(width/scale_));
+      std::string lip="╞",front="│";
+      for(int i=1;i<cells-1;++i){lip+="═";front+=i%6==3?"▥":"─";}
+      world_text(area.x,area.y,cells==1?"▰":lip+"╡",0xabc9e4);
+      if(cells>1)world_text(area.x,area.y+row,front+"╯",0x6c879f);
+    }
+  }
+
 // Repeated infrastructure follows the landings in expeditions. Keep the art
 // behind the route so decorations never become apparent stepping stones.
   void draw_expedition_infrastructure() {

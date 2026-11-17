@@ -210,6 +210,28 @@ int main(int argc,char **argv) {
     run.layout_version=2;estate.load_room();
     check(estate.grid.template_id==24&&!estate.grid.platforms.front().tram,
       "older Endless saves keep the original tram room movement");
+    AdventureSession archive(options,path);
+    archive.begin_campaign(true);
+    archive.profile.unlocked=3;archive.run_district=3;
+    auto &archive_run=archive.profile.expeditions[0];
+    archive_run={};archive_run.active=true;archive_run.district=3;archive_run.seed=archive_run.origin_seed=73;
+    archive_run.itinerary={39,36,37,38,40,41,42,43};
+    archive.begin_run(iceberg::Mode::Endless);
+    check(archive.grid.growth.size()==2&&!archive.grid.solid_at(65,40)&&verify_route(archive.grid).complete,
+      "the Archive's main route still works while the catalogue drawers are shut");
+    archive.state.player.x=57.;archive.state.player.y=44.-kPlayerHeight;
+    Controls pull;pull.interact=true;archive.tick(pull,1./120);
+    check((archive.grid.switch_flags&1)&&!archive.grid.solid_at(65,40),
+      "the catalogue handle starts extending drawers through ordinary interaction");
+    for(int tick=0;tick<150;++tick)archive.tick({},1./120);
+    check(archive.grid.solid_at(65,40)&&archive.grid.solid_at(73,35),
+      "both open drawers become solid landing steps");
+    archive.begin_campaign(false);archive.begin_run(iceberg::Mode::Endless);
+    check(archive.grid.solid_at(65,40)&&archive.grid.solid_at(73,35),
+      "the same expedition room resumes with the drawers extended");
+    archive.advance_room();
+    check(archive.grid.growth.empty()&&archive.grid.switch_flags==0,
+      "drawer state does not carry into the next expedition room");
     std::filesystem::remove(path);std::filesystem::remove(backup);
     return 0;
   } catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
