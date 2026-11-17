@@ -780,25 +780,23 @@ public:
     if(blocked){sync_view();return;}
     v.pickup_left=std::max(0.,v.pickup_left-dt);
     v.door_left=std::max(0.,v.door_left-dt);
-    if(state.won)v.door_open=std::min(1.,v.door_open+dt*3.5);
+    const bool at_door=state.won;
+    const bool first_exit=mode==iceberg::Mode::Campaign&&district==0&&stage<=1&&
+      profile.hidden_room<0&&profile.visit_district<0&&!profile.revisit.active;
+    if(at_door)v.door_open=std::min(1.,v.door_open+dt*4.5);
     if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
     if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}
-    if(state.won) {
-      if(c.restart||c.new_run){state.won=false;stepper={};}
-      else {
-        // The opening threshold is a walk-through door. Let its shutter
-        // finish before advancing, including after Helena's first briefing.
-        bool first_exit=mode==iceberg::Mode::Campaign&&district==0&&stage<=1&&
-          profile.hidden_room<0&&profile.visit_district<0&&!profile.revisit.active;
-        if(c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))advance_room();
-        sync_view();return;
-      }
+    if(state.won&&!c.restart&&!c.new_run&&
+       (c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))) {
+      advance_room();
+      sync_view();return;
     }
-    if(c.new_run){c.restart=true;}
+    if(c.new_run)c.restart=true;
     Player before=state.player;
     int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
     double old_elapsed=state.elapsed;
     stepper.advance(state,grid,c,dt);
+    if(!state.won)v.door_open=std::max(0.,v.door_open-dt*4.5);
     feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,dt,audio);
     harbor_step(before,old_deaths);
     if(state.checkpoint!=old_cp)v.lamp_left=.8;
@@ -833,7 +831,7 @@ public:
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::RouteChoice)v.prompt="[E] B: "+grid.interactions[size_t(at)].label.get(profile.language);
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
     autosave_left-=dt;
-    if(old_cp!=state.checkpoint||state.won||autosave_left<=0)persist();
+    if(old_cp!=state.checkpoint||(state.won&&!at_door)||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,dt);
     sync_view();
   }

@@ -1,6 +1,6 @@
 // RenderGrid members. Reactions are cosmetic, bounded and deterministic.
   void draw_dock_tram(double x,double y) {
-    world_art(x,y,{"    ╭────────────────────────╮","    │ ▯▯  ▯▯  ▯▯  ▯▯  ▯▯    │","    ├────────────────────────┤","    │   T R A M W A J   02   │","    ╰───◉───────────────◉────╯"},iceberg::Districts[0].accent);
+    world_art(x,y,{"    ╭────────────────────────╮","    │ ▯▯  ▯▯  ▯▯  ▯▯  ▯▯     │","    ├────────────────────────┤","    │   T R A M W A J   02   │","    ╰───◉───────────────◉────╯"},iceberg::Districts[0].accent);
   }
   void draw_machinery_reaction() {
     const auto &v=state_.adventure;if(v.machinery_left<=0)return;
@@ -14,7 +14,7 @@
       std::string track;for(int i=0;i<int(100/scale_);++i)track+="═";
       world_text(x-35,rail+aspect_*scale_,track,d.stone);
       if(v.machinery_kind==4)draw_dock_tram(car,40);
-      else world_art(car,rail-3*aspect_*scale_,{"      ╱╲                ","╭─────┴┴────────────────╮","│ ▯ ▯ ▯ ▯  ║  ▯ ▯ ▯ ▯  │","╰──◉───────╨───────◉───╯"},d.light);
+      else world_art(car,rail-3*aspect_*scale_,{"      ╱╲                ","╭─────┴┴────────────────╮","│ ▯ ▯ ▯ ▯  ║  ▯ ▯ ▯ ▯   │","╰──◉───────╨───────◉───╯"},d.light);
       for(int i=0;i<34;++i) {
         double born=.12+i*.055,age=time-born;
         if(age<0||age>1.15)continue;

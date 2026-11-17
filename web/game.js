@@ -68,7 +68,7 @@ window.tvUI=u=>{
  if(!!(u.flags&modalFlags)!==!!(uiFlags&modalFlags))clearInput();
  lastBlocked=!!(u.flags&(modalFlags|1024));
  const before=uiFlags;uiFlags=u.flags;
- if((before&(255|1024))!==(uiFlags&(255|1024)))resize();
+ if((before&255)!==(uiFlags&255))resize();
  const nextEnglish=!!(u.flags&512);
  if(english!==nextEnglish){english=nextEnglish;try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}}
  document.querySelector('#settings-keys').hidden=!(u.flags&16);
@@ -110,7 +110,7 @@ function syncSave(){if(!started||syncing)return;Module._web_save();syncing=true;
 addEventListener('blur',()=>{focused=false;clearInput();syncSave();});addEventListener('focus',()=>{focused=true;last=performance.now();});
 document.addEventListener('visibilitychange',()=>{focused=!document.hidden;if(!focused){clearInput();syncSave();}last=performance.now();});
 function resize(){
- const compact=mobile()&&!!(uiFlags&(255|1024)),landscape=innerHeight<500&&stage.clientWidth>560;
+ const compact=mobile()&&!!(uiFlags&255),landscape=innerHeight<500&&stage.clientWidth>560;
  cols=compact?(landscape?60:38):Math.max(76,Math.min(160,Math.floor(stage.clientWidth/10)));
  rows=compact?(landscape?20:28):Math.max(24,Math.min(48,Math.floor(stage.clientHeight/(stage.clientWidth/cols*2))));
  previous=new Uint32Array(0);if(!started)drawBoot();

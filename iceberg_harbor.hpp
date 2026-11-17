@@ -23,6 +23,13 @@ inline void decorate_harbor_room(EngineGrid &g,const Pattern &spec) {
         bottom=std::min(bottom,lower.y-7);
     if(bottom>p.y+2)g.add_solid_rect(p.x+2,p.y+2,std::max(1,p.w-4),bottom-p.y-2);
   }
+  if(g.template_id==504) {
+    for(size_t i=1;i+1<spec.path.size();i+=2) {
+      const auto &left=spec.path[i-1], &ferry=spec.path[i], &right=spec.path[i+1];
+      const double shore=left.x+left.w, surface=ferry.y+2.6;
+      g.water_basins.push_back({shore,surface,right.x-shore,62-surface});
+    }
+  }
   if(g.template_id==503) {
     for(size_t i=1;i+1<spec.path.size();++i) {
       auto pad=spec.path[i];
@@ -83,6 +90,7 @@ inline EngineGrid build_harbor_lesson_v4() {
     if(i%2==0)g.checkpoint_points.push_back({p.x+2.,p.y-kPlayerHeight});
     if(i)g.sweets.push_back({p.x+p.w*.5,p.y-2.});
   }
+  g.water_basins.push_back({92,49.6,28,12.4});
   g.spawn_x=5;g.spawn_y=55-kPlayerHeight;g.goal={186,36,3,4};
   g.interactions.push_back({{8,51,4,4},InteractionKind::Note,0,{"Przeczytaj tabliczkę","Read sign"}});
   g.interactions.push_back({{43,48,4,4},InteractionKind::Note,1,{"Przeczytaj tabliczkę","Read sign"}});

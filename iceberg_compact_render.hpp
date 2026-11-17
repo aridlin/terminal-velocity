@@ -46,7 +46,8 @@
       y=6;compact_paragraph(y,state_.paused?tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."):tr("R wróć do lampy, jeśli coś zostało z tyłu.","R returns to the lamp if you left something behind."),rows_-3);
       paint_text(rows_-2,2,tr("ENTER dalej · M menu","ENTER continue · M menu"),d.accent);
     }
-    if(state_.won&&!state_.paused&&!v.dialogue.active()) {
+    if(state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active()) {
+      fill(rows_-3,0,cols_,2,Color::Default);
       paint_text(rows_-3,2,tr("E / ENTER — przejdź dalej","E / ENTER — pass through"),d.accent);
       paint_text(rows_-2,2,tr("R — wróć do lampy","R — return to the lamp"),d.light);
     }

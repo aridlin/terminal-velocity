@@ -103,7 +103,7 @@
     if(wy<6+std::sin(wx*.06)*2)return c("░",shade);
     return {};
   }
-  void world_art(double x,double y,const std::vector<std::string> &lines,uint32_t rgb) {
+  void world_art(double x,double y,const std::vector<std::string> &lines,uint32_t rgb,bool opaque=false) {
     // Decoration is behind collision and characters, even when the camera
     // exposes only a few cells of a large architectural landmark.
     auto [origin_x,origin_y]=screen(x,y);
@@ -116,7 +116,7 @@
       auto glyph=glyphs(lines[r]);
       for(size_t c=0;c<glyph.size();++c) {
         int sx=origin_x+int(c);
-        if(sx<0||sx>=cols_||glyph[c]==" ")continue;
+        if(sx<0||sx>=cols_||(!opaque&&glyph[c]==" "))continue;
         double wx=x+c*scale_,wy=y+r*aspect_*scale_;
         if(grid_.solid_at(int(std::floor(wx)),int(std::floor(wy)))||grid_.hazard_at(int(std::floor(wx)),int(std::floor(wy)))||
            state_.player.rect().intersects({wx,wy,scale_,aspect_*scale_}))continue;
@@ -165,14 +165,14 @@
       world_art(137,40+5*aspect_*scale_,{"══════════════════════════════════","  ·   ·   ·   ·   ·   ·   ·   ·"},d.stone);
       world_art(94,29,{"     ╭───╮","═════╡ ◉ ╞═════","     ╰─┬─╯","       │","       │"},d.stone);
     } else if(grid_.template_id==301) {
-      world_art(4,44,{"╭──────────────────╮",tr("│ ↑ NIE PRZEWRACAĆ ↑│","│ ↑ KEEP UPRIGHT ↑  │"),"╰──────────────────╯"},d.accent);
+      world_art(4,44,{"╭──────────────────╮",tr("│↑ NIE PRZEWRACAĆ ↑│","│ ↑ KEEP UPRIGHT ↑ │"),"╰──────────────────╯"},d.accent);
       world_art(192,21,{"     ╔════════════╗","═════╣ ░░░░░░░░░░ ╠═════","     ║    P 01    ║","     ╚════╤══╤════╝","          │  │"},d.stone);
     } else if(grid_.template_id==302) {
       for(auto [x,y]:{std::pair{56.,40.},std::pair{114.,34.}})
         world_art(x,y,{"   ╭──────────────╮","═══╡  ╭────────╮  ╞═══","   │  │ ╲ │ ╱  │  │","   │  │ ─ ◉ ─  │  │","   │  │ ╱ │ ╲  │  │","   │  ╰────────╯  │","   ╰──────┬───────╯","          ║"},d.stone);
     }
     if(grid_.room_role==iceberg::RoomRole::Settlement&&grid_.district==1) {
-      world_art(3,42,{"   ┌──────────────────────────────┐","   │     CIEPŁOWNIA ŁAZARZ         │","   ├──────────────────────────────┤","   │ ▤▤▤▤  ▤▤▤▤  ▤▤▤▤  ▤▤▤▤      │","   │                              │","   │  ╭───────────────╮   ╭────╮  │","   │  │   ◴     ◷     │   │ ░░ │  │","   │  │ ──╪─────╪──   │   │ ░░ │  │","   │  ╰───────────────╯   ╰────╯  │","   │                 ╭──────╮     │","   │   ▣▣▣           │      │     │","   └─────────────────┴──────┴─────┘"},d.stone);
+      world_art(3,42,{"   ┌──────────────────────────────┐","   │     CIEPŁOWNIA ŁAZARZ        │","   ├──────────────────────────────┤","   │ ▤▤▤▤  ▤▤▤▤  ▤▤▤▤  ▤▤▤▤       │","   │                              │","   │  ╭───────────────╮   ╭────╮  │","   │  │   ◴     ◷     │   │ ░░ │  │","   │  │ ──╪─────╪──   │   │ ░░ │  │","   │  ╰───────────────╯   ╰────╯  │","   │                 ╭──────╮     │","   │   ▣▣▣           │      │     │","   └─────────────────┴──────┴─────┘"},d.stone);
       world_art(38,36,{"      ╭──────────────────╮","══════╡ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ ╞══════","      │  ╭──────╮        │","      │  │  ◉   │        │","      │  ╰──────╯        │","      ╰──┬─────────┬─────╯","         ║         ║","         ║         ║","         ║         ║"},d.stone);
       world_art(64,43,{"╔════════════════════╗","║  ▣   ▣   ▣   ▣     ║","╚═══════════╤════════╝","            │","            │"},d.stone);
       world_art(12,47,{"╔══════════╗",tr("║ DYŻURNY  ║","║ OPERATOR ║"),"╚══════════╝"},d.light);
@@ -180,10 +180,10 @@
     }
     if(grid_.room_role==iceberg::RoomRole::Settlement) {
       world_art(3,39,{
-        "       ╱──────────────────╲", "  ╔═══╧════════════════════╧═══╗", "  ║  ╭────╮  ╭────╮  ╭────╮   ║",
-        "  ║  │ ░░ │  │ ░░ │  │ ░░ │   ║", "  ║  ╰────╯  ╰────╯  ╰────╯   ║", "  ╠═══════════════════════════╣",
-        "  ║         P O C Z T A        ║", "  ║  ╭────╮  ╔════╗  ╭────╮   ║", "  ║  │ ▤▤ │  ║    ║  │ ▤▤ │   ║",
-        "  ║  ╰────╯  ║  ○ ║  ╰────╯   ║", "  ╚══════════╩════╩═══════════╝"},d.stone);
+        "       ╱──────────────────╲", "  ╔═══╧════════════════════╧═══╗", "  ║  ╭────╮  ╭────╮  ╭────╮    ║",
+        "  ║  │ ░░ │  │ ░░ │  │ ░░ │    ║", "  ║  ╰────╯  ╰────╯  ╰────╯    ║", "  ╠════════════════════════════╣",
+        "  ║         P O C Z T A        ║", "  ║  ╭────╮  ╔════╗  ╭────╮    ║", "  ║  │ ▤▤ │  ║    ║  │ ▤▤ │    ║",
+        "  ║  ╰────╯  ║  ○ ║  ╰────╯    ║", "  ╚══════════╩════╩════════════╝"},d.stone);
       world_art(22,38,{"  ╭────────────╮","  │  11½   ▯   │","  │ ░░░░░░░░░░ │","  ╰──┬──────┬──╯","     │      │"},d.stone);
       world_art(38,33,{"         ╱╲", "   ┌────╱──╲────┐", "   │  ▤▤    ▤▤  │", "   ├────────────┤", "   │  ╭──╮  ▤▤  │", "   │  │  │      │", "   └──┴──┴──────┘"},d.stone);
       world_art(58,38,{"  ╭──────────────╮","  │ ░░░░  ░░░░   │","  │ ░░░░  ░░░░   │","  ├──────────────┤","  │    ○   ▤▤    │","  ╰──────────────╯"},d.stone);
@@ -210,7 +210,7 @@
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     for(int y=0;y<play_rows_;++y)for(int x=0;x<cols_;++x) {
       auto cell=world_cell(x,y);
-      cell.background=iceberg_light(state_.camera_x+x*scale_,state_.camera_y+y*aspect_*scale_);
+      if(!cell.background)cell.background=iceberg_light(state_.camera_x+x*scale_,state_.camera_y+y*aspect_*scale_);
       buffer_[y+4][x]=std::move(cell);
     }
     draw_iceberg_landmarks();
@@ -561,7 +561,7 @@
       center(12,tr("ENTER / P wznów   M menu","ENTER / P resume   M menu"));
       center(14,tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."));
     }
-    if(state_.won&&!v.dialogue.active()) {
+    if(state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active()) {
       fill(rows_-3,0,cols_,2,Color::Default);
       paint_text(rows_-3,2,tr("E / ENTER — przejdź przez drzwi","E / ENTER — go through the door"),d.accent,true);
       paint_text(rows_-2,2,tr("R — wróć do lampy","R — return to the lamp"),d.light);

@@ -456,6 +456,7 @@ public:
   std::vector<Interaction> interactions;
   std::vector<AirField> air_fields;
   std::vector<SortingBelt> sorting_belts;
+  std::vector<Rect> water_basins; // Scenery behind the walkable surfaces.
   std::vector<PulseHazard> pulses;
   std::vector<Gate> gates;
   std::vector<GrowingBridge> growth;
@@ -1095,6 +1096,9 @@ public:
       input.dash_pressed = pending.dash_pressed;
       input.restart = pending.restart;
       pending = Controls{};
+      // Adventure goals indicate current doorway contact, while classic
+      // courses latch completion for the results screen.
+      if (grid.adventure_level) state.won = false;
       if (!state.won || input.restart) {
         world_step(state, grid, input, 1.0 / 120.0);
         for (size_t i = 0; i < grid.sweets.size(); ++i) {
@@ -2107,7 +2111,19 @@ private:
                                            : Color::Solid;
       return solid == 255 ? Cell{"█", terrain} : braille_cell(solid, terrain);
     }
-    if (grid_.adventure_level) return iceberg_background(wx,wy,x,y);
+    if (grid_.adventure_level) {
+      for (const auto &water : grid_.water_basins) {
+        const double depth=wy+aspect_*scale_*.5-water.y;
+        if(wx<water.x||wx>=water.right()||depth<0||depth>=water.h)continue;
+        const int ripple=int(wx/scale_+state_.elapsed*6);
+        if(depth<aspect_*scale_)
+          return {ripple%8<3?"∿":"─",Color::Decor,false,false,0,0x8ed9e5,0x214b62};
+        if(ripple%13==int(depth*2)%13)
+          return {"·",Color::Decor,false,false,0,0x5196ab,0x14394e};
+        return {" ",Color::Decor,false,false,0,0,0x14394e};
+      }
+      return iceberg_background(wx,wy,x,y);
+    }
     if (grid_.chapter) {
       // Two distant ridgelines; decoration never enters collision geometry.
       double near_ridge =

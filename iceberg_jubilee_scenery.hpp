@@ -23,14 +23,14 @@
       "  ║       21,37 MW       ║     ",
       "  ╚══════════════════════╝     "},0xded8bd);
     world_art(77,33,{"╔═══════════════════════════════════════════════════════╗",
-      "║   POMPA IM. ŚW. JANA PAWŁA II  ·  DAR MIESZKAŃCÓW       ║",
+      "║   POMPA IM. ŚW. JANA PAWŁA II  ·  DAR MIESZKAŃCÓW     ║",
       "╠═══════════════════════════════════════════════════════╣",
       "║            ◉    ┌───────────────┐    ◉                ║",
       "║═════════════════╡    21,37 MW   ╞═════════════════════║",
       "║            ◉    └───────────────┘    ◉                ║",
       "╚═══════════════════════════════════════════════════════╝"},d.stone);
     world_art(25,43,{"       ╭──────────────────╮","       │       ◉          │","       ╰────────┬─────────╯",
-      "       ╔════════╧═════════╗","       ║                 ║","═══════╩═════════════════╩═══════"},0x789aa3);
+      "       ╔════════╧═════════╗","       ║                  ║","═══════╩═════════════════╩═══════"},0x789aa3);
     if(!(grid_.switch_flags&1)) {
       for(int jet=0;jet<3;++jet) {
         double x=29.+jet*2.6;
@@ -40,7 +40,7 @@
       world_art(30,46,{tr("TRYB UROCZYSTY","CEREMONIAL MODE")},d.accent);
     } else world_art(30,46,{tr("FONTANNA: STOP","FOUNTAIN: OFF")},d.light);
     world_art(143,23,{"╭──────────────╮",tr("│ OBIEG ZWROTNY│","│ RETURN LOOP  │"),"╰──────┬───────╯","       ↓"},d.accent);
-    world_art(104,14,{"╭─────────────────╮",tr("│   DO MIESZKAŃ    │","│   TO THE HOMES   │"),"╰────────┬────────╯","         ↓"},d.accent);
+    world_art(104,14,{"╭─────────────────╮",tr("│   DO MIESZKAŃ   │","│   TO THE HOMES  │"),"╰────────┬────────╯","         ↓"},d.accent);
     if((grid_.switch_flags&7)==7) {
       world_art(8,24,{tr("CIEPŁO: MIESZKANIA","HEAT: HOMES"),"═══════════════════"},0xf1c66f);
       world_art(92,32,{tr("NIEZATWIERDZONY CUD","UNAUTHORISED MIRACLE")},d.accent);

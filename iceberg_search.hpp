@@ -44,7 +44,7 @@ inline MotionPath find_motion_path(const EngineGrid &grid,const GameState &initi
       if(action.jump_pressed&&!p.grounded&&p.coyote_left<=0&&p.wall_coyote_left<=0&&p.dash_time_left<=0)continue;
       auto next=current.state;FixedStepper step;
       step.advance(next,grid,action,.1);
-      if(next.deaths!=initial.deaths||(next.won&&!next.player.rect().intersects(goal)))continue;
+      if(next.deaths!=initial.deaths||(!grid.adventure_level&&next.won&&!next.player.rect().intersects(goal)))continue;
       auto key=motion_key(next);int depth=current.depth+1;
       auto found=best.find(key);if(found!=best.end()&&found->second<=depth)continue;
       best[key]=depth;double d=distance(next);nearest=std::min(nearest,d);
