@@ -7,7 +7,7 @@ let pendingBootLanguage=null;
 let hasStoredLanguage=false;
 let preferredLanguage=(navigator.languages?.[0]||navigator.language||'en').toLowerCase().split('-')[0]==='pl'?'pl':'en';
 try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en'){preferredLanguage=saved;hasStoredLanguage=true;}const pending=localStorage.getItem(pendingLanguageKey);if(pending==='pl'||pending==='en')preferredLanguage=pendingBootLanguage=pending;}catch{}
-let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastUI='',lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootStatus='',explicitBootLanguage=pendingBootLanguage!==null;
+let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootStatus='',explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
 async function suggestLanguage(){
  if(hasStoredLanguage||explicitBootLanguage)return null;
@@ -54,8 +54,14 @@ window.tvFrame=(data,w,h)=>{
  const pixels=Math.max(1,Math.ceil(10*scale*samples));
  if(cellPixels!==pixels){cellPixels=pixels;tiles.clear();}
  if(canvas.width!==w*pixels||canvas.height!==h*pixels*2){canvas.width=w*pixels;canvas.height=h*pixels*2;previous=new Uint32Array(0);}
- for(let i=0;i<w*h;i++){const n=i*4;if(previous.length===data.length&&data[n]===previous[n]&&data[n+1]===previous[n+1]&&data[n+2]===previous[n+2]&&data[n+3]===previous[n+3])continue;ctx.drawImage(tile(data[n],data[n+1],data[n+2],data[n+3]),(i%w)*pixels,Math.floor(i/w)*pixels*2);}
- previous=new Uint32Array(data);
+ const sameGrid=previous.length===data.length;
+ for(let i=0;i<w*h;i++){
+  const n=i*4;
+  if(sameGrid&&data[n]===previous[n]&&data[n+1]===previous[n+1]&&data[n+2]===previous[n+2]&&data[n+3]===previous[n+3])continue;
+  ctx.drawImage(tile(data[n],data[n+1],data[n+2],data[n+3]),(i%w)*pixels,Math.floor(i/w)*pixels*2);
+ }
+ if(!sameGrid)previous=new Uint32Array(data.length);
+ previous.set(data);
 };
 const tap=(...keys)=>{for(const k of keys)pressed|=1<<k;};
 function translateUI(){
@@ -89,13 +95,15 @@ function selectLanguage(language){
 for(const b of document.querySelectorAll('[data-language]'))b.onclick=()=>selectLanguage(b.dataset.language);
 for(const b of document.querySelectorAll('[data-language-toggle]'))b.onclick=()=>selectLanguage(english?'pl':'en');
 window.tvUI=u=>{
+ const nextEnglish=!!(u.flags&512);
+ // The game sends UI state every frame. Only a transition changes the controls.
+ if(u.flags===uiFlags&&english===nextEnglish)return;
  const modalFlags=1|2|4|8|64|128;
  // A doorway still reads held movement while its shutter opens.
  if(!!(u.flags&modalFlags)!==!!(uiFlags&modalFlags))clearInput();
  lastBlocked=!!(u.flags&(modalFlags|1024));
  const before=uiFlags;uiFlags=u.flags;
  if((before&255)!==(uiFlags&255))resize();
- const nextEnglish=!!(u.flags&512);
  if(english!==nextEnglish){english=nextEnglish;try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}}
  settingsKeys.hidden=!(u.flags&16);
  translateUI();

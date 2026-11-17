@@ -47,6 +47,18 @@ const server=http.createServer((req,res)=>{
    if(locale==='en-US'){
     await page.evaluate(()=>{const frame=window.tvFrame,ui=window.tvUI;window.tvFrame=(cells,w,h)=>{window.entryFrame=Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>String.fromCodePoint(cells[(y*w+x)*4])).join('')).join('\n');frame(cells,w,h);};window.tvUI=u=>{window.entryFlags=u.flags;ui(u);};});
     await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);
+    const frameWork=await page.evaluate(async()=>{
+     const buffer=previous.buffer;
+     let mutations=0;
+     const observer=new MutationObserver(records=>{mutations+=records.length;});
+     observer.observe(document.querySelector('#touch-use'),{childList:true,attributes:true});
+     try{
+      for(let i=0;i<8;i++)await new Promise(requestAnimationFrame);
+      return {mutations:mutations+observer.takeRecords().length,reusesBuffer:buffer===previous.buffer};
+     }finally{observer.disconnect();}
+    });
+    assert.deepEqual(frameWork,{mutations:0,reusesBuffer:true},'steady gameplay reuses frame storage and leaves unchanged controls alone');
+    console.log('PASS steady browser animation reuses its framebuffer and keeps stable controls untouched');
     await page.keyboard.down('d');await page.keyboard.down('ArrowRight');
     await page.keyboard.up('d');
     assert.ok(await page.evaluate(()=>held&(1<<1)),'right remains held through the other physical key');
