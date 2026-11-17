@@ -146,6 +146,10 @@ struct View {
   std::array<unsigned, 8> quest_counts{};
   std::array<uint64_t,2> task_items{};
   std::array<Record, DistrictCount> records{}, trials{};
+  bool inspecting=false;
+  std::string inspect_title, inspect_body, inspect_icon;
+  double pickup_left=0, pickup_x=0, pickup_y=0;
+  int pickup_kind=0;
   Dialogue dialogue;
   std::string prompt, notice, room_name;
   double notice_left = 0;

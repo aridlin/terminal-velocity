@@ -176,6 +176,7 @@ private:
     if (k == 'u')
       edges_.mute_audio = true;
     if (k == 'e' || k == 'f') edges_.interact = true;
+    if (k == 'b') edges_.inspect = true;
     if (k == 'j') edges_.map = true;
     if (k == 'l') edges_.language = true;
     if (k == 's') edges_.navigate = 1;

@@ -110,7 +110,7 @@ public:
     previous_course=snapshot.level;network_deaths=state.deaths;
     snapshot.x=state.player.x;snapshot.y=state.player.y;snapshot.epoch=network_epoch;
     bool visible=focused&&!state.menu&&!state.paused&&!state.journal&&!state.adventure.map&&
-      !state.adventure.dialogue.active()&&columns>=76&&rows>=24&&grid.room_role!=iceberg::RoomRole::Secret;
+      !state.adventure.dialogue.active()&&!state.adventure.inspecting&&columns>=76&&rows>=24&&grid.room_role!=iceberg::RoomRole::Secret;
     snapshot.flags=(state.player.dash_available?1:0)|(visible?2:0)|(state.won?4:0);
     network.tick(snapshot,dt);state.multiplayer=true;state.ghosts=network.visible();
     if(grid.room_role==iceberg::RoomRole::Secret)state.ghosts.clear();
@@ -383,6 +383,41 @@ public:
       if(p.intersects(grid.interactions[i].area))return int(i);
     return -1;
   }
+  void animate_pickup(const Interaction &node,int kind) {
+    auto &v=state.adventure;v.pickup_left=.65;v.pickup_x=node.area.x;
+    v.pickup_y=node.area.bottom()-1.3;v.pickup_kind=kind;
+    if(kind==0)audio.play(AudioCue::Paper);
+  }
+  void inspect_nearby() {
+    int at=near_interaction();
+    if(at<0||grid.interactions[size_t(at)].kind==InteractionKind::Secret) {
+      notice(t("Podejdź do przedmiotu lub postaci, żeby obejrzeć z bliska.","Approach an object or character to inspect it."));return;
+    }
+    const auto &node=grid.interactions[size_t(at)];auto &v=state.adventure;
+    v.inspect_title=node.label.get(profile.language);v.inspect_icon="▤";
+    switch(node.kind) {
+    case InteractionKind::Npc:case InteractionKind::Rescue:
+      v.inspect_title=iceberg::Npcs[size_t(node.id)].name;
+      v.inspect_body=iceberg::Npcs[size_t(node.id)].title.get(profile.language)+t(". E — rozmowa. Zlecenia i odebrane wiadomości znajdziesz w dzienniku.",". E — talk. Tasks and received messages are kept in your journal.");v.inspect_icon="◉";break;
+    case InteractionKind::Carry:
+      v.inspect_title=t("Termometr transportowy","Transit thermometer");v.inspect_icon="▣";
+      v.inspect_body=t("Szklana rurka jest zawieszona w skrzynce na dwóch sprężynach. Strzałka na wieku wskazuje górę. Możesz biec i skakać, ale zryw uszkodziłby pomiar. Po odebraniu przesyłki zryw wróci.","A glass tube hangs inside the case on two springs. The lid's arrow points up. Running and jumping are safe, but a dash would spoil the reading. Dashing returns after delivery.");break;
+    case InteractionKind::Task:
+      v.inspect_title=iceberg::Quests[size_t(node.id)].title.get(profile.language);
+      v.inspect_icon=node.id==1?"⊗":node.id==7?"▤":"▣";
+      v.inspect_body=node.id==1?t("Mosiężne koło jest ciepłe. Biała kreska na rurze oznacza położenie otwarte. Przekręć zawór i zgłoś Witkowi przywrócony obieg.","The brass wheel is warm. A white mark on the pipe indicates the open position. Turn the valve and report the restored circuit to Witek."):
+        node.id==7?t("Pod siatką ktoś wsunął kartkę z częstotliwością. Głośnik wciąż ma zasilanie; trzeba dostroić odbiornik, nie uderzać w obudowę.","Someone slipped a frequency note beneath the grille. The speaker still has power; its receiver needs tuning, not a hit on the casing."):
+        t("Papier spuchł od wilgoci, ale sznurek trzyma. Pod pieczątką widać adres. Zabierz przesyłkę; Helena odnajdzie odbiorcę.","The paper has swollen with moisture, but the string holds. An address is visible beneath the stamp. Take the parcel; Helena can find its recipient.");
+      if(profile.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))v.inspect_body+=t("\nJuż załatwione.","\nAlready handled.");
+      break;
+    case InteractionKind::Valve:
+      v.inspect_icon="⊗";v.inspect_body=t("Korba steruje pobliską maszyną. Ciemne koło jest zamknięte; jasny środek oznacza otwarty obieg. Stan mechanizmu pozostaje zapisany po powrocie do lampy.","The crank controls the nearby machinery. A dark wheel is closed; a bright centre marks an open circuit. The mechanism stays set after a checkpoint retry.");break;
+    case InteractionKind::Board:
+      v.inspect_body=iceberg::route_title(district,stage).get(profile.language);break;
+    default:v.inspect_body=t("E — użyj. Możesz zamknąć ten widok bez wykonywania działania.","E — use. You can close this view without performing the action.");break;
+    }
+    v.inspecting=true;stepper={};audio.play(AudioCue::Paper);
+  }
   void interact() {
     int at=near_interaction();if(at<0)return;
     const auto node=grid.interactions[size_t(at)];
@@ -400,7 +435,7 @@ public:
       if(!(grid.switch_flags&2)){grid.switch_flags|=2;talk(iceberg::rescued_conductor());persist();}
     } else if(node.kind==InteractionKind::Carry) {
       if(!(grid.switch_flags&1)) {
-        grid.switch_flags|=1;state.player.dash_time_left=state.player.dash_buffer_left=state.player.momentum_left=0;
+        animate_pickup(node,0);grid.switch_flags|=1;state.player.dash_time_left=state.player.dash_buffer_left=state.player.momentum_left=0;
         state.player.vx=clamp(state.player.vx,-kMaxRunSpeed,kMaxRunSpeed);
         notice(t("TERMOMETR: skacz ostrożnie. Zryw wróci po dostawie.","THERMOMETER: jump carefully. Dashing returns after delivery."),6);audio.play(AudioCue::Pickup);persist();
       }
@@ -428,6 +463,7 @@ public:
     } else if(node.kind==InteractionKind::Task) {
       int bit=node.detail;auto mask=uint64_t(1)<<(bit%64);
       if(!(profile.task_items[size_t(bit/64)]&mask)) {
+        animate_pickup(node,node.id);
         profile.task_items[size_t(bit/64)]|=mask;
         ++profile.quest_counts[size_t(node.id)];
         if(profile.quests[size_t(node.id)]==1 && profile.quest_counts[size_t(node.id)]>=unsigned(iceberg::Quests[size_t(node.id)].required))profile.quests[size_t(node.id)]=2;
@@ -506,7 +542,14 @@ public:
     auto &v=state.adventure;
     v.notice_left=std::max(0.,v.notice_left-dt);
     if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
-    if(c.menu_request){persist();state.menu=true;v.dialogue={};stepper={};sync_view();return;}
+    if(c.menu_request){persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};sync_view();return;}
+    if(v.inspecting) {
+      if(c.inspect||c.pause||c.confirm||c.interact)v.inspecting=false;
+      audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
+    }
+    if(c.inspect&&!v.dialogue.active()&&!state.paused&&!state.journal&&!v.map) {
+      inspect_nearby();sync_view();if(v.inspecting)return;
+    }
     if(v.dialogue.active()) {
       if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
@@ -528,6 +571,7 @@ public:
     bool blocked=state.paused||state.journal||v.map||columns<76||rows<24;
     audio.update(blocked?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
     if(blocked){sync_view();return;}
+    v.pickup_left=std::max(0.,v.pickup_left-dt);
     if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
     if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}
     if(state.won) {

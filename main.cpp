@@ -132,7 +132,7 @@ struct Controls {
        new_run = false;
   int select_level = 0;
   bool next_seed = false, menu_request = false, mute_audio = false;
-  bool interact = false, map = false, language = false;
+  bool interact = false, inspect = false, map = false, language = false;
   int navigate = 0;
 };
 
@@ -1439,6 +1439,7 @@ public:
 
   void ui_controls(Controls &c) const {
     c.interact = press(KEY_E) || press(KEY_F);
+    c.inspect = press(KEY_B);
     c.map = press(KEY_J);
     c.language = press(KEY_L);
     c.navigate = int(press(KEY_DOWN) || press(KEY_S)) - int(press(KEY_UP) || press(KEY_W));
@@ -2766,10 +2767,10 @@ iceberg::SessionOptions adventure_options(const Args &args) {
     double dt=clamp(std::chrono::duration<double>(now-last).count(),0.,.1);last=now;
     auto size=term_size();
     Controls c=input.poll(dt);
-    bool was_blocked=session.state.menu||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.dialogue.active();
+    bool was_blocked=session.state.menu||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.dialogue.active()||session.state.adventure.inspecting;
     session.state.ssh_basic=input.basic_ssh();session.state.input_source=input.label();
     session.tick(c,dt,input.focused,size.cols,size.rows,aspect);
-    bool blocked=session.state.menu||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.dialogue.active();
+    bool blocked=session.state.menu||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.dialogue.active()||session.state.adventure.inspecting;
     if(was_blocked!=blocked)input.clear();
     if(now>=render_at) {
       RenderGrid(session.grid,session.state,size.rows,size.cols,aspect).draw();

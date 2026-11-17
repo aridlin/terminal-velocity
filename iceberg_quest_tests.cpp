@@ -21,6 +21,32 @@ int main() {
   try {
     iceberg::SessionOptions options;options.no_save=true;options.mute=true;options.seed=73;
     AdventureSession game(options,std::filesystem::temp_directory_path()/"tv-quest-nosave");game.begin_campaign(true);
+    {
+      AdventureSession inspected(options,std::filesystem::temp_directory_path()/"tv-inspect-nosave");
+      inspected.begin_campaign(true);install_test_room(inspected,iceworld::build_room(0,73,0));
+      auto object=inspected.grid.interactions.front();
+      inspected.state.player.x=object.area.x;inspected.state.player.y=object.area.y;
+      auto original_items=inspected.profile.task_items;double elapsed=inspected.state.elapsed;
+      Controls examine;examine.inspect=true;inspected.tick(examine,.1);
+      require_quest(inspected.state.adventure.inspecting&&inspected.profile.task_items==original_items,
+        "inspection opens without collecting or modifying a task");
+      Controls move;move.move=1;move.jump_pressed=true;inspected.tick(move,.1);
+      require_quest(inspected.state.elapsed==elapsed,"inspection freezes simulation and movement input");
+      inspected.tick(examine,.1);require_quest(!inspected.state.adventure.inspecting,"inspection closes without using the object");
+      interact(inspected);require_quest(inspected.state.adventure.pickup_left>0&&inspected.profile.task_items!=original_items,
+        "parcel collection starts a visible lift animation and persists exactly once");
+      auto items=inspected.profile.task_items;interact(inspected);
+      require_quest(inspected.profile.task_items==items,"repeated interaction cannot duplicate a parcel");
+      Controls pause;pause.pause=true;inspected.tick(pause,.1);double animation=inspected.state.adventure.pickup_left;
+      inspected.tick({},.1);require_quest(inspected.state.adventure.pickup_left==animation,"pickup animation respects pause");
+      inspected.tick(pause,.1);for(int i=0;i<8;++i)inspected.tick({},.1);
+      require_quest(inspected.state.adventure.pickup_left==0,"pickup animation ends without locking controls");
+      install_test_room(inspected,iceworld::build_settlement(0));
+      auto hidden=std::find_if(inspected.grid.interactions.begin(),inspected.grid.interactions.end(),[](const Interaction &n){return n.kind==InteractionKind::Secret;});
+      inspected.state.player.x=hidden->area.x;inspected.state.player.y=hidden->area.y;
+      inspected.tick(examine,.1);require_quest(!inspected.state.adventure.inspecting&&inspected.profile.hidden_room<0,
+        "inspection does not reveal or enter hidden entrances");
+    }
     game.profile.story=63;
     for(int q:{0,1,7})game.profile.quests[size_t(q)]=1;
     for(int id:{0,4,8,12,16,20,13,17,21}) {

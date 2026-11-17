@@ -1062,6 +1062,7 @@ int terminal_window_main(int argc,char **argv) {
           c.jump_pressed|=key==SDL_SCANCODE_SPACE||key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP;
           c.dash_pressed|=key==SDL_SCANCODE_X||key==SDL_SCANCODE_LSHIFT||key==SDL_SCANCODE_RSHIFT;
           c.interact|=key==SDL_SCANCODE_E||key==SDL_SCANCODE_F;
+          c.inspect|=key==SDL_SCANCODE_B;
           c.confirm|=key==SDL_SCANCODE_RETURN;
           c.restart|=key==SDL_SCANCODE_R;c.new_run|=key==SDL_SCANCODE_N;
           c.pause|=key==SDL_SCANCODE_P||key==SDL_SCANCODE_ESCAPE;
@@ -1092,10 +1093,10 @@ int terminal_window_main(int argc,char **argv) {
         }
         auto now=std::chrono::steady_clock::now();
         double dt=args.smoke?1./120:std::chrono::duration<double>(now-last).count();last=now;
-        bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map;
+        bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
         if(c.debug)session.state.debug=!session.state.debug;
         session.tick(c,dt,focused,cols,rows,2);
-        bool blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map;
+        bool blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
         if(was_blocked!=blocked)held.fill(false);
         if(now>=render_at||args.smoke||!screenshot.empty()) {
           RenderGrid(session.grid,session.state,rows,cols,2).draw();

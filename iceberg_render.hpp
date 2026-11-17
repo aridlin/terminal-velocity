@@ -119,6 +119,7 @@
     }
   }
 #include "iceberg_scenery.hpp"
+#include "iceberg_sprites.hpp"
   void draw_iceberg_landmarks() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     bool secret=grid_.room_role==iceberg::RoomRole::Secret;
@@ -230,15 +231,8 @@
       double x=node.area.x,y=node.area.bottom();
       if(node.kind==InteractionKind::Npc||node.kind==InteractionKind::Rescue) {
         if(node.kind==InteractionKind::Rescue&&(grid_.switch_flags&2))continue;
-        auto rgb=iceberg::Npcs[size_t(node.id)].color;
-        static const char *heads[]={"▄█▄","▟█▙","▔█▔","▟▓▙","▄▣▄","♣█▄","▄▓▙","┌▣┐"};
-        static const char *poses[]={"▐█▱","╶█┐","▐█╴","▐▓▤","▐█▥","♧█▌","╴▓▌","│▤│"};
         auto [sx,sy]=screen(x,y-.001);++sy;
-        if(sy-3>=4&&sy<rows_-2) {
-          paint_text(sy-3,sx,heads[node.id],rgb);
-          paint_text(sy-2,sx,int(state_.elapsed*.7+node.id)%4==0?poses[node.id]:node.id==7?"│▤│":"▐█▌",rgb);
-          paint_text(sy-1,sx,node.id==7?"└┬┘":int(state_.elapsed*.7+node.id)%4==0?"╱ │":"│ ╲",rgb);
-        }
+        resident_sprite(node.id,sx,sy);
       } else if(node.kind==InteractionKind::Carry) {
         if(!(grid_.switch_flags&1))world_art(x,y-2.4,{"╭─↑─╮","│ ▯ │","╰───╯"},d.accent);
       } else if(node.kind==InteractionKind::Deliver) {
@@ -251,6 +245,7 @@
       else if(node.kind==InteractionKind::Task) {
         static const char *icons[]={"▣","─⊗─","┌◉┐","▤","▥","♧","▣","▤▤"};
         bool done=state_.adventure.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64));
+        if(done&&node.id!=1&&node.id!=7)continue;
         world_text(x,y-1.3,node.id==1&&done?"─◉─":icons[node.id],done?d.shadow:d.accent);
       } else if(node.kind==InteractionKind::Shortcut||node.kind==InteractionKind::Replay||node.kind==InteractionKind::Return)world_text(x,y-2,"╭↶─╮",d.accent);
       else if(node.kind==InteractionKind::Secret&&node.id==1)world_art(x,y-2,{"╭─╮","│▥│","╰┬╯"},d.stone);
@@ -261,19 +256,36 @@
     static const uint32_t coats[]={0xe4ad68,0xdab0d5,0x88d3d9,0xc9bb85,0xabbcf4,0xb8dfb7,0xe99462,0xdce9ef};
     uint32_t coat=coats[std::clamp(state_.adventure.outfit,0,7)];
     auto [px,feet]=screen(p.x,p.y+kPlayerHeight-.001);++feet;
-    if(feet-3>=4&&feet<rows_-2) {
-      paint_text(feet-3,px,"▟▀▙",coat);
-      paint_text(feet-2,px,p.facing>0?"▐█▖":"▗█▌",p.dash_available&&!grid_.dash_locked()?0xf5cd79:0x83c5ce);
-      if(state_.adventure.cosmetics&0x3f0000u)paint_text(feet-2,px+1,"✦",0xf3ce82);
-      paint_text(feet-1,px,!p.grounded?"╱╲":std::abs(p.vx)>2&&int(state_.elapsed*12)%2?"▗ ▖":"▐ ▌",coat);
-    }
+    courier_sprite(px,feet,coat);
     if(std::abs(p.vx)>8)world_text(p.x+(p.facing>0?-.9:.9),p.y+.6,int(state_.elapsed*16)%2?"╴∽":"╶∼",coat);
     if(grid_.dash_locked())world_text(p.x+.8,p.y-.7,"▱",d.accent);
+    if(state_.adventure.pickup_left>0) {
+      const auto &v=state_.adventure;double progress=std::clamp(1-v.pickup_left/.65,0.,1.);
+      if(v.pickup_kind==1||v.pickup_kind==7) {
+        world_text(v.pickup_x,v.pickup_y-.5,int(progress*8)%2?"╱◉╲":"─◉─",d.accent);
+      } else {
+        double travel=std::clamp((progress-.25)/.75,0.,1.);
+        double x=v.pickup_x+(p.x+.3-v.pickup_x)*travel;
+        double y=v.pickup_y+(p.y+.5-v.pickup_y)*travel-std::sin(travel*3.14159)*1.4;
+        world_text(x,y,progress<.85?"▣":"✧",d.accent);
+      }
+    }
     auto goal=grid_.goal;
     world_text(goal.x,goal.y,"╭────╮",d.accent);
     for(double y=goal.y+.6;y<goal.bottom();y+=.6)world_text(goal.x,y,"│    │",d.accent);
     world_text(goal.x+.6,goal.y+1.8,(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires?"↑":"⊗",d.light);
     for(const auto &m:state_.motes)world_text(m.x,m.y,"·",m.gold?d.accent:d.light);
+  }
+  void draw_iceberg_inspection() {
+    const auto &v=state_.adventure;
+    int top=std::max(5,(rows_-15)/2),height=std::min(16,rows_-top-3);
+    frame(top,3,cols_-6,height,0xe4ad68);
+    paint_text(top+1,6,tr("OGLĘDZINY","INSPECT"),0x9dd4dd);
+    paint_text(top+3,6,v.inspect_icon,0xe4ad68);
+    paint_text(top+3,10,v.inspect_title,0xf5cd79,true);
+    auto lines=wrap(v.inspect_body,cols_-14);
+    for(size_t i=0;i<lines.size()&&int(i)<height-7;++i)text(top+5+int(i),7,lines[i]);
+    text(top+height-2,7,tr("B / ESC / ENTER — zamknij","B / ESC / ENTER — close"),Color::Gold);
   }
   void draw_iceberg_menu() {
     auto &v=state_.adventure;
@@ -447,7 +459,7 @@
     for(int x=0;x<cols_;++x)paint_text(3,x,"─",d.stone);
     fill(rows_-3,0,cols_,3,Color::Default);
     text(rows_-3,2,state_.ssh_basic?tr("A/D bieg S stop SPACJA skok X zryw I/O ↑/↓ E rozmowa","A/D run S stop SPACE jump X dash I/O ↑/↓ E interact"):
-      tr("A/D ruch  SPACJA skok  SHIFT/X zryw  E rozmowa","A/D move  SPACE jump  SHIFT/X dash  E interact"),Color::Player);
+      tr("A/D ruch  SPACJA skok  X zryw  E użyj  B obejrzyj","A/D move  SPACE jump  X dash  E use  B inspect"),Color::Player);
     text(rows_-2,2,tr("R powrót  TAB dziennik  J mapa  P pauza  M menu  U dźwięk","R retry  TAB journal  J map  P pause  M menu  U sound"));
     if(v.save_error)text(rows_-1,2,tr("Błąd zapisu — postęp pozostaje w tej sesji.","Save error — progress remains in this session."),Color::Hazard);
     else if(v.notice_left>0)text(rows_-1,2,v.notice,Color::Gold);
@@ -468,4 +480,5 @@
       center(14,tr("R wróć do lampy, jeśli coś zostało z tyłu.","R returns to the lamp if you left something behind."));
     }
     draw_iceberg_dialogue();
+    if(v.inspecting)draw_iceberg_inspection();
   }
