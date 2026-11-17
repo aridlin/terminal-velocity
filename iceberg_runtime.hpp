@@ -100,6 +100,8 @@ public:
           v.trials[size_t(d)]=challenge.record;
       }
     }
+    if(grid.template_id==330)for(auto &node:grid.interactions)if(node.kind==InteractionKind::Board)
+      node.label=profile.finished?iceberg::Text{"Wyrusz na wyprawę","Start an expedition"}:iceberg::Text{"Zakończ obchód","Finish the round"};
     v.discoveries=profile.discoveries;
     v.switches=grid.switch_flags;v.room_name=(grid.room_role==iceberg::RoomRole::Settlement&&grid.template_id!=330?
       iceberg::Districts[size_t(grid.district)].subtitle:grid.room_name).get(profile.language);
@@ -517,7 +519,7 @@ public:
     case InteractionKind::Deliver:
       v.inspect_art=Art::Delivery;v.inspect_body=t("Gniazdo pomiarowe przyjmuje skrzynkę z termometrem. Zatrzaski utrzymują ją pionowo podczas odczytu.","The measuring socket accepts the thermometer case. Its catches keep the case upright during the reading.");break;
     case InteractionKind::Board:
-      v.inspect_art=Art::Board;v.inspect_body=iceberg::route_title(district,stage).get(profile.language);break;
+      v.inspect_art=Art::Board;v.inspect_body=grid.template_id==330?node.label.get(profile.language):iceberg::route_title(district,stage).get(profile.language);break;
     default:v.inspect_body=t("E — użyj. Możesz zamknąć ten widok bez wykonywania działania.","E — use. You can close this view without performing the action.");break;
     }
     v.inspecting=true;stepper={};audio.play(AudioCue::Paper);
