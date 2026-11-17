@@ -60,7 +60,16 @@
       clipped(legend,5,(wide?tr("< > tutaj   [ ] odwiedzone","< > here   [ ] visited"):tr("▶ tutaj   ● odwiedzone","▶ here   ● visited")),0xc7d9df);
       if(legend+1<bottom-1)clipped(legend+1,5,(wide?tr("( ) nieodwiedzone","( ) not recorded as visited"):tr("○ nieodwiedzone","○ no visit recorded")),0x607887);
     }
-    if(!campaign&&r.current>=0&&r.current+1<int(r.rooms.size()))
-      clipped(bottom-2,5,tr("Plan: ","Planned: ")+r.rooms[size_t(r.current+1)].get(v.language),0xc7d9df);
-    if(bottom-1>top+4)clipped(bottom-1,5,tr("Teraz: ","Now: ")+r.place.get(v.language),0xffd68a);
+    const auto current=tr("Teraz: ","Now: ")+r.place.get(v.language);
+    if(campaign) {
+      if(bottom-1>top+4)clipped(bottom-1,5,current,0xffd68a);
+      return;
+    }
+    // Put the room details just below the route and wrap at terminal-cell width.
+    int row=top+8;
+    for(const auto &line:wrap(current,cols_-9))clipped(row++,5,line,0xffd68a);
+    if(r.current>=0&&r.current+1<int(r.rooms.size())) {
+      const auto next=tr("Plan: ","Planned: ")+r.rooms[size_t(r.current+1)].get(v.language);
+      for(const auto &line:wrap(next,cols_-9))clipped(row++,5,line,0xc7d9df);
+    }
   }

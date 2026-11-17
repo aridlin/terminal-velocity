@@ -88,15 +88,27 @@ int main(){try {
     ui_check(v.route.available&&v.route.current==room&&v.route.visited==(1u<<(room+1))-1,"expedition route marks only the rooms reached in this leg");
     for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
       game.profile.language=language;game.sync_view();
+      auto &route=game.state.adventure.route;
+      // Representative long, localized names that exceed a compact map line.
+      route.place=iceworld::pattern(40).name;
+      route.rooms[size_t(route.current+1)]=iceworld::pattern(45).name;
       for(auto size:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
         RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
         const bool en=language==iceberg::Language::English;
         const auto text=ui_text(frame);
         const char *title=mode==iceberg::Mode::Endless?(en?"ENDLESS EXPEDITION":"WYPRAWA BEZ KOŃCA"):(en?"MASTERY TRIAL":"PRÓBA MISTRZOWSKA");
         const char *progress=mode==iceberg::Mode::Endless?(en?"Leg 2 · Depth 9":"Odcinek 2 · Głębokość 9"):(en?"Room 3 / 8":"Pokój 3 / 8");
+        std::string details;
+        for(const auto &row:frame) {
+          for(const auto &cell:row)if(cell.rgb==0xffd68a||cell.rgb==0xc7d9df)details+=cell.glyph;
+          details+=' ';
+        }
+        const auto normalized=normalize_ui(details);
+        const auto current=(en?"Now: ":"Teraz: ")+route.place.get(language);
+        const auto next=(en?"Planned: ":"Plan: ")+route.rooms[size_t(route.current+1)].get(language);
         ui_check(text.find(title)!=std::string::npos&&text.find(progress)!=std::string::npos&&
-          text.find(en?"Now: ":"Teraz: ")!=std::string::npos&&text.find(en?"Planned: ":"Plan: ")!=std::string::npos,
-          "expedition map shows mode, progress and room labels at all supported sizes");
+          normalized.find(current+" "+next)!=std::string::npos,
+          "expedition map shows progress and both complete room names at all supported sizes");
       }
     }
     game.tick(map,1./120);ui_check(!v.map,"J closes the expedition map");
