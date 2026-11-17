@@ -37,19 +37,57 @@
     for(const auto &platform:grid_.platforms) {auto r=platform.at(state_.elapsed);
       world_art(r.x,r.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱","      ╱╲"},d.stone);
     }
-    for(const auto &field:grid_.air_fields) {
-      if(field.disabled_by&&(grid_.switch_flags&field.disabled_by)==field.disabled_by)continue;
-      double amount=.5+.5*std::sin((state_.elapsed/field.period+field.phase)*6.283185307);
-      for(int i=0;i<10;++i) {
-        double drift=clock*(field.ax>0?1:-1)*(4+amount*6);
-        double x=field.area.x+std::fmod(i*7.7+drift+10000,field.area.w);
-        double y=field.area.y+std::fmod(i*3.1,field.area.h);
-        world_text(x,y,amount>.6?(field.ax>0?"╶─›":"‹─╴"):"·",amount>.6?d.stone:d.shadow);
-      }
-    }
+    draw_crown_wind();
     for(int i=0;i<9;++i) {
       double x=std::fmod(i*29.7+clock*(7+i%3),double(grid_.width()));
-      world_text(x,8+i*7+(std::sin(clock+i)*.8),i%3?"╶─":"⠂",d.shadow);
+      double y=8+i*7+std::sin(clock+i)*.8;
+      const Rect flake{x,y,2*scale_,aspect_*scale_};
+      if(std::none_of(grid_.air_fields.begin(),grid_.air_fields.end(),[&](const auto &field){return field.area.intersects(flake);}))
+        world_art(x,y,{i%3?"╶─":"⠂"},d.shadow);
+    }
+  }
+
+  void draw_crown_wind() {
+    const double elapsed=state_.elapsed,row=aspect_*scale_;
+    for(const auto &field:grid_.air_fields) {
+      if(field.ax==0)continue;
+      const bool active=field.active(grid_.switch_flags);
+      const double amount=active?field.strength(elapsed):0.;
+      const bool right=field.ax>0;
+      for(double edge:{field.area.left(),field.area.right()}) {
+        double best=20.;
+        std::pair<double,double> landing{};
+        for(auto [x,floor]:grid_.route_points) {
+          const double distance=std::abs(x-edge);
+          if(distance>=best||!grid_.solid_at(int(std::floor(x)),int(std::floor(floor))))continue;
+          best=distance;landing={x,floor};
+        }
+        if(best>=20.)continue;
+        const auto [x,floor]=landing;
+        const double y=floor-4*row;
+        world_art(x,y,{"╥","║","║","║"},0x8395a9);
+        world_text(x,floor,"╨",0x8395a9);
+        if(amount<.2)world_art(x+scale_,y,{"╲"," ░"," ╵"},0xb6c5d3);
+        else if(right)world_art(x+scale_,y,{amount>.65?"█▓▒░╴":"▓▒░╲"},0xd7ecfa);
+        else world_art(x-(amount>.65?5:4)*scale_,y,{amount>.65?"╶░▒▓█":"╱░▒▓"},0xd7ecfa);
+      }
+      if(!active||amount<.1)continue;
+      const double width=field.area.w-3*scale_;
+      if(width<=0)continue;
+      const double direction=right?1.:-1.;
+      // Integrate the gust cycle so snow always travels in the displayed direction.
+      const double angular=6.283185307179586/std::max(.01,field.period);
+      const double distance=field.period>0
+        ?8*elapsed-(4/angular)*(std::cos(elapsed*angular+field.phase*6.283185307179586)-std::cos(field.phase*6.283185307179586))
+        :12*elapsed;
+      const int count=std::clamp(int(field.area.w*.65),12,60);
+      for(int i=0;i<count;++i) {
+        double offset=std::fmod(i*6.29+direction*distance,width);
+        if(offset<0)offset+=width;
+        const double y=field.area.y+std::fmod(i*4.17,field.area.h);
+        world_art(field.area.x+offset,y,{amount>.55?(right?"╶─›":"‹─╴"):(right?"·╴":"╶·")},
+          amount>.55?0x93bbd6:0x526779);
+      }
     }
   }
   void draw_epilogue_landmarks() {

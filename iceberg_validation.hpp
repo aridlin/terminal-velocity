@@ -156,6 +156,16 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   return recovery_room_for(candidate);
 }
 
+inline void strengthen_expedition_wind(EngineGrid &room) {
+  if(room.district!=5||room.air_fields.size()!=1)return;
+  auto &field=room.air_fields.front();
+  const double original=field.ax;
+  field.ax=std::copysign(44.,original);
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else field.ax=original;
+}
+
 inline void add_expedition_ice(EngineGrid &room) {
   if(room.district!=4)return;
   if(room.template_id==48)room.ice_strips={{8,56,12,1},{48,50,9,1},{68,47,12,1},{108,47,9,1}};

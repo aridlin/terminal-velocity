@@ -354,6 +354,7 @@ struct AirField {
   Rect area;
   double ax=0, ay=0, period=0, phase=0;
   uint64_t disabled_by=0;
+  bool active(uint64_t flags) const {return !disabled_by||(flags&disabled_by)!=disabled_by;}
   double strength(double elapsed) const {
     return period<=0 ? 1. : .5+.5*std::sin((elapsed/period+phase)*6.283185307);
   }
@@ -1051,7 +1052,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   if (s.deaths != deaths || c.restart)
     return;
   for (const auto &field : g.air_fields)
-    if (!(field.disabled_by&&(g.switch_flags&field.disabled_by)==field.disabled_by) && p.rect().intersects(field.area) && p.dash_time_left <= 0) {
+    if (field.active(g.switch_flags) && p.rect().intersects(field.area) && p.dash_time_left <= 0) {
       double amount = field.strength(s.elapsed);
       p.vx += field.ax * amount * dt;
       p.vy += field.ay * amount * dt;

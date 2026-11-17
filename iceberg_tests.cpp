@@ -257,6 +257,30 @@ int main(int argc,char **argv) {
     garden_run.layout_version=2;gardens.load_room();
     check(gardens.grid.template_id==48&&gardens.grid.ice_strips.empty(),
       "a legacy Underfrost save keeps its prior dry surfaces");
+    AdventureSession crown(options,path);
+    crown.begin_campaign(true);
+    crown.profile.unlocked=5;crown.run_district=5;
+    auto &crown_run=crown.profile.expeditions[0];
+    crown_run={};crown_run.active=true;crown_run.district=5;crown_run.seed=crown_run.origin_seed=73;
+    crown_run.itinerary={60,63,61,62,64,65,66,67};
+    crown.begin_run(iceberg::Mode::Endless);
+    for(double direction:{1.,-1.}) {
+      const auto &ridge=crown.grid;
+      check(ridge.air_fields.size()==1&&ridge.air_fields[0].ax==44.*direction&&verify_route(ridge).complete,
+        "the current Crown route retains a verified gust in its intended direction");
+      auto gust=new_state(ridge);gust.player.x=80.;gust.player.y=31.;gust.elapsed=1.5;
+      auto lull=gust;lull.elapsed=4.5;
+      for(int tick=0;tick<42;++tick) {
+        world_step(gust,ridge,{},1./120);
+        world_step(lull,ridge,{},1./120);
+      }
+      check((gust.player.x-lull.player.x)*direction>1.1,
+        "a Crown gust moves an airborne courier farther in the wind direction than a lull");
+      if(direction>0)crown.advance_room();
+    }
+    crown_run.layout_version=2;crown.load_room();
+    check(crown.grid.template_id==63&&crown.grid.air_fields[0].ax==-4.,
+      "legacy Crown expeditions keep their original wind strength");
     std::filesystem::remove(path);std::filesystem::remove(backup);
     return 0;
   } catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
