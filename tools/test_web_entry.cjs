@@ -181,10 +181,37 @@ const server=http.createServer((req,res)=>{
    }));
    assert.ok(bounds,'fullscreen tools fit a narrow phone');
    await page.screenshot({path:path.join(out,fallback?'web-fullscreen-fallback.png':'web-fullscreen-touch.png')});
+   await tools.locator('[data-tap="12"]').tap();
+   await page.waitForFunction(()=>!!(uiFlags&1));
+   await page.keyboard.press('Digit5');
+   await page.locator('#touch-use').tap();
+   await page.waitForFunction(()=>!!(uiFlags&16));
+   const settings=tools.locator('#settings-keys');
+   assert.equal(await settings.count(),1,'fullscreen contains the settings buttons');
+   await page.evaluate(()=>{
+    const render=window.tvFrame;
+    window.tvFrame=(cells,w,h)=>{
+     window.volumeLine=Array.from({length:h},(_,r)=>
+      Array.from({length:w},(_,c)=>String.fromCodePoint(cells[(r*w+c)*4])).join('')
+     ).find(line=>line.includes('Music:'));
+     render(cells,w,h);
+    };
+   });
+   await page.waitForFunction(()=>!!window.volumeLine);
+   const oldVolume=await page.evaluate(()=>window.volumeLine);
+   await settings.locator('[data-tap="20"]').tap();
+   await page.waitForFunction(old=>window.volumeLine&&window.volumeLine!==old,oldVolume);
+   await page.screenshot({path:path.join(out,fallback?"web-settings-fallback.png":"web-settings-fullscreen.png")});
+   await page.locator('#touch-use').tap();
+   await page.waitForFunction(()=>!(uiFlags&16));
+   await page.keyboard.press('Digit1');
+   await page.locator('#touch-use').tap();
+   await page.waitForFunction(()=>!(uiFlags&1));
    await page.locator('#leave-fullscreen').tap();
    await page.waitForFunction(()=>!expanded());
+   await page.locator("footer #settings-keys").waitFor({state:"attached"});
   }
-  console.log('PASS mobile native and fallback fullscreen Map and Quests controls');
+  console.log('PASS mobile native and fallback fullscreen Map, Quests and settings controls');
   console.log('PASS mobile, landscape, resized and large canvas preserve proportions; language remains reachable');await mobile.close();
   assert.deepEqual(errors,[],'browser errors');console.log(visualOnly?'PASS current Chromium/WASM visual smoke':'PASS real Chromium/WASM entry, save-language restoration and responsive rendering');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

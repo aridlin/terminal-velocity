@@ -72,7 +72,7 @@ window.tvUI=u=>{
  if((before&255)!==(uiFlags&255))resize();
  const nextEnglish=!!(u.flags&512);
  if(english!==nextEnglish){english=nextEnglish;try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}}
- document.querySelector('#settings-keys').hidden=!(u.flags&16);
+ settingsKeys.hidden=!(u.flags&16);
  translateUI();
 };
 const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25};
@@ -160,8 +160,17 @@ function drawBoot(){
  window.tvFrame(cells,w,h);
 }
 const playfield=document.querySelector('#playfield');
+const settingsKeys=document.querySelector('#settings-keys');
 const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('expanded');
-function fullscreenLayout(){clearInput();resize();canvas.focus();document.querySelector('#fullscreen').setAttribute('aria-pressed',String(expanded()));}
+function fullscreenLayout(){
+ const active=expanded();
+ if(active)document.querySelector('#fullscreen-tools').append(settingsKeys);
+ else document.querySelector('#hint').before(settingsKeys);
+ clearInput();
+ resize();
+ canvas.focus();
+ document.querySelector('#fullscreen').setAttribute('aria-pressed',String(active));
+}
 async function toggleFullscreen(){
  if(document.fullscreenElement){await document.exitFullscreen();return;}
  if(playfield.classList.contains('expanded')){playfield.classList.remove('expanded');fullscreenLayout();return;}
