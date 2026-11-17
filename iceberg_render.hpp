@@ -502,7 +502,7 @@
     const auto &v=state_.adventure;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     fill(0,0,cols_,4,Color::Default);
-    paint_text(0,2,"◈  "+d.name.get(v.language),d.accent,true);
+    paint_text(0,2,d.name.get(v.language),d.accent,true);
     paint_text(1,2,v.room_name,d.light);
     if(cols_>90)paint_text(0,cols_-27,tr("TRASA ","SEED ")+std::to_string(v.seed),d.stone);
     std::string mode=v.revisit?tr("POWRÓT NA TRASĘ","REVISIT"):v.mode==iceberg::Mode::Campaign?tr("PODRÓŻ","JOURNEY"):v.mode==iceberg::Mode::Endless?tr("BEZ KOŃCA","ENDLESS"):tr("PRÓBA","TRIAL");

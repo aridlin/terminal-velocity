@@ -19,13 +19,19 @@ function tile(code,fg,bg,bold){
  else if(code>=0x2596&&code<=0x259f){const mask=[4,8,1,13,9,7,11,2,6,14][code-0x2596];for(let y=0;y<2;y++)for(let x=0;x<2;x++)if(mask&(1<<(y*2+x)))p.fillRect(x*5,y*10,5,10);}
  else if(code>=0x2800&&code<=0x28ff){const dots=[[1,8],[2,16],[4,32],[64,128]];for(let y=0;y<4;y++)for(let x=0;x<2;x++)if((code-0x2800)&dots[y][x])p.fillRect(x*5+1,y*5+1,2,2);}
  else{p.font=(bold?'bold ':'')+'17px Cell,monospace';p.textBaseline='alphabetic';p.fillText(String.fromCodePoint(code),0,16,10);}
- if(tiles.size>8192)tiles.clear();tiles.set(key,c);return c;
+ const cacheLimit=Math.max(512,Math.floor(24*1024*1024/(cellPixels*cellPixels*8)));
+ if(tiles.size>cacheLimit)tiles.clear();tiles.set(key,c);return c;
 }
 window.tvFrame=(data,w,h)=>{
  const scale=Math.min(stage.clientWidth/(w*10),stage.clientHeight/(h*20));canvas.style.width=w*10*scale+'px';canvas.style.height=h*20*scale+'px';
  // Rasterize glyphs for the actual display density instead of enlarging a
  // fixed 10x20 bitmap. Whole-pixel cells keep adjacent block art seamless.
- const pixels=Math.max(1,Math.ceil(10*scale*(window.devicePixelRatio||1)));
+ const density=window.devicePixelRatio||1;
+ // Two samples per display pixel soften diagonal glyph edges. Bound the
+ // extra canvas memory on large screens, while never going below native DPI.
+ const displayArea=Math.max(1,w*10*scale*h*20*scale);
+ const samples=Math.max(density,Math.min(density*2,Math.sqrt(12000000/displayArea)));
+ const pixels=Math.max(1,Math.ceil(10*scale*samples));
  if(cellPixels!==pixels){cellPixels=pixels;tiles.clear();}
  if(canvas.width!==w*pixels||canvas.height!==h*pixels*2){canvas.width=w*pixels;canvas.height=h*pixels*2;previous=new Uint32Array(0);}
  for(let i=0;i<w*h;i++){const n=i*4;if(previous.length===data.length&&data[n]===previous[n]&&data[n+1]===previous[n+1]&&data[n+2]===previous[n+2]&&data[n+3]===previous[n+3])continue;ctx.drawImage(tile(data[n],data[n+1],data[n+2],data[n+3]),(i%w)*pixels,Math.floor(i/w)*pixels*2);}
@@ -69,7 +75,21 @@ function drawBoot(){
  line(19,'Klawiatura lub ekran dotykowy.');line(20,'Zapis zostaje w przeglądarce.');
  window.tvFrame(cells,w,h);
 }
-document.querySelector('#fullscreen').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.();};
+async function toggleFullscreen(){
+ try {
+  if(document.fullscreenElement)await document.exitFullscreen();
+  else await document.querySelector('#playfield').requestFullscreen();
+ } catch {saveStatus.textContent=english?'Fullscreen is unavailable in this browser':'Pełny ekran jest niedostępny w tej przeglądarce';}
+}
+addEventListener('keydown',e=>{
+ if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&document.fullscreenElement&&!accounts.active)){
+  e.preventDefault();e.stopImmediatePropagation();toggleFullscreen();
+ }
+},{capture:true});
+document.querySelector('#fullscreen').onclick=toggleFullscreen;
+document.querySelector('#leave-fullscreen').onclick=toggleFullscreen;
+document.addEventListener('fullscreenchange',()=>{clearInput();resize();canvas.focus();});
+new ResizeObserver(resize).observe(stage);
 document.querySelector('#export-save').onclick=()=>{if(!started)return;Module._web_save();try{const bytes=Module.FS.readFile('/persist/progress.dat.iceberg');const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=document.createElement('a');a.href=url;a.download='terminal-velocity.iceberg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{saveStatus.textContent='Brak zapisu do pobrania';}};
 function frame(now){if(accounts.active)accounts.draw();else if(started){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);pressed=0;}last=now;requestAnimationFrame(frame);}
 start.onclick=()=>{if(!ready||started)return;started=true;Module._web_start(Date.now()>>>0);start.hidden=true;accounts.start();resize();last=performance.now();canvas.focus();requestAnimationFrame(frame);};
@@ -78,6 +98,7 @@ addEventListener('keydown',e=>{if(!started&&e.code==='Enter')start.click();});
 var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mount(Module.IDBFS,{},'/persist');Module.FS.syncfs(true,error=>{if(error)saveStatus.textContent='Zapis przeglądarki niedostępny — pobieraj kopię';ready=true;start.disabled=false;if(!error)saveStatus.textContent='Gotowe / Ready';start.textContent='Uruchom / Start';drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});});}catch(e){bootStatus=String(e);drawBoot();}},setStatus(text){bootStatus=text;drawBoot();},onAbort(error){bootStatus='Błąd uruchamiania: '+error;drawBoot();}};
 const accounts=new TVAccounts({english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame});
 document.querySelector('#account').onclick=()=>accounts.open();
+document.querySelector('#account-fullscreen').onclick=()=>accounts.open();
 setInterval(syncSave,5000);
 setInterval(()=>accounts.sync(),15000);
 
