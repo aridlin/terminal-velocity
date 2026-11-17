@@ -9,7 +9,7 @@ int main(int argc,char **argv) {
     for(int variant=0;variant<variants;++variant)for(bool expert:{false,true})
       for(const auto &pattern:iceworld::patterns()) {
         uint32_t seed=variant==0?73:iceberg::mix(unsigned(variant*149));
-        auto grid=verified_room(pattern.id,seed,pattern.id/12,expert);
+        auto grid=verified_room(pattern.id,seed,iceworld::district_of(pattern),expert);
         if(grid.template_id!=pattern.id)throw std::runtime_error("template unexpectedly replaced");
         auto state=new_state(grid);FixedStepper stepper;
         auto reach=[&](Rect target,bool landing) {

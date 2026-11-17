@@ -2,6 +2,7 @@
 // painted behind gameplay objects. A room's landmark is not a collision mask.
   void draw_room_identity() {
     int id=grid_.template_id;
+    if(id>=400){draw_revision_landmark();return;}
     if(id<0||id>=int(iceworld::patterns().size()))return;
     static const std::vector<std::vector<std::string>> landmarks{
       {"      ╭───────╮", "──────┤ POCZTA├──────", "      ╰───┬───╯", "   ╭──────┴──────╮", "   │ ▣   ▣   ▣   │", "   ╰──────┬──────╯", "          │"},

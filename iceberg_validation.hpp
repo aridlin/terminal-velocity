@@ -41,6 +41,13 @@ struct RoutePilot {
     }
     if(p.grounded&&target<g.route_points.size())
       c.jump_pressed=(gap||rise)&&std::abs(dx)>1;
+    // Descending passages are entered by dropping from the edge. A full jump
+    // can put the courier on a roof instead of inside the passage.
+    if(g.template_id>=400&&p.grounded&&ty>p.y+kPlayerHeight+2&&p.dash_available)c.jump_pressed=false;
+    if(p.grounded&&c.move) {
+      int danger_x=int(std::floor(p.x+(c.move>0?kPlayerWidth+1.7:-1.7)));
+      if(g.hazard_at(danger_x,foot-1)||g.hazard_at(danger_x,foot-2))c.jump_pressed=true;
+    }
     if(p.grounded){launched=c.jump_pressed;takeoff_y=p.y+kPlayerHeight;}
     if(!p.grounded&&launched&&takeoff_y-ty>3.6&&p.dash_available&&p.dash_time_left<=0&&p.vy>=-7&&p.vy<0&&
        p.y+kPlayerHeight>ty-.5&&std::abs(dx)>2) {

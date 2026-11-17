@@ -57,6 +57,9 @@ public:
   }
   ~AdventureSession() = default;
   std::string t(const char *pl,const char *en) const { return iceberg::tr(profile.language,pl,en); }
+  unsigned route_version() const {
+    return mode==iceberg::Mode::Campaign?profile.layout_version:profile.expeditions[mode==iceberg::Mode::Endless?0:1].layout_version;
+  }
   int music_track() const {
     // The short snow theme belongs to inhabited resting places. Long route
     // pieces keep an expedition from repeating a 25-second musical phrase.
@@ -87,10 +90,15 @@ public:
     v.run_district=run_district;v.endless_best=profile.endless_best;v.seed=mode==iceberg::Mode::Campaign?profile.seed:run_seed;
     v.outfit=profile.outfit;v.quests=profile.quests;v.quest_counts=profile.quest_counts;v.task_items=profile.task_items;
     v.records=profile.records;v.trials=profile.trials;
-    if(options.seed_override) {
-      v.trials={};
-      for(const auto &challenge:profile.challenges)if(challenge.seed==options.seed&&challenge.version==iceberg::ContentVersion)
-        v.trials[size_t(challenge.district)]=challenge.record;
+    for(int d=0;d<iceberg::DistrictCount;++d) {
+      uint32_t wanted=options.seed_override?options.seed:iceberg::mix(0x54495241u+unsigned(d)*7919u);
+      const auto &e=profile.expeditions[1];
+      unsigned version=e.active&&e.district==d&&e.seed==wanted?e.layout_version:iceberg::ContentVersion;
+      if(options.seed_override||version!=iceberg::ContentVersion) {
+        v.trials[size_t(d)]={};
+        for(const auto &challenge:profile.challenges)if(challenge.district==d&&challenge.seed==wanted&&challenge.version==version)
+          v.trials[size_t(d)]=challenge.record;
+      }
     }
     v.discoveries=profile.discoveries;
     v.switches=grid.switch_flags;v.room_name=(grid.room_role==iceberg::RoomRole::Settlement?
@@ -102,7 +110,7 @@ public:
     if(!network.enabled())return;
     ghosts::Snapshot snapshot;
     snapshot.room=options.ghost_room;
-    snapshot.level=ghosts::adventure_level(iceberg::ContentVersion,grid.district,int(mode),grid.template_id);
+    snapshot.level=ghosts::adventure_level(route_version(),grid.district,int(mode),grid.template_id);
     snapshot.seed=grid.seed?grid.seed:mode==iceberg::Mode::Campaign?profile.seed:run_seed;
     // Optional unlocked geometry is part of course identity too.
     if(grid.district==2&&profile.quests[3]==3)snapshot.seed^=0x72574f46u;
@@ -110,7 +118,7 @@ public:
     previous_course=snapshot.level;network_deaths=state.deaths;
     snapshot.x=state.player.x;snapshot.y=state.player.y;snapshot.epoch=network_epoch;
     bool visible=focused&&!state.menu&&!state.paused&&!state.journal&&!state.adventure.map&&
-      !state.adventure.dialogue.active()&&!state.adventure.inspecting&&columns>=76&&rows>=24&&grid.room_role!=iceberg::RoomRole::Secret;
+      !state.adventure.dialogue.active()&&!state.adventure.inspecting&&columns>=34&&rows>=(columns>=56?20:24)&&grid.room_role!=iceberg::RoomRole::Secret;
     snapshot.flags=(state.player.dash_available?1:0)|(visible?2:0)|(state.won?4:0);
     network.tick(snapshot,dt);state.multiplayer=true;state.ghosts=network.visible();
     if(grid.room_role==iceberg::RoomRole::Secret)state.ghosts.clear();
@@ -163,13 +171,13 @@ public:
     } else {
       if(mode==iceberg::Mode::Campaign) {
         if(profile.itinerary.size()!=size_t(iceberg::RoomsPerLeg*3))
-          profile.itinerary=iceworld::make_itinerary(profile.seed,district);
+          profile.itinerary=iceworld::make_itinerary(profile.seed,district,iceberg::RoomsPerLeg*3,profile.layout_version);
         int leg=stage==2?0:stage==4?1:2;
         grid=verified_room(profile.itinerary[size_t(leg*iceberg::RoomsPerLeg+room)],
           iceberg::mix(profile.seed ^ unsigned(district*104729+leg*31+room)),district);
       } else {
         auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
-        if(e.itinerary.size()!=iceberg::RoomsPerLeg)e.itinerary=iceworld::make_itinerary(run_seed,district,iceberg::RoomsPerLeg);
+        if(e.itinerary.size()!=iceberg::RoomsPerLeg)e.itinerary=iceworld::make_itinerary(run_seed,district,iceberg::RoomsPerLeg,e.layout_version);
         grid=verified_room(e.itinerary[size_t(room % iceberg::RoomsPerLeg)],
           iceberg::mix(run_seed+unsigned(depth)),district,mode==iceberg::Mode::Trial);
       }
@@ -191,7 +199,7 @@ public:
       node.label=profile.visit_district>=0?iceberg::Text{"Wróć na swoją trasę","Return to your route"}:iceberg::route_title(grid.district,stage);
     auto old_view=state.adventure;
     state=new_state(grid);state.adventure=std::move(old_view);
-    state.adventure.dialogue={};state.adventure.map=false;state.adventure.prompt.clear();
+    state.adventure.dialogue={};state.adventure.map=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
     state.ssh=options.remote;
     if(resume && mode==iceberg::Mode::Campaign && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       grid.switch_flags=profile.switches;
@@ -318,12 +326,12 @@ public:
     if(mode!=iceberg::Mode::Campaign) {
       ++room;++depth;if(mode==iceberg::Mode::Endless)profile.endless_best=std::max(profile.endless_best,depth);
       if(mode==iceberg::Mode::Trial && room>=iceberg::RoomsPerLeg) {
-        if(options.seed_override) {
+        if(options.seed_override||route_version()!=iceberg::ContentVersion) {
           auto it=std::find_if(profile.challenges.begin(),profile.challenges.end(),[&](const iceberg::SeedRecord &r){
-            return r.seed==run_seed&&r.district==district&&r.version==iceberg::ContentVersion;});
+            return r.seed==run_seed&&r.district==district&&r.version==route_version();});
           if(it==profile.challenges.end()) {
             if(profile.challenges.size()>=128)profile.challenges.erase(profile.challenges.begin());
-            profile.challenges.push_back({run_seed,district,iceberg::ContentVersion,{}});it=std::prev(profile.challenges.end());
+            profile.challenges.push_back({run_seed,district,route_version(),{}});it=std::prev(profile.challenges.end());
           }
           merge_record(it->record,run_seconds,run_deaths,run_treasures);
         } else merge_record(profile.trials[size_t(district)],run_seconds,run_deaths,run_treasures);
@@ -536,6 +544,7 @@ public:
     audio.set_environment(grid.district,grid.room_role==iceberg::RoomRole::Secret);
     if(c.quit){persist();running=false;return;}
     if(c.mute_audio)audio.muted=!audio.muted;
+    if(c.language&&!state.menu){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
     if(!focused && previous_focus){state.paused=true;stepper={};}
     previous_focus=focused;
     if(!focused)c={};
@@ -568,7 +577,7 @@ public:
         persist();profile.visit_district=v.selected==district?-1:v.selected;load_room(profile.visit_district<0);persist();
       } else if(c.confirm){state.journal=false;v.map=false;}
     }
-    bool blocked=state.paused||state.journal||v.map||columns<76||rows<24;
+    bool blocked=state.paused||state.journal||v.map||columns<34||rows<(columns>=56?20:24);
     audio.update(blocked?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
     if(blocked){sync_view();return;}
     v.pickup_left=std::max(0.,v.pickup_left-dt);

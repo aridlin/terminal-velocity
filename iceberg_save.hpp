@@ -47,7 +47,7 @@ class SaveStore {
     std::ifstream in(file, std::ios::binary);
     std::string magic;
     uint64_t hash = 0;
-    if (!(in >> magic >> hash) || (magic != "TVICE2" && magic != "TVICE3" && magic != "TVICE4")) return false;
+    if (!(in >> magic >> hash) || (magic != "TVICE2" && magic != "TVICE3" && magic != "TVICE4" && magic != "TVICE5")) return false;
     in.get();
     std::string payload((std::istreambuf_iterator<char>(in)), {});
     if (payload.size() > 65536 || checksum(payload) != hash) return false;
@@ -85,7 +85,7 @@ class SaveStore {
           !record_valid(r)) return false;
     if (!(data >> count) || count > 512) return false;
     q.itinerary.resize(count);
-    for (int &id : q.itinerary) if (!(data >> id) || id < 0 || id >= 72) return false;
+    for (int &id : q.itinerary) if (!(data >> id) || !((id>=0&&id<72)||(id>=400&&id<=405)||(id>=420&&id<=425))) return false;
     if (magic!="TVICE2" && !(data >> q.at_content_boundary))return false;
     if (!(data >> q.hidden_room >> q.visit_district) || q.hidden_room < -1 || q.hidden_room > 2 || q.visit_district < -1 || q.visit_district >= DistrictCount) return false;
     for (auto &e : q.expeditions) {
@@ -97,7 +97,7 @@ class SaveStore {
         !std::isfinite(e.room_seconds) || e.room_seconds < 0 || e.room_seconds > 1e9 ||
         !std::isfinite(e.seconds) || e.seconds < 0 || e.seconds > 1e9 || count > 512) return false;
       e.itinerary.resize(count);
-      for (int &id : e.itinerary) if (!(data >> id) || id < 0 || id >= 72) return false;
+      for (int &id : e.itinerary) if (!(data >> id) || !((id>=0&&id<72)||(id>=400&&id<=405)||(id>=420&&id<=425))) return false;
     }
     if(magic!="TVICE2") {
       if(!(data>>count)||count>128)return false;
@@ -108,7 +108,7 @@ class SaveStore {
           challenge.district<0||challenge.district>=DistrictCount||challenge.version==0||challenge.version>65535||!record_valid(r))return false;
       }
     }
-    if(magic=="TVICE4") {
+    if(magic=="TVICE4"||magic=="TVICE5") {
       auto &r=q.revisit;
       if(!(data>>r.active>>r.district>>r.scene>>r.checkpoint>>r.deaths>>r.collected>>r.switches>>r.seconds)||
         r.district<0||r.district>=DistrictCount||r.scene<0||r.scene>1||r.checkpoint<0||r.checkpoint>64||
@@ -116,6 +116,12 @@ class SaveStore {
       for(auto &e:q.expeditions)if(!(data>>e.origin_seed))return false;
       if(!(data>>q.interlude))return false;
     } else for(auto &e:q.expeditions)e.origin_seed=e.seed;
+    q.layout_version=q.content_version;
+    for(auto &e:q.expeditions)e.layout_version=q.content_version;
+    if(magic=="TVICE5") {
+      if(!(data>>q.layout_version)||q.layout_version==0||q.layout_version>ContentVersion)return false;
+      for(auto &e:q.expeditions)if(!(data>>e.layout_version)||e.layout_version==0||e.layout_version>ContentVersion)return false;
+    }
     data >> std::ws;
     if (!data.eof()) return false;
     q.language = Language(language);
@@ -140,7 +146,7 @@ public:
       std::string magic;uint64_t hash;unsigned version=0;
       if(header>>magic>>hash) {
         header.get();std::string payload((std::istreambuf_iterator<char>(header)),{});std::istringstream body(payload);
-        if(checksum(payload)==hash&&(body>>version))protected_future=(magic.rfind("TVICE",0)==0&&magic!="TVICE2"&&magic!="TVICE3"&&magic!="TVICE4")||version>ContentVersion;
+        if(checksum(payload)==hash&&(body>>version))protected_future=(magic.rfind("TVICE",0)==0&&magic!="TVICE2"&&magic!="TVICE3"&&magic!="TVICE4"&&magic!="TVICE5")||version>ContentVersion;
       }
     }
     if (read(path_, p)) return true;
@@ -185,6 +191,9 @@ public:
     body<<r.active<<' '<<r.district<<' '<<r.scene<<' '<<r.checkpoint<<' '<<r.deaths<<' '<<r.collected<<' '<<r.switches<<' '<<r.seconds<<'\n';
     for(const auto &e:p.expeditions)body<<e.origin_seed<<' ';
     body<<p.interlude<<'\n';
+    body<<p.layout_version<<' ';
+    for(const auto &e:p.expeditions)body<<e.layout_version<<' ';
+    body<<'\n';
     auto payload = body.str();
     std::error_code ec;
     if (!path_.parent_path().empty()) std::filesystem::create_directories(path_.parent_path(), ec);
@@ -197,7 +206,7 @@ public:
 #endif
     {
       std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-      out << "TVICE4 " << checksum(payload) << '\n' << payload;
+      out << "TVICE5 " << checksum(payload) << '\n' << payload;
       out.close();
       if (!out) return false;
     }

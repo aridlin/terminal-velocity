@@ -10,15 +10,26 @@ int main(int argc,char **argv) {
   try {
     int seeds=argc>1?std::max(1,std::atoi(argv[1])):100;
     for(int seed=0;seed<seeds;++seed) {
-      int biome=seed%int(iceworld::patterns().size()/12);
+      int biome=seed%iceberg::AuthoredDistrictCount;
       auto route=iceworld::make_itinerary(unsigned(seed),biome);
       if(route!=iceworld::make_itinerary(unsigned(seed),biome))throw std::runtime_error("nondeterministic itinerary");
+      for(int required:biome==0?std::vector<int>{0,4,8}:std::vector<int>{12,13,16,17,20,21})
+        if(std::find(route.begin(),route.begin()+16,required)==route.begin()+16)throw std::runtime_error("task reserved after final settlement visit");
       for(size_t i=1;i<route.size();++i)if(route[i]==route[i-1]||!iceworld::connects(iceworld::pattern(route[i-1]),iceworld::pattern(route[i])))throw std::runtime_error("repeated adjacent room");
     }
     check(true,"structural seed determinism and adjacency checks");
+    for(int d=0;d<2;++d) {
+      auto old_route=iceworld::make_itinerary(73,d,24,2);
+      check(std::all_of(old_route.begin(),old_route.end(),[](int id){return id<24;}),"legacy route version retains the released room library");
+      auto new_route=iceworld::make_itinerary(73,d);
+      check(std::count_if(new_route.begin(),new_route.end(),[](int id){return id>=400;})>=6,"revised route contains the new traversal structures");
+    }
+
     int failures=0;
     for(const auto &pattern:iceworld::patterns()) {
-      auto g=iceworld::build_room(pattern.id,73,pattern.id/12);
+      auto g=iceworld::build_room(pattern.id,73,iceworld::district_of(pattern));
+      for(const auto &pad:pattern.optional)for(int x=pad.x+1;x<pad.x+pad.w-1;++x)
+        if(g.solid_at(x,pad.y-1)||g.hazard_at(x,pad.y-1))throw std::runtime_error("blocked optional landing id="+std::to_string(pattern.id));
       auto result=verify_route(g);
       std::cout<<"ROUTE "<<pattern.id<<" complete="<<result.complete<<" deaths="<<result.deaths
         <<" seconds="<<result.ticks/120.<<" target="<<result.target<<" pos="<<result.x<<','<<result.y<<'\n';
@@ -30,7 +41,7 @@ int main(int argc,char **argv) {
     int stable_fallbacks=0,recovery_fallbacks=0;
     for(int n=0;n<traversals;++n) {
       const auto &p=iceworld::patterns()[size_t(n)%iceworld::patterns().size()];
-      auto g=verified_room(p.id,iceberg::mix(unsigned(n)),p.id/12,expert);
+      auto g=verified_room(p.id,iceberg::mix(unsigned(n)),iceworld::district_of(p),expert);
       stable_fallbacks+=g.generation_fallback==1;recovery_fallbacks+=g.generation_fallback==2;
       if(g.generation_fallback)std::cout<<"FALLBACK seed="<<g.seed<<" requested="<<p.id<<" actual="<<g.template_id<<" kind="<<g.generation_fallback<<'\n';
       auto result=verify_route(g);
@@ -69,6 +80,25 @@ int main(int argc,char **argv) {
     auto rising=new_state(lift);rising.player.support=0;rising.player.grounded=true;
     input={};input.jump_pressed=input.jump_held=true;physics={};physics.advance(rising,lift,input,1./120);
     check(rising.player.vy<-26&&rising.player.momentum_left>0,"rising platform contributes real launch momentum");
+    iceberg::SaveStore v4_save("tests/fixtures/iceberg-v4.dat");iceberg::Profile v4;
+    check(v4_save.load(v4)&&v4.layout_version==2&&v4.expeditions[0].layout_version==2,
+      "released TVICE4 saves retain their campaign and expedition layout versions");
+    {
+      iceberg::SessionOptions old_options;old_options.mute=old_options.no_save=true;
+      AdventureSession old_run(old_options,"tests/fixtures/iceberg-v4.dat");
+      old_run.begin_campaign(false);old_run.stage=2;old_run.load_room();
+      check(std::all_of(old_run.profile.itinerary.begin(),old_run.profile.itinerary.end(),[](int id){return id<24;}),
+        "continuing a released campaign does not adopt revised room geometry");
+      old_run.mode=iceberg::Mode::Endless;old_run.run_active=true;old_run.room=7;old_run.district=0;
+      old_run.profile.expeditions[0].layout_version=2;old_run.advance_room();
+      const auto &bag=old_run.profile.expeditions[0].itinerary;
+      check(!bag.empty()&&std::all_of(bag.begin(),bag.end(),[](int id){return id<24;}),
+        "legacy endless bag rotation preserves its original generator version");
+      old_run.mode=iceberg::Mode::Trial;old_run.run_active=true;old_run.room=7;
+      old_run.profile.expeditions[1].layout_version=2;old_run.run_seconds=42;old_run.advance_room();
+      check(!old_run.profile.trials[0].complete&&!old_run.profile.challenges.empty()&&old_run.profile.challenges.back().version==2,
+        "finishing a resumed legacy trial cannot overwrite revised-course records");
+    }
     iceberg::SaveStore old_save("tests/fixtures/iceberg-v2.dat");iceberg::Profile migrated;
     check(old_save.load(migrated)&&migrated.story==291&&migrated.room==4&&migrated.expeditions[0].seed==821,
       "published TVICE2 campaign migrates without losing story or expedition state");

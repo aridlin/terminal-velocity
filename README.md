@@ -8,7 +8,7 @@ A courier platformer inside an inhabited iceberg. Carry the mail, reconnect the 
 
 ## The playable opening
 
-Explore the **Lower Harbor** and **Lazarus Heating Works**: two settlements, 24 authored traversal templates, lessons, machinery, moving barges, a stranded conductor and a fragile delivery. Four optional character tasks unlock letters, a service shortcut, outfits and movement trials. The opening resolves the lower network's immediate emergency; the ascent through the upper city continues in a later content release.
+Explore the **Lower Harbor** and **Lazarus Heating Works**: two settlements, 36 authored traversal templates, lessons, machinery, moving barges, a stranded conductor and a fragile delivery. Four optional character tasks unlock letters, a service shortcut, outfits and movement trials. The opening resolves the lower network's immediate emergency; the ascent through the upper city continues in a later content release.
 
 The opening targets roughly 20 minutes with dialogue and exploration. Automated traversal plus estimated reading is about 18 minutes; this is **not a measured first-player duration**. This release is not the planned two-hour campaign, and the number of seeds is not a promise of hundreds of distinct hours.
 

@@ -84,7 +84,9 @@ bool GameAudio::ensure_ready() {
   config.sampleRate = 48000;
   config.noDevice = offline_ ? MA_TRUE : MA_FALSE;
   if (!offline_) {
-#ifdef _WIN32
+#if defined(__EMSCRIPTEN__)
+    ma_backend backends[] = {ma_backend_webaudio};
+#elif defined(_WIN32)
     ma_backend backends[] = {ma_backend_wasapi, ma_backend_dsound,
                              ma_backend_winmm};
 #else
@@ -113,7 +115,13 @@ bool GameAudio::ensure_ready() {
   for (size_t i = 0; i < impl_->music.size(); ++i) {
     if (impl_->load(
             impl_->music[i], directory_ / tracks[i],
-            flags | (offline_ ? MA_SOUND_FLAG_DECODE : MA_SOUND_FLAG_STREAM))) {
+            flags |
+#ifdef __EMSCRIPTEN__
+            0 // Keep encoded music in memory; Web builds have no streaming worker.
+#else
+            (offline_ ? MA_SOUND_FLAG_DECODE : MA_SOUND_FLAG_STREAM)
+#endif
+      )) {
       ma_sound_set_looping(&impl_->music[i].sound, MA_TRUE);
       ma_sound_set_volume(&impl_->music[i].sound, .55f);
       ma_sound_set_fade_in_milliseconds(&impl_->music[i].sound, 0, 0, 1);

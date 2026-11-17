@@ -29,7 +29,7 @@ Campaign stages are arrival, lesson, route, return, route, return, route, finale
 
 `ContentVersion` belongs to geometry/route identity. Bump it when a published route's physics or geometry changes; new areas alone need not invalidate old rooms. Live ghosts match version, district, mode, template and seed. Records for explicit seeds also carry content version. Incompatible ghosts must never appear together.
 
-The current writer is TVICE4; TVICE2/3 fixtures exercise migration. Preserve legacy TVP1 records in their own file. Any new serialized state requires an explicit format migration and interrupted-write tests. Checkpoint saves must retain moving-platform time, machinery, collected items and itinerary, rather than regenerate a new route on death.
+The current writer is TVICE5; TVICE2/3 fixtures exercise migration. Preserve legacy TVP1 records in their own file. Any new serialized state requires an explicit format migration and interrupted-write tests. Checkpoint saves must retain moving-platform time, machinery, collected items and itinerary, rather than regenerate a new route on death.
 
 ## Verification
 
@@ -58,3 +58,24 @@ Generation tries normal variation, then stable timing, then a verified recovery 
 Audio source URLs, source/output hashes, processing and licenses live alongside the recordings. Font and rendering-library notices must accompany packages. Keep debug scene screenshots and simulations from writing real player profiles.
 
 For release packaging, first build and verify the binaries, commit the reviewed tree, then run `python tools/package_release.py DESTINATION --windows`. It creates Linux and Windows archives, an archive of the exact committed source, per-bundle build identity files and SHA-256 checksums. It refuses a dirty working tree and does not touch player profiles or install anything. Run smoke tests from extracted archives before installing a release.
+
+### Additive route revision (content version 3)
+
+Layouts 0–23 retain their released geometry. New harbor layouts use IDs 400–405, heating works 420–425, with explicit district ownership through `district_of`. Never derive a new room's district from its ID. TVICE5 stores campaign and expedition `layout_version` fields; TVICE2/3/4 migration initializes them from the source content version. Existing itineraries, later endless bags and resumed trial records retain the old route version. New stories and expeditions use the current library. Add valid stable IDs to save validation when extending the registry. Preserve old geometry and old itinerary assembly for versioned runs.
+
+### Browser frontend
+
+`EMXX=/path/to/em++ ./tools/build_web.sh` produces `web/dist/`. Serve that folder
+with an ordinary static HTTP(S) server. It contains the same C++ session,
+120 Hz simulation, room validation, Unicode cell frames and recorded audio.
+The web shell supplies keyboard/touch input, canvas glyph drawing and browser
+save storage. Dialogue, inspection, menus and journal remain in the shared
+cell renderer; narrow screens use its compact 38-column layout. There are no
+HTML dialogue panels. Startup requires a click/key gesture for audio.
+
+The browser edition stores its separate profile in IndexedDB; download a copy
+using the save button. Desktop saves are not read or modified. Local storage
+may be unavailable in private/restricted browsing. Classic legacy courses and
+UDP ghosts remain desktop-only. An actual phone multitouch/play review is
+still needed in addition to responsive viewport testing. Attribution and font
+licenses are copied into the static distribution.

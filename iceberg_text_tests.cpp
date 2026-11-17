@@ -24,10 +24,20 @@ int main() {
         if(normalize_text(shown)!=normalize_text(line.text.get(language))) {
           std::cerr<<"FAIL clipped dialogue index="<<id<<" language="<<int(language)<<'\n';return 1;
         }
+        RenderGrid(game.grid,game.state,28,38,2).draw();shown.clear();
+        for(int row=11;row<26;++row){for(int col=2;col<36;++col)shown+=frame[size_t(row)][size_t(col)].glyph;shown+=' ';}
+        if(normalize_text(shown)!=normalize_text(line.text.get(language))) {
+          std::cerr<<"FAIL compact dialogue index="<<id<<" language="<<int(language)<<'\n';return 1;
+        }
+        RenderGrid(game.grid,game.state,20,60,2).draw();shown.clear();
+        for(int row=11;row<18;++row){for(int col=2;col<58;++col)shown+=frame[size_t(row)][size_t(col)].glyph;shown+=' ';}
+        if(normalize_text(shown)!=normalize_text(line.text.get(language))) {
+          std::cerr<<"FAIL landscape dialogue index="<<id<<" language="<<int(language)<<'\n';return 1;
+        }
         ++pages;
       }
     }
-    cell_frame_sink={};std::cout<<"PASS "<<pages<<" authored dialogue pages fully visible in the actual 76x24 cell renderer, Polish and English\n";
+    cell_frame_sink={};std::cout<<"PASS "<<pages<<" authored dialogue pages fully visible in the actual 76x24, compact 38x28 and landscape 60x20 cell renderers, Polish and English\n";
     return 0;
   }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
 }

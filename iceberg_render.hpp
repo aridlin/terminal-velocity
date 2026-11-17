@@ -118,6 +118,7 @@
       }
     }
   }
+#include "iceberg_revision_scenery.hpp"
 #include "iceberg_scenery.hpp"
 #include "iceberg_sprites.hpp"
   void draw_iceberg_landmarks() {
@@ -442,8 +443,10 @@
     for(auto &s:lines)if(y<top+11)paint_text(y++,24,s,0xeee7d6);
     paint_text(top+11,24,tr("E / ENTER  dalej","E / ENTER  continue"),npc.color);
   }
+#include "iceberg_compact_render.hpp"
   void draw_iceberg() {
     draw_iceberg_world();
+    if(cols_<76||rows_<24){draw_iceberg_compact();return;}
     const auto &v=state_.adventure;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     fill(0,0,cols_,4,Color::Default);

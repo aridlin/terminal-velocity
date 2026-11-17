@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace iceberg {
-inline constexpr unsigned ContentVersion = 2;
+inline constexpr unsigned ContentVersion = 3;
 inline constexpr int DistrictCount = 6;
 // Content registry boundary: increment when another district is fully authored.
 inline constexpr int AuthoredDistrictCount = 2;
@@ -72,6 +72,7 @@ struct Record {
 };
 struct SeedRecord {uint32_t seed=1;int district=0;unsigned version=ContentVersion;Record record;};
 struct Expedition {
+  unsigned layout_version = ContentVersion;
   bool active = false;
   uint32_t seed = 1, origin_seed = 1;
   int district = 0, room = 0, depth = 0, checkpoint = 0;
@@ -91,6 +92,7 @@ struct Profile {
   bool started = false, finished = false, at_content_boundary = false, interlude = false;
   uint32_t seed = 1;
   unsigned content_version = ContentVersion;
+  unsigned layout_version = ContentVersion;
   int district = 0, stage = 0, room = 0;
   int unlocked = 0;
   uint64_t story = 0;

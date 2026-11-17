@@ -8,7 +8,9 @@
 #ifndef _WIN32
 #include <fcntl.h>
 #include <fstream>
+#ifndef __EMSCRIPTEN__
 #include <linux/input.h>
+#endif
 #include <map>
 #include <sstream>
 #include <sys/ioctl.h>
@@ -1217,6 +1219,7 @@ void update_camera(GameState &state, const EngineGrid &grid, int view_width,
   state.camera_y += (target_y - state.camera_y) * blend;
 }
 
+#ifndef __EMSCRIPTEN__
 struct TermSize {
   int rows = 24;
   int cols = 80;
@@ -1664,6 +1667,7 @@ private:
 #include "windows_console.hpp"
 #endif
 
+#endif
 enum class Color {
   Gold,
   Ghost,
@@ -1803,7 +1807,7 @@ public:
     buffer_.assign(rows_, std::vector<Cell>(cols_));
   }
   void draw() {
-    if (rows_ < 24 || cols_ < 76) {
+    if (rows_ < (grid_.adventure_level&&cols_>=56?20:24) || cols_ < (grid_.adventure_level?34:76)) {
       text(1, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Powiększ terminal do co najmniej 76 × 24.","Resize the window to at least 76 × 24."):"Powiększ terminal do co najmniej 76 × 24.");
       text(3, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Zalecane: 110 × 34. Q — wyjście.","Recommended: 110 × 34. Q — quit."):"Zalecane: 110 × 34. Q — wyjście.");
       flush();
@@ -2339,6 +2343,7 @@ std::filesystem::path audio_directory() {
 #include "iceberg_validation.hpp"
 #include "iceberg_runtime.hpp"
 
+#ifndef __EMSCRIPTEN__
 [[maybe_unused]] int run_game(double aspect, InputMode input_mode,
                               bool demo = false, bool event_level = false,
                               uint32_t seed = 1, bool summit = false,
@@ -2781,6 +2786,7 @@ iceberg::SessionOptions adventure_options(const Args &args) {
   session.persist();
   return session.legacy_requested?10:0;
 }
+#endif
 
 } // namespace
 

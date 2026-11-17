@@ -8,7 +8,7 @@ Platformówka o kurierze w mieście zbudowanym wewnątrz ogromnej góry lodowej.
 
 ## Co można zagrać
 
-Otwarcie obejmuje **Dolną Przystań** i **Ciepłownię Łazarz**: dwie osady, 24 zaprojektowane szablony tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Cztery zadania mieszkańców dają dostęp do listów, skrótu serwisowego, strojów i prób mistrzowskich.
+Otwarcie obejmuje **Dolną Przystań** i **Ciepłownię Łazarz**: dwie osady, 36 zaprojektowanych szablonów tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Cztery zadania mieszkańców dają dostęp do listów, skrótu serwisowego, strojów i prób mistrzowskich.
 
 Przywrócenie dolnych obiegów zamyka bieżącą awarię. Dalsza wspinaczka przez górne dzielnice jest przeznaczona na kolejne wydanie. To otwarcie celuje w około 20 minut z rozmowami i eksploracją. Automatyczne przejście z szacowanym czasem czytania daje około 18 minut — **nie jest to zmierzony czas pierwszego gracza**. Pełna dwugodzinna kampania nie jest jeszcze gotowa.
 

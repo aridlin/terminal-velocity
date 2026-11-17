@@ -1001,7 +1001,7 @@ int terminal_window_main(int argc,char **argv) {
         bool mission=scene.rfind("mission:",0)==0;
         int id=std::atoi(scene.c_str()+(mission?8:5));
         if(mission)session.grid=iceworld::build_harbor_mission(std::clamp(id,0,2));
-        else {id=std::clamp(id,0,int(iceworld::patterns().size())-1);session.grid=verified_room(id,73,id/12);}
+        else {const auto &layout=iceworld::pattern(id);session.grid=verified_room(layout.id,73,iceworld::district_of(layout));}
         session.district=session.grid.district;session.stage=2;session.state=new_state(session.grid);session.state.menu=false;
         if(scene.find(":mid")!=std::string::npos&&!session.grid.checkpoint_points.empty()) {
           auto [x,y]=session.grid.checkpoint_points[session.grid.checkpoint_points.size()/2];

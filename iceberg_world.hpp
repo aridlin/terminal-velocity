@@ -10,6 +10,7 @@ struct Pattern {
   Rhythm rhythm;
   std::vector<Pad> path;
   std::vector<Pad> optional;
+  int district = -1;
 };
 inline const std::vector<Pattern> &patterns() {
   static const std::vector<Pattern> values{
@@ -51,9 +52,12 @@ inline const std::vector<Pattern> &patterns() {
       {{27,42,5},{40,37,5},{54,32,5},{68,27,7},{84,28,5},{98,25,6}}}
 
 #include "iceberg_rooms_heat.inc"
+#include "iceberg_rooms_revision.inc"
   };
   return values;
 }
+
+inline int district_of(const Pattern &p) {return p.district<0?p.id/12:p.district;}
 
 inline const Pattern &pattern(int id) {
   const auto &all = patterns();
@@ -87,11 +91,11 @@ inline bool connects(const Pattern &from,const Pattern &to) {
   return a.exit.landing_width>=4&&b.entrance.landing_width>=4&&
     (a.exit.dash_available||!(b.required&Dash));
 }
-inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = RoomsPerLeg * 3) {
+inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = RoomsPerLeg * 3, unsigned layout_version=ContentVersion) {
   Random random{mix(seed ^ unsigned(district * 7919))};
   std::vector<int> pool;
-  for (const auto &p : patterns()) if (p.id / 12 == district) pool.push_back(p.id);
-  if (pool.empty()) for (const auto &p : patterns()) if (p.id / 12 == 0) pool.push_back(p.id);
+  for (const auto &p : patterns()) if (district_of(p) == district && (layout_version>=3||district>=2||p.id<24)) pool.push_back(p.id);
+  if (pool.empty()) for (const auto &p : patterns()) if (district_of(p) == 0) pool.push_back(p.id);
   std::vector<int> result;
   int previous = -1;
   while (int(result.size()) < count) {
@@ -106,6 +110,15 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
       for(size_t i=0;i<bag.size();++i) {
         const auto &candidate=pattern(bag[i]);
         int score=(candidate.rhythm==desired?0:3)+(bag[i]==previous?100:0);
+        // Reserve collection-task rooms before the final settlement visit.
+        // Expanding the library must not move a task's last object beyond its
+        // owner's last ordinary turn-in opportunity.
+        auto reserved=[&](int id){return district==0?(id==0||id==4||id==8):
+          district==1?(id==12||id==13||id==16||id==17||id==20||id==21):false;};
+        if(layout_version>=3&&count>=16&&result.size()<16) {
+          int outstanding=int(std::count_if(bag.begin(),bag.end(),reserved));
+          if(16-int(result.size())<=outstanding&&!reserved(bag[i]))score+=10000;
+        }
         if(previous>=0) {
           if(!connects(pattern(previous),candidate))score+=1000;
           if(pattern(previous).rhythm==candidate.rhythm)score+=5;
@@ -144,12 +157,12 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
     auto p = spec.path[i];
     // Trials demand accurate landings while retaining the room's silhouette.
     if(expert&&i>0&&i+1<spec.path.size()&&p.w>=7&&spec.rhythm!=Rhythm::Vertical){++p.x;p.w-=2;}
-    if (p.kind == 'm') {
+    if (p.kind == 'm'||p.kind=='h'||p.kind=='v') {
       // Conservative movement envelopes preserve both neighboring landings.
-      g.platforms.push_back({{double(p.x), double(p.y), double(p.w), .5}, .6, .5, stable?4.5:3.5+variation.below(21)*.1, stable?0.:variation.below(100)*.01});
+      g.platforms.push_back({{double(p.x), double(p.y), double(p.w), .5}, p.kind=='h'?2.8:p.kind=='v'?0.:.6, p.kind=='v'?1.8:p.kind=='h'?0.:.5, stable?4.5:3.5+variation.below(21)*.1, stable?0.:variation.below(100)*.01});
     } else g.add_solid_rect(p.x, p.y, p.w+(!stable&&i+1<spec.path.size()&&spec.rhythm!=Rhythm::Vertical?variation.below(2):0), 2);
     if (i) g.route_points.push_back({p.x + p.w * .5, double(p.y)});
-    if (i && i % 4 == 0 && p.kind != 'm')
+    if (i && i % 4 == 0 && p.kind != 'm'&&p.kind!='h'&&p.kind!='v')
       g.checkpoint_points.push_back({p.x + 1.5, p.y - kPlayerHeight});
     if (i % 3 == 2) g.sweets.push_back({p.x + p.w * .5, p.y - 2.3});
     if (i > 0 && i % 4 == 2) {
@@ -163,25 +176,36 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
     g.sweets.push_back({p.x + p.w * .5, p.y - 1.5});
     if (i % 2 == 0) g.refills.push_back({p.x - 2., p.y + 1.});
   }
-  if (!spec.optional.empty() && (id % 12 == 0 || id % 12 == 4 || id % 12 == 8)) {
+  if (id<24 && !spec.optional.empty() && (id % 12 == 0 || id % 12 == 4 || id % 12 == 8)) {
     auto p = spec.optional.back();
     int quest = district == 0 ? 0 : district == 1 ? 1 : district == 2 ? 2 : district == 3 ? 4 : 5;
     g.interactions.push_back({{p.x + 1.,p.y - 2.,2,2},InteractionKind::Task,quest,
       quest==1?Text{"Otwórz zawór","Open valve"}:quest==2?Text{"Napraw sygnał","Repair signal"}:quest==4?Text{"Zabierz teczkę","Recover file"}:
       quest==5?Text{"Zabierz nasiona","Take seeds"}:Text{"Zbadaj przesyłkę","Inspect parcel"},quest * 3 + (id % 12) / 4});
   }
-  if(!spec.optional.empty() && ((district==2&&id%4==2)||(district==1&&id%4==1))) {
+  if(id<24 && !spec.optional.empty() && ((district==2&&id%4==2)||(district==1&&id%4==1))) {
     auto p=spec.optional.back();int quest=district==2?3:7;
     g.interactions.push_back({{p.x+1.,p.y-2.,2,2},InteractionKind::Task,quest,
       quest==3?Text{"Sprawdź tabliczkę","Read the plaque"}:Text{"Dostrój głośnik","Tune speaker"},quest*3+(id%12)/4});
   }
   // Catching a fall is a fast retry; no long free fall beneath the room.
   g.add_hazard_rect(0, 62, width, 2);
-  if(district==1 && !stable && (spec.rhythm==Rhythm::Timing||spec.rhythm==Rhythm::Precision)) {
+  if(id<24 && district==1 && !stable && (spec.rhythm==Rhythm::Timing||spec.rhythm==Rhythm::Precision)) {
     for(size_t i=3;i+1<spec.path.size();i+=4) {
       auto p=spec.path[i];if(p.kind=='m'||p.w<10)continue;
       g.pulses.push_back({{p.x+p.w*.5,p.y-2.5,1.2,2.5},4.2,variation.below(100)*.01});
     }
+  }
+  // Broad ceilings create low passages, followed by exposed leaps. They are
+  // behind/below the optional upper route, never camouflage for a hazard.
+  if(id==400||id==420) {
+    for(size_t i=1;i<4;++i){auto p=spec.path[i];g.add_solid_rect(p.x-1,0,p.w+2,p.y-6);}
+  }
+  if(id==403) {
+    for(int i:{1,4}){auto p=spec.path[size_t(i)];g.add_hazard_rect(p.x+p.w-1,p.y-1,1,1);}
+  }
+  if(id==423) {
+    for(int i:{1,3,5}){auto p=spec.path[size_t(i)];g.pulses.push_back({{p.x+7.,p.y-2.5,1.5,2.5},4.8,double(i)*.13});}
   }
   return g;
 }

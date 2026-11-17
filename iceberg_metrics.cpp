@@ -23,7 +23,7 @@ int main(int argc,char **argv) {
     if(!first)std::cout<<",\n";
     first=false;
     auto meta=iceworld::describe(p);
-    std::cout<<"    {\"id\":"<<p.id<<",\"district\":"<<p.id/12<<",\"main_landings\":"<<p.path.size()
+    std::cout<<"    {\"id\":"<<p.id<<",\"district\":"<<iceworld::district_of(p)<<",\"main_landings\":"<<p.path.size()
       <<",\"optional_landings\":"<<p.optional.size()<<",\"moving_landings\":"<<moving
       <<",\"ascent\":"<<ascent<<",\"descent\":"<<descent<<",\"direction_changes\":"<<turns
       <<",\"difficulty\":"<<meta.difficulty<<",\"safe_rest_points\":"<<meta.resting_points.size()<<"}";

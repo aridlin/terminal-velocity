@@ -33,3 +33,5 @@ iceberg_mastery_tests
 /.build-windows/
 /SDL2.dll
 /iceberg_branch_tests
+
+/web/dist/
