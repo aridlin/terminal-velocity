@@ -319,8 +319,17 @@ enum class InputMode {
 struct MovingPlatform {
   Rect base;
   double dx = 0, dy = 0, period = 4, phase = 0;
+  bool tram = false;
+  double offset(double t) const {
+    const double cycle=t/period+phase;
+    if(!tram)return std::sin(cycle*6.283185307179586);
+    const double half_cycle=std::fmod(cycle,1.)*2;
+    const double travel=std::clamp((std::fmod(half_cycle,1.)-.22)/.78,0.,1.);
+    const double eased=travel*travel*(3-2*travel);
+    return half_cycle<1?2*eased-1:1-2*eased;
+  }
   Rect at(double t) const {
-    double a = std::sin((t / period + phase) * 6.283185307179586);
+    const double a=offset(t);
     return {base.x + dx * a, base.y + dy * a, base.w, base.h};
   }
 };

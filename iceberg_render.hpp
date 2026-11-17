@@ -235,7 +235,9 @@
       auto [x,y]=grid_.refills[i];refill_art(x,y,state_.refill_cooldown[i]>0);
     }
     for(size_t i=0;i<grid_.platforms.size();++i) {
-      const auto r=grid_.platforms[i].at(state_.elapsed);
+      const auto &platform=grid_.platforms[i];
+      const auto r=platform.at(state_.elapsed);
+      if(platform.tram){draw_estate_tram(platform,r);continue;}
       if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}
       std::string line;
       int n=std::max(2,int(r.w/scale_));

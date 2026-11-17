@@ -156,6 +156,18 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   return recovery_room_for(candidate);
 }
 
+inline void add_expedition_trams(EngineGrid &room) {
+  if(room.district!=2||room.template_id!=24||room.platforms.size()!=3)return;
+  auto original=room.platforms;
+  for(size_t i=0;i<room.platforms.size();++i) {
+    auto &tram=room.platforms[i];
+    tram.dx=7.5;tram.period=6.;tram.phase=i*.17;tram.tram=true;
+  }
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.platforms=std::move(original);
+}
+
 inline void add_expedition_steam(EngineGrid &room) {
   if(room.district!=1||(room.template_id!=18&&room.template_id!=22))return;
   if(room.template_id==18)room.air_fields.push_back({{59.2,29.,2.6,19.},0.,-165.,4.8,0.});

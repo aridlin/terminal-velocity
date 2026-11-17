@@ -187,6 +187,29 @@ int main(int argc,char **argv) {
       session.options.seed_override=false;session.begin_campaign(true);
       check(session.profile.seed!=9999,"a fresh unseeded journey assembles a new campaign itinerary");
     }
+    options.no_save=true;
+    AdventureSession estate(options,path);
+    estate.begin_campaign(true);
+    estate.profile.unlocked=2;estate.run_district=2;
+    auto &run=estate.profile.expeditions[0];
+    run={};
+    run.active=true;run.district=2;run.seed=run.origin_seed=73;
+    run.itinerary={24,25,26,27,28,29,30,31};
+    estate.begin_run(iceberg::Mode::Endless);
+    check(estate.grid.template_id==24&&estate.grid.platforms.size()==3&&
+      std::all_of(estate.grid.platforms.begin(),estate.grid.platforms.end(),[](const auto &platform){return platform.tram;}),
+      "Windowsill Estate's tram room runs scheduled shuttles in current Endless layouts");
+    const auto &tram=estate.grid.platforms.front();
+    check(tram.at(0).x==tram.at(.5).x&&tram.at(3.).x==tram.at(3.5).x&&tram.at(3.).x-tram.at(0).x==15.,
+      "the first tram stops at both landings and spans the street");
+    auto rider=new_state(estate.grid);
+    rider.player.x=tram.at(0).x+3.;rider.player.y=tram.base.y-kPlayerHeight;
+    for(int tick=0;tick<360;++tick)world_step(rider,estate.grid,{},1./120);
+    check(rider.player.support==0&&std::abs(rider.player.x-(tram.at(3.).x+3.))<.02&&rider.deaths==0,
+      "the tram carries a standing courier between stops");
+    run.layout_version=2;estate.load_room();
+    check(estate.grid.template_id==24&&!estate.grid.platforms.front().tram,
+      "older Endless saves keep the original tram room movement");
     std::filesystem::remove(path);std::filesystem::remove(backup);
     return 0;
   } catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}

@@ -1,3 +1,26 @@
+  void draw_estate_tram(const MovingPlatform &platform,const Rect &tram) {
+    const double row=aspect_*scale_;
+    const double left=platform.base.x-platform.dx;
+    const double right=platform.base.right()+platform.dx;
+    const double track_y=tram.y+3*row;
+    std::string rail="╞";
+    for(int i=1;i<int((right-left)/scale_)-1;++i)rail+=(i%4==0?"╪":"═");
+    world_art(left,track_y,{rail+"╡"},0x71647d);
+    const double travel=platform.offset(state_.elapsed);
+    world_art(left+2*scale_,tram.y+row,{"╥","║",travel<=-1?"●":"○","╨"},travel<=-1?0xefcd74:0x71647d);
+    world_art(right-scale_,tram.y+row,{"╥","║",travel>=1?"●":"○","╨"},travel>=1?0xefcd74:0x71647d);
+
+    std::string roof="╭",windows="│",sill="╰";
+    const int cells=std::max(4,int(tram.w/scale_));
+    for(int i=1;i<cells-1;++i) {
+      roof+="━";
+      windows+=(i%5==0?"│":i%5==1?"▐":i%5==4?"▌":"░");
+      sill+=(i==2||i==cells-3?"●":"─");
+    }
+    world_text(tram.x,tram.y,roof+"╮",0xe4ad68);
+    world_art(tram.x,tram.y+row,{windows+"│",sill+"╯"},0xc0a487,true);
+  }
+
 // Repeated infrastructure follows the landings in expeditions. Keep the art
 // behind the route so decorations never become apparent stepping stones.
   void draw_expedition_infrastructure() {

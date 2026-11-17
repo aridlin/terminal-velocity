@@ -207,7 +207,10 @@ public:
         if(e.itinerary.size()!=iceberg::RoomsPerLeg)e.itinerary=iceworld::make_itinerary(run_seed,district,iceberg::RoomsPerLeg,e.layout_version);
         grid=verified_room(e.itinerary[size_t(room % iceberg::RoomsPerLeg)],
           iceberg::mix(run_seed+unsigned(depth)),district,mode==iceberg::Mode::Trial);
-        if(mode==iceberg::Mode::Endless&&e.layout_version>=4)add_expedition_steam(grid);
+        if(mode==iceberg::Mode::Endless&&e.layout_version>=4) {
+          add_expedition_steam(grid);
+          add_expedition_trams(grid);
+        }
       }
     }
     if(mode==iceberg::Mode::Campaign && profile.quests[1]==3 && district==1 && room==0 && grid.room_role==iceberg::RoomRole::Traverse)
