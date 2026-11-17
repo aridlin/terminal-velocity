@@ -158,6 +158,33 @@ const server=http.createServer((req,res)=>{
    assert.ok(Math.abs(ratio.bitmap-ratio.display)<.01,'canvas aspect preserved '+JSON.stringify(size));
    assert.equal(await page.locator('[data-language="en"]').isVisible(),true,'entry language visible '+JSON.stringify(size));
   }
+  for(const fallback of [false,true]){
+   if(fallback)await page.evaluate(()=>{
+    document.querySelector('#playfield').requestFullscreen=async()=>{throw Error('fullscreen unavailable');};
+   });
+   await page.setViewportSize({width:320,height:700});
+   await page.locator('#fullscreen').tap();
+   await page.waitForFunction(()=>expanded());
+   assert.equal(await page.evaluate(()=>!!document.fullscreenElement),!fallback);
+   const tools=page.locator('#fullscreen-tools');
+   for(const [key,flag] of [[11,128],[10,64]]){
+    const button=tools.locator('[data-tap="'+key+'"]');
+    assert.equal(await button.count(),1,'fullscreen keeps Map and Quests in reach');
+    await button.tap();
+    await page.waitForFunction(flag=>!!(uiFlags&flag),flag);
+    await button.tap();
+    await page.waitForFunction(flag=>!(uiFlags&flag),flag);
+   }
+   const bounds=await tools.locator('button:visible').evaluateAll(buttons=>buttons.every(button=>{
+    const rect=button.getBoundingClientRect();
+    return rect.left>=0&&rect.right<=window.innerWidth&&rect.bottom<=window.innerHeight;
+   }));
+   assert.ok(bounds,'fullscreen tools fit a narrow phone');
+   await page.screenshot({path:path.join(out,fallback?'web-fullscreen-fallback.png':'web-fullscreen-touch.png')});
+   await page.locator('#leave-fullscreen').tap();
+   await page.waitForFunction(()=>!expanded());
+  }
+  console.log('PASS mobile native and fallback fullscreen Map and Quests controls');
   console.log('PASS mobile, landscape, resized and large canvas preserve proportions; language remains reachable');await mobile.close();
   assert.deepEqual(errors,[],'browser errors');console.log(visualOnly?'PASS current Chromium/WASM visual smoke':'PASS real Chromium/WASM entry, save-language restoration and responsive rendering');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

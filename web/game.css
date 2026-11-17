@@ -21,8 +21,13 @@
 
 #playfield{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;background:#101923}
 #playfield:fullscreen,#playfield.expanded{width:100vw;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-#fullscreen-tools{display:none;flex-shrink:0;justify-content:center;gap:6px;padding:5px 8px}
-#fullscreen-tools button{font-size:12px;min-height:34px}
+#fullscreen-tools{display:none;flex-shrink:0;flex-wrap:wrap;justify-content:center;gap:6px;padding:5px 8px}
+#fullscreen-tools button{font-size:12px;min-height:34px;padding:4px 8px}
+@media(pointer:coarse){#fullscreen-tools button{min-height:44px}}
+@media(max-width:360px){
+ #touch{gap:8px;padding-inline:8px}
+ #touch button{min-width:44px;padding-inline:6px}
+}
 @media(pointer:coarse),(max-width:760px),(max-height:500px){#playfield:fullscreen #fullscreen-tools,#playfield.expanded #fullscreen-tools{display:flex}}
 
 #playfield.expanded{position:fixed;inset:0;z-index:10}
