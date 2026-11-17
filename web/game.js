@@ -23,6 +23,7 @@ async function suggestLanguage(){
 const locationLanguage=suggestLanguage();
 const pointers=new Map(),keyboard=new Set(),tiles=new Map();
 let dashShift='';
+let frameWasStalled=false;
 let storageFlushQueued=false;
 let cellPixels=10;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
@@ -343,7 +344,20 @@ saveFile.onchange=async()=>{
   finishImport();
  }
 };
-function frame(now){if(accounts.active)accounts.draw();else if(started&&!importPending){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);clearPresses();}last=now;requestAnimationFrame(frame);}
+function frame(now){
+ const elapsed=Math.max(0,(now-last)/1000);
+ const stalled=elapsed>.5;
+ // Resume with a normal step after an isolated stall so rapid motion stays visible.
+ const dt=stalled&&!frameWasStalled?1/60:Math.min(.1,elapsed);
+ frameWasStalled=stalled;
+ if(accounts.active)accounts.draw();
+ else if(started&&!importPending){
+  Module._web_tick(dt,held,pressed,cols,rows,focused?1:0);
+  clearPresses();
+ }
+ last=now;
+ requestAnimationFrame(frame);
+}
 start.onclick=()=>{
  if(!ready||started)return;
  try {
