@@ -8,6 +8,7 @@ struct StoryReview {
   double reading_estimate=0;
   void read_dialogue() {
     while(game.state.adventure.dialogue.active()) {
+      if(game.state.adventure.dialogue.revealing)game.dialogue_next();
       auto text=game.state.adventure.dialogue.lines[game.state.adventure.dialogue.page].text.get(game.profile.language);
       std::istringstream input(text);std::string word;int n=0;while(input>>word)++n;
       words+=n;++pages;reading_estimate+=n/3.+.6;

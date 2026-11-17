@@ -240,13 +240,40 @@ public:
   }
   void talk(std::vector<iceberg::DialogueLine> lines,int action=0) {
     state.adventure.dialogue={std::move(lines),0,action};stepper={};
-    state.player.vx=0;audio.play(AudioCue::Voice);
+    state.player.vx=0;
+  }
+  void tick_dialogue(double dt) {
+    auto &dialogue=state.adventure.dialogue;
+    if(!dialogue.active()||!dialogue.revealing)return;
+    const auto &line=dialogue.lines[dialogue.page];auto text=line.text.get(profile.language);
+    dialogue.character_delay-=dt;dialogue.speech_delay=std::max(0.,dialogue.speech_delay-dt);
+    bool voiced=false;
+    static const double rates[]={39,34,36,43,33,37,46,31};
+    while(dialogue.character_delay<=0&&dialogue.byte_cursor<text.size()) {
+      unsigned char ch=text[dialogue.byte_cursor];
+      size_t bytes=ch<128?1:ch<224?2:ch<240?3:4;
+      dialogue.byte_cursor+=std::min(bytes,text.size()-dialogue.byte_cursor);
+      if(ch==' '||ch=='\n'||ch=='\t'||ch=='\r')continue;
+      ++dialogue.visible_characters;
+      double delay=1./rates[size_t(std::clamp(line.speaker,0,7))];
+      if(ch=='.'||ch=='!'||ch=='?')delay+=.19;
+      else if(ch==','||ch==';'||ch==':')delay+=.09;
+      dialogue.character_delay+=delay;
+      bool letter=ch>=128||(ch>='A'&&ch<='Z')||(ch>='a'&&ch<='z')||(ch>='0'&&ch<='9');
+      if(letter&&dialogue.speech_delay<=0&&!voiced) {
+        if(line.speaker>=0)audio.play(AudioCue(int(AudioCue::Talk0)+std::clamp(line.speaker,0,7)),.86f+float(dialogue.visible_characters%3)*.06f);
+        else audio.play(AudioCue::Paper,.12f);
+        dialogue.speech_delay=line.speaker<0?.22:.075;voiced=true;
+      }
+    }
+    if(dialogue.byte_cursor>=text.size())dialogue.revealing=false;
   }
   void dialogue_next() {
     auto &dialogue=state.adventure.dialogue;
     if(!dialogue.active())return;
+    if(dialogue.revealing){dialogue.reveal_all();return;}
     ++dialogue.page;
-    if(dialogue.active()){audio.play(AudioCue::Paper);return;}
+    if(dialogue.active()){dialogue.reset_reveal();audio.play(AudioCue::Paper,.4f);return;}
     int action=dialogue.action;
     dialogue={};
     if(action==1) {
@@ -600,7 +627,7 @@ public:
     audio.set_environment(grid.district,grid.room_role==iceberg::RoomRole::Secret);
     if(c.quit){persist();running=false;return;}
     if(c.mute_audio)audio.muted=!audio.muted;
-    if(c.language&&!state.menu){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
+    if(c.language&&!state.menu){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;if(state.adventure.dialogue.active())state.adventure.dialogue.reset_reveal();persist();}
     if(!focused && previous_focus){state.paused=true;stepper={};}
     previous_focus=focused;
     if(!focused)c={};
@@ -625,7 +652,12 @@ public:
       inspect_nearby();sync_view();if(v.inspecting)return;
     }
     if(v.dialogue.active()) {
-      if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
+      if(state.paused&&(c.confirm||c.interact)){state.paused=false;audio.update(AudioScene::Paused,music_track(),dt,focused);return;}
+      if(c.pause)state.paused=!state.paused;
+      if(focused&&!state.paused) {
+        if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
+        else tick_dialogue(dt);
+      }
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
     if(c.journal){state.journal=!state.journal;v.map=false;stepper={};}

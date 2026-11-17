@@ -466,6 +466,14 @@
       tr("W/S wybierz   ENTER / J wróć","W/S select   ENTER / J return")):
       tr("W/S wybierz   E czytaj nagrodę   TAB wróć","W/S select   E read reward   TAB return"));
   }
+  std::string dialogue_fragment(const std::string &line,size_t &remaining) const {
+    std::string shown;
+    for(const auto &ch:glyphs(line)) {
+      if(ch==" "){shown+=' ';continue;}
+      if(remaining){shown+=ch;--remaining;}else shown+=' ';
+    }
+    return shown;
+  }
   void draw_iceberg_dialogue() {
     const auto &dialogue=state_.adventure.dialogue;
     if(!dialogue.active())return;
@@ -482,9 +490,9 @@
       paint_text(top+3+i,4,portrait,npc.color);
     }
     auto lines=wrap(line.text.get(state_.adventure.language),cols_-28);
-    int y=top+4;
-    for(auto &s:lines)if(y<top+11)paint_text(y++,24,s,0xeee7d6);
-    paint_text(top+11,24,tr("E / ENTER  dalej","E / ENTER  continue"),npc.color);
+    int y=top+4;size_t remaining=dialogue.visible_characters;
+    for(auto &s:lines)if(y<top+11)paint_text(y++,24,dialogue_fragment(s,remaining),0xeee7d6);
+    paint_text(top+11,24,state_.paused?tr("E / ENTER  wznów","E / ENTER  resume"):dialogue.revealing?tr("E / ENTER  pokaż całość","E / ENTER  reveal line"):tr("E / ENTER  dalej","E / ENTER  continue"),npc.color);
   }
 #include "iceberg_compact_render.hpp"
   void draw_iceberg() {

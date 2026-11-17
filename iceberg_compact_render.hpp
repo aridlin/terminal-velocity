@@ -76,8 +76,9 @@
       }
       auto title=wrap(line.speaker<0?tr("Odnaleziony zapis","Recovered record"):npc.title.get(v.language),cols_-22);
       for(size_t i=0;i<title.size()&&i<7;++i)paint_text(3+int(i),20,title[i],d.light);
-      y=11;compact_paragraph(y,line.text.get(v.language),rows_-2);
-      paint_text(rows_-2,2,tr("E / ENTER dalej","E / ENTER continue"),npc.color);
+      y=11;size_t remaining=v.dialogue.visible_characters;
+      for(const auto &part:wrap(line.text.get(v.language),cols_-4))if(y<rows_-2)paint_text(y++,2,dialogue_fragment(part,remaining),0xeee7d6);
+      paint_text(rows_-2,2,state_.paused?tr("E / ENTER wznów","E / ENTER resume"):v.dialogue.revealing?tr("E / ENTER pokaż całość","E / ENTER reveal line"):tr("E / ENTER dalej","E / ENTER continue"),npc.color);
     }
     if(v.inspecting)draw_iceberg_inspection();
   }

@@ -20,7 +20,7 @@ int main() {
     for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
       game.profile.language=language;game.sync_view();
       for(size_t id=0;id<content.size();++id) {
-        const auto &line=content[id];game.talk({line});
+        const auto &line=content[id];game.talk({line});game.dialogue_next();
         RenderGrid(game.grid,game.state,24,76,2).draw();
         std::string shown;
         for(int row=13;row<20;++row){for(int col=24;col<72;++col)shown+=frame[size_t(row)][size_t(col)].glyph;shown+=' ';}

@@ -14,6 +14,8 @@ The current journey reaches the original network plan in the frozen archive. Aut
 
 Afterwards, revisit settlements and authored routes, start endless expeditions, or attempt the four district mastery trials. Each trial combines seven expert rooms with a final movement examination. Time, fewest retries and collection records are independent. Explicit seeds have separate records; mastery unlocks a visible badge and outfit.
 
+Dialogue appears character by character, with short recorded voices. **E / Enter** reveals the current page immediately; press again to continue. **P** pauses the dialogue.
+
 Polish is the default. **L** in the menu switches to English, including dialogue, objectives and controls. Observation and exploration are rewarded, but optional discoveries never gate the ordinary story.
 
 ## Start playing

@@ -137,10 +137,10 @@ bool GameAudio::ensure_ready() {
   const char *names[] = {"jump",       "dash",   "pickup", "death",
                          "checkpoint", "land",   "step1",  "step2",
                          "refill", "spring", "menu", "win",
-    "wood1", "wood2", "metal1", "metal2", "stone1", "stone2", "valve", "voice", "paper", "bounce", "door", "steam", "lift", "cloth", "motor", "rumble", "spark"};
+    "wood1", "wood2", "metal1", "metal2", "stone1", "stone2", "valve", "voice", "paper", "bounce", "door", "steam", "lift", "cloth", "motor", "rumble", "spark", "talk0", "talk1", "talk2", "talk3", "talk4", "talk5", "talk6", "talk7"};
   const float volumes[] = {.45f, .4f,  .35f, .4f, .4f,  .3f,
                            .17f, .17f, .35f, .4f, .22f, .45f,
-    .38f,.38f,.32f,.32f,.4f,.4f,.55f,.3f,.42f,.4f, .32f,.22f,.25f,.2f,.36f,.42f,.25f};
+    .38f,.38f,.32f,.32f,.4f,.4f,.55f,.3f,.42f,.4f, .32f,.22f,.25f,.2f,.36f,.42f,.25f, .40f,.38f,.36f,.36f,.34f,.38f,.34f,.32f};
   std::copy(std::begin(volumes), std::end(volumes), impl_->effect_levels.begin());
   for (size_t i = 0; i < size_t(AudioCue::Count); ++i)
     for (auto &voice : impl_->effects[i])

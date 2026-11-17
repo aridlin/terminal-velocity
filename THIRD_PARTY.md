@@ -15,3 +15,7 @@ Downloaded archive SHA-256:
 
 - `SDL2-devel-2.32.10-mingw.tar.gz`: `83a5d74012311edc3c0d40ea6faecbe57ad692aa033fa5dc273cc937e3938ff2`
 - `freetype-2.14.1.tar.xz`: `32427e8c471ac095853212a37aef816c60b42052d4d9e48230bab3bdf2936ccc`
+
+### Recorded character dialogue
+
+The short `talk0.wav`–`talk7.wav` syllables are edited excerpts of male and female performances from **Kenney — Voiceover Pack**, released under **CC0 1.0**. Sources: https://kenney.nl/assets/voiceover-pack and https://lpc.opengameart.org/content/voiceover-pack-40-lines . The original license is retained in `assets/audio/KENNEY-VOICE-LICENSE.txt`. Per-file originals, hashes, excerpt offsets and processing are in `assets/audio/manifest.json`; `tools/prepare_dialogue_audio.py` reproduces them. These are recordings, not generated oscillator or speech-synthesizer tones.

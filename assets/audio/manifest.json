@@ -378,5 +378,85 @@
     "source_sha256": "5ea1f077585fb655220a19bcd5cfaf44d60151652339cdcecc86b1fc3b4fe94d",
     "changes": "Recorded excerpt/loop up to 0.55s; highpass=f=1400,lowpass=f=7000; -23 LUFS / -8 dBTP; edge fades; 24 kHz mono PCM.",
     "sha256": "c1c2b04645fd763b257d930db2bc54ec138678498f2e54252b4637dae0191350"
+  },
+  {
+    "file": "talk0.wav",
+    "source": "Female/1.ogg",
+    "source_url": "https://lpc.opengameart.org/content/voiceover-pack-40-lines",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "fb84ff9f243c2dcbbd22e6f1a553f2d39808686df06e4a83a75c557af7f8e802",
+    "changes": "Recorded vocal excerpt after leading silence, offset 0.09s, duration85ms; pitch ratio1.0; 130Hz high-pass/4600Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
+    "sha256": "c1ae7f421c555579bec30eed41d1934ccd5569c3351f41803a6bc5319e45f962"
+  },
+  {
+    "file": "talk1.wav",
+    "source": "Male/1.ogg",
+    "source_url": "https://lpc.opengameart.org/content/voiceover-pack-40-lines",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "58ecc2a3d1528f75ee74d1fed84586afbafce5134a27e1ba1dcc3dcd42074d4d",
+    "changes": "Recorded vocal excerpt after leading silence, offset 0.1s, duration85ms; pitch ratio0.88; 130Hz high-pass/3600Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
+    "sha256": "cbb5a705f5bba7624e983b2b3297510ec170c4537ac43084e9cd36fac2243dc6"
+  },
+  {
+    "file": "talk2.wav",
+    "source": "Male/go.ogg",
+    "source_url": "https://lpc.opengameart.org/content/voiceover-pack-40-lines",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "35c7b85d74935a2718e067ba26cdddbb114ccea23fa7253ad2586a9065f1bec1",
+    "changes": "Recorded vocal excerpt after leading silence, offset 0.08s, duration85ms; pitch ratio0.96; 130Hz high-pass/3900Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
+    "sha256": "335287113b615f3700dbb2e7192c9964e749c1f4121d81a88428597ea352ad5b"
+  },
+  {
+    "file": "talk3.wav",
+    "source": "Female/go.ogg",
+    "source_url": "https://lpc.opengameart.org/content/voiceover-pack-40-lines",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "1ba6aa2cb3710fd7c6e021622b4ef0428a0107c8f2db2e0dda8de8bcbdb56fd3",
+    "changes": "Recorded vocal excerpt after leading silence, offset 0.08s, duration85ms; pitch ratio0.92; 130Hz high-pass/4300Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
+    "sha256": "f43ba5039bf3d788c267a68ca59031f4a5e842e4798abdf2d0cbf3a55c55c5c0"
+  },
+  {
+    "file": "talk4.wav",
+    "source": "Female/level.ogg",
+    "source_url": "https://lpc.opengameart.org/content/voiceover-pack-40-lines",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "56481d2e7f433cf697e98dae5c512602c95540c939ab2209e0378f541a2cd7de",
+    "changes": "Recorded vocal excerpt after leading silence, offset 0.09s, duration85ms; pitch ratio0.86; 130Hz high-pass/3800Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
+    "sha256": "b2a9e6807a32eb3b69af054e657553ab307813a9eb8cf6416c03a6766c1541b6"
+  },
+  {
+    "file": "talk5.wav",
+    "source": "Female/2.ogg",
+    "source_url": "https://lpc.opengameart.org/content/voiceover-pack-40-lines",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "47fc7222f50c56e6c242bfc0b669ee54085383f8afbd057489b09645f5e857e4",
+    "changes": "Recorded vocal excerpt after leading silence, offset 0.1s, duration85ms; pitch ratio1.04; 130Hz high-pass/4900Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
+    "sha256": "d5a6a955ccfac25d629548e36e3c07fc328e4226ba73ec8815fe6e9e84401366"
+  },
+  {
+    "file": "talk6.wav",
+    "source": "Male/level.ogg",
+    "source_url": "https://lpc.opengameart.org/content/voiceover-pack-40-lines",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "5525dadb547b1a7028399195073357321fe61e6e49dc8c8cccc53a7e00afe99e",
+    "changes": "Recorded vocal excerpt after leading silence, offset 0.08s, duration85ms; pitch ratio1.13; 130Hz high-pass/4800Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
+    "sha256": "13624955f41d59cc7b517127c39e6535fdab0932236f21b51338a27ab7b4f0b4"
+  },
+  {
+    "file": "talk7.wav",
+    "source": "Male/1.ogg",
+    "source_url": "https://lpc.opengameart.org/content/voiceover-pack-40-lines",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source_sha256": "58ecc2a3d1528f75ee74d1fed84586afbafce5134a27e1ba1dcc3dcd42074d4d",
+    "changes": "Recorded vocal excerpt after leading silence, offset 0.1s, duration85ms; pitch ratio0.73; 130Hz high-pass/1700Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
+    "sha256": "4cc029ccc6502973c4b36294dc8bc0b70bd509d88061f29ea26a6aca7887403c"
   }
 ]

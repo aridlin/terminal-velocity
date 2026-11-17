@@ -41,8 +41,10 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         assert 'HELENA' in screen(t)
         t.send('b');pump([t],.10)
         t.send('e');expect(t,'HELENA')
-        assert 'You' in screen(t),screen(t)
-        for _ in range(6):t.send('e');pump([t],.10)
+        expect(t,'You')
+        for _ in range(20):
+            if 'E / ENTER' not in screen(t):break
+            t.send('e');pump([t],.10)
         t.send('\t');expect(t,"COURIER'S JOURNAL")
         t.send('\t');pump([t],.10)
         t.send('j');expect(t,'DISTRICTS OF THE ICEBERG')

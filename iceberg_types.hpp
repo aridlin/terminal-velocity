@@ -132,6 +132,11 @@ struct Dialogue {
   std::vector<DialogueLine> lines;
   size_t page = 0;
   int action = 0;
+  size_t visible_characters=0, byte_cursor=0;
+  double character_delay=0, speech_delay=0;
+  bool revealing=true;
+  void reset_reveal(){visible_characters=byte_cursor=0;character_delay=speech_delay=0;revealing=true;}
+  void reveal_all(){visible_characters=size_t(-1);revealing=false;}
   bool active() const { return page < lines.size(); }
 };
 struct View {

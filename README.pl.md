@@ -6,6 +6,8 @@ Platformówka o kurierze w mieście zbudowanym wewnątrz ogromnej góry lodowej.
 
 [English guide](README.md) · [Trasy klasyczne](docs/LEGACY.pl.md) · [Rozwój gry](DEVELOPMENT.md)
 
+Rozmowy pojawiają się litera po literze, z krótkimi nagranymi głosami. **E / Enter** pokazuje od razu całą stronę; kolejne naciśnięcie przechodzi dalej. **P** wstrzymuje rozmowę.
+
 ## Co można zagrać
 
 Otwarcie obejmuje **Dolną Przystań**, **Ciepłownię Łazarz** **Osiedle Parapet** i **Archiwum Ciszy**: cztery osady, 60 zaprojektowanych szablonów tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Siedem zadań mieszkańców daje dostęp do listów, skrótów serwisowych i tramwajowych, ogrodu na dachu, strojów i prób mistrzowskich.
