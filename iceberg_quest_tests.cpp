@@ -123,7 +123,7 @@ int main() {
       // verified here and the campaign checkpoint restoration has its own test.
       game.profile.hidden_room=-1;
     }
-    game.state.journal=true;game.state.adventure.selected=0;game.profile.quests[0]=3;
+    game.state.journal=true;game.state.adventure.journal_tab=1;game.state.adventure.selected=0;game.profile.quests[0]=3;game.sync_view();
     double journal_x=game.state.player.x;interact(game);
     require_quest(game.state.adventure.dialogue.lines.size()==3,"completed mail task unlocks actual letters through the journal controls");
     finish_dialogue(game);

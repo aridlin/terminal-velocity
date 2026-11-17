@@ -87,7 +87,7 @@
     case 3:
       if(a%23==0)return c("│",shade);
       if(b%13==0&&a%23<16)return c("─",shade);
-      if((b%13==4||b%13==6||b%13==8)&&a%23>=3&&a%23<13)return c(a%2?"▥":"▤",shade);
+      if((b%13==4||b%13==8)&&a%23>=3&&a%23<13&&a%2)return c("▥",shade);
       break;
     case 4:
       if(a%21==0)return c("│",shade);
@@ -131,6 +131,7 @@
   void draw_iceberg_landmarks() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     if(grid_.template_id==330){draw_epilogue_landmarks();return;}
+    if(iceworld::harbor_v4_room(grid_.template_id)||iceworld::harbor_v4_mission(grid_.template_id)||grid_.template_id==600||grid_.template_id==601){draw_harbor_landmarks();return;}
     if(grid_.district==5&&grid_.room_role!=iceberg::RoomRole::Secret){draw_crown_landmarks();return;}
     if(grid_.template_id==303){draw_jubilee_monument();return;}
     if(grid_.district==2&&grid_.room_role!=iceberg::RoomRole::Secret){draw_estate_landmarks();return;}
@@ -253,7 +254,7 @@
     for(const auto &node:grid_.interactions) {
       double x=node.area.x,y=node.area.bottom();
       if(node.kind==InteractionKind::Npc||node.kind==InteractionKind::Rescue) {
-        if(node.kind==InteractionKind::Rescue&&(grid_.switch_flags&2))continue;
+        if(node.kind==InteractionKind::Rescue&&(grid_.switch_flags&(grid_.template_id==310?8:2)))continue;
         auto [sx,sy]=screen(x,y-.001);++sy;
         resident_sprite(node.id,sx,sy);
       } else if(node.kind==InteractionKind::Carry) {
@@ -266,12 +267,15 @@
         else prop_art(x+1.5,y,{"╭─────╮","│▤▤▤▤▤│","╰─────╯"},done?d.light:d.accent);
       } else if(node.kind==InteractionKind::Deliver) {
         world_art(x,y-3.2,{"╭─────╮","│ ▥▥▥ │","│  ▱  │","╰─────╯"},d.accent);
+      } else if(node.kind==InteractionKind::RouteChoice) {
+        prop_art(x+node.area.w*.5,y,{"╭─B─╮","│   │","│ ↗ │","│   │","╰───╯"},0x91d4ce);
       } else if(node.kind==InteractionKind::Board) {
         prop_art(x+node.area.w*.5,y,{"╭─────╮","│ ≋≋≋ │","│ ≋≋  │","╰┬───┬╯"," │   │ "},d.accent);
       } else if(node.kind==InteractionKind::Valve)valve_art(x+node.area.w*.5,y,bool(grid_.switch_flags&(uint64_t(1)<<node.id)));
       else if(node.kind==InteractionKind::Note)sign_art(x+node.area.w*.5,y,node.id,d.light);
       else if(node.kind==InteractionKind::Task) {
-        bool done=state_.adventure.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64));
+        bool done=(state_.adventure.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))||
+          (node.id==0&&iceworld::harbor_v4_room(grid_.template_id)&&(grid_.switch_flags&(uint64_t(1)<<20)));
         if(done&&node.id!=1&&node.id!=2&&node.id!=3&&node.id!=7)continue;
         task_art(node,done);
       } else if(node.kind==InteractionKind::Shortcut||node.kind==InteractionKind::Replay||node.kind==InteractionKind::Return)world_text(x,y-2,"╭↶─╮",d.accent);
@@ -414,66 +418,70 @@
       center(18,tr("1/2/3 zmień głośność  ENTER wróć","1/2/3 cycle volume  ENTER return"));
     }
   }
+#include "iceberg_route_render.hpp"
   void draw_iceberg_journal() {
-    const auto &v=state_.adventure;
-    auto l=v.language;
-    frame(4,2,cols_-4,rows_-7,0x637f8e);
-    center(6,v.map?tr("DZIELNICE GÓRY LODOWEJ","DISTRICTS OF THE ICEBERG"):tr("DZIENNIK KURIERA","COURIER'S JOURNAL"),Color::Gold);
+    const auto &v=state_.adventure;auto l=v.language;
+    const auto &d=iceberg::Districts[size_t(grid_.district)];
+    frame(0,0,cols_,rows_,0x637f8e);
+    paint_text(1,2,v.map?tr("MAPA PODRÓŻY","JOURNEY MAP"):tr("KSIĘGA ZADAŃ","QUEST BOOK"),d.accent,true);
     if(v.map) {
-      bool wide=cols_>=100&&rows_>=32;
-      static const std::array<std::array<const char *,3>,6> strata{{
-        {{"             ╱╲", "            ╱◈ ╲", "      ∿∿∿∿╱────╲∿∿∿∿"}},
-        {{"          ╱ ♧ ♧  ╲", "         ╱────────╲", "        ╱  ♧   ♧   ╲"}},
-        {{"       ╱ ▤▤ ▤▤ ▤▤ ▤▤ ╲", "       │─────────────│", "      ╱  ▤▤ ▤▤ ▤▤ ▤▤  ╲"}},
-        {{"     ╱ ┌┐ ┌┐ ┌┐ ┌┐ ┌┐ ╲", "     │ └┘ └┘ └┘ └┘ └┘ │", "    ╱═══════════════════╲"}},
-        {{"   ╱   ▥▥    ◉    ▥▥     ╲", "   │═════════════════════│", "   │   ║             ║   │"}},
-        {{"    ╲  ║ ∿∿  ◈ ∿∿    ║  ╱", "     ╲─────────────────╱", "       ╲_____________╱"}}
-      }};
-      for(int i=5;i>=0;--i) {
-        int y=8+(5-i)*(wide?3:2);
-        if(y>=rows_-5)break;
-        std::string label=(i==v.selected?"▸ ":"  ")+iceberg::Districts[size_t(i)].name.get(l);
-        if(wide) {
-          const auto &district=iceberg::Districts[size_t(i)];
-          uint32_t shade=i<=v.unlocked?district.accent:0x34434d;
-          for(int line=0;line<3;++line)paint_text(y+line,7,strata[size_t(5-i)][size_t(line)],shade);
-          text(y,cols_/2,label,i==v.selected?Color::Gold:i<=v.unlocked?Color::Player:Color::Ice);
-          paint_text(y+1,cols_/2+2,i==v.district?tr("tu jesteś","you are here"):
-            i<=v.unlocked?tr("połączenie czynne","connection open"):tr("brak połączenia","not connected"),i<=v.unlocked?0xc8bbb8:0x63788b);
-        } else center(y,label,i==v.selected?Color::Gold:i<=v.unlocked?Color::Player:Color::Ice);
-        const auto &record=v.records[size_t(i)];
-        if(record.complete) {
-          std::string best=tr("Najlepiej: ","Best: ")+fixed(record.best_seconds)+"s / "+
-            std::to_string(record.best_deaths)+tr(" powr. / "," retries / ")+std::to_string(record.best_treasures)+" ◆";
-          if(wide)paint_text(y+2,cols_/2+2,best,iceberg::Districts[size_t(i)].accent);
-          else center(y+1,best,Color::Text);
+      paint_text(3,2,v.map_route?tr("  Dzielnice  ·  [Trasa]","  Districts  ·  [Route]"):tr("[Dzielnice]  ·   Trasa","[Districts]  ·   Route"),d.light);
+      if(v.map_route)draw_iceberg_route_map(5,rows_-9);
+      else {
+        bool roomy=rows_>=30;int first=5,spacing=roomy?2:1;
+        for(int i=5;i>=0;--i) {
+          int y=first+(5-i)*spacing;
+          std::string marker=i==v.district?"● ":i>v.unlocked?"□ ":"○ ";
+          paint_text(y,2,(v.selected==i?"▸ ":"  ")+marker+iceberg::Districts[size_t(i)].name.get(l),v.selected==i?d.accent:i<=v.unlocked?d.light:0x7c8492);
         }
+        int y=first+6*spacing+1;
+        for(const auto &line:wrap(iceberg::district_travel_status(v,std::clamp(v.selected,0,5)),cols_-4))if(y<rows_-4)paint_text(y++,2,line,0xeee7d6);
       }
+      paint_text(rows_-3,2,v.map_route?tr("↑↓ odcinek · B dzielnice","↑↓ leg · B districts"):tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"),d.light);
+      paint_text(rows_-2,2,v.map_route?tr("J/P wróć","J/P return"):tr("B trasa · J/P wróć","B route · J/P return"),d.light);
+      return;
+    }
+    std::array<std::string,3> tabs{tr("Aktywne","Active"),tr("Ukończone","Completed"),tr("Notatki","Notes")};
+    std::string tabline;for(int i=0;i<3;++i){if(i)tabline+=" · ";tabline+=i==v.journal_tab?"["+tabs[size_t(i)]+"]":tabs[size_t(i)];}
+    paint_text(3,2,tabline,d.light);
+    auto entries=iceberg::journal_entries(v);
+    if(entries.empty()) {
+      int y=7;for(const auto &line:wrap(v.journal_tab==1?tr("Ukończone zadania i ich skutki pojawią się tutaj.","Completed tasks and their outcomes will appear here."):tr("Znalezione dokumenty możesz tutaj przeczytać ponownie.","Documents you find can be read again here."),cols_-4))paint_text(y++,2,line,0xeee7d6);
     } else {
-      int q=std::clamp(v.selected,0,7);
-      auto objective=iceberg::Districts[size_t(v.district)].objective.get(l);
-      if(v.revisit)objective=tr("Powrót na dawną trasę. Brama przy wejściu wraca do osady.","Revisiting an earlier route. The entrance door returns to the settlement.");
-      else if(v.visit_district>=0)objective=tr("Wizyta w osadzie. Tablica wypraw wraca na twoją trasę.","Visiting a settlement. Its expedition board returns to your route.");
-      if(v.mode!=iceberg::Mode::Campaign)objective=v.mode==iceberg::Mode::Endless?tr("Wyprawa: wybieraj nowe trasy i pobij swoją głębokość.","Expedition: explore new routes and beat your depth record."):tr("Próba: osiem trudnych odcinków. Liczą się czas, powroty i zbiory.","Trial: eight expert rooms. Time, retries and collection count.");
-      auto goal_lines=wrap(objective,cols_-12);
-      for(size_t i=0;i<goal_lines.size()&&i<2;++i)text(8+int(i),6,goal_lines[i],Color::Player);
-      text(10,6,iceberg::route_title(v.district,v.stage).get(l),Color::Gold);
-      int visible=std::clamp(rows_-22,3,8),start=std::clamp(q-visible/2,0,8-visible);
-      for(int i=start;i<start+visible;++i) {
-        text(11+i-start,5,(q==i?"▸ ":"  ")+(v.quests[size_t(i)]?iceberg::Quests[size_t(i)].title.get(l):tr("Niepoznana historia","An untold story")),q==i?Color::Gold:Color::Text);
-      }
-      if(v.quests[size_t(q)]) {
-        auto lines=wrap((v.quests[size_t(q)]==3?iceberg::Quests[size_t(q)].reward:iceberg::Quests[size_t(q)].objective).get(l),cols_-12);
-        int y=rows_-8;
-        for(const auto &line:lines)if(y<rows_-5)text(y++,6,line);
-        text(rows_-5,6,v.quests[size_t(q)]==3?tr("UKOŃCZONE","COMPLETE"):
-          std::to_string(v.quest_counts[size_t(q)])+" / "+std::to_string(iceberg::Quests[size_t(q)].required),Color::Gold);
+      int choice=std::clamp(v.selected,0,int(entries.size())-1),selected=entries[size_t(choice)];
+      auto title=[&](int entry){return entry<0?tr("Główna podróż","Main journey"):entry==200?tr("Oryginalny plan sieci","Original network plan"):entry==100?tr("Dziecięcy plan mieszkania","A child's apartment plan"):entry==101?tr("Nagranie z klatki jedenastej","Stairwell eleven recording"):entry==102?tr("Protokół zamknięcia","Closure log"):iceberg::Quests[size_t(entry)].title.get(l);};
+      bool wide=cols_>=100&&rows_>=26;int detail_x=wide?cols_/2:2,detail_width=cols_-detail_x-3,y=5;
+      if(wide) {
+        int visible=rows_-10,start=std::clamp(choice-visible/2,0,std::max(0,int(entries.size())-visible));
+        for(int i=start;i<std::min(start+visible,int(entries.size()));++i) {
+          auto label=(i==choice?"▸ ":"  ")+title(entries[size_t(i)]);
+          auto chars=glyphs(label);if(int(chars.size())>detail_x-4){label.clear();for(int j=0;j<detail_x-5;++j)label+=chars[size_t(j)];label+="…";}
+          paint_text(5+i-start,2,label,i==choice?d.accent:0xc8bbb8);
+        }
+      } else {paint_text(y++,2,std::to_string(choice+1)+" / "+std::to_string(entries.size()),0x9aa9b6);}
+      auto paragraph=[&](const std::string &value,uint32_t color){for(const auto &line:wrap(value,detail_width))if(y<rows_-4)paint_text(y++,detail_x,line,color);};
+      paragraph(title(selected),d.accent);++y;
+      if(selected<0) {
+        paragraph(v.quest_focus<0?tr("◆ BIEŻĄCY CEL","◆ CURRENT FOCUS"):tr("PODRÓŻ","JOURNEY"),d.light);
+        paragraph(iceberg::journey_next_step(v),0xeee7d6);
+      } else if(selected>=100) {
+        paragraph(tr("E / ENTER — otwórz zapis","E / ENTER — open record"),0xeee7d6);
+        paragraph(selected==200?tr("Plan łączy archiwum z ogrodami. Obejście biegnie pod szklarniami.","The plan connects the archive to the gardens. The bypass runs beneath the greenhouses."):tr("Zapis zachowany po odkryciu na trasie.","A record kept after finding it on the route."),0xc8bbb8);
+      } else {
+        const auto &quest=iceberg::Quests[size_t(selected)];
+        paragraph(std::string(iceberg::Npcs[size_t(quest.owner)].name)+" · "+(v.quests[size_t(selected)]==3?tr("UKOŃCZONE","COMPLETE"):v.quests[size_t(selected)]==2?tr("WRÓĆ DO ZLECENIODAWCY","RETURN TO TASK GIVER"):std::to_string(v.quest_counts[size_t(selected)])+" / "+std::to_string(quest.required)),d.light);
+        if(v.quest_focus==selected&&v.quests[size_t(selected)]<3)paragraph(tr("◆ BIEŻĄCY CEL","◆ CURRENT FOCUS"),d.accent);
+        paragraph(iceberg::quest_next_step(v,selected),0xeee7d6);
+        if(v.quests[size_t(selected)]==3){++y;paragraph(tr("E — listy, podziękowania i nagroda","E — letters, thanks and reward"),d.light);}
       }
     }
-    center(rows_-4,v.map?(v.mode==iceberg::Mode::Campaign?
-      tr("W/S wybierz   ENTER podróż   J powrót","W/S select   ENTER travel   J return"):
-      tr("W/S wybierz   ENTER / J wróć","W/S select   ENTER / J return")):
-      tr("W/S wybierz   E czytaj nagrodę   TAB wróć","W/S select   E read reward   TAB return"));
+    paint_text(rows_-3,2,tr("↑↓ wybór · E cel/czytaj","↑↓ select · E focus/read"),d.light);
+    paint_text(rows_-2,2,tr("B zakładka · TAB/P wróć","B tab · TAB/P return"),d.light);
+  }
+  std::string quest_focus_hint() const {
+    const auto &v=state_.adventure;int q=v.quest_focus;
+    if(q<0||q>=8||v.quests[size_t(q)]==0||v.quests[size_t(q)]==3)return "";
+    return "◆ "+iceberg::Quests[size_t(q)].title.get(v.language)+"  "+std::to_string(v.quest_counts[size_t(q)])+"/"+std::to_string(iceberg::Quests[size_t(q)].required);
   }
   std::string dialogue_fragment(const std::string &line,size_t &remaining) const {
     std::string shown;
@@ -484,24 +492,25 @@
     return shown;
   }
   void draw_iceberg_dialogue() {
-    const auto &dialogue=state_.adventure.dialogue;
-    if(!dialogue.active())return;
+    const auto &dialogue=state_.adventure.dialogue;if(!dialogue.active())return;
     const auto &line=dialogue.lines[dialogue.page];
     const auto &npc=iceberg::Npcs[size_t(std::clamp(line.speaker,0,7))];
-    int top=rows_-15;
-    frame(top,2,cols_-4,13,npc.color);
-    paint_text(top+1,5,line.speaker<0?tr("DOKUMENT","DOCUMENT"):npc.name,npc.color,true);
-    paint_text(top+2,5,line.speaker<0?tr("Odnaleziony zapis","Recovered record"):npc.title.get(state_.adventure.language),0xa9b8c2);
-    for(int i=0;i<8;++i) {
+    int courier=screen(state_.player.x,state_.player.y).second;
+    auto layout=iceberg::dialogue_layout(line.text.get(state_.adventure.language),cols_,rows_,courier,dialogue.segment);
+    frame(layout.top,layout.left,layout.width,layout.height,npc.color);
+    std::string name=line.speaker<0?tr("DOKUMENT","DOCUMENT"):npc.name;
+    if(layout.pages>1)name+="  "+std::to_string(dialogue.segment+1)+"/"+std::to_string(layout.pages);
+    paint_text(layout.top+1,3,name,npc.color,true);
+    if(layout.portrait)for(int i=0;i<8;++i) {
       static const char *paper[]={"   ╭────────╮   ","   │ ≋≋≋≋≋  │   ","   │ ≋≋≋≋≋≋ │   ","   │ ≋≋≋≋   │   ","   │        │   ","   │ ≋≋≋≋≋  │   ","   │    ▣   │   ","   ╰────────╯   "};
       std::string portrait=line.speaker<0?paper[i]:npc.portrait[size_t(i)];
-      if(grid_.room_role==iceberg::RoomRole::Secret && line.speaker==7 && dialogue.page>=2 && i==2)portrait="   │ │    │ │   ";
-      paint_text(top+3+i,4,portrait,npc.color);
+      if(grid_.room_role==iceberg::RoomRole::Secret&&line.speaker==7&&dialogue.page>=2&&i==2)portrait="   │ │    │ │   ";
+      paint_text(layout.top+2+i,3,portrait,npc.color);
     }
-    auto lines=wrap(line.text.get(state_.adventure.language),cols_-28);
-    int y=top+4;size_t remaining=dialogue.visible_characters;
-    for(auto &s:lines)if(y<top+11)paint_text(y++,24,dialogue_fragment(s,remaining),0xeee7d6);
-    paint_text(top+11,24,state_.paused?tr("E / ENTER  wznów","E / ENTER  resume"):dialogue.revealing?tr("E / ENTER  pokaż całość","E / ENTER  reveal line"):tr("E / ENTER  dalej","E / ENTER  continue"),npc.color);
+    size_t remaining=dialogue.visible_characters;int first=std::clamp(dialogue.segment,0,layout.pages-1)*layout.text_rows;
+    for(int i=first;i<std::min(first+layout.text_rows,int(layout.body.size()));++i)
+      paint_text(layout.text_y+i-first,layout.text_x,dialogue_fragment(layout.body[size_t(i)],remaining),0xeee7d6);
+    paint_text(layout.top+layout.height-2,layout.text_x,state_.paused?tr("E/ENTER wznów","E/ENTER resume"):dialogue.revealing?tr("E/ENTER: tekst od razu","E/ENTER: instant text"):tr("E/ENTER: dalej","E/ENTER: continue"),npc.color);
   }
 #include "iceberg_compact_render.hpp"
   void draw_iceberg() {
@@ -524,10 +533,10 @@
     fill(rows_-3,0,cols_,3,Color::Default);
     text(rows_-3,2,state_.ssh_basic?tr("A/D bieg S stop SPACJA skok X zryw I/O ↑/↓ E rozmowa","A/D run S stop SPACE jump X dash I/O ↑/↓ E interact"):
       tr("A/D ruch  SPACJA skok  X zryw  E użyj  B obejrzyj","A/D move  SPACE jump  X dash  E use  B inspect"),Color::Player);
-    text(rows_-2,2,tr("R powrót  TAB dziennik  J mapa  P pauza  M menu  U dźwięk","R retry  TAB journal  J map  P pause  M menu  U sound"));
+    text(rows_-2,2,tr("R powrót  TAB zadania  J mapa  P pauza  M menu  U dźwięk","R retry  TAB quests  J map  P pause  M menu  U sound"));
     if(v.save_error)text(rows_-1,2,tr("Błąd zapisu — postęp pozostaje w tej sesji.","Save error — progress remains in this session."),Color::Hazard);
     else if(v.notice_left>0)text(rows_-1,2,v.notice,Color::Gold);
-    else text(rows_-1,2,v.prompt,Color::Gold);
+    else text(rows_-1,2,v.prompt.empty()?quest_focus_hint():v.prompt,Color::Gold);
     if(state_.debug)text(5,2,"vx "+fixed(state_.player.vx)+" vy "+fixed(state_.player.vy)+" 120 Hz",Color::Gold);
     if(state_.menu){draw_iceberg_menu();return;}
     if(state_.journal||v.map)draw_iceberg_journal();

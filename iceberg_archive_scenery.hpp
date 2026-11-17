@@ -1,7 +1,9 @@
 // RenderGrid members. Shelves and catalogue rails belong to the room's
 // architecture; moving carriages stay attached to their collision platform.
   void draw_archive_landmarks() {
-    const auto &d=iceberg::Districts[3];
+    auto d=iceberg::Districts[3];
+    // Archive decoration recedes behind pale collision edges and warm task props.
+    d.stone=0x344253;d.shadow=0x253144;d.accent=0x4c6075;d.light=0x63738a;
     const double clock=state_.adventure.presentation_time;
     if(grid_.room_role==iceberg::RoomRole::Settlement) {
       world_art(3,32,{"          ╱────────────────────────╲","    ╔════╧══════════════════════════╧════╗","    ║  A R C H I W U M   M I E J S K I E  ║","    ╠═══════════════════════════════════╣","    ║ ╭────────╮  ╭────────╮ ╭────────╮ ║","    ║ │ ▥▥▥▥▥▥ │  │ ▥▥▥▥▥▥ │ │ ▥▥▥▥▥▥ │ ║","    ║ ├────────┤  ├────────┤ ├────────┤ ║","    ║ │ ▥▥▥▥▥▥ │  │ ▥▥▥▥▥▥ │ │ ▥▥▥▥▥▥ │ ║","    ║ ╰────────╯  ╰────────╯ ╰────────╯ ║","    ║      ╭────────────────────╮       ║","    ║      │     CZYTELNIA       │       ║","    ╚══════╧════════════════════╧═══════╝"},d.stone);
@@ -47,7 +49,7 @@
     }
     for(const auto &platform:grid_.platforms) {
       auto p=platform.at(state_.elapsed);
-      world_art(p.x+.5,p.y+.7,{"╭─────────────────────╮","│ ▥▥▥ ▥▥▥▥ ▥▥▥ ▥▥▥▥▥  │","╰──◉───────────────◉──╯"},d.accent);
+      world_art(p.x+.5,p.y+.7,{"╭─────────────────────╮","│ ▥▥▥ ▥▥▥▥ ▥▥▥ ▥▥▥▥▥  │","╰──◉───────────────◉──╯"},0x4c6075);
     }
     // Fine frost drifts behind the walkable surfaces, without hiding hazards.
     for(int i=0;i<9;++i) {

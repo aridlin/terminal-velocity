@@ -11,7 +11,7 @@
     for(int x=0;x<cols_;++x)paint_text(3,x,"─",d.stone);
     fill(rows_-3,0,cols_,3,Color::Default);
     paint_text(rows_-3,1,tr("E użyj · B obejrzyj · P pauza","E use · B inspect · P pause"),d.light);
-    y=rows_-2;compact_paragraph(y,v.notice_left>0?v.notice:v.prompt,rows_,d.accent);
+    y=rows_-2;compact_paragraph(y,v.notice_left>0?v.notice:v.prompt.empty()?quest_focus_hint():v.prompt,rows_,d.accent);
     auto panel=[&](const std::string &title){frame(0,0,cols_,rows_,d.stone);paint_text(1,2,title,d.accent,true);};
     if(state_.menu) {
       panel("TERMINAL VELOCITY");
@@ -40,23 +40,7 @@
       paint_text(rows_-3,2,tr("↑↓ wybór · ENTER graj","↑↓ choose · ENTER play"),d.light);
       paint_text(rows_-2,2,tr("R nowa wyprawa · L język","R new expedition · L language"),d.light);return;
     }
-    if(state_.journal||v.map) {
-      panel(v.map?tr("DZIELNICE","DISTRICTS"):tr("DZIENNIK KURIERA","COURIER'S JOURNAL"));
-      if(v.map) {
-        for(int i=5;i>=0;--i)paint_text(4+(5-i)*(rows_<24?1:2),2,(v.selected==i?"▸ ":"  ")+iceberg::Districts[size_t(i)].name.get(v.language),i==v.selected?d.accent:i<=v.unlocked?d.light:d.stone);
-        y=rows_<24?11:17;compact_paragraph(y,iceberg::Districts[size_t(std::clamp(v.selected,0,5))].objective.get(v.language),rows_-3);
-      } else {
-        int q=std::clamp(v.selected,0,7);const auto &quest=iceberg::Quests[size_t(q)];
-        y=4;compact_paragraph(y,std::to_string(q+1)+" / 8",rows_-3,d.stone);++y;
-        compact_paragraph(y,v.quests[size_t(q)]?quest.title.get(v.language):tr("Niepoznana historia","An untold story"),rows_-3,d.accent);++y;
-        if(v.quests[size_t(q)]) {
-          compact_paragraph(y,(v.quests[size_t(q)]==3?quest.reward:quest.objective).get(v.language),rows_-5);++y;
-          compact_paragraph(y,v.quests[size_t(q)]==3?tr("UKOŃCZONE","COMPLETE"):std::to_string(v.quest_counts[size_t(q)])+" / "+std::to_string(quest.required),rows_-3,d.accent);
-        }
-      }
-      paint_text(rows_-3,2,v.map?tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"):tr("↑↓ wybór · E czytaj","↑↓ select · E read"),d.light);
-      paint_text(rows_-2,2,tr("P wróć","P return"),d.light);
-    }
+    if(state_.journal||v.map)draw_iceberg_journal();
     if(state_.paused) {
       panel(state_.paused?tr("CHWILA ODDECHU","A MOMENT TO BREATHE"):tr("DROGA OTWARTA","THE WAY IS OPEN"));
       y=6;compact_paragraph(y,state_.paused?tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."):tr("R wróć do lampy, jeśli coś zostało z tyłu.","R returns to the lamp if you left something behind."),rows_-3);
@@ -66,19 +50,6 @@
       paint_text(rows_-3,2,tr("E / ENTER — przejdź dalej","E / ENTER — pass through"),d.accent);
       paint_text(rows_-2,2,tr("R — wróć do lampy","R — return to the lamp"),d.light);
     }
-    if(v.dialogue.active()) {
-      const auto &line=v.dialogue.lines[v.dialogue.page];const auto &npc=iceberg::Npcs[size_t(std::clamp(line.speaker,0,7))];
-      panel(line.speaker<0?tr("DOKUMENT","DOCUMENT"):npc.name);
-      for(int i=0;i<8;++i) {
-        std::string portrait=line.speaker<0?std::array<const char*,8>{" ╭────────╮"," │ ≋≋≋≋≋  │"," │ ≋≋≋≋≋≋ │"," │ ≋≋≋≋   │"," │        │"," │ ≋≋≋≋≋  │"," │    ▣   │"," ╰────────╯"}[size_t(i)]:npc.portrait[size_t(i)];
-        if(grid_.room_role==iceberg::RoomRole::Secret&&line.speaker==7&&v.dialogue.page>=2&&i==2)portrait="   │ │    │ │   ";
-        paint_text(2+i,2,portrait,npc.color);
-      }
-      auto title=wrap(line.speaker<0?tr("Odnaleziony zapis","Recovered record"):npc.title.get(v.language),cols_-22);
-      for(size_t i=0;i<title.size()&&i<7;++i)paint_text(3+int(i),20,title[i],d.light);
-      y=11;size_t remaining=v.dialogue.visible_characters;
-      for(const auto &part:wrap(line.text.get(v.language),cols_-4))if(y<rows_-2)paint_text(y++,2,dialogue_fragment(part,remaining),0xeee7d6);
-      paint_text(rows_-2,2,state_.paused?tr("E / ENTER wznów","E / ENTER resume"):v.dialogue.revealing?tr("E / ENTER pokaż całość","E / ENTER reveal line"):tr("E / ENTER dalej","E / ENTER continue"),npc.color);
-    }
+    draw_iceberg_dialogue();
     if(v.inspecting)draw_iceberg_inspection();
   }

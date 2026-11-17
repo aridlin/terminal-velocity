@@ -57,6 +57,7 @@ inline const std::vector<Pattern> &patterns() {
 #include "iceberg_rooms_archive.inc"
 #include "iceberg_rooms_gardens.inc"
 #include "iceberg_rooms_crown.inc"
+#include "iceberg_rooms_harbor.inc"
   };
   return values;
 }
@@ -98,7 +99,9 @@ inline bool connects(const Pattern &from,const Pattern &to) {
 inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = RoomsPerLeg * 3, unsigned layout_version=ContentVersion) {
   Random random{mix(seed ^ unsigned(district * 7919))};
   std::vector<int> pool;
-  for (const auto &p : patterns()) if (district_of(p) == district && (layout_version>=3||district>=2||p.id<24)) pool.push_back(p.id);
+  for (const auto &p : patterns()) if (district_of(p) == district &&
+      (district!=0 || (layout_version>=4 ? p.id>=500&&p.id<=511 : p.id<500)) &&
+      (layout_version>=3||district>=2||p.id<24)) pool.push_back(p.id);
   if (pool.empty()) for (const auto &p : patterns()) if (district_of(p) == 0) pool.push_back(p.id);
   std::vector<int> result;
   int previous = -1;
@@ -107,7 +110,8 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
     for (size_t i = bag.size(); i > 1; --i) std::swap(bag[i - 1], bag[size_t(random.below(int(i)))]);
     // Within every leg alternate flow/precision/vertical/timing with relief.
     while (!bag.empty() && int(result.size()) < count) {
-      size_t choice=0;int best=10000;
+      const bool harbor_graph=district==0&&layout_version>=4;
+      size_t choice=0;int best=harbor_graph?INT_MAX:10000;
       static const Rhythm phrase[]={Rhythm::Flow,Rhythm::Explore,Rhythm::Precision,Rhythm::Vertical,
         Rhythm::Timing,Rhythm::Flow,Rhythm::Vertical,Rhythm::Recovery};
       auto desired=phrase[result.size()%8];
@@ -117,8 +121,21 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
         // Reserve collection-task rooms before the final settlement visit.
         // Expanding the library must not move a task's last object beyond its
         // owner's last ordinary turn-in opportunity.
-        auto reserved=[&](int id){return district==0?(id==0||id==4||id==8):
+        auto reserved=[&](int id){return district==0?(layout_version>=4?(id==500||id==503||id==506):(id==0||id==4||id==8)):
           district==1?(id==12||id==13||id==16||id==17||id==20||id==21):district==2?(id==24||id==26||id==28||id==30||id==32||id==34):district==3?(id==36||id==40||id==44):district==4?(id==48||id==52||id==56):false;};
+        // A fork replaces only this traversal cell, never a parcel landmark.
+        if(harbor_graph) {
+          const bool fork=result.size()%8==2;
+          if(fork&&reserved(bag[i]))continue;
+          // Eligibility, not a score penalty: once the remaining normal cells
+          // are all needed by parcel landmarks, this normal cell must hold a
+          // parcel too. Fork cells always retain a non-landmark candidate.
+          int future_allowed=0;
+          for(size_t remaining=1;remaining<bag.size();++remaining)
+            if((result.size()+remaining)%8!=2)++future_allowed;
+          int outstanding=int(std::count_if(bag.begin(),bag.end(),reserved));
+          if(!fork&&outstanding>future_allowed&&!reserved(bag[i]))continue;
+        }
         if(layout_version>=3&&count>=16&&result.size()<16) {
           int outstanding=int(std::count_if(bag.begin(),bag.end(),reserved));
           if(16-int(result.size())<=outstanding&&!reserved(bag[i]))score+=10000;
@@ -137,6 +154,14 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
   return result;
 }
 
+inline int harbor_alternate(const std::vector<int> &itinerary,int leg,uint32_t seed) {
+  if(leg<0||leg>2||itinerary.size()<size_t(leg*8+4))return -1;
+  std::vector<int> candidates;
+  for(int id:{501,502,504,505,507,508,509,510,511})
+    if(id!=itinerary[size_t(leg*8+1)]&&id!=itinerary[size_t(leg*8+2)]&&id!=itinerary[size_t(leg*8+3)])candidates.push_back(id);
+  return candidates[size_t(mix(seed^unsigned(leg*7919+441)))%candidates.size()];
+}
+inline void decorate_harbor_room(EngineGrid &g,const Pattern &spec);
 inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = false, bool stable = false) {
   const auto &spec = pattern(id);
   Random variation{mix(seed^unsigned(id*65537))};
@@ -214,6 +239,7 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
   if(district==5&&(id==60||id==63||id==66||id==70)) {
     g.air_fields.push_back({{69,15,44,44},id==63||id==70?-4.:4.,0,6.,0});
   }
+  if(id>=500&&id<=511)decorate_harbor_room(g,spec);
   return g;
 }
 
@@ -223,6 +249,7 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
 #include "iceberg_gardens.hpp"
 #include "iceberg_crown.hpp"
 #include "iceberg_missions.hpp"
+#include "iceberg_harbor.hpp"
 #include "iceberg_jubilee.hpp"
 #include "iceberg_mastery.hpp"
 

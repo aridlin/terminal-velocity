@@ -65,6 +65,26 @@ std::vector<unsigned> utf8(const std::string &s) {
   }
   return out;
 }
+struct UnicodeViewport {
+  int cell_w=10,cell_h=20,columns=110,rows=34,x=0,y=0;
+};
+UnicodeViewport unicode_viewport(int width,int height,int logical_width,int logical_height,int zoom) {
+  double density=std::max(1.,std::min(double(width)/std::max(1,logical_width),double(height)/std::max(1,logical_height)));
+  // Match the browser's useful camera span. A 4K/fullscreen drawable must not
+  // silently turn the normal view into a tiny, almost whole-room overview.
+  double base=std::max({10*density,std::ceil(width/160.),std::ceil(height/96.)});
+  int smallest=std::max({6,int(std::ceil(width/240.)),int(std::ceil(height/200.))});
+  // Keep either supported UI layout readable when zooming in. Ordinary small
+  // windows still show the shared resize prompt when neither layout fits.
+  int largest=std::max(std::min(width/56,height/40),std::min(width/34,height/48));
+  UnicodeViewport view;
+  view.cell_w=std::clamp(int(std::round(base*zoom/10.)),smallest,std::max(smallest,largest));
+  view.cell_h=view.cell_w*2;
+  view.columns=std::clamp(width/view.cell_w,1,240);view.rows=std::clamp(height/view.cell_h,1,100);
+  view.x=std::max(0,(width-view.columns*view.cell_w)/2);view.y=std::max(0,(height-view.rows*view.cell_h)/2);
+  return view;
+}
+
 class Font {
   FT_Library lib{};
   FT_Face face{}, fallback{};
@@ -140,10 +160,15 @@ public:
     if(codepoints.empty())return;
     unsigned code=codepoints.front();
     auto rectangle=[&](int left,int top,int width,int height){box(x+left,y+top,width,height,fg);};
+    auto design_rectangle=[&](int left,int top,int width,int height){
+      int x0=int(std::round(left*cell_w/10.)),y0=int(std::round(top*cell_h/20.));
+      int x1=int(std::round((left+width)*cell_w/10.)),y1=int(std::round((top+height)*cell_h/20.));
+      rectangle(x0,y0,std::max(1,x1-x0),std::max(1,y1-y0));
+    };
     if(code>=0x2800&&code<=0x28ff) {
       static const unsigned dots[4][2]={{1,8},{2,16},{4,32},{64,128}};
       for(int row=0;row<4;++row)for(int col=0;col<2;++col)
-        if((code-0x2800)&dots[row][col])rectangle(col*cell_w/2+1,row*cell_h/4+1,std::max(1,cell_w/4),std::max(1,cell_h/8));
+        if((code-0x2800)&dots[row][col])design_rectangle(col*5+1,row*5+1,2,2);
       return;
     }
     if(code>=0x2581&&code<=0x2588){int h=cell_h*int(code-0x2580)/8;rectangle(0,cell_h-h,cell_w,h);return;}
@@ -153,14 +178,14 @@ public:
     if(code==0x2594){rectangle(0,0,cell_w,std::max(1,cell_h/8));return;}
     if(code==0x2595){rectangle(cell_w-std::max(1,cell_w/8),0,std::max(1,cell_w/8),cell_h);return;}
     if(code>=0x2591&&code<=0x2593) {
-      for(int py=0;py<cell_h;py+=2)for(int px=0;px<cell_w;px+=2)
-        if(((px/2+py/2*3)%4)<int(code-0x2590))rectangle(px,py,1,1);
+      for(int py=0;py<20;py+=2)for(int px=0;px<10;px+=2)
+        if(((px/2+py/2*3)%4)<int(code-0x2590))design_rectangle(px,py,1,1);
       return;
     }
     if(code>=0x2596&&code<=0x259f) {
       static const int quadrants[]={4,8,1,13,9,7,11,2,6,14};int mask=quadrants[code-0x2596];
       for(int row=0;row<2;++row)for(int col=0;col<2;++col)
-        if(mask&(1<<(row*2+col)))rectangle(col*cell_w/2,row*cell_h/2,cell_w/2,cell_h/2);
+        if(mask&(1<<(row*2+col)))rectangle(col*cell_w/2,row*cell_h/2,(col+1)*cell_w/2-col*cell_w/2,(row+1)*cell_h/2-row*cell_h/2);
       return;
     }
     int directions=0; // left, right, up, down; joins reach the cell boundary.
@@ -174,28 +199,32 @@ public:
     case 0x252c:directions=11;break;case 0x2534:directions=7;break;case 0x253c:directions=15;break;
     }
     if(directions) {
-      int mx=cell_w/2,my=cell_h/2;
-      if(directions&1)rectangle(0,my,mx+1,1);
-      if(directions&2)rectangle(mx,my,cell_w-mx,1);
-      if(directions&4)rectangle(mx,0,1,my+1);
-      if(directions&8)rectangle(mx,my,1,cell_h-my);
+      int mx=cell_w/2,my=cell_h/2,stroke=std::max(1,int(std::round(cell_w/10.)));
+      if(directions&1)rectangle(0,my,mx+stroke,stroke);
+      if(directions&2)rectangle(mx,my,cell_w-mx,stroke);
+      if(directions&4)rectangle(mx,0,stroke,my+stroke);
+      if(directions&8)rectangle(mx,my,stroke,cell_h-my);
       return;
     }
-    if(code==0x2550){rectangle(0,cell_h/2-2,cell_w,1);rectangle(0,cell_h/2+2,cell_w,1);return;}
-    if(code==0x2551){rectangle(cell_w/2-2,0,1,cell_h);rectangle(cell_w/2+2,0,1,cell_h);return;}
-    auto &g=glyph(cell_h-3,code);
+    if(code==0x2550){design_rectangle(0,8,10,1);design_rectangle(0,12,10,1);return;}
+    if(code==0x2551){design_rectangle(3,0,1,20);design_rectangle(7,0,1,20);return;}
+    // Keep the font's design-space proportions at every zoom/DPI. Fixed
+    // 3/4-pixel margins used to make high-DPI glyphs taller and then squeeze
+    // only their width back into the cell.
+    const double raster_scale=double(cell_h)/20.;
+    auto &g=glyph(std::max(1,int(std::round(17*raster_scale))),code);
     if(!g.texture)return;
     SDL_SetTextureColorMod(g.texture,fg.r,fg.g,fg.b);
     SDL_SetTextureAlphaMod(g.texture,255);
-    double scale=std::min(1.,double(cell_w)/std::max(1,g.w));
-    int width=std::max(1,int(g.w*scale)),height=g.h;
-    SDL_Rect rect{x+(cell_w-width)/2,y+cell_h-4-g.top,width,height};
+    double scale=std::min({1.,double(cell_w)/std::max(1,g.w),double(cell_h)/std::max(1,g.h)});
+    int width=std::max(1,int(std::round(g.w*scale))),height=std::max(1,int(std::round(g.h*scale)));
+    SDL_Rect rect{x+(cell_w-width)/2,y+int(std::round(16*raster_scale-g.top*scale)),width,height};
     SDL_RenderCopy(ren,g.texture,nullptr,&rect);
     if(c.bold) {
       SDL_Rect previous_clip;SDL_RenderGetClipRect(ren,&previous_clip);
       bool had_clip=SDL_RenderIsClipEnabled(ren);
       SDL_Rect clip{x,y,cell_w,cell_h};SDL_RenderSetClipRect(ren,&clip);
-      ++rect.x;SDL_RenderCopy(ren,g.texture,nullptr,&rect);
+      rect.x+=std::max(1,int(std::round(raster_scale)));SDL_RenderCopy(ren,g.texture,nullptr,&rect);
       SDL_RenderSetClipRect(ren,had_clip?&previous_clip:nullptr);
     }
   }
@@ -973,6 +1002,11 @@ void pause_or_win(App &a, Font &f) {
 
 int terminal_window_main(int argc,char **argv) {
   const Args args=parse_args(argc,argv,true);
+  // SDL reports logical window points and physical drawable pixels. Opt in
+  // before creating the window so Windows does not stretch a low-DPI bitmap.
+#ifdef SDL_HINT_WINDOWS_DPI_SCALING
+  SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING,"1");
+#endif
   if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_TIMER)!=0)return 1;
   SDL_Window *window=SDL_CreateWindow("Terminal Velocity • Unicode",SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,1100,680,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
@@ -995,7 +1029,7 @@ int terminal_window_main(int argc,char **argv) {
         else if(a=="--frames"&&i+1<argc)maxframes=std::atoi(argv[++i]);
       }
       options.no_save=args.smoke||!screenshot.empty();options.mute|=options.no_save;
-      AdventureSession session(options);
+      AdventureSession session(options,options.no_save?std::filesystem::path{}:iceberg::SaveStore::default_file());
       if(scene=="play")session.state.menu=false;
       if(options.no_save&&(scene.rfind("room:",0)==0||scene.rfind("mission:",0)==0)) {
         bool mission=scene.rfind("mission:",0)==0;
@@ -1119,6 +1153,8 @@ int terminal_window_main(int argc,char **argv) {
             if(key==SDL_SCANCODE_EQUALS||key==SDL_SCANCODE_KP_PLUS){zoom=std::min(24,zoom+1);continue;}
             if(key==SDL_SCANCODE_MINUS||key==SDL_SCANCODE_KP_MINUS){zoom=std::max(6,zoom-1);continue;}
             if(key==SDL_SCANCODE_0||key==SDL_SCANCODE_KP_0){zoom=10;continue;}
+            // Ctrl+Shift+= is a zoom shortcut, not a gameplay dash.
+            continue;
           }
           held[key]=true;
           c.jump_pressed|=key==SDL_SCANCODE_SPACE||key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP;
@@ -1144,25 +1180,26 @@ int terminal_window_main(int argc,char **argv) {
         if(args.smoke){c.move=1;c.jump_held=true;}
         int w,h;SDL_GetRendererOutputSize(ren,&w,&h);
         int logical_w,logical_h;SDL_GetWindowSize(window,&logical_w,&logical_h);
-        double density=std::max(1.,std::min(double(w)/std::max(1,logical_w),double(h)/std::max(1,logical_h)));
-        cell_w=std::max(6,int(std::round(zoom*density)));cell_h=cell_w*2;
-        int cols=std::clamp(w/cell_w,1,240),rows=std::clamp(h/cell_h,1,100);
-        origin_x=std::max(0,(w-cols*cell_w)/2);origin_y=std::max(0,(h-rows*cell_h)/2);
+        const auto viewport=unicode_viewport(w,h,logical_w,logical_h,zoom);
+        cell_w=viewport.cell_w;cell_h=viewport.cell_h;
+        int cols=viewport.columns,rows=viewport.rows;
+        origin_x=viewport.x;origin_y=viewport.y;
         if(args.smoke) {
           if(frames==0)smoke_initial_columns=cols;
           if(frames==20)smoke_zoomed=cols<smoke_initial_columns;
           if(frames==40)smoke_reset=cols==smoke_initial_columns;
         }
         auto now=std::chrono::steady_clock::now();
-        double dt=args.smoke?1./120:std::chrono::duration<double>(now-last).count();last=now;
+        double dt=(args.smoke||!screenshot.empty())?1./120:std::chrono::duration<double>(now-last).count();last=now;
         bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
         if(c.debug)session.state.debug=!session.state.debug;
-        session.tick(c,dt,focused,cols,rows,2);
+        const double cell_aspect=double(cell_h)/cell_w;
+        session.tick(c,dt,focused,cols,rows,cell_aspect);
         bool blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
         if(was_blocked!=blocked)held.fill(false);
         if(now>=render_at||args.smoke||!screenshot.empty()) {
-          RenderGrid(session.grid,session.state,rows,cols,2).draw();
-          if(!screenshot.empty()) {
+          RenderGrid(session.grid,session.state,rows,cols,cell_aspect).draw();
+          if(!screenshot.empty()&&frames+1>=std::max(1,maxframes)) {
             SDL_Surface *surface=SDL_CreateRGBSurfaceWithFormat(0,w,h,32,SDL_PIXELFORMAT_ARGB8888);
             if(SDL_RenderReadPixels(ren,nullptr,surface->format->format,surface->pixels,surface->pitch)!=0||
               SDL_SaveBMP(surface,screenshot.c_str())!=0)result=2;

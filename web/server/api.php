@@ -13,7 +13,7 @@ function query(PDO $db, string $sql, array $values = []): PDOStatement {
     $statement = $db->prepare($sql); $statement->execute($values); return $statement;
 }
 function validSave(string $body): bool {
-    if (strlen($body)>65536 || !preg_match('/\ATVICE[2-5] ([0-9]{1,20})\n([\x09\x0a\x0d\x20-\x7e]+)\z/D', $body, $parts)) return false;
+    if (strlen($body)>65536 || !preg_match('/\ATVICE[2-6] ([0-9]{1,20})\n([\x09\x0a\x0d\x20-\x7e]+)\z/D', $body, $parts)) return false;
     // The native save's 64-bit FNV checksum, computed as two exact 32-bit limbs.
     $high=342167472; $low=1939669891;
     for($i=0,$n=strlen($parts[2]);$i<$n;$i++) {

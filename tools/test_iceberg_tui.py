@@ -47,21 +47,25 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         t.send('e');expect(t,'HELENA')
         expect(t,'You')
         for _ in range(20):
-            if 'E / ENTER' not in screen(t):break
+            if 'E/ENTER' not in screen(t):break
             t.send('e');pump([t],.10)
-        t.send('\t');expect(t,"COURIER'S JOURNAL")
+        t.send('\t');expect(t,"QUEST BOOK")
         t.send('\t');pump([t],.10)
-        t.send('j');expect(t,'DISTRICTS OF THE ICEBERG')
-        t.send('w');expect(t,'▸ LAZARUS HEATING WORKS')
+        t.send('j');expect(t,'JOURNEY MAP')
+        t.send('w');expect(t,'▸ □ LAZARUS HEATING WORKS')
+        t.send('\r');expect(t,'Closed.')
+        assert 'JOURNEY MAP' in screen(t),screen(t)
+        t.send('b');expect(t,'[Route]')
         t.send('j');pump([t],.10)
         t.send('m');expect(t,'CONTINUE JOURNEY')
         t.send('5\r');expect(t,'Music:')
         t.send('1');pump([t],.15)
         t.send('\r');pump([t],.15)
         resize(t,76,24);expect(t,'CONTINUE JOURNEY')
-        # Resize below supported size suspends gameplay and gives a readable message.
-        resize(t,60,20)
-        assert '76' in screen(t) or 'terminal' in screen(t).lower(),screen(t)
+        # Compact layout remains usable; unsupported sizes explain the minimum.
+        resize(t,60,20);expect(t,'Continue journey')
+        resize(t,32,19)
+        assert '34' in screen(t) or 'Resize' in screen(t),screen(t)
         resize(t,110,34);expect(t,'CONTINUE JOURNEY')
         t.send('3\r');expect(t,'ENDLESS')
         t.send('m');expect(t,'RESUME ENDLESS EXPEDITION')

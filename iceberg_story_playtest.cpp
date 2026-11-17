@@ -22,6 +22,49 @@ struct StoryReview {
     for(auto c:path.actions)game.tick(c,.1);
     if(!game.state.player.rect().intersects(target))throw std::runtime_error("Input path replay diverged");
   }
+  void landing(size_t index) {
+    const auto [x,y]=game.grid.route_points.at(index);
+    Rect target{x-3,y-kPlayerHeight-.1,6,kPlayerHeight+.2};
+    ++searches;
+    auto path=find_motion_path(game.grid,game.state,target,[&](const GameState &s){
+      return s.player.grounded&&std::abs(s.player.y+kPlayerHeight-y)<.6;
+    });
+    if(!path.reached)throw std::runtime_error("No ordinary-input landing path in harbor mission "+std::to_string(game.grid.template_id)+" landing="+std::to_string(index));
+    for(auto c:path.actions)game.tick(c,.1);
+    if(!game.state.won&&(!game.state.player.grounded||std::abs(game.state.player.y+kPlayerHeight-y)>=.6))
+      throw std::runtime_error("Harbor landing replay diverged id="+std::to_string(game.grid.template_id)+" landing="+std::to_string(index)+" feet="+std::to_string(game.state.player.y+kPlayerHeight)+" grounded="+std::to_string(game.state.player.grounded)+" target="+std::to_string(y));
+  }
+  void use(InteractionKind kind,int id=-1) {
+    for(auto node:game.grid.interactions)if(node.kind==kind&&(id<0||node.id==id)) {
+      walk(reach(node.area));interact();return;
+    }
+    throw std::runtime_error("Missing harbor mission interaction");
+  }
+  void harbor_mission() {
+    const int id=game.grid.template_id;
+    if(id==310) {
+      for(size_t i=1;i<=5;++i)landing(i);
+      use(InteractionKind::Rescue);
+      for(size_t i=6;i<game.grid.route_points.size();++i)landing(i);
+      if((game.grid.switch_flags&63)!=63)throw std::runtime_error("Tram escort bypassed a contact or shelter");
+    } else if(id==311) {
+      use(InteractionKind::Carry);
+      for(size_t i=1;i<=3;++i)landing(i);
+      use(InteractionKind::Valve,2);
+      for(size_t i=4;i<game.grid.route_points.size();++i)landing(i);
+      use(InteractionKind::Deliver);
+      if((game.grid.switch_flags&7)!=7)throw std::runtime_error("Thermometer delivery omitted the measurement");
+    } else if(id==312) {
+      use(InteractionKind::Note,40);
+      landing(1);use(InteractionKind::Valve,1);
+      landing(2);use(InteractionKind::Valve,0);
+      landing(3);landing(4);use(InteractionKind::Valve,2);
+      for(size_t i=5;i<game.grid.route_points.size();++i)landing(i);
+      if((game.grid.switch_flags&23)!=23)throw std::runtime_error("Heat routing omitted its evidence or circuit");
+    }
+    walk(game.grid.goal);
+    if(!game.state.won)throw std::runtime_error("Harbor mission exit stayed locked");
+  }
   static Rect reach(Rect a){a.x-=1.5;a.y-=.9;a.w+=3;a.h+=1.8;return a;}
   void residents() {
     std::vector<Interaction> npcs;
@@ -45,6 +88,7 @@ int main() {
       std::string identity=std::to_string(game.district)+":"+std::to_string(game.stage)+":"+std::to_string(game.room)+":"+std::to_string(game.profile.interlude);
       if(identity!=last){last=identity;pilot={};pilot.predictive=game.grid.verification_policy;++rooms;}
       if(game.state.won){Controls c;c.confirm=true;game.tick(c,1./120);continue;}
+      if(iceworld::harbor_v4_mission(game.grid.template_id)){review.harbor_mission();continue;}
       if(game.grid.room_role==iceberg::RoomRole::Settlement) {
         review.residents();
         for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Epilogue&&!(game.grid.switch_flags&(uint64_t(1)<<node.id))) {

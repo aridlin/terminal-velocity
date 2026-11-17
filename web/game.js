@@ -2,7 +2,12 @@
 const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d',{alpha:false});
 const stage=document.querySelector('#stage'),start=document.querySelector('#start'),saveStatus=document.querySelector('#save-status');
 const mobile=()=>matchMedia('(pointer:coarse)').matches||innerWidth<760||(innerHeight<500&&innerWidth<1100);
-let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastUI='',lastBlocked=false,uiFlags=0,english=false,bootStatus='Ładowanie gry…';
+const languageKey='terminal-velocity.language',pendingLanguageKey='terminal-velocity.pending-language';
+let pendingBootLanguage=null;
+let preferredLanguage=(navigator.languages?.[0]||navigator.language||'en').toLowerCase().split('-')[0]==='pl'?'pl':'en';
+try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en')preferredLanguage=saved;const pending=localStorage.getItem(pendingLanguageKey);if(pending==='pl'||pending==='en')preferredLanguage=pendingBootLanguage=pending;}catch{}
+let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastUI='',lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootStatus='',explicitBootLanguage=pendingBootLanguage!==null;
+const tr=(pl,en)=>english?en:pl;
 const pointers=new Map(),keyboard=new Set(),tiles=new Map();
 let cellPixels=10;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
@@ -38,17 +43,34 @@ window.tvFrame=(data,w,h)=>{
  previous=new Uint32Array(data);
 };
 const tap=(...keys)=>{for(const k of keys)pressed|=1<<k;};
+function translateUI(){
+ document.documentElement.lang=english?'en':'pl';
+ document.title='Terminal Velocity — '+tr('Pod powierzchnią','Below the surface');
+ for(const b of document.querySelectorAll('[data-pl]'))b.textContent=tr(b.dataset.pl,b.dataset.en);
+ for(const b of document.querySelectorAll('[data-aria-pl]'))b.setAttribute('aria-label',tr(b.dataset.ariaPl,b.dataset.ariaEn));
+ for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
+ document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X/Shift zryw · E użyj · B obejrzyj · P pauza','A/D move · Space jump · X/Shift dash · E use · B inspect · P pause');
+ document.querySelector('#touch-use').textContent=lastBlocked?'↵':tr('Użyj','Use');
+ if(!started){start.textContent=ready?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');saveStatus.textContent=ready?tr('Gotowe','Ready'):tr('Ładowanie gry…','Loading game…');}
+}
+function selectLanguage(language){
+ english=language==='en';explicitBootLanguage=true;
+ try{localStorage.setItem(languageKey,english?'en':'pl');if(!started)localStorage.setItem(pendingLanguageKey,english?'en':'pl');}catch{}
+ translateUI();
+ if(started){Module._web_set_language(english?1:0);syncSave();canvas.focus();}
+ else drawBoot();
+}
+for(const b of document.querySelectorAll('[data-language]'))b.onclick=()=>selectLanguage(b.dataset.language);
+for(const b of document.querySelectorAll('[data-language-toggle]'))b.onclick=()=>selectLanguage(english?'pl':'en');
 window.tvUI=u=>{
  const blocked=!!(u.flags&(1|2|4|8|64|128|1024));
  if(blocked!==lastBlocked){clearInput();lastBlocked=blocked;}
  const before=uiFlags;uiFlags=u.flags;
  if((before&(255|1024))!==(uiFlags&(255|1024)))resize();
- english=!!(u.flags&512);document.documentElement.lang=english?'en':'pl';
- document.querySelector('#touch-use').textContent=blocked?'↵':english?'Use':'Użyj';
+ const nextEnglish=!!(u.flags&512);
+ if(english!==nextEnglish){english=nextEnglish;try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}}
  document.querySelector('#settings-keys').hidden=!(u.flags&16);
- const tr=(pl,en)=>english?en:pl;
- for(const b of document.querySelectorAll('[data-pl]'))b.textContent=tr(b.dataset.pl,b.dataset.en);
- document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X/Shift zryw · E użyj · B obejrzyj · P pauza','A/D move · Space jump · X/Shift dash · E use · B inspect · P pause');
+ translateUI();
 };
 const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25};
 function recompute(){held=0;for(const k of keyboard)held|=1<<k;for(const k of pointers.values())held|=1<<k;}
@@ -57,7 +79,7 @@ addEventListener('keyup',e=>{if(keyMap[e.code]!==undefined){keyboard.delete(keyM
 for(const button of document.querySelectorAll('[data-key]')){button.addEventListener('pointerdown',e=>{if(accounts.active||!started)return;e.preventDefault();const k=button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;button.setPointerCapture(e.pointerId);pointers.set(e.pointerId,k);button.classList.add('held');tap(k);recompute();});for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>{pointers.delete(e.pointerId);button.classList.remove('held');recompute();});}
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{tap(+b.dataset.tap);canvas.focus();};
 function clearInput(){keyboard.clear();pointers.clear();held=pressed=0;document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
-function syncSave(){if(!started||syncing)return;Module._web_save();syncing=true;Module.FS.syncfs(false,error=>{syncing=false;saveStatus.textContent=error?(english?'Save failed — download a copy':'Błąd zapisu — pobierz kopię'):(english?'Saved in this browser ✓':'Zapis w tej przeglądarce ✓');});}
+function syncSave(){if(!started||syncing)return;Module._web_save();syncing=true;Module.FS.syncfs(false,error=>{syncing=false;if(!error)try{localStorage.removeItem(pendingLanguageKey);}catch{}saveStatus.textContent=error?(english?'Save failed — download a copy':'Błąd zapisu — pobierz kopię'):(english?'Saved in this browser ✓':'Zapis w tej przeglądarce ✓');});}
 addEventListener('blur',()=>{focused=false;clearInput();syncSave();});addEventListener('focus',()=>{focused=true;last=performance.now();});
 document.addEventListener('visibilitychange',()=>{focused=!document.hidden;if(!focused){clearInput();syncSave();}last=performance.now();});
 function resize(){
@@ -70,9 +92,9 @@ function drawBoot(){
  const w=38,h=24,cells=new Uint32Array(w*h*4);for(let i=0;i<w*h;i++){cells[i*4]=32;cells[i*4+1]=0xc8bbb8;cells[i*4+2]=0x101923;}
  const line=(y,text,fg=0xc8bbb8)=>{let x=2;for(const ch of text){if(x>=w-2)break;const i=(y*w+x++)*4;cells[i]=ch.codePointAt(0);cells[i+1]=fg;}};
  line(3,'T E R M I N A L',0xe4ad68);line(5,'V E L O C I T Y',0xe4ad68);
- line(9,'POD POWIERZCHNIĄ');line(12,'Miasto wewnątrz góry lodowej.');
- line(16,ready?'Dotknij / ENTER — rozpocznij':bootStatus,0x9dd4dd);
- line(19,'Klawiatura lub ekran dotykowy.');line(20,'Zapis zostaje w przeglądarce.');
+ line(9,tr('POD POWIERZCHNIĄ','BELOW THE SURFACE'));line(12,tr('Miasto wewnątrz góry lodowej.','A city inside an iceberg.'));
+ line(16,ready?tr('Dotknij / ENTER — rozpocznij','Tap / ENTER — start'):(bootStatus||tr('Ładowanie gry…','Loading game…')),0x9dd4dd);
+ line(19,tr('Klawiatura lub ekran dotykowy.','Keyboard or touch controls.'));line(20,tr('Zapis zostaje w przeglądarce.','Progress stays in this browser.'));
  window.tvFrame(cells,w,h);
 }
 const playfield=document.querySelector('#playfield');
@@ -98,16 +120,24 @@ document.querySelector('#fullscreen').onclick=toggleFullscreen;
 document.querySelector('#leave-fullscreen').onclick=toggleFullscreen;
 document.addEventListener('fullscreenchange',fullscreenLayout);
 new ResizeObserver(resize).observe(stage);
-document.querySelector('#export-save').onclick=()=>{if(!started)return;Module._web_save();try{const bytes=Module.FS.readFile('/persist/progress.dat.iceberg');const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=document.createElement('a');a.href=url;a.download='terminal-velocity.iceberg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{saveStatus.textContent='Brak zapisu do pobrania';}};
+document.querySelector('#export-save').onclick=()=>{if(!started)return;Module._web_save();try{const bytes=Module.FS.readFile('/persist/progress.dat.iceberg');const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=document.createElement('a');a.href=url;a.download='terminal-velocity.iceberg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{saveStatus.textContent=tr('Brak zapisu do pobrania','No save to download');}};
 function frame(now){if(accounts.active)accounts.draw();else if(started){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);pressed=0;}last=now;requestAnimationFrame(frame);}
-start.onclick=()=>{if(!ready||started)return;started=true;Module._web_start(Date.now()>>>0);start.hidden=true;accounts.start();resize();last=performance.now();canvas.focus();requestAnimationFrame(frame);};
+start.onclick=()=>{if(!ready||started)return;started=true;Module._web_start(Date.now()>>>0,english?1:0);start.hidden=true;syncSave();accounts.start();resize();last=performance.now();canvas.focus();requestAnimationFrame(frame);};
 canvas.onclick=()=>{if(!started)start.click();};
 addEventListener('keydown',e=>{if(!started&&e.code==='Enter')start.click();});
-var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mount(Module.IDBFS,{},'/persist');Module.FS.syncfs(true,error=>{if(error)saveStatus.textContent='Zapis przeglądarki niedostępny — pobieraj kopię';ready=true;start.disabled=false;if(!error)saveStatus.textContent='Gotowe / Ready';start.textContent='Uruchom / Start';drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});});}catch(e){bootStatus=String(e);drawBoot();}},setStatus(text){bootStatus=text;drawBoot();},onAbort(error){bootStatus='Błąd uruchamiania: '+error;drawBoot();}};
+var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mount(Module.IDBFS,{},'/persist');Module.FS.syncfs(true,error=>{
+ // A valid game save is authoritative even before the player presses Start.
+ // An explicit selection made while loading takes precedence over that save.
+ if(!explicitBootLanguage){const saved=Module._web_saved_language();if(saved===0||saved===1)english=saved===1;}
+ try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}
+ ready=true;start.disabled=false;translateUI();
+ if(error)saveStatus.textContent=tr('Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups');
+ drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
+ });}catch(e){bootStatus=tr('Błąd uruchamiania: ','Startup failed: ')+String(e);drawBoot();}},setStatus(text){if(!text)bootStatus='';drawBoot();},onAbort(error){bootStatus=tr('Błąd uruchamiania: ','Startup failed: ')+error;drawBoot();}};
 const accounts=new TVAccounts({english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame});
 document.querySelector('#account').onclick=()=>accounts.open();
 document.querySelector('#account-fullscreen').onclick=()=>accounts.open();
 setInterval(syncSave,5000);
 setInterval(()=>accounts.sync(),15000);
 
-resize();
+translateUI();resize();

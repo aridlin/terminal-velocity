@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace iceberg {
-inline constexpr unsigned ContentVersion = 3;
+inline constexpr unsigned ContentVersion = 4;
 inline constexpr int DistrictCount = 6;
 // Content registry boundary: increment when another district is fully authored.
 inline constexpr int AuthoredDistrictCount = 6;
@@ -105,7 +105,7 @@ struct Profile {
   std::array<unsigned, 8> quest_counts{};
   std::array<uint64_t, 2> task_items{};
   uint32_t discoveries = 0, cosmetics = 0;
-  int outfit = 0;
+  int outfit = 0, quest_focus = -1;
   int hidden_room = -1, visit_district = -1;
   double campaign_seconds = 0;
   int campaign_deaths = 0;
@@ -116,6 +116,9 @@ struct Profile {
   int endless_best = 0;
   std::array<Expedition, 2> expeditions;
   Revisit revisit;
+  // Exact visited room cells; never infer a visit from a shortcut or a secret.
+  std::array<uint32_t, DistrictCount> route_visited{};
+  std::array<unsigned, DistrictCount> route_choices{}, route_decisions{};
   std::vector<SeedRecord> challenges;
   // Persist the assembled itinerary as well as its seed: content additions
   // cannot silently reroll an expedition that somebody has already started.
@@ -132,6 +135,8 @@ struct Dialogue {
   std::vector<DialogueLine> lines;
   size_t page = 0;
   int action = 0;
+  int segment = 0;
+  bool instant = false;
   size_t visible_characters=0, byte_cursor=0;
   double character_delay=0, speech_delay=0;
   bool revealing=true;
@@ -139,7 +144,17 @@ struct Dialogue {
   void reveal_all(){visible_characters=size_t(-1);revealing=false;}
   bool active() const { return page < lines.size(); }
 };
+struct RouteView {
+  std::vector<Text> rooms;
+  std::array<Text,3> alternatives{};
+  uint32_t visited=0;
+  unsigned choices=0, decisions=0;
+  int leg=0, current=-1;
+  bool branching=false, available=false;
+  Text place;
+};
 struct View {
+  RouteView route;
   Language language = Language::Polish;
   Mode mode = Mode::Campaign;
   int district = 0, stage = 0, room = 0, depth = 0, selected = 0;
@@ -147,6 +162,10 @@ struct View {
   int hidden_room = -1, visit_district = -1;
   int run_district = 0, endless_best = 0;
   bool revisit = false;
+  bool can_travel = false, map_route = false;
+  int journal_tab = 0, quest_focus = -1, journey_district = 0, route_page = -1;
+  uint64_t story = 0;
+  std::string current_objective;
   uint32_t seed = 1;
   uint32_t cosmetics = 0;
   bool map = false, settings = false, confirm_new = false, finished = false, at_content_boundary = false;

@@ -30,7 +30,7 @@ struct Quest {
   int owner, district, required;
 };
 inline const std::array<Quest,8> Quests{{
- {{"Listy, które wypłynęły","Letters that surfaced"},{"Odszukaj trzy worki pocztowe na bocznych pomostach.","Find three mailbags on the side boardwalks."},{"Nowy szalik i wiadomości mieszkańców","A new scarf and letters from the residents"},0,0,3},
+ {{"Listy, które wypłynęły","Letters that surfaced"},{"Odzyskaj trzy worki pocztowe i przywróć listy do obiegu.","Recover three mailbags and bring the letters back into circulation."},{"Nowy szalik i wiadomości mieszkańców","A new scarf and letters from the residents"},0,0,3},
  {{"Ciśnienie społeczne","Social pressure"},{"Otwórz trzy boczne zawory bezpieczeństwa.","Open three auxiliary safety valves."},{"Skrót przez kotłownię","A shortcut through the boiler room"},1,1,3},
  {{"Bilet w jedną górę","One-way up"},{"Przywróć trzy sygnalizatory nieczynnego tramwaju.","Restore three signals on the abandoned tram line."},{"Tramwaj pospieszny przez osiedle","An express tram through the estate"},2,2,3},
  {{"Lokal do wyjaśnienia","An apartment to explain"},{"Sprawdź tabliczki na trzech zapomnianych balkonach.","Read the plaques on three forgotten balconies."},{"Klucz do dachu spółdzielni","The housing board's rooftop key"},3,2,3},
@@ -43,12 +43,8 @@ inline const std::array<Quest,8> Quests{{
 inline std::vector<DialogueLine> introduction(int district) {
   switch (district) {
   case 0: return {
-    {0,{"Jesteś. Zostawiłam ci suchą kurtkę pod ladą. Tę z urwanym guzikiem — drugiej nie mamy.","You're here. I left a dry coat under the counter. The one with the missing button — we haven't got another."}},
-    {0,{"Górne dzielnice milczą od rana. Witek twierdzi, że ciepło znika z rur, zanim dotrze do mieszkań.","The upper districts have been silent all morning. Witek says heat is disappearing from the pipes before it reaches the homes."}},
-    {0,{"Na tablicy na końcu nabrzeża są trzy odcinki: odpływ, przepompownia i droga do ciepłowni. Sprawdź połączenia po kolei.","The board at the far end of the quay has three routes: the drain, the pumping station, and the heating works approach. Check the connections in order."}},
-    {0,{"Nie musisz być szybki. Musisz wrócić. Na pomostach świecą lampy powrotne. R zabierze cię do ostatniej.","You don't need to be fast. You need to come back. Return lamps mark the boardwalks. R takes you to the last one."}},
-    {6,{"A jeśli jednak będziesz szybki, nie mów Helenie, że ci pokazałem. Skok po zrywie niesie dalej niż sam zryw.","And if you do happen to be fast, don't tell Helena I showed you. A jump out of a dash carries you farther than the dash alone."}},
-    {0,{"Zajrzyj też na boczne pomosty. Została tam poczta. Nie będę cię poganiać, ale ludzie czekają.","Check the side boardwalks too. There's mail out there. I won't rush you, but people are waiting."}}
+    {0,{"Jesteś. Sucha kurtka jest pod ladą. Góra nie ma ciepła — sprawdź połączenie z Łazarzem.","You're here. Dry coat under the counter. The upper homes have no heat — check the Lazarus connection."}},
+    {0,{"Zacznij przy tablicy na końcu nabrzeża. Lampy zapisują powrót; R zabierze cię do ostatniej. Nie musisz być szybki. Musisz wrócić.","Start at the board at the far end of the quay. Lamps save your return point; R takes you back. You don't need to be fast. You need to come back."}}
   };
   case 1: return {
     {1,{"O, poczta. Rachunek? Jeśli tak, wrzuć do pieca. Przynajmniej da trochę ciepła.","Oh, mail. A bill? Put it in the furnace. At least it will give us some heat."}},

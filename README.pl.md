@@ -16,7 +16,9 @@ Historia prowadzi za oryginalnym planem sieci przez ogrody do pękniętej Korony
 
 Po zakończeniu można wrócić do mieszkańców i stałych tras, ruszyć na wyprawę bez końca albo sprawdzić się w sześciu próbach mistrzowskich. Każda składa się z siedmiu trudniejszych sal i egzaminu ruchowego. Rekord czasu, najmniejsza liczba powrotów i najlepszy zbiór zapisują się niezależnie. Własne seedy mają osobne rekordy. Ukończenie próby daje odznakę widoczną na postaci i strój.
 
-Język polski jest domyślny. **L** w menu przełącza całą główną grę na angielski. Warto rozglądać się uważnie, ale dodatkowe odkrycia nie blokują zwykłej historii.
+Dialog pojawia się litera po literze. **E / Enter** podczas pisania pokazuje tekst od razu i zachowuje to tempo do końca rozmowy; każdą stronę nadal zatwierdzasz osobno. Długi tekst dzieli się na strony w małych oknach. **P** zatrzymuje rozmowę.
+
+Wydania komputerowe uruchamiają się po polsku. Pierwsza wizyta w przeglądarce wybiera język według jej ustawień (polski dla polskich preferencji, angielski w pozostałych przypadkach); zapis gry i ręczny wybór mają pierwszeństwo. **PL / EN** przy wejściu do gry w przeglądarce lub **L** w grze zmienia język dialogów, celów i sterowania. Warto rozglądać się uważnie, ale dodatkowe odkrycia nie blokują zwykłej historii.
 
 ## Uruchamianie
 
@@ -29,7 +31,7 @@ Linux, w terminalu:
 ./ghostty-play.sh               # nowe okno Ghostty
 ```
 
-Minimum to **76×24 komórki**, zalecane **110×34**. Okno można skalować; **F11** przełącza pełny ekran. **Ctrl +/−** zmienia wielkość komórek, a **Ctrl 0** ją resetuje; ekrany o dużej gęstości pikseli skalują się automatycznie. Utrata fokusu pauzuje grę; **Enter/P** wznawia.
+Podróż fabularna obsługuje **34×24 komórki** albo szeroki układ **56×20**; zalecane **110×34**. Klasyczne trasy wymagają **76×24**. Okno można skalować; **F11** przełącza pełny ekran. **Ctrl +/−** zmienia wielkość komórek, a **Ctrl 0** ją resetuje; ekrany o dużej gęstości pikseli skalują się automatycznie. Utrata fokusu pauzuje grę; **Enter/P** wznawia.
 
 Windows 10/11 x64: rozpakuj całą paczkę, uruchom **play.cmd** w Windows Terminal albo **play-window.cmd** dla wersji okienkowej. Zachowaj katalog `assets/` obok plików wykonywalnych. Wersja okienkowa potrzebuje też dołączonego `SDL2.dll`; terminalowa nie potrzebuje SDL. Administrator nie jest wymagany.
 
@@ -44,11 +46,11 @@ Domyślne wejście linuksowe używa zdarzeń naciśnięcia i zwolnienia klawiszy
 | X lub Shift + kierunek | Zryw |
 | S/dół | Szybkie opadanie; zejście przez ruchomą platformę |
 | E/F | Rozmowa, obsługa maszyny, zabranie przedmiotu zadania |
-| B | Oględziny z osobną, szczegółową ilustracją; B zamyka bez wykonania działania |
+| B | Oględziny z osobną, szczegółową ilustracją; B zamyka bez obsługi maszyny; odczyt manometrów zapisuje dowód |
 | E/Enter | Dalsza rozmowa/opis oględzin albo przejście po ukończeniu sali |
 | R | Szybki powrót do lampy |
-| Tab | Dziennik; E przy ukończonym zadaniu otwiera jego nagrodę |
-| J | Mapa; W/S wybiera, Enter podróżuje, gdy przejazd jest dostępny |
+| Tab | Księga zadań; B zmienia zakładkę, W/S wybiera, E ustawia cel lub otwiera zapis |
+| J | Mapa podróży; B przełącza dzielnice/trasę, W/S wybiera cel lub odcinek, Enter podróżuje, gdy przejazd jest dostępny |
 | P/Escape | Pauza lub zamknięcie panelu |
 | M | Menu główne |
 | U | Wyciszenie |
@@ -100,7 +102,7 @@ Używajcie tej samej wersji gry, dzielnicy, trybu i seedu. Duchy pokazują się 
 
 C++20 i make wystarczą do `make terminal_velocity`. Cała gra: `make -j2 all` — okno wymaga dodatkowo SDL2 i FreeType. Pakiety Debian/Ubuntu: `g++ make pkg-config libsdl2-dev libfreetype6-dev`; Arch/CachyOS: `base-devel pkgconf sdl2-compat freetype2`.
 
-`make test` sprawdza dawną fizykę i sieć, 10 000 seedów strukturalnie, 1000 tras zwykłymi wejściami, postęp historii i zadań, boczne drogi, próby, polskie/angielskie dialogi w 76×24, przerwane zapisy oraz oba frontendy SDL. `python tools/test_iceberg_tui.py` (pyte) sprawdza prawdziwy TUI w PTY. Dodatkowo: `./iceberg_tests 10000 1000 expert` i `./iceberg_branch_tests 2`.
+`make test` sprawdza dawną fizykę i sieć, 10 000 seedów strukturalnie, 1000 tras zwykłymi wejściami, postęp historii i zadań, boczne drogi, próby, polskie/angielskie dialogi w pięciu rozmiarach od 34×24 do 110×34, przerwane zapisy oraz oba frontendy SDL. `python tools/test_iceberg_tui.py` (pyte) sprawdza prawdziwy TUI w PTY. Dodatkowo: `./iceberg_tests 10000 1000 expert` i `./iceberg_branch_tests 2`.
 
 Windows w MSYS2 UCRT64: `make windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=windres`. Dla okna zainstaluj pakiety SDL2/FreeType UCRT64 i zbuduj `make terminal_velocity_sdl.exe MINGW_CXX=g++`. Cross-build na Linuxie z MinGW-w64: `tools/build_windows_sdl.sh`, z przypiętymi i sprawdzanymi zależnościami. [Licencje bibliotek](THIRD_PARTY.md).
 

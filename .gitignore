@@ -46,3 +46,11 @@ iceberg_dialogue_tests
 trailer_capture
 
 /iceberg_ending_tests
+
+/iceberg_route_tests
+/iceberg_ui_tests
+/iceberg_harbor_tests
+
+/sdl_cell_tests
+
+/iceberg_compatibility_tests

@@ -10,23 +10,26 @@ int main(){try {
  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
   game.profile.language=language;game.sync_view();
   for(auto dimensions:{std::pair{76,24},std::pair{38,28},std::pair{60,20}}) {
+   game.tick({},0,true,dimensions.first,dimensions.second);
    game.talk({{4,line},{0,{"Dziękuję.","Thank you."}}},100);
    auto &dialogue=game.state.adventure.dialogue;
    dialogue_check(dialogue.visible_characters==0&&dialogue.revealing,"new dialogue begins unrevealed");
    for(int i=0;i<4;++i)game.tick({},.1);
-   dialogue_check(dialogue.visible_characters>0&&dialogue.visible_characters<30&&dialogue.page==0,"normal time reveals a partial Unicode line without advancing the page");
+   dialogue_check(dialogue.visible_characters>0&&dialogue.visible_characters<40&&dialogue.page==0,"normal time reveals a partial Unicode line without advancing the page");
    RenderGrid(game.grid,game.state,dimensions.second,dimensions.first,2).draw();auto partial=frame;
    Controls confirm;confirm.confirm=true;game.tick(confirm,1./120);
    dialogue_check(dialogue.page==0&&!dialogue.revealing,"first confirmation instantly reveals the current page");
    RenderGrid(game.grid,game.state,dimensions.second,dimensions.first,2).draw();
-   int top=dimensions.first>=76?dimensions.second-11:11,bottom=dimensions.first>=76?dimensions.second-4:dimensions.second-2;
-   int left=dimensions.first>=76?24:2,right=dimensions.first>=76?dimensions.first-4:dimensions.first-2;
+   int courier=4+int(std::floor((game.state.player.y-game.state.camera_y)/.8));
+   auto layout=iceberg::dialogue_layout(line.get(language),dimensions.first,dimensions.second,courier,dialogue.segment);
+   int top=layout.text_y,bottom=top+std::min(layout.text_rows,int(layout.body.size())),left=layout.text_x,right=dimensions.first-3;
    int letters=0;
    for(int y=top;y<bottom;++y)for(int x=left;x<right;++x)if(partial[size_t(y)][size_t(x)].glyph!=" ") {
     ++letters;dialogue_check(partial[size_t(y)][size_t(x)].glyph==frame[size_t(y)][size_t(x)].glyph,"revealed letters keep their final wrapped positions");
    }
    dialogue_check(letters>0,"partially revealed text is present in the actual cell renderer");
-   game.tick(confirm,1./120);dialogue_check(dialogue.page==1&&dialogue.visible_characters==0,"second confirmation starts the next page from its first character");
+   game.tick(confirm,1./120);dialogue_check(dialogue.page==1&&!dialogue.revealing&&dialogue.instant,"one reveal choice makes subsequent lines immediate without skipping them");
+   dialogue.instant=false;dialogue.reset_reveal();
    game.tick({},.1);auto visible=dialogue.visible_characters;
    Controls pause;pause.pause=true;game.tick(pause,1./120);game.tick({},.1);
    dialogue_check(dialogue.visible_characters==visible,"pause freezes text and speech cadence");game.tick(pause,1./120);

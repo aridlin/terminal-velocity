@@ -1,7 +1,7 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++20 -O2 -Wall -Wextra -pedantic
 SDL_FLAGS = $(shell pkg-config --cflags --libs sdl2 freetype2)
-ICEBERG_HEADERS = $(wildcard iceberg_*.hpp iceberg_rooms_*.inc)
+ICEBERG_HEADERS = $(wildcard iceberg_*.hpp iceberg_*.inc)
 .PHONY: all run test smoke clean
 all: terminal_velocity keyboard_launcher terminal_velocity_sdl
 terminal_velocity_sdl: sdl_frontend.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio.o
@@ -21,7 +21,12 @@ campaign_tests: campaign_tests.cpp main.cpp progress.hpp audio.hpp audio.o
 	$(CXX) $(CXXFLAGS) -o $@ campaign_tests.cpp audio.o -ldl -lpthread
 iceberg_tests: iceberg_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
 	$(CXX) $(CXXFLAGS) -o $@ iceberg_tests.cpp audio.o -ldl -lpthread
-test: physics_tests extension_tests multiplayer_tests campaign_tests iceberg_tests iceberg_campaign_tests iceberg_quest_tests iceberg_text_tests iceberg_story_playtest iceberg_mastery_tests iceberg_branch_tests iceberg_save_crash_tests iceberg_jubilee_tests iceberg_inspection_tests iceberg_reaction_tests terminal_velocity_sdl iceberg_dialogue_tests iceberg_ending_tests
+test: iceberg_compatibility_tests iceberg_harbor_tests sdl_cell_tests iceberg_route_tests iceberg_ui_tests physics_tests extension_tests multiplayer_tests campaign_tests iceberg_tests iceberg_campaign_tests iceberg_quest_tests iceberg_text_tests iceberg_story_playtest iceberg_mastery_tests iceberg_branch_tests iceberg_save_crash_tests iceberg_jubilee_tests iceberg_inspection_tests iceberg_reaction_tests terminal_velocity_sdl iceberg_dialogue_tests iceberg_ending_tests
+	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./sdl_cell_tests
+	./iceberg_compatibility_tests
+	./iceberg_harbor_tests
+	./iceberg_route_tests
+	./iceberg_ui_tests
 	./physics_tests
 	./extension_tests
 	./multiplayer_tests
@@ -55,8 +60,8 @@ WINDOWS_FLAGS = -std=c++20 -O2 -Wall -Wextra -pedantic -static -static-libgcc -s
 windows: terminal_velocity.exe
 terminal_velocity.exe: main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio_windows.o windows_icon.o
 	$(MINGW_CXX) $(WINDOWS_FLAGS) -o $@ main.cpp windows_icon.o audio_windows.o -lws2_32
-windows-tests: physics_tests.exe extension_tests.exe multiplayer_tests.exe windows_input_tests.exe campaign_tests.exe iceberg_tests.exe iceberg_campaign_tests.exe iceberg_text_tests.exe iceberg_story_playtest.exe iceberg_mastery_tests.exe iceberg_jubilee_tests.exe iceberg_inspection_tests.exe iceberg_reaction_tests.exe iceberg_dialogue_tests.exe iceberg_ending_tests.exe
-	@if [ -n "$$MSYSTEM" ]; then ./iceberg_tests.exe 1000 100 && ./iceberg_campaign_tests.exe && ./iceberg_text_tests.exe && ./iceberg_story_playtest.exe && ./iceberg_mastery_tests.exe && ./iceberg_jubilee_tests.exe && ./iceberg_inspection_tests.exe && ./iceberg_reaction_tests.exe && ./iceberg_dialogue_tests.exe && ./iceberg_ending_tests.exe; fi
+windows-tests: iceberg_route_tests.exe iceberg_ui_tests.exe iceberg_harbor_tests.exe physics_tests.exe extension_tests.exe multiplayer_tests.exe windows_input_tests.exe campaign_tests.exe iceberg_tests.exe iceberg_campaign_tests.exe iceberg_text_tests.exe iceberg_story_playtest.exe iceberg_mastery_tests.exe iceberg_jubilee_tests.exe iceberg_inspection_tests.exe iceberg_reaction_tests.exe iceberg_dialogue_tests.exe iceberg_ending_tests.exe
+	@if [ -n "$$MSYSTEM" ]; then ./iceberg_route_tests.exe && ./iceberg_ui_tests.exe && ./iceberg_harbor_tests.exe && ./iceberg_tests.exe 1000 100 && ./iceberg_campaign_tests.exe && ./iceberg_text_tests.exe && ./iceberg_story_playtest.exe && ./iceberg_mastery_tests.exe && ./iceberg_jubilee_tests.exe && ./iceberg_inspection_tests.exe && ./iceberg_reaction_tests.exe && ./iceberg_dialogue_tests.exe && ./iceberg_ending_tests.exe; fi
 iceberg_story_playtest.exe: iceberg_story_playtest.cpp main.cpp $(ICEBERG_HEADERS) audio_windows.o
 	$(MINGW_CXX) $(WINDOWS_FLAGS) -o $@ $< audio_windows.o -lws2_32
 %_tests.exe: %_tests.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp $(ICEBERG_HEADERS) audio_windows.o
@@ -119,4 +124,19 @@ trailer_capture: tools/capture_trailer.cpp sdl_frontend.cpp main.cpp $(ICEBERG_H
 	$(CXX) $(CXXFLAGS) -o $@ tools/capture_trailer.cpp audio.o $(SDL_FLAGS) -ldl -lpthread
 
 iceberg_ending_tests: iceberg_ending_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ $< audio.o -ldl -lpthread
+
+iceberg_route_tests: iceberg_route_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ $< audio.o -ldl -lpthread
+
+iceberg_ui_tests: iceberg_ui_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ $< audio.o -ldl -lpthread
+
+sdl_cell_tests: sdl_cell_tests.cpp sdl_frontend.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ $< audio.o $(SDL_FLAGS) -ldl -lpthread
+
+iceberg_harbor_tests: iceberg_harbor_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ $< audio.o -ldl -lpthread
+
+iceberg_compatibility_tests: iceberg_compatibility_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
 	$(CXX) $(CXXFLAGS) -o $@ $< audio.o -ldl -lpthread

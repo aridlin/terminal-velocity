@@ -14,9 +14,9 @@ The complete story follows the original network plan through the cultivation cha
 
 Afterwards, revisit settlements and authored routes, start endless expeditions, or attempt the six district mastery trials. Each trial combines seven expert rooms with a final movement examination. Time, fewest retries and collection records are independent. Explicit seeds have separate records; mastery unlocks a visible badge and outfit.
 
-Dialogue appears character by character, with short recorded voices. **E / Enter** reveals the current page immediately; press again to continue. **P** pauses the dialogue.
+Dialogue appears character by character, with short recorded voices. **E / Enter** during typing shows the text immediately and keeps the remaining conversation at that pace; each page still waits for your next press. Long passages paginate on smaller screens. **P** pauses the dialogue.
 
-Polish is the default. **L** in the menu switches to English, including dialogue, objectives and controls. Observation and exploration are rewarded, but optional discoveries never gate the ordinary story.
+Desktop editions start in Polish. A fresh browser visit follows the browser language (Polish for Polish preferences, English otherwise); saved games and explicit choices take precedence. Use **PL / EN** beside the browser entrance or **L** in the game to change dialogue, objectives and controls. Observation and exploration are rewarded, but optional discoveries never gate the ordinary story.
 
 ## Start playing
 
@@ -29,7 +29,7 @@ Linux, inside a terminal:
 ./ghostty-play.sh                # open a new Ghostty window
 ```
 
-Use at least **76×24 cells**; **110×34** is recommended. The window can be resized; **F11** toggles fullscreen. **Ctrl +/−** changes cell size and **Ctrl 0** resets it; high-density displays scale automatically. Losing focus pauses play. **Enter/P** resumes.
+The story supports **34×24 cells** or a wide **56×20** layout; **110×34** is recommended. Classic courses require **76×24**. The window can be resized; **F11** toggles fullscreen. **Ctrl +/−** changes cell size and **Ctrl 0** resets it; high-density displays scale automatically. Losing focus pauses play. **Enter/P** resumes.
 
 On Windows 10/11 x64, extract the whole package and run **play.cmd** in Windows Terminal, or **play-window.cmd** for the window edition. Keep `assets/` beside the executables. The window edition needs the included `SDL2.dll`; the terminal executable does not. No administrator access is needed on Windows.
 
@@ -46,11 +46,11 @@ Guest SSH: `ssh -t gra@prol.aridlin.pl`. Each anonymous visit has independent te
 | X or Shift + direction | Dash |
 | S/down | Fast fall; drop through a moving platform |
 | E/F | Talk, operate machinery, collect a task object |
-| B | Detailed illustrated inspection of a nearby object or character; B closes without using it |
+| B | Detailed illustrated inspection of a nearby object or character; B closes without operating it; reading gauges records their evidence |
 | E/Enter | Continue dialogue/inspection text or leave a completed room |
 | R | Fast checkpoint retry |
-| Tab | Journal; select a completed task and E to read its reward |
-| J | District map; W/S selects, Enter travels when available |
+| Tab | Quest book; B switches active/completed/notes, W/S selects, E focuses a task or reads a record |
+| J | Journey map; B switches districts/room route, W/S selects a destination or route leg, Enter travels when available |
 | P/Escape | Pause or close a panel |
 | M | Main menu |
 | U | Mute/unmute |

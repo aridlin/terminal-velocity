@@ -42,7 +42,12 @@ with tempfile.TemporaryDirectory(prefix='tv-account-test-') as private:
  check(request('logout','POST',{},cookie,csrf)[0]==200,'logout succeeds')
  check(request('save',cookie=cookie)[0]==401,'logout invalidates prior session cookie')
  check(request('save',cookie=second)[0]==200,'logout preserves other device session')
+ # Current route-aware envelopes and legacy files both survive cloud storage.
+ sample6=sample.replace('TVICE4 ', 'TVICE6 ', 1)
+ check(request('save','PUT',{'revision':2,'save':sample6},second,second_csrf)[0]==200,'TVICE6 route-aware envelope accepted')
+ check(request('save',cookie=second)[1]['save']==sample6,'TVICE6 cloud round-trip is byte-exact')
+ check(request('save','PUT',{'revision':3,'save':sample6.replace('TVICE6','TVICE7',1)},second,second_csrf)[0]==400,'unknown future envelope rejected')
  for _ in range(21):last=request('login','POST',{'username':'courier_one','password':'wrong-password'},third,s['csrf'])[0]
  check(last==429,'login attempts throttled')
- check(db.execute('select count(*) from history').fetchone()[0]==1,'previous save retained for recovery')
+ check(db.execute('select count(*) from history').fetchone()[0]==2,'previous saves retained for recovery')
  print('All account endpoint checks passed through real PHP CGI; no live deployment claimed.')

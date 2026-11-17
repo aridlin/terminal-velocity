@@ -30,8 +30,14 @@ void send_web_ui() {
 }
 }
 extern "C" {
-EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed) {
+EMSCRIPTEN_KEEPALIVE int web_saved_language() {
+  iceberg::Profile saved;
+  iceberg::SaveStore store("/persist/progress.dat.iceberg");
+  return store.load(saved)?int(saved.language):-1;
+}
+EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language) {
   iceberg::SessionOptions options;options.seed=seed;options.mute=false;
+  if(language==0||language==1){options.language=iceberg::Language(language);options.language_override=true;}
   web_game=std::make_unique<AdventureSession>(options,"/persist/progress.dat.iceberg");
   cell_frame_sink=[](const CellFrame &frame) {
     int rows=int(frame.size()),cols=rows?int(frame[0].size()):0;
@@ -64,17 +70,23 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   RenderGrid(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2).draw();send_web_ui();
 }
 EMSCRIPTEN_KEEPALIVE void web_save() {if(web_game)web_game->persist();}
+EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
+  if(!web_game||(language!=0&&language!=1))return;
+  web_game->profile.language=iceberg::Language(language);
+  if(web_game->state.adventure.dialogue.active()){web_game->state.adventure.dialogue.segment=0;web_game->state.adventure.dialogue.reset_reveal();web_game->frame_dialogue();}
+  web_game->persist();web_game->sync_view();send_web_ui();
+}
 EMSCRIPTEN_KEEPALIVE int web_import_save() {
   iceberg::Profile imported;
   if(!iceberg::SaveStore::validate_file("/persist/import.iceberg",imported))return 0;
   // Validate before replacing anything. SaveStore preserves the prior profile.
   if(!web_game||!web_game->saves.save(imported))return 0;
-  web_game.reset();web_start(imported.seed);return 1;
+  web_game.reset();web_start(imported.seed,-1);return 1;
 }
 EMSCRIPTEN_KEEPALIVE void web_guest_profile() {
   if(!web_game)return;
-  iceberg::Profile fresh;fresh.seed=unsigned(std::chrono::system_clock::now().time_since_epoch().count());
-  web_game->saves.save(fresh);web_game.reset();web_start(fresh.seed);
+  iceberg::Profile fresh;fresh.language=web_game->profile.language;fresh.seed=unsigned(std::chrono::system_clock::now().time_since_epoch().count());
+  web_game->saves.save(fresh);web_game.reset();web_start(fresh.seed,-1);
 }
 EMSCRIPTEN_KEEPALIVE void web_account_pause() {
   if(web_game){web_account_was_paused=web_game->state.paused;web_game->state.paused=!web_game->state.menu;web_game->audio.update(AudioScene::Paused,web_game->music_track(),.05,true);}

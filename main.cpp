@@ -6,6 +6,7 @@
 #include "iceberg_story.hpp"
 #include "iceberg_epilogue_story.hpp"
 #include "iceberg_inspection.hpp"
+#include "iceberg_ui.hpp"
 #include <csignal>
 #ifndef _WIN32
 #include <fcntl.h>
@@ -331,7 +332,7 @@ struct Patrol {
     return {left + (z < w ? z : 2 * w - z), y, 1.1, 1.0};
   }
 };
-enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence, Epilogue };
+enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence, Epilogue, RouteChoice };
 struct Interaction {
   Rect area;
   InteractionKind kind;
@@ -1817,7 +1818,7 @@ public:
   }
   void draw() {
     if (rows_ < (grid_.adventure_level&&cols_>=56?20:24) || cols_ < (grid_.adventure_level?34:76)) {
-      text(1, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Powiększ terminal do co najmniej 76 × 24.","Resize the window to at least 76 × 24."):"Powiększ terminal do co najmniej 76 × 24.");
+      text(1, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Powiększ okno: 34 × 24 lub 56 × 20.","Resize the window: 34 × 24 or 56 × 20."):"Powiększ terminal do co najmniej 76 × 24.");
       text(3, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Zalecane: 110 × 34. Q — wyjście.","Recommended: 110 × 34. Q — quit."):"Zalecane: 110 × 34. Q — wyjście.");
       flush();
       return;
@@ -2071,7 +2072,7 @@ private:
       if (grid_.adventure_level) {
         auto c=solid==255?Cell{"█",Color::Solid}:braille_cell(solid,Color::Solid);
         const auto &district=iceberg::Districts[size_t(grid_.district)];
-        c.rgb=district.stone;
+        c.rgb=grid_.district==3?0x78929e:district.stone;
         // Sparse masonry/plate seams retain a solid collision silhouette.
         if(solid==255 && (int(std::floor(wx*2))+int(std::floor(wy))*3)%47==0) {
           c.glyph=grid_.district==1?"▥":"▓";
