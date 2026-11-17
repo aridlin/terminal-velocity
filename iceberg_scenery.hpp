@@ -21,16 +21,49 @@
       world_art(center-5*scale_,deck.y+2*row,{"┏━━━━┳━━━━┓","┃╲   ┃   ╱┃","┃ ╲  ┃  ╱ ┃","┗━━╧━┻━╧━━┛"},0xbd9364);
     }
   }
+  bool quay_ferry(size_t platform) const {
+    return grid_.template_id==504||(grid_.template_id==601&&platform==0);
+  }
   void draw_quay_ferry(const Rect &deck) {
     const double row=aspect_*scale_;
-    int width=std::max(6,int(deck.w/scale_));
-    std::string hull="╲";
-    for(int i=2;i<width;++i)hull+=i%7==0?"○":"━";
-    world_art(deck.x,deck.y+row,{hull+"╱"},0xa58460);
+    const int width=std::max(6,int(deck.w/scale_));
     world_art(deck.x+deck.w*.38,deck.y-6*row,
       {"     ▆▆","     ▓▓","  ▟██████▙","  ▌▥ ▥ ▥ ▐","╔═╧══════╧══╗","║ ○       ○ ║"},0x82999a);
-    int wake=int(state_.elapsed*4)%3;
-    world_art(deck.x-3*scale_,deck.y+2*row,{wake==0?"∿  ∿":" ∿  ∿"},0x527a89);
+
+    // The painted basin sits 2.6 world units below the walkable deck.
+    const int surface=screen(deck.x,deck.y+2.6+.5*row).second;
+    const int deck_row=screen(deck.x,deck.y).second;
+    std::string rim="╞";
+    for(int i=2;i<width;++i)rim+="═";
+    world_art(deck.x,deck.y,{rim+"╡"},0xc0a378);
+    std::string gunwale;
+    for(int i=0;i<width;++i)gunwale+="▄";
+    world_art(deck.x,deck.y-.001,{gunwale},0x9d7c58);
+    for(int y=deck_row+1;y<=surface;++y) {
+      const int inset=std::min((width-4)/2,y-deck_row-1);
+      const int inner=width-2*inset-2;
+      std::string body=y==surface?"╰":"╲";
+      for(int i=0;i<inner;++i)
+        body+=y==surface?"━":y==deck_row+1&&i%7==3?"○":"▒";
+      body+=y==surface?"╯":"╱";
+      world_art(deck.x+inset*scale_,deck.y+(y-deck_row)*row,{body},y==surface?0x6897a9:0xa58460);
+    }
+  }
+  void draw_ferry_foreground() {
+    const int platform=state_.player.support;
+    if(platform<0||size_t(platform)>=grid_.platforms.size()||!quay_ferry(size_t(platform)))return;
+    const Rect deck=grid_.platforms[size_t(platform)].at(state_.elapsed);
+    auto [left,row]=screen(deck.x,deck.y-.001);
+    if(row<4||row>=rows_-3)return;
+    const int right=left+int(deck.w/scale_);
+    const int rider=screen(state_.player.x,deck.y).first;
+    for(int x=std::max({0,left,rider});x<std::min({cols_,right,rider+4});++x) {
+      const Cell &under=buffer_[row][x];
+      // Keep the upper half of the sprite cell. The solid near gunwale
+      // covers the courier's boots when the platform is carrying them.
+      const uint32_t above=under.glyph=="▀"?under.rgb:under.background;
+      put(row,x,{"▄",Color::Decor,false,false,0,0x9d7c58,above});
+    }
   }
   void draw_scenery_pipe(std::initializer_list<std::pair<double,double>> path,uint32_t color) {
     auto paint=[&](int x,int y,const char *glyph) {
@@ -135,14 +168,12 @@
       draw_scenery_pipe({{76,35.6},{81,35.6},{81,44}},0x52686f);
       draw_quay_hoist();
       world_art(106,48-6*aspect_*scale_,{" ╱▔▔╲╱▔▔╲╱▔▔╲╱▔▔╲","│                 │","│  ♧  ▰  ♧  ▰    │","├─────────────────┤","│                 │","╰───┬─────────┬───╯"},d.stone);
-      draw_dock_worker(94,48,std::fmod(time,2.4));
       for(int x=83;x<123;x+=12)world_art(x,58,{"║","║","╨"},d.stone);
       world_art(112,48-8*aspect_*scale_,{"╭─────╮","│  ◷  │","╰──┬──╯","   │","   │"},d.accent);
       return;
     }
     if(id==601) {
       world_art(8,55-8*aspect_*scale_,{"╭─────────────────────────╮",tr("│ SZKOŁA NA NABRZEŻU      │","│ LESSONS ON THE QUAY     │"),"├─────────────────────────┤","│ ▤▤ ▤▤ ▤▤  ╭─────╮  ▤▤   │","│           │     │       │","│           │  ○  │       │","╰───────────┴─────┴───────╯"},d.stone);
-      draw_quay_ferry(grid_.platforms.front().at(state_.elapsed));
       world_art(70,49-5*aspect_*scale_,{"╭──────────────────╮","│ ▥▥▥  ▥▥▥  ▥▥▥    │","├──────────────────┤","│  ▱▱▱  ▱▱▱  ▱▱▱   │","╰──────────────────╯"},d.stone);
       world_art(137,43-7*aspect_*scale_,{"        ╔══════════════╗","        ║              │","        ║              │","        ║             ╱╲","        ║            ▐▣▣▌","        ║","════════╩═══════════════"},d.stone);
       world_art(171,40-5*aspect_*scale_,{"╭───────────────────╮",tr("│ DO DOKÓW       →  │","│ TO THE DOCKS   →  │"),"╰──┬─────────────┬──╯","   │             │","═══╧═════════════╧═══"},d.stone);
@@ -166,7 +197,6 @@
         }
         if(i%3==0) {
           world_art(a.x+a.w-7,a.y-5*aspect_*scale_,{"╭──╮","│▥▥│","╰┬─╯"," │ "," │ "},d.stone);
-          if(i>0)draw_dock_worker(a.x+4,a.y,std::fmod(time+i,2.4));
         }
       }
       const auto &middle=p.path[p.path.size()/2];
@@ -181,10 +211,6 @@
         world_art(88,43-6*aspect_*scale_,{" ╭──────────────────╮",tr(" │ SORTOWNIA  02    │"," │ SORTING    02    │")," │ ▯ ▯ ▯ ▯ ▯ ▯ ▯ ▯  │"," ╰───╥────────╥─────╯","     ║        ║","═════╩════════╩══════"},d.stone);
         draw_sorting_belts();
       } else if(id==504) {
-        for(const auto &platform:grid_.platforms) {
-          auto boat=platform.at(state_.elapsed);
-          draw_quay_ferry(boat);
-        }
         world_art(126,41-6*aspect_*scale_,{"    ╱╲","   ╱  ╲","  ╱    ╲"," ╱______╲","     │","─────┴──────"},d.stone);
       } else if(id==505) {
         draw_scenery_pipe({{39,32},{39,35.2},{44,35.2},{44,37.3}},0x879396);

@@ -92,8 +92,19 @@ int main(){try{
  game.state.menu=false;
  game.state.camera_x=86;game.state.camera_y=40;
  RenderGrid(game.grid,game.state,34,110,2).draw();
- require_reaction(frame[16][30].rgb==0x8ed9e5&&frame[16][30].background==0x214b62&&
-   frame[18][30].background==0x14394e&&!game.grid.hazard_at(98,50),
+ require_reaction(frame[16][62].rgb==0x8ed9e5&&frame[16][62].background==0x214b62&&
+   frame[18][62].background==0x14394e&&!game.grid.hazard_at(98,50),
    "ferry water has a visible surface and depth beneath the deck");
+ const auto deck=game.grid.platforms[0].at(game.state.elapsed);
+ game.state.player.x=deck.x+deck.w*.7;game.state.player.y=deck.y-kPlayerHeight;
+ const int foot_row=4+int(std::floor((deck.y-.001-game.state.camera_y)/.8));
+ const int rider_col=int(std::floor((game.state.player.x-game.state.camera_x)/.4));
+ RenderGrid(game.grid,game.state,34,110,2).draw();auto ashore=frame;
+ game.state.player.support=0;
+ RenderGrid(game.grid,game.state,34,110,2).draw();
+ require_reaction(frame[foot_row][rider_col+1].rgb==0x9d7c58&&
+   frame[foot_row][rider_col+1].glyph=="▄"&&ashore[foot_row][rider_col+1].rgb!=0x9d7c58&&
+   frame[foot_row-1][rider_col+1].glyph==ashore[foot_row-1][rider_col+1].glyph,
+   "the foreground gunwale hides the rider's boots and leaves the upper sprite visible");
  return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

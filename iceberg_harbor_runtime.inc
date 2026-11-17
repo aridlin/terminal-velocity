@@ -2,6 +2,22 @@
 // the courier's real collision state; switches already have atomic save and
 // checkpoint persistence, so no separate unsaved mission state is needed.
   bool harbor_interact(const Interaction &node) {
+    if(node.kind==InteractionKind::DockWorker) {
+      static constexpr iceberg::Text lines[]={
+        {"Mewy znów polują na mój obiad.","The gulls are after my lunch again."},
+        {"Nie wszystko, co przecieka, jest statkiem.","Some leaks don't even come with a boat."},
+        {"Wychodzi na to, że lód też skrzypi.","Even the ice creaks around here."},
+        {"Herbata stygnie. Skrzynki poczekają.","My tea's going cold. The crates can wait."},
+        {"Dziś wiatr pachnie mokrym drewnem.","The wind smells of wet wood today."},
+        {"Jeszcze trzy skrzynki. Chyba.","Three crates left. I think."}
+      };
+      constexpr int count=int(std::size(lines));
+      int line=dock_chatter.below(last_dock_line<0?count:count-1);
+      if(last_dock_line>=0&&line>=last_dock_line)++line;
+      last_dock_line=line;
+      notice(t("Doker: ","Dockworker: ")+lines[line].get(profile.language),4);
+      return true;
+    }
     auto &v=state.adventure;
     if(iceworld::harbor_v4_room(grid.template_id)&&node.kind==InteractionKind::Task&&node.id==0) {
       const uint64_t item=uint64_t(1)<<node.detail;

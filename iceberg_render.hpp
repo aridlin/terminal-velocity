@@ -232,8 +232,10 @@
     for(size_t i=0;i<grid_.refills.size();++i) {
       auto [x,y]=grid_.refills[i];refill_art(x,y,state_.refill_cooldown[i]>0);
     }
-    for(auto platform:grid_.platforms) {
-      auto r=platform.at(state_.elapsed);std::string line;
+    for(size_t i=0;i<grid_.platforms.size();++i) {
+      const auto r=grid_.platforms[i].at(state_.elapsed);
+      if(quay_ferry(i)){draw_quay_ferry(r);continue;}
+      std::string line;
       int n=std::max(2,int(r.w/scale_));
       for(int i=0;i<n;++i)line+=(i==0?"╞":i==n-1?"╡":"═");
       world_text(r.x,r.y,line,d.accent);
@@ -274,6 +276,8 @@
         if(node.kind==InteractionKind::Rescue&&(grid_.switch_flags&(grid_.template_id==310?8:2)))continue;
         auto [sx,sy]=screen(x,y-.001);++sy;
         resident_sprite(node.id,sx,sy);
+      } else if(node.kind==InteractionKind::DockWorker) {
+        draw_dock_worker(x,y,std::fmod(state_.adventure.presentation_time+node.id,2.4));
       } else if(node.kind==InteractionKind::Carry) {
         if(!(grid_.switch_flags&1))world_art(x,y-2.4,{"╭─↑─╮","│ ▯ │","╰───╯"},d.accent);
       } else if(node.kind==InteractionKind::Evidence) {
@@ -306,6 +310,7 @@
     uint32_t coat=coats[std::clamp(state_.adventure.outfit,0,7)];
     auto [px,feet]=screen(p.x,p.y+kPlayerHeight-.001);++feet;
     courier_sprite(px,feet,coat);
+    draw_ferry_foreground();
     if(std::abs(p.vx)>8)world_text(p.x+(p.facing>0?-.9:.9),p.y+.6,int(state_.elapsed*16)%2?"╴∽":"╶∼",coat);
     if(grid_.dash_locked()){world_text(p.x+.5,p.y-.8,"╭─╮",d.accent);world_text(p.x+.5,p.y,"╰↑╯",d.accent);}
     if(state_.adventure.pickup_left>0) {

@@ -39,6 +39,12 @@ int main(int argc,char **argv) {
    if(scene=="boiler"){p.x=59;p.y=41-kPlayerHeight;}
    game.state.elapsed=game.state.adventure.presentation_time=1.3;
   }
+  if(scene=="ferry"){
+   const auto deck=game.grid.platforms[0].at(game.state.elapsed);
+   game.state.player.x=deck.x+deck.w*.67;
+   game.state.player.y=deck.y-kPlayerHeight;
+   game.state.player.support=0;
+  }
   game.sync_view();update_camera(game.state,game.grid,cols,rows-7,2,10);game.tick({},0,true,cols,rows,2);game.state.adventure.door_left=0;
   if(scene=="dialogue"||scene=="archive:dialogue"){game.talk(iceberg::introduction(game.grid.district));game.dialogue_next();}
   if(scene=="quest") {game.profile.quests[0]=1;game.profile.quest_counts[0]=1;game.profile.quest_focus=0;game.sync_view();game.state.journal=true;game.state.adventure.selected=1;}

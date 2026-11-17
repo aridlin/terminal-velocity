@@ -12,6 +12,8 @@ public:
   GameAudio audio;
   ghosts::Client network;
   uint32_t network_epoch=0,previous_course=0;
+  iceberg::Random dock_chatter;
+  int last_dock_line=-1;
   int network_deaths=0;
   int last_columns=110,last_rows=34;
   double last_aspect=2;
@@ -26,7 +28,7 @@ public:
 
   explicit AdventureSession(const iceberg::SessionOptions &o,
       const std::filesystem::path &save_file = iceberg::SaveStore::default_file())
-    : saves(save_file), options(o), grid(iceworld::build_settlement(0)), mode(o.mode), run_seed(o.seed) {
+    : saves(save_file), options(o), grid(iceworld::build_settlement(0)), dock_chatter{o.seed^0xa75d834bu}, mode(o.mode), run_seed(o.seed) {
     saves.load(profile);
     if(profile.content_version!=iceberg::ContentVersion) {
       for(int d=0;d<iceberg::DistrictCount;++d)if(profile.trials[size_t(d)].complete) {
@@ -522,6 +524,9 @@ public:
     case InteractionKind::Npc:case InteractionKind::Rescue:
       v.inspect_art=Art::Character;v.inspect_title=iceberg::Npcs[size_t(node.id)].name;
       v.inspect_body=iceberg::Npcs[size_t(node.id)].title.get(profile.language)+t(". E — rozmowa. Zlecenia i odebrane wiadomości znajdziesz w dzienniku.",". E — talk. Tasks and received messages are kept in your journal.");v.inspect_icon="◉";break;
+    case InteractionKind::DockWorker:
+      v.inspect_title=t("Doker","Dockworker");
+      v.inspect_body=t("Sortuje skrzynki. E — porozmawiaj.","Sorting crates. E — talk.");break;
     case InteractionKind::Carry:
       v.inspect_art=Art::Thermometer;v.inspect_title=t("Termometr transportowy","Transit thermometer");v.inspect_icon="▣";
       v.inspect_body=t("Szklana rurka jest zawieszona w skrzynce na dwóch sprężynach. Strzałka na wieku wskazuje górę. Możesz biec i skakać, ale zryw uszkodziłby pomiar. Po odebraniu przesyłki zryw wróci.","A glass tube hangs inside the case on two springs. The lid's arrow points up. Running and jumping are safe, but a dash would spoil the reading. Dashing returns after delivery.");break;

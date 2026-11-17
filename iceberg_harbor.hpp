@@ -12,6 +12,10 @@ inline std::vector<DialogueLine> harbor_mission_arrival(int mission) {
   return {{1,{"Ta pompa grzeje morze zamiast mieszkań. Manometry przy wejściu pokażą, jak ją bezpiecznie uruchomić. Potem wybierz właściwy odpływ. Znak domu prowadzi do ludzi.",
     "This pump heats the sea instead of the homes. Read the entry gauges to start it safely, then choose the right outlet. The house symbol leads to the residents."}}};
 }
+inline void place_dock_worker(EngineGrid &g,double x,double floor,int id) {
+  g.interactions.push_back({{x,floor-2.4,2,2.4},InteractionKind::DockWorker,id,
+    {"Porozmawiaj z dokerem","Talk to the dockworker"}});
+}
 inline void decorate_harbor_room(EngineGrid &g,const Pattern &spec) {
   if(!harbor_v4_room(g.template_id))return;
   // Roofs belong to solid buildings. Where a route turns back below a roof,
@@ -42,6 +46,10 @@ inline void decorate_harbor_room(EngineGrid &g,const Pattern &spec) {
     g.interactions.push_back({{p.x+2.,p.y-3.,3,3},InteractionKind::Task,0,
       {"Zabierz listy do skrzynki przy wyjściu","Take the letters to the exit postbox"},item});
   }
+  for(size_t i=3;i<spec.path.size();i+=3) {
+    const auto &pad=spec.path[i];
+    if(pad.kind=='p')place_dock_worker(g,pad.x+4.,pad.y,int(i));
+  }
   // Small inhabited alcoves below the roofline are visual; all collision
   // remains the bright building silhouette. Broad roofs provide safe pauses.
   if(g.template_id==505) {
@@ -68,6 +76,7 @@ inline EngineGrid build_harbor_settlement_v4() {
   g.interactions.push_back({{44,35,4,4},InteractionKind::Npc,6,{"Porozmawiaj","Talk"}});
   g.interactions.push_back({{110,44,4,4},InteractionKind::Board,0,{"Tablica wypraw","Expedition board"}});
   g.interactions.push_back({{27,40,3,3},InteractionKind::Secret,0,{"",""}});
+  place_dock_worker(g,94,48,0);
   return g;
 }
 inline EngineGrid build_harbor_lesson_v4() {

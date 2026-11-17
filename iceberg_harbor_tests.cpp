@@ -115,6 +115,28 @@ int main() {
 
     s.begin_campaign(true);s.state.menu=false;
     check_harbor(s.grid.template_id==600,"new campaigns begin on the inhabited architectural quay");
+    auto worker=std::find_if(s.grid.interactions.begin(),s.grid.interactions.end(),
+      [](const Interaction &node){return node.kind==InteractionKind::DockWorker;});
+    check_harbor(worker!=s.grid.interactions.end(),"the quay dockworker has a real conversation target");
+    auto talk_area=worker->area;
+    talk_area.x-=1.4;talk_area.w+=2.8;
+    walk_harbor(s,talk_area,true);
+    s.profile.language=iceberg::Language::English;
+    Controls chat;chat.interact=true;
+    auto elapsed=s.state.elapsed;
+    auto story=s.profile.story;
+    s.tick(chat,.1);
+    auto first=s.state.adventure.notice;
+    check_harbor(first.starts_with("Dockworker: ")&&!s.state.adventure.dialogue.active()&&s.state.elapsed>elapsed&&s.profile.story==story,
+      "dockworker conversation shows one line while play continues");
+    s.tick(chat,.1);
+    check_harbor(s.state.adventure.notice.starts_with("Dockworker: ")&&s.state.adventure.notice!=first,
+      "a repeat conversation draws a different line");
+    s.profile.language=iceberg::Language::Polish;
+    s.tick(chat,.1);
+    check_harbor(s.state.adventure.notice.starts_with("Doker: "),"dockworker banter follows the game language");
+    s.begin_campaign(true);
+    s.state.menu=false;
     use_harbor(s,InteractionKind::Npc,0);
     use_harbor(s,InteractionKind::Secret,0);
     check_harbor(s.profile.hidden_room==0,"the original first secret remains reachable through real hub movement");
