@@ -8,7 +8,7 @@ The executable uses one `AdventureSession`, one 120 Hz simulation and one Unicod
 | --- | --- |
 | `iceberg_types.hpp` | Stable types/IDs, district registry, profile, presentation view |
 | `iceberg_world.hpp`, `iceberg_rooms_heat.inc` | Traversal templates, compatible ports, rhythm composition, room assembly |
-| `iceberg_sequences.hpp`, `iceberg_missions.hpp`, `iceberg_mastery.hpp` | Fixed lessons, story sequences and movement examination |
+| `iceberg_sequences.hpp`, `iceberg_missions.hpp`, `iceberg_gardens.hpp`, `iceberg_mastery.hpp` | Fixed lessons, story sequences and movement examination |
 | `iceberg_story.hpp` | Bilingual dialogue, character portraits, task definitions and reward writing |
 | `iceberg_runtime.hpp` | Campaign progression, interactions, revisits, expeditions, records and shared events |
 | `iceberg_save.hpp` | Checksummed versioned saves, migration, verified atomic replacement and recovery |
@@ -17,7 +17,7 @@ The executable uses one `AdventureSession`, one 120 Hz simulation and one Unicod
 | `main.cpp` | Existing input backends, shared physics, terminal sink and legacy modes |
 | `sdl_frontend.cpp` | Window input, fonts and cell sink; retained graphical diagnostic renderer |
 
-Four districts are authored. `AuthoredDistrictCount` is the availability boundary; it is separate from the six-district world registry. Future district introductions, character identities and audio slots are scaffolding, not completed gameplay. Raising the boundary must follow authoring and verification, not substitute palette swaps for areas.
+Five districts are authored. `AuthoredDistrictCount` is the availability boundary; it is separate from the six-district world registry. Future district introductions, character identities and audio slots are scaffolding, not completed gameplay. Raising the boundary must follow authoring and verification, not substitute palette swaps for areas.
 
 Adding a district is content work: provide its twelve distinct patterns, settlement, fixed sequences, area-specific mechanics, scenery, conversations and tasks; validate ordinary movement and then raise the boundary. A profile at the previous boundary advances on continue. The existing profile already carries the remaining district/task/record slots.
 
@@ -79,3 +79,17 @@ may be unavailable in private/restricted browsing. Classic legacy courses and
 UDP ghosts remain desktop-only. An actual phone multitouch/play review is
 still needed in addition to responsive viewport testing. Attribution and font
 licenses are copied into the static distribution.
+
+### Cultivation chambers
+
+District 4 adds layouts 48–59, settlement 104 and sequences 80–81. Irrigation
+sets persistent switch flags and unfolds `GrowingBridge` collision over 1.15
+seconds. Rendering uses the same integer leading edge. Pause/focus freezes
+both together; restoring a saved activation restores the complete bridge.
+Celina's seeds use existing task 5 IDs and unlock outfit 5 (green), plus the
+harbor planter. Notes 20–21 are ordinary instructions and never change
+optional-discovery flags. The upper Crown is still unavailable content.
+
+Web fullscreen targets `#playfield`; it keeps touch controls and cell-based
+account overlays inside the surface. Restricted embedded/mobile browsers
+fall back to an expanded game viewport with an exit control and Escape.

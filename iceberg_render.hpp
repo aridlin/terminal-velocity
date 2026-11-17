@@ -91,7 +91,7 @@
       break;
     case 4:
       if(a%21==0)return c("│",shade);
-      if((a+b*3)%23==0)return c("❧",d.stone);
+      if(a%21==10&&b%16==3)return c("┼",shade);
       if((a-b)%19==0)return c("╱",shade);
       break;
     default:
@@ -126,11 +126,13 @@
 #include "iceberg_jubilee_scenery.hpp"
 #include "iceberg_estate_scenery.hpp"
 #include "iceberg_archive_scenery.hpp"
+#include "iceberg_gardens_scenery.hpp"
   void draw_iceberg_landmarks() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     if(grid_.template_id==303){draw_jubilee_monument();return;}
     if(grid_.district==2&&grid_.room_role!=iceberg::RoomRole::Secret){draw_estate_landmarks();return;}
     if(grid_.district==3&&grid_.room_role!=iceberg::RoomRole::Secret){draw_archive_landmarks();return;}
+    if(grid_.district==4&&grid_.room_role!=iceberg::RoomRole::Secret){draw_garden_landmarks();return;}
     bool secret=grid_.room_role==iceberg::RoomRole::Secret;
     if(secret) {
       if(grid_.template_id==200) {
@@ -506,7 +508,7 @@
     paint_text(1,2,v.room_name,d.light);
     if(cols_>90)paint_text(0,cols_-27,tr("TRASA ","SEED ")+std::to_string(v.seed),d.stone);
     std::string mode=v.revisit?tr("POWRÓT NA TRASĘ","REVISIT"):v.mode==iceberg::Mode::Campaign?tr("PODRÓŻ","JOURNEY"):v.mode==iceberg::Mode::Endless?tr("BEZ KOŃCA","ENDLESS"):tr("PRÓBA","TRIAL");
-    paint_text(2,2,mode+(grid_.sweets.empty()?"":"   ◆ "+std::to_string(state_.sweets_count())+"/"+std::to_string(grid_.sweets.size()))+
+    paint_text(2,2,mode+(grid_.sweets.empty()?"":tr("   Żetony ","   Tokens ")+std::to_string(state_.sweets_count())+"/"+std::to_string(grid_.sweets.size()))+
       tr("   Powroty ","   Retries ")+std::to_string(state_.deaths)+
       (v.mode==iceberg::Mode::Endless?tr("   Głębokość ","   Depth ")+std::to_string(v.depth):
        grid_.room_role==iceberg::RoomRole::Traverse?"   "+std::to_string(v.room+1)+"/"+std::to_string(iceberg::RoomsPerLeg):"")+

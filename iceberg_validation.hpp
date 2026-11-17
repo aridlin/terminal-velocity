@@ -58,7 +58,7 @@ struct RoutePilot {
       c.jump_pressed=(gap||rise)&&std::abs(dx)>1;
     // Descending passages are entered by dropping from the edge. A full jump
     // can put the courier on a roof instead of inside the passage.
-    if((g.template_id>=400||(g.template_id>=24&&g.template_id<48))&&p.grounded&&ty>p.y+kPlayerHeight+2&&p.dash_available)c.jump_pressed=false;
+    if((g.template_id>=400||(g.template_id>=24&&g.template_id<60))&&p.grounded&&ty>p.y+kPlayerHeight+2&&p.dash_available)c.jump_pressed=false;
     if(p.grounded&&c.move) {
       int danger_x=int(std::floor(p.x+(c.move>0?kPlayerWidth+1.7:-1.7)));
       if(g.hazard_at(danger_x,foot-1)||g.hazard_at(danger_x,foot-2))c.jump_pressed=true;

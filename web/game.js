@@ -75,20 +75,28 @@ function drawBoot(){
  line(19,'Klawiatura lub ekran dotykowy.');line(20,'Zapis zostaje w przeglądarce.');
  window.tvFrame(cells,w,h);
 }
+const playfield=document.querySelector('#playfield');
+const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('expanded');
+function fullscreenLayout(){clearInput();resize();canvas.focus();document.querySelector('#fullscreen').setAttribute('aria-pressed',String(expanded()));}
 async function toggleFullscreen(){
- try {
-  if(document.fullscreenElement)await document.exitFullscreen();
-  else await document.querySelector('#playfield').requestFullscreen();
- } catch {saveStatus.textContent=english?'Fullscreen is unavailable in this browser':'Pełny ekran jest niedostępny w tej przeglądarce';}
+ if(document.fullscreenElement){await document.exitFullscreen();return;}
+ if(playfield.classList.contains('expanded')){playfield.classList.remove('expanded');fullscreenLayout();return;}
+ try {await playfield.requestFullscreen();}
+ catch(error){
+  // Embedded browsers and some mobile browsers refuse the native API. The
+  // game still occupies the entire viewport, with an explicit way back out.
+  console.info('Native fullscreen unavailable; using game viewport',error.name);
+  playfield.classList.add('expanded');fullscreenLayout();
+ }
 }
 addEventListener('keydown',e=>{
- if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&document.fullscreenElement&&!accounts.active)){
+ if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&expanded()&&!accounts.active)){
   e.preventDefault();e.stopImmediatePropagation();toggleFullscreen();
  }
 },{capture:true});
 document.querySelector('#fullscreen').onclick=toggleFullscreen;
 document.querySelector('#leave-fullscreen').onclick=toggleFullscreen;
-document.addEventListener('fullscreenchange',()=>{clearInput();resize();canvas.focus();});
+document.addEventListener('fullscreenchange',fullscreenLayout);
 new ResizeObserver(resize).observe(stage);
 document.querySelector('#export-save').onclick=()=>{if(!started)return;Module._web_save();try{const bytes=Module.FS.readFile('/persist/progress.dat.iceberg');const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=document.createElement('a');a.href=url;a.download='terminal-velocity.iceberg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{saveStatus.textContent='Brak zapisu do pobrania';}};
 function frame(now){if(accounts.active)accounts.draw();else if(started){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);pressed=0;}last=now;requestAnimationFrame(frame);}

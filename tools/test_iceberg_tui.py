@@ -35,10 +35,14 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         def dash_spent():return any(c.fg=='83c5ce' for row in t.screen.buffer.values() for c in row.values())
         while not dash_spent() and time.monotonic()<deadline:pump([t],.02)
         assert dash_spent(),'Basic SSH upward dash did not spend the dash\n'+screen(t)
-        t.send('r');pump([t],.12)
-        t.send('d');pump([t],.30);t.send('s');pump([t],.05)
+        t.send('r');expect(t,'Retries 1')
+        t.send('d');deadline=time.monotonic()+2
+        while '[E] Talk' not in screen(t) and time.monotonic()<deadline:pump([t],.01)
+        pump([t],.12)  # Walk inside the interaction area before braking.
+        t.send('s');pump([t],.08)
+        assert '[E] Talk' in screen(t), 'Never reached the dispatcher\n'+screen(t)
         t.send('b');expect(t,'INSPECT')
-        assert 'HELENA' in screen(t)
+        assert 'HELENA' in screen(t), screen(t)
         t.send('b');pump([t],.10)
         t.send('e');expect(t,'HELENA')
         expect(t,'You')

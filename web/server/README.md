@@ -1,6 +1,6 @@
 # Account save service
 
-The browser edition supports optional username/password accounts. Guest play and local saves continue when the service is unavailable. This service is prepared and tested locally through PHP CGI, **not yet deployed or verified on the public domain**.
+The browser edition supports optional username/password accounts. Guest play and local saves continue when the service is unavailable. The service is deployed at `https://aridlin.pl/terminal-velocity/api.php`. Registration, login, save upload/download and logout have been exercised on the public domain with a separate QA account; local CGI and two-device conflict tests cover revision handling.
 
 Deploy `api.php` to `/terminal-velocity/api.php`, outside the versioned static release folders. PHP 8.1+ with PDO_SQLite and HTTPS is required. Set `TV_ACCOUNT_DATA` to an application-owned directory outside the web document root; alternatively the default for that deployed location is a sibling `terminal-velocity-private` directory above `public_html`. The service refuses storage beneath the document root. Back up that directory (using SQLite's backup interface for an active database), and never include it in public build artifacts. A static-only server cannot run this endpoint.
 

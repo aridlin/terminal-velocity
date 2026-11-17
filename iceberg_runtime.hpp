@@ -193,7 +193,7 @@ public:
     }
     if(mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&
         (profile.story&(uint64_t(1)<<(grid.district+8)))) {
-      int ground=grid.district==1?48:43;
+      int ground=grid.district==1?48:grid.district==4?50:43;
       for(int i=0;i<2;++i)grid.interactions.push_back({{i?grid.district==1?67.:grid.district==2?82.:62.:24.,ground-3.,2,3},
         InteractionKind::Replay,i,i?iceberg::Text{"Wróć do stacji pomp","Revisit the pumping station"}:
         iceberg::Text{"Trasa szkoleniowa","Training route"}});
@@ -285,7 +285,7 @@ public:
       profile.quests[size_t(quest)]=profile.quest_counts[size_t(quest)]>=unsigned(iceberg::Quests[size_t(quest)].required)?2:1;
     } else if(action>=200 && action<208) {
       int quest=action-200;profile.quests[size_t(quest)]=3;
-      profile.cosmetics|=1u<<(quest%7+1);
+      profile.cosmetics|=1u<<(quest==5?5:quest%7+1);
       notice(t("ZADANIE UKOŃCZONE — nagroda w dzienniku","TASK COMPLETE — reward in journal"));
       audio.play(AudioCue::Win);
     }
@@ -434,8 +434,8 @@ public:
     if(kind==0){audio.play(AudioCue::Paper);audio.play(AudioCue::Cloth);}
   }
   void activate_machinery(const Interaction &node,bool tram=false) {
-    auto &v=state.adventure;v.machinery_duration=tram?2.8:1.05;
-    v.machinery_left=v.machinery_duration;v.machinery_kind=tram?2:grid.district==3?3:node.kind==InteractionKind::Task&&node.id==2?1:0;
+    auto &v=state.adventure;v.machinery_duration=tram?2.8:grid.district==4?1.6:1.05;
+    v.machinery_left=v.machinery_duration;v.machinery_kind=tram?2:grid.district==4?5:grid.district==3?3:node.kind==InteractionKind::Task&&node.id==2?1:0;
     v.machinery_x=node.area.x+node.area.w*.5;v.machinery_y=node.area.bottom();
     v.machinery_changed=node.kind==InteractionKind::Valve?uint64_t(1)<<node.id:0;
     audio.play(AudioCue::Motor,tram?1.f:.6f);audio.play(AudioCue::Rumble,tram?1.f:.45f);
@@ -490,8 +490,9 @@ public:
     case InteractionKind::Valve:
       v.inspect_art=Art::Valve;v.inspect_icon="⊗";v.inspect_body=t("Korba steruje pobliską maszyną. Ciemne koło jest zamknięte; jasny środek oznacza otwarty obieg. Stan mechanizmu pozostaje zapisany po powrocie do lampy.","The crank controls the nearby machinery. A dark wheel is closed; a bright centre marks an open circuit. The mechanism stays set after a checkpoint retry.");break;
     case InteractionKind::Note:
-      v.inspect_art=node.id==30?Art::Dedication:node.id<10?Art::Sign:Art::File;v.inspect_title=node.id==30?t("Akt fundacyjny","Dedication"):t("Tablica informacyjna","Information sign");
+      v.inspect_art=node.id==30?Art::Dedication:(node.id<10||node.id==20||node.id==21)?Art::Sign:Art::File;v.inspect_title=node.id==30?t("Akt fundacyjny","Dedication"):t("Tablica informacyjna","Information sign");
       if(node.id==30){auto lines=iceberg::jubilee_dedication();v.inspect_body=lines[0].text.get(profile.language)+" "+lines[1].text.get(profile.language);}
+      else if(node.id==20||node.id==21)v.inspect_body=iceberg::garden_sign(node.id).get(profile.language);
       else if(node.id<10)v.inspect_body=iceberg::training_sign(node.id).get(profile.language);
       else v.inspect_body=t("Kartka zachowała się za osłoną. Możesz odczytać ją w całości, naciskając E.","The sheet survived behind its cover. Press E to read the complete record.");
       break;
@@ -555,6 +556,7 @@ public:
       if(grid.switch_flags&(uint64_t(1)<<node.id)){notice(t("Obieg już pracuje.","The circuit is already running."));return;}
       animate_pickup(node,1);
       grid.switch_flags|=uint64_t(1)<<node.id;
+      for(auto &bridge:grid.growth)if(bridge.flag&(uint64_t(1)<<node.id))bridge.amount=0;
       activate_machinery(node,grid.template_id==77&&grid.switch_flags==7);
       audio.play(AudioCue::Valve);notice(grid.district==3?t("ZASUWA OTWARTA","SHUTTER RELEASED"):t("OBIEG OTWARTY","CIRCUIT OPEN"));persist();
     } else if(node.kind==InteractionKind::Task) {
@@ -570,7 +572,8 @@ public:
       } else notice(t("Już zabrane. Wróć do zleceniodawcy.","Already collected. Return to the task giver."));
     } else if(node.kind==InteractionKind::Note) {
       if(node.id==30){talk(iceberg::jubilee_dedication());return;}
-      if(node.id>=10) {
+      if(node.id==20||node.id==21){talk({{5,iceberg::garden_sign(node.id)}});return;}
+      if(node.id>=10&&node.id<=12) {
         profile.discoveries|=1u<<(node.id-10);
         talk(iceberg::hidden_testimony(node.id-10));persist();return;
       }
@@ -636,6 +639,7 @@ public:
     if(focused&&!state.paused&&!state.menu&&!v.inspecting&&!state.journal&&!v.map) {
       v.presentation_time+=dt;v.npc_reaction_left=std::max(0.,v.npc_reaction_left-dt);
       v.machinery_left=std::max(0.,v.machinery_left-dt);v.lamp_left=std::max(0.,v.lamp_left-dt);
+      for(auto &bridge:grid.growth)if((grid.switch_flags&bridge.flag)==bridge.flag)bridge.amount=std::min(1.,bridge.amount+dt/1.15);
       if(v.dialogue.active())v.pickup_left=std::max(0.,v.pickup_left-dt);
     }
     if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}

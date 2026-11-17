@@ -66,7 +66,7 @@ int main() {
       Rect goal{};for(auto node:game.grid.interactions)
         if(node.kind==InteractionKind::Npc&&node.id==iceberg::Quests[size_t(quest)].owner)goal=reach_area(node.area);
       walk_to(game,goal);interact(game);finish_dialogue(game);
-      require_quest(game.profile.quests[size_t(quest)]==3&&(game.profile.cosmetics&(1u<<(quest%7+1))),"character turn-in grants its persistent reward");
+      require_quest(game.profile.quests[size_t(quest)]==3&&(game.profile.cosmetics&(1u<<(quest==5?5:quest%7+1))),"character turn-in grants its persistent reward");
     }
     {
       AdventureSession recovered(options,std::filesystem::temp_directory_path()/"tv-recovery-quest-nosave");

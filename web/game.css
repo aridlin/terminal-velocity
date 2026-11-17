@@ -20,7 +20,16 @@
 .account-open #touch,.account-open footer,.account-open #fullscreen-tools{display:none!important}
 
 #playfield{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;background:#101923}
-#playfield:fullscreen{width:100vw;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#playfield:fullscreen,#playfield.expanded{width:100vw;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 #fullscreen-tools{display:none;flex-shrink:0;justify-content:center;gap:6px;padding:5px 8px}
 #fullscreen-tools button{font-size:12px;min-height:34px}
-@media(pointer:coarse),(max-width:760px),(max-height:500px){#playfield:fullscreen #fullscreen-tools{display:flex}}
+@media(pointer:coarse),(max-width:760px),(max-height:500px){#playfield:fullscreen #fullscreen-tools,#playfield.expanded #fullscreen-tools{display:flex}}
+
+#playfield.expanded{position:fixed;inset:0;z-index:10}
+#playfield.expanded #fullscreen-tools{display:flex}
+
+#downloads{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 12px;margin-top:5px;font-size:12px}
+#downloads span{color:#9baeb7}#downloads a{color:#e4ad68;text-underline-offset:3px;padding:3px 0}
+#downloads a:focus-visible{outline:2px solid #e4ad68;outline-offset:3px}
+@media(pointer:coarse),(max-width:760px){#downloads{gap:4px 12px;font-size:11px}#downloads a{padding:7px 0}}
+@media(orientation:landscape) and (max-height:500px){#downloads{margin-top:2px;font-size:10px}#downloads a{padding:2px 0}}

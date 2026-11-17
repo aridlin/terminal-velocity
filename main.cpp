@@ -340,6 +340,7 @@ struct Interaction {
 };
 struct AirField { Rect area; double ax = 0, ay = 0, period = 0, phase = 0; };
 struct Gate { Rect area; uint64_t flag = 0; };
+struct GrowingBridge { Rect area; uint64_t flag = 0; double amount = 1.; };
 struct PulseHazard {
   Rect area;
   double period=4,phase=0;
@@ -386,6 +387,11 @@ public:
     for (const auto &gate : gates)
       if ((switch_flags & gate.flag) != gate.flag && gate.area.intersects({double(col),double(row),1,1}))
         return true;
+    for (const auto &bridge : growth) {
+      const double width=std::floor(bridge.area.w*bridge.amount);
+      if(width>0 && (switch_flags&bridge.flag)==bridge.flag &&
+         Rect{bridge.area.x,bridge.area.y,width,bridge.area.h}.intersects({double(col),double(row),1,1}))return true;
+    }
     return solid_[index(col, row)];
   }
 
@@ -441,6 +447,7 @@ public:
   std::vector<AirField> air_fields;
   std::vector<PulseHazard> pulses;
   std::vector<Gate> gates;
+  std::vector<GrowingBridge> growth;
   uint64_t switch_flags = 0, goal_requires = 0, dash_lock = 0, dash_unlock = 0;
   bool dash_locked() const {return (switch_flags&dash_lock)&&!(switch_flags&dash_unlock);}
   bool summit = false;

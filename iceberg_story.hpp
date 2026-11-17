@@ -66,9 +66,10 @@ inline std::vector<DialogueLine> introduction(int district) {
     {4,{"Nie wszystko zniszczyła wilgoć. Ktoś wyciął tę samą ulicę z każdego nowszego wydania. Oryginał pokaże, dokąd prowadził jej przewód.","Damp didn't destroy everything. Someone cut the same street from every newer edition. The original will show where its pipe went."}}
   };
   case 4: return {
-    {5,{"Nie depcz koperku. Ratowanie cywilizacji nie zwalnia z podstawowej kultury.","Don't step on the dill. Saving civilization doesn't excuse bad manners."}},
-    {5,{"Korzenie znalazły stary kanał. Ciepło wraca przez ogród, ale potrzebuje ujścia przy latarni.","The roots found an old channel. Heat is returning through the garden, but it needs an outlet at the beacon."}},
-    {5,{"W archiwum wpisali zamknięcie. Rośliny nie czytają archiwów. Dlatego jeszcze tu jesteśmy.","The archive declared it closed. Plants don't read archives. That's why we're still here."}}
+    {5,{"Zamknij za sobą. Trzymamy ciepło przy sadzonkach. Koper ma dziś pierwszeństwo przed pocztą.","Close the door behind you. We're keeping the seedlings warm. Today the dill takes priority over the post."}},
+    {5,{"To plan Ireny? Ten kanał jest pod nami. Przez lata podlewałam z niego grządki. Ktoś zakręcił go od góry, ale korzenie przebiły zator.","Is that Irena's plan? That channel is below us. I watered the beds from it for years. Someone closed it from above, but the roots broke through."}},
+    {5,{"Podaj wodę do starych podpór. Rozwiną się w pomosty. Najpierw dolny zbiornik, potem koło nad szklarniami. Zobaczymy, czy powrót jeszcze trzyma.","Feed water to the old supports. They'll unfold into bridges. First the lower reservoir, then the wheel above the greenhouses. We'll see whether the return line still holds."}},
+    {6,{"Byłem pod Koroną. Wyjście zasypał lód, ale słychać za nim wiatr. Jeśli ruszy obieg, odmarznie. Poczekam przy górnej śluzie.","I've been beneath the Crown. Ice blocks the exit, but you can hear wind behind it. If the circuit starts, it will thaw. I'll wait by the upper airlock."}}
   };
   default: return {
     {6,{"Myślałem, że na górze będzie cieplej. To chyba najdroższa pomyłka w mojej karierze.","I thought it would be warmer up here. Probably the most expensive mistake of my career."}},
@@ -88,7 +89,9 @@ inline std::vector<DialogueLine> conclusion(int district) {
     {3,{"Zrobiłam dwie kopie. Jedną zabierzesz do Ireny, drugą zachowam tutaj. Pani z czwartego już odebrała leki. Kazała ci podziękować, zanim zacznę mówić o protokole.","I made two copies. Take one to Irena; I'll keep the other here. The lady on the fourth floor has collected her medicine. She told me to thank you before I start talking about the report."}}};
   case 3: return {{4,{"Mam nazwiska. Nie naprawisz tego, co wtedy zrobili. Ale możemy przestać udawać, że nikt tu nie mieszkał.","I have the names. You can't repair what they did then. But we can stop pretending nobody lived here."}},
     {4,{"Kanał przez ogród omija uszkodzoną ścianę. Celina miała rację od lat. Nikt jej nie pytał.","The garden channel bypasses the damaged wall. Celina has been right for years. Nobody asked her."}}};
-  case 4: return {{5,{"Korzenie już grzeją. Została latarnia. Weź nasiona. To nie talizman. Po prostu ktoś musi je zanieść wyżej.","The roots are warming. Only the beacon remains. Take the seeds. They aren't a charm. Someone just needs to carry them higher."}},
+  case 4: return {{5,{"Woda wróciła do zbiornika. Ciepła. Ten kanał mógł działać cały czas. Na planie zamknęli ulicę razem z ludźmi, a potem nikt nie odważył się zapytać o zawór.","Water has returned to the reservoir. Warm. This channel could have worked all along. On the plan they closed a street with its people inside, and then nobody dared ask about the valve."}},
+    {4,{"Mam twoje pomiary, Celino. Dołączę je do oryginału. Nie jako przypis. Cała przystań dostanie kopię.","I have your readings, Celina. I'll attach them to the original. Not as a footnote. The whole harbor will get a copy."}},
+    {5,{"Śluza do Korony odmarzła. Weź nasiona. Nie na szczęście. Chciałabym kiedyś posadzić coś, co zobaczy prawdziwe słońce.","The Crown airlock has thawed. Take the seeds. Not for luck. One day I'd like to plant something that will see the real sun."}},
     {6,{"Pójdę za tobą. Tym razem bez wyścigu.","I'll follow you. No race this time."}}};
   default: return {{0,{"Świeci. Widzimy światło przez lód. Nawet tutaj, na samym dole.","It's shining. We can see the light through the ice. Even here, at the very bottom."}},
     {1,{"Ciśnienie stabilne. Pierwszy raz w życiu nie mam nic do poprawienia młotkiem.","Pressure stable. For the first time in my life, there is nothing I need to fix with a hammer."}},
@@ -284,5 +287,13 @@ namespace iceberg {
 inline std::vector<DialogueLine> archive_record() {
   return {{-1,{"Na pierwotnym planie powrót ciepła biegnie przez ogrody. Późniejszy dopisek każe odciąć tę odnogę po pęknięciu ściany. Nie ma podpisu odbioru prac.","On the original plan, the heat return runs through the gardens. A later note orders that branch sealed after the wall fractured. There is no signature accepting the work."}},
     {4,{"Tu Irena. Widzę oznaczenie na twojej kopii. Nie musimy ponownie otwierać uszkodzonej ściany — jest obejście pod szklarniami. Zabierz cały arkusz. Tym razem niczego nie wycinamy.","Irena here. I can see the mark on your copy. We don't need to reopen the damaged wall — there's a bypass beneath the greenhouses. Bring the whole sheet. We aren't cutting anything out this time."}}};
+}
+}
+
+namespace iceberg {
+inline const Text &garden_sign(int id) {
+  static const Text water={"Podlewaj od strony zaworu. E otwiera dopływ; korzenie rozwiną się nad szczeliną. Poczekaj na pełny pomost. Nie zakręcaj na noc. — Celina","Water from the valve side. E opens the supply; roots will unfold across the gap. Wait for the full bridge. Do not shut it off overnight. — Celina"};
+  static const Text pod={"Strąki pod górną grządką są sprężyste. Wyląduj na nich, żeby odbić się wyżej; potem możesz użyć zrywu. Nasiona na górze nie są potrzebne do uruchomienia obiegu. — Celina","The pods beneath the upper bed are springy. Land on them to bounce higher; you can dash afterwards. The seeds above aren't needed to start the circuit. — Celina"};
+  return id==21?pod:water;
 }
 }

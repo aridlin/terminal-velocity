@@ -1030,6 +1030,12 @@ int terminal_window_main(int argc,char **argv) {
         if(scene=="archive:finale") {session.state.player.x=174;session.state.player.y=32-kPlayerHeight;session.grid.switch_flags=3;}
         update_camera(session.state,session.grid,110,27,2,10);
       }
+      if(options.no_save&&scene.rfind("garden",0)==0) {
+        session.grid=scene=="garden"?iceworld::build_garden_settlement():iceworld::build_garden_sequence(scene=="garden:finale");
+        session.district=4;session.state=new_state(session.grid);session.state.menu=false;session.sync_view();
+        if(scene=="garden:growth") {session.state.player.x=12;session.state.player.y=55-kPlayerHeight;Controls use;use.interact=true;session.tick(use,1./120);for(int i=0;i<65;++i)session.tick({},1./120);}
+        update_camera(session.state,session.grid,110,27,2,10);
+      }
       if(options.no_save&&scene=="dock:tram") {
         session.grid=iceworld::build_harbor_mission(0);session.grid.switch_flags=1;
         session.district=0;session.state=new_state(session.grid);session.state.menu=false;

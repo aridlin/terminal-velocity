@@ -55,6 +55,7 @@ inline const std::vector<Pattern> &patterns() {
 #include "iceberg_rooms_revision.inc"
 #include "iceberg_rooms_estate.inc"
 #include "iceberg_rooms_archive.inc"
+#include "iceberg_rooms_gardens.inc"
   };
   return values;
 }
@@ -116,7 +117,7 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
         // Expanding the library must not move a task's last object beyond its
         // owner's last ordinary turn-in opportunity.
         auto reserved=[&](int id){return district==0?(id==0||id==4||id==8):
-          district==1?(id==12||id==13||id==16||id==17||id==20||id==21):district==2?(id==24||id==26||id==28||id==30||id==32||id==34):district==3?(id==36||id==40||id==44):false;};
+          district==1?(id==12||id==13||id==16||id==17||id==20||id==21):district==2?(id==24||id==26||id==28||id==30||id==32||id==34):district==3?(id==36||id==40||id==44):district==4?(id==48||id==52||id==56):false;};
         if(layout_version>=3&&count>=16&&result.size()<16) {
           int outstanding=int(std::count_if(bag.begin(),bag.end(),reserved));
           if(16-int(result.size())<=outstanding&&!reserved(bag[i]))score+=10000;
@@ -215,6 +216,7 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
 #include "iceberg_sequences.hpp"
 #include "iceberg_estate.hpp"
 #include "iceberg_archive.hpp"
+#include "iceberg_gardens.hpp"
 #include "iceberg_missions.hpp"
 #include "iceberg_jubilee.hpp"
 #include "iceberg_mastery.hpp"
@@ -223,6 +225,7 @@ inline EngineGrid build_authored(int district, bool finale) {
   if(district==1)return build_heatworks_sequence(finale);
   if(district==2)return build_estate_sequence(finale);
   if(district==3)return build_archive_sequence(finale);
+  if(district==4)return build_garden_sequence(finale);
   EngineGrid g(finale ? 144 : 128, 64);
   g.event_level = false; g.adventure_level = true; g.district = district;
   g.template_id = 72 + district * 2 + int(finale);
@@ -267,6 +270,7 @@ inline EngineGrid build_settlement(int district) {
   if(district==1)return build_heatworks_settlement();
   if(district==2)return build_estate_settlement();
   if(district==3)return build_archive_settlement();
+  if(district==4)return build_garden_settlement();
   EngineGrid g(94, 58);
   g.event_level = false; g.adventure_level = true; g.district = district;
   g.template_id = 100 + district; g.room_role = RoomRole::Settlement;

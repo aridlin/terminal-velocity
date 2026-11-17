@@ -22,6 +22,12 @@
         world_text(origin+(i%3-1)*age*1.8,rail+aspect_*scale_+age*age*5.2,i%4?"·":"⠂",i%3?0x938c96:0xc5bec6);
       }
       if(time<1.6)world_text(car+7*scale_,rail-4*aspect_*scale_,int(time*22)%2?"╲✦╱":" ·✧ ",0xf7d693);
+    } else if(v.machinery_kind==5) {
+      world_text(x-1,y-1.7,int(time*10)%2?"─◉─":"╲│╱",d.light);
+      for(int i=0;i<18;++i){double age=time-i*.055;if(age<0||age>.8)continue;
+        world_text(x+(i%5-2)*age*2.4,y-2-age*4+age*age*7,i%4?"⠂":"╴",i%4?0x88bec6:d.accent);}
+      for(const auto &bridge:grid_.growth)if(bridge.flag&v.machinery_changed){double tip=bridge.area.x+std::floor(bridge.area.w*bridge.amount);
+        world_text(tip,bridge.area.y+2+time*2,int(time*8)%2?"╲":"╱",d.accent);}
     } else {
       int phase=int(time*14)%4;
       const char *wheel[]={"╲│╱","─◉─","╱│╲","╶⊕╴"};

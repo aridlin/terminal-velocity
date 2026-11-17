@@ -10,11 +10,11 @@ Rozmowy pojawiają się litera po literze, z krótkimi nagranymi głosami. **E /
 
 ## Co można zagrać
 
-Otwarcie obejmuje **Dolną Przystań**, **Ciepłownię Łazarz** **Osiedle Parapet** i **Archiwum Ciszy**: cztery osady, 60 zaprojektowanych szablonów tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Siedem zadań mieszkańców daje dostęp do listów, skrótów serwisowych i tramwajowych, ogrodu na dachu, strojów i prób mistrzowskich.
+Otwarcie obejmuje **Dolną Przystań**, **Ciepłownię Łazarz**, **Osiedle Parapet**, **Archiwum Ciszy** i **Ogrody Podszronu**: pięć osad, 72 zaprojektowanych szablonów tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Osiem zadań mieszkańców daje dostęp do listów, skrótów serwisowych i tramwajowych, przejścia przez dach, ogrodu w przystani, strojów i prób mistrzowskich.
 
-Przywrócenie dolnych obiegów zamyka bieżącą awarię. Dalsza wspinaczka przez górne dzielnice jest przeznaczona na kolejne wydanie. Obecna podróż prowadzi do oryginalnego planu sieci w zamarzniętym archiwum. Automatyczne przejście ze wszystkimi siedmioma zadaniami i szacowanym czasem czytania daje około 32 minut — **nie jest to zmierzony czas pierwszego gracza**. Pełna dwugodzinna kampania nie jest jeszcze gotowa.
+Przywrócenie dolnych obiegów zamyka bieżącą awarię. Dalsza wspinaczka przez górne dzielnice jest przeznaczona na kolejne wydanie. Obecna podróż prowadzi za oryginalnym planem sieci do ogrodów. Nawadnianie rozwija żywe mosty i przywraca powrót ciepła. Automatyczne przejście ze wszystkimi ośmioma zadaniami i szacowanym czasem czytania daje około 40 minut — **nie jest to zmierzony czas pierwszego gracza**. Pełna dwugodzinna kampania nie jest jeszcze gotowa.
 
-Po zakończeniu można wrócić do mieszkańców i stałych tras, ruszyć na wyprawę bez końca albo sprawdzić się w czterech próbach mistrzowskich. Każda składa się z siedmiu trudniejszych sal i egzaminu ruchowego. Rekord czasu, najmniejsza liczba powrotów i najlepszy zbiór zapisują się niezależnie. Własne seedy mają osobne rekordy. Ukończenie próby daje odznakę widoczną na postaci i strój.
+Po zakończeniu można wrócić do mieszkańców i stałych tras, ruszyć na wyprawę bez końca albo sprawdzić się w pięciu próbach mistrzowskich. Każda składa się z siedmiu trudniejszych sal i egzaminu ruchowego. Rekord czasu, najmniejsza liczba powrotów i najlepszy zbiór zapisują się niezależnie. Własne seedy mają osobne rekordy. Ukończenie próby daje odznakę widoczną na postaci i strój.
 
 Język polski jest domyślny. **L** w menu przełącza całą główną grę na angielski. Warto rozglądać się uważnie, ale dodatkowe odkrycia nie blokują zwykłej historii.
 

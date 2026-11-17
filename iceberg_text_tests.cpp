@@ -13,6 +13,7 @@ int main() {
     for(int s=0;s<3;++s){add(iceberg::hidden_testimony(s));add(iceberg::mission_arrival(s));}
     add(iceberg::jubilee_arrival());add(iceberg::jubilee_dedication());add(iceberg::jubilee_complete());
     add(iceberg::archive_record());
+    for(int note:{20,21})add(std::vector<iceberg::DialogueLine>{{5,iceberg::garden_sign(note)}});
     for(int note=0;note<10;++note)add(std::vector<iceberg::DialogueLine>{{6,iceberg::training_sign(note)}});
     add(iceberg::rescued_conductor());add(iceberg::parcel_delivered());
     int pages=0;CellFrame frame;

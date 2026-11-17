@@ -8,7 +8,7 @@ namespace iceberg {
 inline constexpr unsigned ContentVersion = 3;
 inline constexpr int DistrictCount = 6;
 // Content registry boundary: increment when another district is fully authored.
-inline constexpr int AuthoredDistrictCount = 4;
+inline constexpr int AuthoredDistrictCount = 5;
 inline constexpr int RoomsPerLeg = 8;
 enum class Language { Polish, English };
 enum class Mode { Campaign, Endless, Trial };
