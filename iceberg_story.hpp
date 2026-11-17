@@ -262,10 +262,17 @@ inline std::vector<DialogueLine> parcel_delivered() {
 #include "iceberg_jubilee_story.hpp"
 
 namespace iceberg {
-inline const Text &training_sign(int id) {
+inline const Text &training_sign(int id,int room=0) {
+  if(id==2&&room==601) {
+    static const Text ferry{
+      "Poczekaj przy krawędzi, aż prom podpłynie. Wskocz na pokład i przeskocz na drugi pomost, gdy się zbliży. Winda nad tobą prowadzi do dodatkowego żetonu.",
+      "Wait at the edge for the ferry. Jump aboard and ride until you can jump to the far landing. The lift overhead leads to an optional token."
+    };
+    return ferry;
+  }
   static const std::array<Text,10> signs{{
         {"A/D: ruch. Spacja: skok. Przytrzymaj, żeby skoczyć wyżej. Czerwone krawędzie są niebezpieczne. Lampy zapisują miejsce powrotu.","A/D: move. Space: jump. Hold for a higher jump. Red edges are dangerous. Lamps save your return point."},
-        {"Zryw: X albo Shift z kierunkiem. Żółta postać ma gotowy zryw. Na ziemi: zryw, potem szybko skok — zachowasz rozpęd.","Dash: X or Shift with a direction. A yellow character has a dash ready. On the ground: dash, then quickly jump to keep your momentum."},
+        {"Przytrzymaj kierunek i naciśnij X, żeby zrobić zryw. Żółta postać ma gotowy zryw. Na ziemi: zryw, potem szybko skok — zachowasz rozpęd.","Hold a direction and press X to dash. A yellow character has a dash ready. On the ground: dash, then quickly jump to keep your momentum."},
         {"Przy ścianie zrób zryw w górę, a potem skocz. Na windzie skacz w chwili ruchu w górę. Górna znajdźka jest opcjonalna.","Dash upward beside a wall, then jump. On a lift, jump as it rises. The upper treasure is optional."},
         {"Winda daje ci swój rozpęd. Skacz w chwili, gdy rusza w górę. Możesz zaczekać na pełnym pomoście. Boczne lampy nie są częścią obowiązkowej trasy.","A lift shares its momentum with you. Jump while it is rising. You can wait on the solid landings. Side lamps are not part of the required route."},
         {"Żółte kropki oznaczają, że zawór zaraz wypuści parę. Czerwony słup parzy. Zaczekaj albo przeskocz nad nim; zryw nie chroni przed ciepłem.","Yellow dots mean a vent is about to release steam. The red column burns. Wait or jump over it; a dash doesn't protect against heat."},

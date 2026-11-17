@@ -120,7 +120,7 @@ inline std::vector<std::string> inspection_art(InspectionArt kind,int detail=0) 
     │  │  ─────────  │  │
     │  │  ──────     │  │
     │  └─────────────┘  │
-    │●  ░░░░░░░░░░░   ●│
+    │●  ░░░░░░░░░░░    ●│
     ╰─────────┬┬────────╯
               ││
               ││

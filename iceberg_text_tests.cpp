@@ -19,6 +19,7 @@ int main() {
     for(int action=0;action<2;++action)add(iceberg::epilogue_action(action));
     for(int note:{20,21})add(std::vector<iceberg::DialogueLine>{{5,iceberg::garden_sign(note)}});
     for(int note=0;note<10;++note)add(std::vector<iceberg::DialogueLine>{{6,iceberg::training_sign(note)}});
+    add(std::vector<iceberg::DialogueLine>{{6,iceberg::training_sign(2,601)}});
     add(iceberg::rescued_conductor());add(iceberg::parcel_delivered());
     for(int mission=0;mission<3;++mission)add(iceworld::harbor_mission_arrival(mission));
     {
