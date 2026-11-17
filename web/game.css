@@ -7,7 +7,8 @@
  header{display:none}#touch{display:flex;gap:12px;padding:4px 10px}
  #touch button{min-height:34px;min-width:42px;padding:4px 8px;font-size:12px}
  .directions,.actions{display:flex;gap:5px}footer{padding:3px 8px}
- footer p,.credits{display:none}#toolbar{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto}
+ footer p,.credits{display:none}#toolbar{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;touch-action:pan-x}
+ #toolbar button{touch-action:pan-x}
  footer button{white-space:nowrap;font-size:10px;padding:4px 8px;min-height:28px}
  #settings-keys{padding-top:3px}#settings-keys button{min-height:24px}
 }

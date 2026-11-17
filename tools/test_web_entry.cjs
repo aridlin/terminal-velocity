@@ -331,7 +331,33 @@ const server=http.createServer((req,res)=>{
    await page.locator("footer #settings-keys").waitFor({state:"attached"});
   }
   console.log('PASS mobile native and fallback fullscreen Map, Quests and settings controls');
-  console.log('PASS mobile, landscape, resized and large canvas preserve proportions; language remains reachable');await mobile.close();
+  console.log('PASS mobile, landscape, resized and large canvas preserve proportions; language remains reachable');
+  await page.setViewportSize({width:568,height:320});
+  const toolbar=page.locator('#toolbar');
+  const swipeStart=await toolbar.evaluate(row=>{
+   row.scrollLeft=0;
+   const edge=row.getBoundingClientRect().right;
+   const button=[...row.querySelectorAll('button:not([hidden])')].reverse().find(b=>b.getBoundingClientRect().right<=edge);
+   const box=button.getBoundingClientRect();
+   row.addEventListener('click',()=>{window.landscapeToolbarClicked=true;},{once:true});
+   return {x:box.left+box.width/2,y:box.top+box.height/2,overflow:row.scrollWidth-row.clientWidth};
+  });
+  assert.ok(swipeStart.overflow>0,'the short viewport needs a scrollable toolbar');
+  const swipeSession=await mobile.newCDPSession(page);
+  await swipeSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:swipeStart.x,y:swipeStart.y}]});
+  for(let i=1;i<=12;i++){
+   await swipeSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:swipeStart.x-i*12,y:swipeStart.y}]});
+   await page.evaluate(()=>new Promise(requestAnimationFrame));
+  }
+  await swipeSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await swipeSession.detach();
+  await page.waitForFunction(()=>{
+   const row=document.querySelector('#toolbar');
+   return row.scrollLeft>=row.scrollWidth-row.clientWidth-2;
+  });
+  assert.equal(await page.evaluate(()=>!!window.landscapeToolbarClicked),false,'swiping over a button does not activate it');
+  console.log('PASS a real landscape swipe reaches the end of the toolbar without pressing a button');
+  await mobile.close();
   assert.deepEqual(errors,[],'browser errors');console.log(visualOnly?'PASS current Chromium/WASM visual smoke':'PASS real Chromium/WASM entry, save-language restoration and responsive rendering');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
