@@ -47,6 +47,9 @@ int main() {
       if(game.state.won){Controls c;c.confirm=true;game.tick(c,1./120);continue;}
       if(game.grid.room_role==iceberg::RoomRole::Settlement) {
         review.residents();
+        for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Epilogue&&!(game.grid.switch_flags&(uint64_t(1)<<node.id))) {
+          review.walk(StoryReview::reach(node.area));review.interact();
+        }
         Rect board{};for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Board)board=StoryReview::reach(node.area);
         review.walk(board);review.interact();continue;
       }

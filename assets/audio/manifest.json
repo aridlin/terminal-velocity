@@ -458,5 +458,40 @@
     "source_sha256": "58ecc2a3d1528f75ee74d1fed84586afbafce5134a27e1ba1dcc3dcd42074d4d",
     "changes": "Recorded vocal excerpt after leading silence, offset 0.1s, duration85ms; pitch ratio0.73; 130Hz high-pass/1700Hz low-pass; -24LUFS/-9dBTP target;6/12ms edge fades;24kHz mono PCM.",
     "sha256": "4cc029ccc6502973c4b36294dc8bc0b70bd509d88061f29ea26a6aca7887403c"
+  },
+  {
+    "file": "crown-foundation.wav",
+    "source": [
+      "rumble.wav"
+    ],
+    "source_url": [
+      "https://opengameart.org/content/100-cc0-sfx-2"
+    ],
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": {
+      "rumble.wav": "839e5afbcbb46ccf278ae4c6257b1ae3b1d86d03a2d7440944945d7ae5c08a4c"
+    },
+    "changes": "Recorded machinery/foley arranged as an eight-second atmospheric layer, 48 kHz mono PCM; trimmed envelopes and loop-seam fades. Not an isolated musical stem.",
+    "sha256": "0f4285812a8c76c686c36e2c03c43d29f9fba7940d8d51f62e9395a776e0b3a7"
+  },
+  {
+    "file": "crown-tension.wav",
+    "source": [
+      "metal1.wav",
+      "cloth.wav"
+    ],
+    "source_url": [
+      "https://opengameart.org/content/100-cc0-sfx-2",
+      "https://opengameart.org/content/100-cc0-sfx"
+    ],
+    "author": "rubberduck",
+    "license": "CC0-1.0",
+    "source_sha256": {
+      "metal1.wav": "05962392f43c70642ea05bf47eb286d12fb997ff40116b42f72468bd56506f51",
+      "cloth.wav": "0fa656f4b15114788ba4109c5c688d44c31cd01e4edf1cf95f3b0a6001555d88"
+    },
+    "changes": "Recorded machinery/foley arranged as an eight-second atmospheric layer, 48 kHz mono PCM; trimmed envelopes and loop-seam fades. Not an isolated musical stem.",
+    "sha256": "f3df80a870e06d02f4e51ca93bfb66e74d3c28db049ffbc3a6eda184549a7737"
   }
 ]

@@ -49,7 +49,7 @@ def main():
             for name in files + ['README.md', 'README.pl.md', 'DEVELOPMENT.md', 'THIRD_PARTY.md']:
                 shutil.copy2(ROOT / name, folder / name)
             for name in ['assets', 'docs']:
-                shutil.copytree(ROOT / name, folder / name)
+                shutil.copytree(ROOT / name, folder / name, ignore=shutil.ignore_patterns('media') if name == 'docs' else None)
             hashes = []
             for name in files:
                 hashes.append(f'{hashlib.sha256((folder/name).read_bytes()).hexdigest()}  {name}')

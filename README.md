@@ -6,13 +6,13 @@ A courier platformer inside an inhabited iceberg. Carry the mail, reconnect the 
 
 [Polska instrukcja](README.pl.md) · [Classic courses](docs/LEGACY.md) · [Development](DEVELOPMENT.md)
 
-## The playable opening
+## The journey
 
-Explore the **Lower Harbor**, **Lazarus Heating Works**, **Windowsill Estate**, the **Archive of Silence**, and the **Underfrost Gardens**: five settlements, 72 authored traversal templates, lessons, machinery, moving barges, a stranded conductor and a fragile delivery. Eight optional character tasks unlock letters, service and tram shortcuts, a rooftop shortcut, a harbor garden, outfits and movement trials. The opening resolves the lower network's immediate emergency; the ascent through the upper city continues in a later content release.
+Explore the **Lower Harbor**, **Lazarus Heating Works**, **Windowsill Estate**, the **Archive of Silence**, the **Underfrost Gardens**, and **the Crown**: six settlements, 84 authored traversal templates, lessons, machinery, moving barges, a stranded conductor and a fragile delivery. Eight optional character tasks unlock letters, service and tram shortcuts, a rooftop shortcut, a harbor garden, outfits and movement trials. The journey restores the network, opens the beacon above the city, and returns to a playable morning in the harbor.
 
-The current journey follows the original network plan into the cultivation chambers, where irrigation unfolds living bridges and reopens the heat return. Automated traversal with all eight tasks plus estimated reading is about 40 minutes; this is **not a measured first-player duration**. This release is not the planned two-hour campaign, and the number of seeds is not a promise of hundreds of distinct hours.
+The complete story follows the original network plan through the cultivation chambers to the fractured Crown. Irrigation unfolds living bridges; exposed maintenance cradles and shutter counterweights lead to the beacon. An ordinary-input automated run with all eight tasks takes about 35 minutes of active simulation plus 15 minutes of estimated reading. This is **not a measured first-player duration**, and the planned 100–140 minute human playtime has not been established.
 
-Afterwards, revisit settlements and authored routes, start endless expeditions, or attempt the five district mastery trials. Each trial combines seven expert rooms with a final movement examination. Time, fewest retries and collection records are independent. Explicit seeds have separate records; mastery unlocks a visible badge and outfit.
+Afterwards, revisit settlements and authored routes, start endless expeditions, or attempt the six district mastery trials. Each trial combines seven expert rooms with a final movement examination. Time, fewest retries and collection records are independent. Explicit seeds have separate records; mastery unlocks a visible badge and outfit.
 
 Dialogue appears character by character, with short recorded voices. **E / Enter** reveals the current page immediately; press again to continue. **P** pauses the dialogue.
 
@@ -34,6 +34,8 @@ Use at least **76×24 cells**; **110×34** is recommended. The window can be res
 On Windows 10/11 x64, extract the whole package and run **play.cmd** in Windows Terminal, or **play-window.cmd** for the window edition. Keep `assets/` beside the executables. The window edition needs the included `SDL2.dll`; the terminal executable does not. No administrator access is needed on Windows.
 
 The default Linux input backend reads real evdev key presses and releases. If access is unavailable, `play.sh` uses the existing keyboard helper: it asks for sudo locally, opens the keyboard, permanently drops privileges, and runs the game as you. It changes no groups or device permissions. `--ssh` and the window edition avoid that helper.
+
+Guest SSH: `ssh -t gra@prol.aridlin.pl`. Each anonymous visit has independent temporary progress, for up to two hours; reconnecting starts a new visit.
 
 ## Controls
 

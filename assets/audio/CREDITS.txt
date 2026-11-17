@@ -117,3 +117,10 @@ Machinery responses (motor.wav, rumble.wav, spark.wav): rubberduck,
 100 CC0 SFX 2, https://opengameart.org/content/100-cc0-sfx-2, CC0-1.0.
 Edited recorded machine loops and a metal contact transient; filtering,
 normalization, fades and excerpts. Exact source hashes and edits: manifest.json.
+
+Crown atmospheric music layers (crown-foundation.wav, crown-tension.wav):
+Arranged from the already credited recorded rumble.wav, metal1.wav and cloth.wav.
+Original recording authors, URLs and licenses remain listed above and in manifest.json.
+Two synchronized eight-second machinery/foley layers, with fades; no synthesized tones.
+These are atmospheric arrangements, not isolated stems of the music recording.
+Reproduction: python tools/prepare_crown_layers.py (NumPy and FFmpeg).

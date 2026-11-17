@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Exercise the restricted entrance through real passwordless SSH PTYs."""
+import pyte, signal
 import argparse, codecs, fcntl, hashlib, json, os, pathlib, pty, re, select, struct, subprocess, termios, time
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--host',default='127.0.0.1');p.add_argument('--port',type=int,default=2223)
@@ -9,7 +10,7 @@ target='gra@'+a.host
 ansi=re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
 class Visit:
  def __init__(self):
-  self.fd,slave=pty.openpty();self.slave=slave;self.decoder=codecs.getincrementaldecoder('utf-8')('replace');self.text=''
+  self.fd,slave=pty.openpty();self.slave=slave;self.decoder=codecs.getincrementaldecoder('utf-8')('replace');self.text='';self.screen=pyte.Screen(110,34);self.stream=pyte.Stream(self.screen)
   fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack('HHHH',34,110,1100,680))
   self.proc=subprocess.Popen(base+['-tt',target,'printf TV_ESCAPE_CHECK'],stdin=slave,stdout=slave,stderr=slave,start_new_session=True)
  def read(self,seconds=.15):
@@ -18,7 +19,7 @@ class Visit:
    if select.select([self.fd],[],[],.02)[0]:
     try:new+=self.decoder.decode(os.read(self.fd,262144))
     except OSError:break
-  self.text=ansi.sub('',new);return self.text
+  self.stream.feed(new);self.text='\n'.join(self.screen.display);return self.text
  def expect(self,word,seconds=5):
   end=time.monotonic()+seconds;seen=''
   while time.monotonic()<end:
@@ -37,12 +38,12 @@ visits=[]
 try:
  first=Visit();visits.append(first);first.expect('ROZPOCZNIJ PODRÓŻ')
  first.send('l');first.expect('BEGIN JOURNEY');first.send('\r');first.expect('LOWER HARBOR')
- for i in range(6):first.send('d');first.read(.05)
+ first.send('d');first.expect('[E] Talk');first.read(.12)
  first.send('s');first.read(.05);first.send('b');first.expect('INSPECT');first.expect('HELENA')
  # A second connection is a new visitor, not the first visitor's saved journey.
  second=Visit();visits.append(second);second.expect('ROZPOCZNIJ PODRÓŻ')
  if 'TV_ESCAPE_CHECK' in first.text+second.text:raise RuntimeError('Client command escaped into a shell')
- fcntl.ioctl(first.slave,termios.TIOCSWINSZ,struct.pack('HHHH',24,76,760,480));first.expect('HELENA')
+ first.screen.resize(24,76);fcntl.ioctl(first.slave,termios.TIOCSWINSZ,struct.pack('HHHH',24,76,760,480));os.kill(first.proc.pid,signal.SIGWINCH);first.expect('HELENA')
  first.send('b');first.read(.1)
  for visit in visits:visit.close()
  visits=[]

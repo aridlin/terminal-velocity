@@ -101,7 +101,7 @@ public:
       }
     }
     v.discoveries=profile.discoveries;
-    v.switches=grid.switch_flags;v.room_name=(grid.room_role==iceberg::RoomRole::Settlement?
+    v.switches=grid.switch_flags;v.room_name=(grid.room_role==iceberg::RoomRole::Settlement&&grid.template_id!=330?
       iceberg::Districts[size_t(grid.district)].subtitle:grid.room_name).get(profile.language);
     v.music_volume=profile.music_volume;v.effects_volume=profile.effects_volume;v.ambience_volume=profile.ambience_volume;
     state.audio_muted=audio.muted;state.audio_error=audio.error();
@@ -161,6 +161,8 @@ public:
       grid.interactions.insert(grid.interactions.begin(),{{grid.spawn_x-2,grid.spawn_y-1,1,3},InteractionKind::Return,0,{"Wróć do osady","Return to settlement"}});
     } else if(mode==iceberg::Mode::Campaign && profile.visit_district>=0) {
       grid=iceworld::build_settlement(profile.visit_district);
+    } else if(mode==iceberg::Mode::Campaign&&(profile.story&(uint64_t(1)<<42))) {
+      grid=iceworld::build_epilogue();
     } else if(mode==iceberg::Mode::Trial&&room==iceberg::RoomsPerLeg-1) {
       grid=iceworld::build_mastery_course(district);grid.seed=run_seed;
     } else if(mode==iceberg::Mode::Campaign && profile.interlude) {
@@ -191,9 +193,9 @@ public:
       grid.add_solid_rect(55,31,11,1);grid.springs.push_back({50,40.7,1.5,.3});
       grid.sweets.push_back({60,29});grid.sweets.push_back({63,29});
     }
-    if(mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&
+    if(mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&grid.template_id!=330&&
         (profile.story&(uint64_t(1)<<(grid.district+8)))) {
-      int ground=grid.district==1?48:grid.district==4?50:43;
+      int ground=grid.district==1?48:grid.district==4?50:grid.district==5?51:43;
       for(int i=0;i<2;++i)grid.interactions.push_back({{i?grid.district==1?67.:grid.district==2?82.:62.:24.,ground-3.,2,3},
         InteractionKind::Replay,i,i?iceberg::Text{"Wróć do stacji pomp","Revisit the pumping station"}:
         iceberg::Text{"Trasa szkoleniowa","Training route"}});
@@ -280,6 +282,8 @@ public:
       profile.story|=uint64_t(1)<<district;
     } else if(action==2) {
       complete_district();
+    } else if(action==3) {
+      profile.finished=true;profile.cosmetics|=1u<<7;audio.play(AudioCue::Win);
     } else if(action>=100 && action<108) {
       int quest=action-100;
       profile.quests[size_t(quest)]=profile.quest_counts[size_t(quest)]>=unsigned(iceberg::Quests[size_t(quest)].required)?2:1;
@@ -305,9 +309,11 @@ public:
     profile.itinerary.clear();
     if(district+1<iceberg::AuthoredDistrictCount) {
       ++district;profile.unlocked=std::max(profile.unlocked,district);
-    } else if(district+1==iceberg::DistrictCount){profile.finished=true;profile.cosmetics|=1u<<7;}
+    } else if(district+1==iceberg::DistrictCount){profile.story|=uint64_t(1)<<42;}
     else profile.at_content_boundary=true;
-    stage=0;room=0;clear_room_record();load_room();persist();
+    stage=0;room=0;clear_room_record();load_room();
+    if(profile.story&(uint64_t(1)<<42))talk(iceberg::epilogue_arrival());
+    persist();
   }
   void begin_campaign(bool fresh) {
     persist();
@@ -403,7 +409,13 @@ public:
         talk({{1,{"Dolne obiegi pracują. Droga wyżej poczeka na następną część podróży. Na dziś uratowaliśmy komuś mieszkanie. To nie jest mało.","The lower circuits are working. The route above awaits the next part of the journey. Today we saved somebody's home. That's no small thing."}},
           {0,{"Możesz wrócić do mieszkańców, dokończyć ich sprawy albo wybrać wyprawę i próbę mistrzowską w menu. Poczta poczeka. Tym razem naprawdę.","You can return to the residents, finish their tasks, or choose an expedition or mastery trial in the menu. The mail can wait. This time, really."}}});return;
       }
-      if(profile.finished) {begin_run(iceberg::Mode::Endless);return;}
+      if(grid.template_id==330) {
+        if(profile.finished){begin_run(iceberg::Mode::Endless);return;}
+        if((grid.switch_flags&3)!=3) {
+          notice(t("Zostaw nasiona przy przystanku i doręcz odpis spisu do okienka.","Leave the seeds by the stop and deliver the register copy to the counter."),6);return;
+        }
+        talk(iceberg::journey_end(),3);return;
+      }
       if(!(profile.story&(uint64_t(1)<<district))) {
         talk(iceberg::introduction(district),1);return;
       }
@@ -434,7 +446,7 @@ public:
     if(kind==0){audio.play(AudioCue::Paper);audio.play(AudioCue::Cloth);}
   }
   void activate_machinery(const Interaction &node,bool tram=false) {
-    auto &v=state.adventure;v.machinery_duration=tram?2.8:grid.district==4?1.6:1.05;
+    auto &v=state.adventure;v.machinery_duration=tram?2.8:grid.district==5?2.4:grid.district==4?1.6:1.05;
     v.machinery_left=v.machinery_duration;v.machinery_kind=tram?2:grid.district==4?5:grid.district==3?3:node.kind==InteractionKind::Task&&node.id==2?1:0;
     v.machinery_x=node.area.x+node.area.w*.5;v.machinery_y=node.area.bottom();
     v.machinery_changed=node.kind==InteractionKind::Valve?uint64_t(1)<<node.id:0;
@@ -493,9 +505,13 @@ public:
       v.inspect_art=node.id==30?Art::Dedication:(node.id<10||node.id==20||node.id==21)?Art::Sign:Art::File;v.inspect_title=node.id==30?t("Akt fundacyjny","Dedication"):t("Tablica informacyjna","Information sign");
       if(node.id==30){auto lines=iceberg::jubilee_dedication();v.inspect_body=lines[0].text.get(profile.language)+" "+lines[1].text.get(profile.language);}
       else if(node.id==20||node.id==21)v.inspect_body=iceberg::garden_sign(node.id).get(profile.language);
+      else if(node.id==22)v.inspect_body=iceberg::crown_sign().get(profile.language);
       else if(node.id<10)v.inspect_body=iceberg::training_sign(node.id).get(profile.language);
       else v.inspect_body=t("Kartka zachowała się za osłoną. Możesz odczytać ją w całości, naciskając E.","The sheet survived behind its cover. Press E to read the complete record.");
       break;
+    case InteractionKind::Epilogue:
+      v.inspect_art=node.id==0?Art::Seeds:Art::File;
+      v.inspect_body=node.id==0?t("Ziemia w skrzynce jest wilgotna. Ciepła rura biegnie tuż pod dnem. E — posadź nasiona.","The soil in the box is damp. A warm pipe runs just beneath its base. E — plant the seeds."):t("Nowy spis leży przy publicznym okienku. Jest w nim miejsce na dopiski. E — doręcz odpis.","The new register lies at the public counter. It has room for additions. E — deliver the copy.");break;
     case InteractionKind::Evidence:
       v.inspect_art=Art::File;v.inspect_body=t("Stary plan sieci, oprawiony między dwie płyty szkła. Przy pieczęci pozostała data sprzed przebudowy. Irena prosiła o cały arkusz.","An old network plan held between two glass plates. The date beside its seal predates the reconstruction. Irena asked for the whole sheet.");break;
     case InteractionKind::Deliver:
@@ -509,8 +525,15 @@ public:
   void interact() {
     int at=near_interaction();if(at<0)return;
     const auto node=grid.interactions[size_t(at)];
-    if(node.kind==InteractionKind::Npc) {
+    if(node.kind==InteractionKind::Epilogue) {
+      if(grid.template_id!=330)return;
+      auto bit=uint64_t(1)<<node.id;
+      if(grid.switch_flags&bit){notice(t("Już załatwione.","Already handled."));return;}
+      grid.switch_flags|=bit;animate_pickup(node,node.id==0?5:4);
+      talk(iceberg::epilogue_action(node.id));audio.play(AudioCue::Cloth);persist();return;
+    } else if(node.kind==InteractionKind::Npc) {
       state.adventure.reacting_npc=node.id;state.adventure.npc_reaction_left=1.2;
+      if(grid.template_id==330) {talk({iceberg::epilogue_resident(node.id)});return;}
       if(mode==iceberg::Mode::Campaign && profile.visit_district<0 && stage==0 && !(profile.story&(uint64_t(1)<<district))) {
         talk(iceberg::introduction(district),1);return;
       }
@@ -573,6 +596,7 @@ public:
     } else if(node.kind==InteractionKind::Note) {
       if(node.id==30){talk(iceberg::jubilee_dedication());return;}
       if(node.id==20||node.id==21){talk({{5,iceberg::garden_sign(node.id)}});return;}
+      if(node.id==22){talk({{6,iceberg::crown_sign()}});return;}
       if(node.id>=10&&node.id<=12) {
         profile.discoveries|=1u<<(node.id-10);
         talk(iceberg::hidden_testimony(node.id-10));persist();return;
@@ -628,6 +652,9 @@ public:
     } send_frame{*this,dt,focused,columns,rows};
     audio.set_mix(profile.music_volume,profile.effects_volume,profile.ambience_volume);
     audio.set_environment(grid.district,grid.room_role==iceberg::RoomRole::Secret);
+    bool climax=grid.template_id==83&&!state.menu;
+    int shutters=int(bool(grid.switch_flags&1))+int(bool(grid.switch_flags&2))+int(bool(grid.switch_flags&4));
+    audio.set_climax(climax,.28f+float(shutters)*.24f);
     if(c.quit){persist();running=false;return;}
     if(c.mute_audio)audio.muted=!audio.muted;
     if(c.language&&!state.menu){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;if(state.adventure.dialogue.active())state.adventure.dialogue.reset_reveal();persist();}

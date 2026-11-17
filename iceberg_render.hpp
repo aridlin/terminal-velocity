@@ -127,8 +127,11 @@
 #include "iceberg_estate_scenery.hpp"
 #include "iceberg_archive_scenery.hpp"
 #include "iceberg_gardens_scenery.hpp"
+#include "iceberg_crown_scenery.hpp"
   void draw_iceberg_landmarks() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
+    if(grid_.template_id==330){draw_epilogue_landmarks();return;}
+    if(grid_.district==5&&grid_.room_role!=iceberg::RoomRole::Secret){draw_crown_landmarks();return;}
     if(grid_.template_id==303){draw_jubilee_monument();return;}
     if(grid_.district==2&&grid_.room_role!=iceberg::RoomRole::Secret){draw_estate_landmarks();return;}
     if(grid_.district==3&&grid_.room_role!=iceberg::RoomRole::Secret){draw_archive_landmarks();return;}
@@ -257,6 +260,10 @@
         if(!(grid_.switch_flags&1))world_art(x,y-2.4,{"╭─↑─╮","│ ▯ │","╰───╯"},d.accent);
       } else if(node.kind==InteractionKind::Evidence) {
         if(!(grid_.switch_flags&4))prop_art(x+1.5,y,{"╭─────╮","│┌─┬─┐│","│├─┘ ││","│└───┘│","╰─────╯"},d.light);
+      } else if(node.kind==InteractionKind::Epilogue) {
+        bool done=grid_.switch_flags&(uint64_t(1)<<node.id);
+        if(node.id==0)prop_art(x+1.5,y,done?std::vector<std::string>{" · · · ","╔═════╗","║░░░░░║","╚═════╝"}:std::vector<std::string>{" ╭─╮ "," │⠿│ "," ╰─╯ "},d.accent);
+        else prop_art(x+1.5,y,{"╭─────╮","│▤▤▤▤▤│","╰─────╯"},done?d.light:d.accent);
       } else if(node.kind==InteractionKind::Deliver) {
         world_art(x,y-3.2,{"╭─────╮","│ ▥▥▥ │","│  ▱  │","╰─────╯"},d.accent);
       } else if(node.kind==InteractionKind::Board) {

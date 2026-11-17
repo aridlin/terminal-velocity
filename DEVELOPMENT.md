@@ -17,7 +17,7 @@ The executable uses one `AdventureSession`, one 120 Hz simulation and one Unicod
 | `main.cpp` | Existing input backends, shared physics, terminal sink and legacy modes |
 | `sdl_frontend.cpp` | Window input, fonts and cell sink; retained graphical diagnostic renderer |
 
-Five districts are authored. `AuthoredDistrictCount` is the availability boundary; it is separate from the six-district world registry. Future district introductions, character identities and audio slots are scaffolding, not completed gameplay. Raising the boundary must follow authoring and verification, not substitute palette swaps for areas.
+Six districts, the beacon ending, and a playable harbor epilogue are authored. `AuthoredDistrictCount` is the availability boundary; it is separate from the six-district world registry. Any future area must add verified geometry, writing and presentation. Raising the boundary must follow authoring and verification, not substitute palette swaps for areas.
 
 Adding a district is content work: provide its twelve distinct patterns, settlement, fixed sequences, area-specific mechanics, scenery, conversations and tasks; validate ordinary movement and then raise the boundary. A profile at the previous boundary advances on continue. The existing profile already carries the remaining district/task/record slots.
 

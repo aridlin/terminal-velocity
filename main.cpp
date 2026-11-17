@@ -4,6 +4,7 @@
 #include "iceberg_types.hpp"
 #include "iceberg_save.hpp"
 #include "iceberg_story.hpp"
+#include "iceberg_epilogue_story.hpp"
 #include "iceberg_inspection.hpp"
 #include <csignal>
 #ifndef _WIN32
@@ -330,7 +331,7 @@ struct Patrol {
     return {left + (z < w ? z : 2 * w - z), y, 1.1, 1.0};
   }
 };
-enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence };
+enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence, Epilogue };
 struct Interaction {
   Rect area;
   InteractionKind kind;
@@ -338,7 +339,7 @@ struct Interaction {
   iceberg::Text label;
   int detail = 0;
 };
-struct AirField { Rect area; double ax = 0, ay = 0, period = 0, phase = 0; };
+struct AirField { Rect area; double ax = 0, ay = 0, period = 0, phase = 0; uint64_t disabled_by = 0; };
 struct Gate { Rect area; uint64_t flag = 0; };
 struct GrowingBridge { Rect area; uint64_t flag = 0; double amount = 1.; };
 struct PulseHazard {
@@ -982,7 +983,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   if (s.deaths != deaths || c.restart)
     return;
   for (const auto &field : g.air_fields)
-    if (p.rect().intersects(field.area) && p.dash_time_left <= 0) {
+    if (!(field.disabled_by&&(g.switch_flags&field.disabled_by)==field.disabled_by) && p.rect().intersects(field.area) && p.dash_time_left <= 0) {
       double amount = field.period <= 0 ? 1. :
         .5 + .5 * std::sin((s.elapsed / field.period + field.phase) * 6.283185307);
       p.vx += field.ax * amount * dt;

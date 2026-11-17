@@ -33,6 +33,8 @@ class GameAudio {
   float music_gain_ = 1, effects_gain_ = 1, ambience_gain_ = 1;
   int environment_ = -1;
   bool silence_ = false;
+  bool climax_ = false;
+  float climax_intensity_ = 0;
 
 public:
   bool muted = false;
@@ -46,6 +48,7 @@ public:
   void play(AudioCue cue, float strength = 1.f);
   void set_mix(float music, float effects, float ambience);
   void set_environment(int district, bool silence = false);
+  void set_climax(bool enabled, float intensity = 0);
   bool ready() const;
   std::string error() const;
   size_t loaded_clips() const;

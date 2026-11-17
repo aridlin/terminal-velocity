@@ -21,6 +21,10 @@ struct GameAudio::Impl {
   };
   std::array<Clip, 3> music;
   std::array<Clip, 6> ambience;
+  std::array<Clip, 2> climax;
+  bool climax_active=false;
+  float climax_gain=-1;
+  double climax_quiet=0;
   std::array<double, 6> ambience_quiet{};
   std::array<float, size_t(AudioCue::Count)> effect_levels{};
   std::array<std::array<Clip, 2>, size_t(AudioCue::Count)> effects;
@@ -39,6 +43,7 @@ struct GameAudio::Impl {
     for (auto &track : music)
       if (track.loaded)
         ma_sound_uninit(&track.sound);
+    for(auto &layer:climax)if(layer.loaded)ma_sound_uninit(&layer.sound);
     for (auto &track : ambience)
       if (track.loaded) ma_sound_uninit(&track.sound);
     for (auto &voices : effects)
@@ -128,6 +133,11 @@ bool GameAudio::ensure_ready() {
       ma_sound_set_fade_in_milliseconds(&impl_->music[i].sound, 0, 0, 1);
     }
   }
+  const char *layers[]={"crown-foundation.wav","crown-tension.wav"};
+  for(size_t i=0;i<impl_->climax.size();++i)if(impl_->load(impl_->climax[i],directory_/layers[i],flags|MA_SOUND_FLAG_DECODE)) {
+    ma_sound_set_looping(&impl_->climax[i].sound,MA_TRUE);
+    ma_sound_set_volume(&impl_->climax[i].sound,0);
+  }
   const char *environments[] = {"harbor.wav", "works.wav", "streets.wav", "archive.wav", "gardens.wav", "crown.wav"};
   for (size_t i = 0; i < impl_->ambience.size(); ++i)
     if (impl_->load(impl_->ambience[i], directory_ / environments[i], flags | MA_SOUND_FLAG_DECODE)) {
@@ -178,6 +188,15 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
   bool changed = track != impl_->current_track ||
                  scene != impl_->current_scene || muted != impl_->was_muted ||
                  focused != impl_->was_focused;
+  bool layered=climax_&&track==1&&!silence_;
+  bool entering=layered&&(!impl_->climax_active||(!impl_->was_focused&&focused)||(impl_->was_muted&&!muted));
+  if(entering) {
+    // One engine clock starts the score and both atmosphere layers together.
+    auto start=ma_engine_get_time_in_pcm_frames(&impl_->engine)+ma_engine_get_sample_rate(&impl_->engine)/20;
+    auto schedule=[&](Impl::Clip &clip){if(clip.loaded){ma_sound_stop(&clip.sound);ma_sound_seek_to_pcm_frame(&clip.sound,0);ma_sound_set_start_time_in_pcm_frames(&clip.sound,start);ma_sound_start(&clip.sound);}};
+    schedule(impl_->music[1]);for(auto &clip:impl_->climax)schedule(clip);
+    changed=true;
+  }
   // Master mute is immediate and also silences already-playing effects.
   ma_engine_set_volume(&impl_->engine, muted || !focused ? 0.f : .60f);
   for (size_t i = 0; i < impl_->music.size(); ++i) {
@@ -185,7 +204,7 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
     if (!music.loaded)
       continue;
     bool selected = int(i) == track && !muted && focused && !silence_;
-    ma_sound_set_volume(&music.sound, .48f * music_gain_);
+    ma_sound_set_volume(&music.sound, (layered?.40f:.48f) * music_gain_);
     if (selected) {
       impl_->quiet_time[i] = 0;
       if (!ma_sound_is_playing(&music.sound))
@@ -214,6 +233,24 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
       if (!ma_sound_is_playing(&clip.sound)) ma_sound_start(&clip.sound);
     } else if ((impl_->ambience_quiet[i] += std::clamp(dt, 0., .1)) > .9) ma_sound_stop(&clip.sound);
   }
+  float layer_gain=layered?(scene==AudioScene::Paused?.25f:scene==AudioScene::Menu?0.f:1.f):0.f;
+  float wanted=layer_gain*climax_intensity_;
+  if(entering||std::abs(wanted-impl_->climax_gain)>.001f||changed) {
+    for(size_t i=0;i<impl_->climax.size();++i) {
+      auto &clip=impl_->climax[i];if(!clip.loaded)continue;
+      ma_sound_set_volume(&clip.sound,music_gain_*(i?.32f:.40f));
+      float gain=i?wanted*wanted:wanted;
+      ma_sound_set_fade_in_milliseconds(&clip.sound,-1,gain,entering?1200:800);
+    }
+    impl_->climax_gain=wanted;
+  }
+  // Channel controls apply immediately even while an intensity fade is active.
+  for(size_t i=0;i<impl_->climax.size();++i)if(impl_->climax[i].loaded)
+    ma_sound_set_volume(&impl_->climax[i].sound,music_gain_*(i?.32f:.40f));
+  if(layered)impl_->climax_quiet=0;
+  else if((impl_->climax_quiet+=std::clamp(dt,0.,.1))>.9)
+    for(auto &clip:impl_->climax)if(clip.loaded)ma_sound_stop(&clip.sound);
+  impl_->climax_active=layered;
   impl_->current_track = track;
   impl_->current_scene = scene;
   impl_->was_muted = muted;
@@ -240,4 +277,8 @@ void GameAudio::set_environment(int district, bool silence) {
   environment_ = std::clamp(district, -1, 5);
   if (silence_ != silence && impl_) impl_->current_track = -1;
   silence_ = silence;
+}
+
+void GameAudio::set_climax(bool enabled,float intensity) {
+  climax_=enabled;climax_intensity_=std::clamp(intensity,0.f,1.f);
 }

@@ -13,6 +13,10 @@ int main() {
     for(int s=0;s<3;++s){add(iceberg::hidden_testimony(s));add(iceberg::mission_arrival(s));}
     add(iceberg::jubilee_arrival());add(iceberg::jubilee_dedication());add(iceberg::jubilee_complete());
     add(iceberg::archive_record());
+    add(std::vector<iceberg::DialogueLine>{{6,iceberg::crown_sign()}});
+    add(iceberg::epilogue_arrival());add(iceberg::journey_end());
+    for(int npc=0;npc<8;++npc)add(std::vector<iceberg::DialogueLine>{iceberg::epilogue_resident(npc)});
+    for(int action=0;action<2;++action)add(iceberg::epilogue_action(action));
     for(int note:{20,21})add(std::vector<iceberg::DialogueLine>{{5,iceberg::garden_sign(note)}});
     for(int note=0;note<10;++note)add(std::vector<iceberg::DialogueLine>{{6,iceberg::training_sign(note)}});
     add(iceberg::rescued_conductor());add(iceberg::parcel_delivered());

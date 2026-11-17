@@ -11,5 +11,5 @@ cd /game
 /usr/bin/env -i PATH=/usr/bin:/bin TERM="${TERM:-xterm-256color}" \
   LANG=C.UTF-8 LC_ALL=C.UTF-8 SSH_TTY=guest \
   TV_PROGRESS_FILE="$session_dir/progress" TV_ICEBERG_FILE="$session_dir/campaign" \
-  /usr/bin/timeout --signal=TERM --kill-after=5s 2h \
+  /usr/bin/timeout --foreground --signal=TERM --kill-after=5s 2h \
   /game/terminal_velocity --campaign --ssh --mute

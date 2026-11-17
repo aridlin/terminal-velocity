@@ -10,11 +10,11 @@ Rozmowy pojawiają się litera po literze, z krótkimi nagranymi głosami. **E /
 
 ## Co można zagrać
 
-Otwarcie obejmuje **Dolną Przystań**, **Ciepłownię Łazarz**, **Osiedle Parapet**, **Archiwum Ciszy** i **Ogrody Podszronu**: pięć osad, 72 zaprojektowanych szablonów tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Osiem zadań mieszkańców daje dostęp do listów, skrótów serwisowych i tramwajowych, przejścia przez dach, ogrodu w przystani, strojów i prób mistrzowskich.
+Podróż obejmuje **Dolną Przystań**, **Ciepłownię Łazarz**, **Osiedle Parapet**, **Archiwum Ciszy** **Ogrody Podszronu** i **Koronę**: sześć osad, 84 zaprojektowane szablony tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Osiem zadań mieszkańców daje dostęp do listów, skrótów serwisowych i tramwajowych, przejścia przez dach, ogrodu w przystani, strojów i prób mistrzowskich.
 
-Przywrócenie dolnych obiegów zamyka bieżącą awarię. Dalsza wspinaczka przez górne dzielnice jest przeznaczona na kolejne wydanie. Obecna podróż prowadzi za oryginalnym planem sieci do ogrodów. Nawadnianie rozwija żywe mosty i przywraca powrót ciepła. Automatyczne przejście ze wszystkimi ośmioma zadaniami i szacowanym czasem czytania daje około 40 minut — **nie jest to zmierzony czas pierwszego gracza**. Pełna dwugodzinna kampania nie jest jeszcze gotowa.
+Historia prowadzi za oryginalnym planem sieci przez ogrody do pękniętej Korony. Nawadnianie rozwija żywe mosty; podwieszone wózki i przeciwwagi prowadzą do latarni. Po uruchomieniu obiegów wracasz na grywalny poranny obchód w przystani. Automatyczne przejście ze wszystkimi ośmioma zadaniami zajmuje około 35 minut aktywnej symulacji oraz 15 minut szacowanego czytania — **nie jest to zmierzony czas pierwszego gracza**. Zakładany czas 100–140 minut gry człowieka nie został potwierdzony.
 
-Po zakończeniu można wrócić do mieszkańców i stałych tras, ruszyć na wyprawę bez końca albo sprawdzić się w pięciu próbach mistrzowskich. Każda składa się z siedmiu trudniejszych sal i egzaminu ruchowego. Rekord czasu, najmniejsza liczba powrotów i najlepszy zbiór zapisują się niezależnie. Własne seedy mają osobne rekordy. Ukończenie próby daje odznakę widoczną na postaci i strój.
+Po zakończeniu można wrócić do mieszkańców i stałych tras, ruszyć na wyprawę bez końca albo sprawdzić się w sześciu próbach mistrzowskich. Każda składa się z siedmiu trudniejszych sal i egzaminu ruchowego. Rekord czasu, najmniejsza liczba powrotów i najlepszy zbiór zapisują się niezależnie. Własne seedy mają osobne rekordy. Ukończenie próby daje odznakę widoczną na postaci i strój.
 
 Język polski jest domyślny. **L** w menu przełącza całą główną grę na angielski. Warto rozglądać się uważnie, ale dodatkowe odkrycia nie blokują zwykłej historii.
 
@@ -107,3 +107,5 @@ Windows w MSYS2 UCRT64: `make windows windows-tests MINGW_CXX=g++ MINGW_WINDRES=
 CI testuje Linux i natywną logikę/terminal Windows. Jego dotychczasowy artefakt Windows zawiera terminal; osobno przygotowana paczka okienkowa zawiera też SDL EXE i DLL. Okno Windows sprawdzono przez cross-build i Wine; fizyczna klawiatura/GPU Windows wymagają osobnego sprawdzenia.
 
 `--diagnostic` zachowuje dawny graficzny frontend. Event JP2, górskie rozdziały i Szczyt są w **Trasach klasycznych**; opisuje je [dawna instrukcja](docs/LEGACY.pl.md).
+
+Wejście gościnne SSH: `ssh -t gra@prol.aridlin.pl`. Każda anonimowa wizyta ma osobny, tymczasowy zapis na maksymalnie dwie godziny; ponowne połączenie rozpoczyna nową wizytę.

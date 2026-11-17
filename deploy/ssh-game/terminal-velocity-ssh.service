@@ -1,7 +1,7 @@
 [Unit]
 Description=Terminal Velocity anonymous game entrance
 After=network.target
-ConditionPathIsExecutable=/opt/terminal-velocity/guest-root/game/terminal_velocity
+ConditionFileIsExecutable=/opt/terminal-velocity/guest-root/game/terminal_velocity
 
 [Service]
 Type=simple

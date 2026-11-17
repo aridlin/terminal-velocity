@@ -38,7 +38,6 @@ Match User gra
     PermitTunnel no
     PermitTTY yes
     PermitUserRC no
-    PermitUserEnvironment no
     MaxSessions 1
     ChrootDirectory /opt/terminal-velocity/guest-root
     ForceCommand /game/session

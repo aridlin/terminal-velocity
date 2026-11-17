@@ -19,7 +19,7 @@ int main() {
       int at=game.near_interaction();
       if(at>=0) {
         const auto &node=game.grid.interactions[size_t(at)];
-        if(node.kind==InteractionKind::Board||(!(game.profile.story&(uint64_t(1)<<game.district))&&node.kind==InteractionKind::Npc))c.interact=true;
+        if(node.kind==InteractionKind::Epilogue||node.kind==InteractionKind::Board||(!(game.profile.story&(uint64_t(1)<<game.district))&&node.kind==InteractionKind::Npc))c.interact=true;
       }
     } else {
       c=pilot.controls(game.grid,game.state);

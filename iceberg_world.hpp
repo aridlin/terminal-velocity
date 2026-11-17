@@ -56,6 +56,7 @@ inline const std::vector<Pattern> &patterns() {
 #include "iceberg_rooms_estate.inc"
 #include "iceberg_rooms_archive.inc"
 #include "iceberg_rooms_gardens.inc"
+#include "iceberg_rooms_crown.inc"
   };
   return values;
 }
@@ -210,6 +211,9 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
   if(id==423) {
     for(int i:{1,3,5}){auto p=spec.path[size_t(i)];g.pulses.push_back({{p.x+7.,p.y-2.5,1.5,2.5},4.8,double(i)*.13});}
   }
+  if(district==5&&(id==60||id==63||id==66||id==70)) {
+    g.air_fields.push_back({{69,15,44,44},id==63||id==70?-4.:4.,0,6.,0});
+  }
   return g;
 }
 
@@ -217,6 +221,7 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
 #include "iceberg_estate.hpp"
 #include "iceberg_archive.hpp"
 #include "iceberg_gardens.hpp"
+#include "iceberg_crown.hpp"
 #include "iceberg_missions.hpp"
 #include "iceberg_jubilee.hpp"
 #include "iceberg_mastery.hpp"
@@ -226,6 +231,7 @@ inline EngineGrid build_authored(int district, bool finale) {
   if(district==2)return build_estate_sequence(finale);
   if(district==3)return build_archive_sequence(finale);
   if(district==4)return build_garden_sequence(finale);
+  if(district==5)return build_crown_sequence(finale);
   EngineGrid g(finale ? 144 : 128, 64);
   g.event_level = false; g.adventure_level = true; g.district = district;
   g.template_id = 72 + district * 2 + int(finale);
@@ -271,6 +277,7 @@ inline EngineGrid build_settlement(int district) {
   if(district==2)return build_estate_settlement();
   if(district==3)return build_archive_settlement();
   if(district==4)return build_garden_settlement();
+  if(district==5)return build_crown_settlement();
   EngineGrid g(94, 58);
   g.event_level = false; g.adventure_level = true; g.district = district;
   g.template_id = 100 + district; g.room_role = RoomRole::Settlement;

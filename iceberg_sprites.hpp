@@ -22,10 +22,34 @@
     static const uint32_t hair[]={0x654b46,0xd79743,0x394a69,0x8b8990,0xd2c5a8,0x665544,0x433d49};
     static const uint32_t clothes[]={0x93717c,0x76838a,0x537b93,0x8f829b,0x698c8b,0x769768,0x5ba6ae};
     uint32_t h=hair[id],coat=clothes[id],skin=0xd9ac89,leg=0x55616f,boot=0xa3abb0;
+    uint32_t paper=0xe8dbb2,metal=0xb3c3c8;
     bool gesture=(state_.adventure.reacting_npc==id&&state_.adventure.npc_reaction_left>0)||int(state_.adventure.presentation_time*.65+id)%5==0;
-    pixel_sprite(feet-3,x,{{0,h,h,0},{0,skin,h,0},
-      {gesture?skin:0,coat,coat,0},{gesture?0:skin,coat,npc.color,skin},
-      {0,leg,leg,0},{boot,0,boot,0}});
+    std::vector<std::array<uint32_t,4>> pixels;
+    switch(id) {
+    case 0: // Dispatcher's tied hair, scarf and delivery clipboard.
+      pixels={{0,h,h,0},{h,skin,skin,0},{0,skin,h,0},{coat,coat,npc.color,0},
+        {skin,coat,paper,paper},{0,coat,paper,paper},{0,leg,leg,0},{boot,0,boot,0}};break;
+    case 1: // Mechanic's cap, open overalls and steel tool.
+      pixels={{0,h,h,0},{h,h,h,0},{0,skin,skin,0},{skin,coat,skin,metal},
+        {coat,paper,coat,metal},{0,coat,coat,skin},{0,leg,leg,0},{boot,0,boot,0}};break;
+    case 2: // Conductor's peaked cap and brass-buttoned long coat.
+      pixels={{0,coat,coat,0},{coat,paper,coat,coat},{0,skin,h,0},{0,coat,coat,0},
+        {skin,coat,paper,skin},{0,coat,paper,0},{0,leg,leg,0},{boot,0,boot,0}};break;
+    case 3: // Administrator's bun, spectacles and large folder.
+      pixels={{0,h,h,h},{0,skin,metal,0},{0,skin,h,0},{coat,coat,coat,0},
+        {paper,paper,coat,skin},{paper,paper,coat,0},{0,leg,leg,0},{boot,0,boot,0}};break;
+    case 4: // Archivist's pale hair and book held open in both hands.
+      pixels={{0,h,h,0},{h,skin,h,0},{0,skin,skin,0},{0,coat,coat,0},
+        {skin,paper,paper,skin},{0,paper,paper,0},{0,leg,leg,0},{boot,0,boot,0}};break;
+    case 5: // Gardener's brimmed hat, apron and warm terracotta basket.
+      pixels={{0,h,h,0},{h,h,h,h},{0,skin,skin,0},{skin,coat,paper,0},
+        {0,paper,paper,skin},{0,paper,0xb78b62,0xb78b62},{0,leg,leg,0},{boot,0,boot,0}};break;
+    default: // Rival's hood, contrasting shoulder strap and courier bag.
+      pixels={{0,coat,coat,0},{coat,skin,h,0},{0,skin,coat,0},{0,npc.color,coat,0},
+        {skin,coat,npc.color,0x9b7864},{0,coat,coat,0x9b7864},{0,leg,leg,0},{boot,0,boot,0}};break;
+    }
+    if(gesture){pixels[3][0]=skin;pixels[4][0]=0;}
+    pixel_sprite(feet-4,x,pixels);
   }
   void courier_sprite(int x,int feet,uint32_t coat) {
     const auto &p=state_.player;const auto &v=state_.adventure;

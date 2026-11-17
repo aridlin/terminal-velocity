@@ -1,12 +1,12 @@
 # ProLiant guest entrance
 
-Prepared deployment, **not yet installed or publicly verified**.
+Published on ProLiant and verified through the public relay on 17 November 2026. Real tests cover passwordless PTYs, independent visits, movement/inspection/resize/exit, and command/SFTP/local+remote forwarding denial. The installer compares administrative effective SSH settings before reloading. Re-run staging verification whenever changing the jail or binary.
 
-Intended command: `ssh -t gra@prol.aridlin.pl`. No password or client key is required. OpenSSH's `none` authentication is limited to the dedicated `gra` account in an account-specific block on the existing listener. All other users retain their effective settings. A separate loopback-only listener on port 2223 is used to verify the guest before publishing.
+Command: `ssh -t gra@prol.aridlin.pl`. No password or client key is required. OpenSSH's `none` authentication is limited to the dedicated `gra` account in an account-specific block on the existing listener. All other users retain their effective settings. A separate loopback-only listener on port 2223 is used to verify the guest before publishing.
 
 The account's root-owned login shell ignores all supplied arguments and runs the game. The server also forces that command, prohibits forwarding, user startup files, environment injection and subsystems, and confines the session to a root-owned chroot containing only the game and its required libraries/utilities. It needs a PTY; noninteractive command requests without one exit. Each visit gets a temporary profile, removed on exit. Anonymous visits do not share campaign saves. A visit lasts at most two hours; reconnecting starts another visit. Quiet SSH input supports ordinary terminals and enhanced keyboard protocols.
 
-Before installation:
+Installation and upgrade procedure:
 
 1. Build and test the committed native terminal target on the server's distribution. Do not copy a binary whose dynamic libraries are unavailable there.
 2. Create `/opt/terminal-velocity/guest-root`, owned by root with no group/other write permission. Install the game at `/game/terminal_velocity` inside it. Install `guest-session` at `/game/session` and mirror `guest-shell` at `/usr/local/libexec/terminal-velocity-guest` both outside and inside the jail, root-owned 0755.
