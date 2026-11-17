@@ -200,10 +200,54 @@ const server=http.createServer((req,res)=>{
     await page.reload();await page.waitForFunction(()=>!document.querySelector('#start').disabled);
     assert.equal(await page.locator('html').getAttribute('lang'),'en','explicit English persists across reload');
     await page.locator('#start').click();await page.waitForTimeout(100);
-    const sample=fs.readFileSync(path.join(root,'tests/fixtures/iceberg-v4.dat'),'utf8');
-    const imported=await page.evaluate(sample=>{Module._web_save();const previous=Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'});Module.FS.writeFile('/persist/import.iceberg',sample);return {ok:Module._web_import_save(),previous,backup:Module.FS.readFile('/persist/progress.dat.iceberg.bak',{encoding:'utf8'})};},sample);
-    assert.equal(imported.ok,1);assert.equal(imported.backup,imported.previous,'import retains original profile as rollback');
-    await page.waitForFunction(()=>document.documentElement.lang==='pl');console.log('PASS imported Polish save keeps its language and previous profile backup');
+    const sample=fs.readFileSync(path.join(root,'tests/fixtures/iceberg-v4.dat'));
+    const importButton=page.locator('#import-save');
+    const openPicker=()=>Promise.all([page.waitForEvent('filechooser'),importButton.click()]).then(([picker])=>picker);
+    // A chooser that never reports a file or cancellation must leave play available.
+    await openPicker();
+    const liveTicks=await page.evaluate(async()=>{
+      let ticks=0;
+      const tick=Module._web_tick;
+      Module._web_tick=(dt,...args)=>{if(dt>0)ticks++;return tick(dt,...args);};
+      try {
+        for(let i=0;i<6;i++)await new Promise(requestAnimationFrame);
+        return ticks;
+      } finally {Module._web_tick=tick;}
+    });
+    assert.ok(liveTicks>0,'the chooser alone cannot freeze the game');
+    assert.equal(await importButton.isEnabled(),true);
+    assert.equal(await page.evaluate(()=>canvas===document.activeElement),true);
+    const picker=await openPicker();
+    await page.evaluate(()=>{
+      const runImport=Module._web_import_save;
+      Module._web_import_save=()=>{
+        window.replacedSave=Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'});
+        const result=runImport();
+        window.importBackup=Module.FS.readFile('/persist/progress.dat.iceberg.bak',{encoding:'utf8'});
+        return result;
+      };
+    });
+    const confirmation=page.waitForEvent('dialog').then(dialog=>{
+      assert.equal(dialog.type(),'confirm');
+      return dialog.accept();
+    });
+    await picker.setFiles({name:'polish.iceberg',mimeType:'application/octet-stream',buffer:sample});
+    await confirmation;
+    await page.waitForFunction(()=>!importPending&&!document.querySelector('#export-previous-save').hidden&&document.documentElement.lang==='pl');
+    const imported=await page.evaluate(()=>({
+      previous:window.replacedSave,
+      backup:window.importBackup,
+      manual:Module.FS.readFile('/persist/before-manual-import.iceberg',{encoding:'utf8'})
+    }));
+    assert.equal(imported.backup,imported.previous,'import retains the previous profile as rollback');
+    assert.equal(imported.manual,imported.previous,'the previous-save download uses that same profile');
+    await page.waitForFunction(()=>!syncing);
+    await page.reload();
+    await page.waitForFunction(()=>!document.querySelector('#start').disabled);
+    await page.locator('#start').click();
+    assert.equal(await page.locator('#export-previous-save').isVisible(),true);
+    assert.equal(await page.evaluate(()=>Module.FS.readFile('/persist/before-manual-import.iceberg',{encoding:'utf8'})),imported.previous);
+    console.log('PASS silent file picker dismissal, real Polish save import and rollback after reload');
    }
    console.log('PASS',locale,'fresh boot/game language and entry control');await context.close();
   }

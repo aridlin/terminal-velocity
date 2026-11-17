@@ -313,20 +313,24 @@ function finishImport(){
  importSave.disabled=false;
  clearInput();
  last=performance.now();
- if(!accounts.active)canvas.focus();
+ if(!accounts.active)canvas.focus({preventScroll:true});
 }
 importSave.onclick=()=>{
- importPending=true;
- importSave.disabled=true;
  clearInput();
+ canvas.focus({preventScroll:true});
  saveFile.click();
 };
-saveFile.oncancel=finishImport;
+saveFile.oncancel=()=>{if(!importPending)finishImport();};
 saveFile.onchange=async()=>{
  const file=saveFile.files[0];
  saveFile.value='';
+ // Only an actual selection starts an import. A picker dismissal may never
+ // reach the page, so opening the picker cannot suspend the game loop.
+ if(!file||importPending)return;
+ importPending=true;
+ importSave.disabled=true;
+ clearInput();
  try {
-  if(!file)return;
   if(!file.size||file.size>65536) {
    saveStatus.textContent=tr('Nieprawidłowy plik zapisu','Invalid save file');
    return;
