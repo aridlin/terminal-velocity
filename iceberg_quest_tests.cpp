@@ -113,6 +113,9 @@ int main() {
       walk_to(game,departure);interact(game);
       require_quest(!game.profile.revisit.active&&game.grid.room_role==iceberg::RoomRole::Settlement&&
         game.state.player.rect().intersects(door),"return door places the courier back at the original entrance");
+      const int nearby=game.near_interaction();
+      require_quest(nearby>=0&&game.grid.interactions[size_t(nearby)].kind==InteractionKind::Replay&&
+        game.grid.interactions[size_t(nearby)].id==scene,"returning preserves the same doorway as the nearby interaction");
     }
     for(int id=0;id<3;++id) {
       game.profile.hidden_room=id;install_test_room(game,iceworld::build_hidden(id));

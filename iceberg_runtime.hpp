@@ -438,7 +438,7 @@ public:
         return node.kind==InteractionKind::Replay&&node.id==scene;
       });
       if(entrance!=grid.interactions.end()) {
-        state.player.x=entrance->area.x+(entrance->area.w-kPlayerWidth)*.5;
+        state.player.x=entrance->area.x;
         state.player.y=entrance->area.bottom()-kPlayerHeight;
         update_camera(state,grid,last_columns,last_rows-7,last_aspect,10);
       }
