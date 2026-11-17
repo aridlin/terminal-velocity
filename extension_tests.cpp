@@ -85,6 +85,27 @@ int main() {
     step = FixedStepper{};
     step.advance(s, g, input, .02);
     require(s.defeated[0] && s.deaths == 0, "dash defeats patrol");
+
+    EngineGrid open(80,60);
+    open.spawn_x=20;open.spawn_y=24;
+    auto quick_dash=new_state(open);quick_dash.player.facing=-1;
+    Controls chord;chord.move_pressed=1;chord.aim_pressed=-1;chord.dash_pressed=true;
+    FixedStepper short_frame;
+    short_frame.advance(quick_dash,open,chord,.001);
+    require(quick_dash.player.dash_available,"short frame waits for a physics tick");
+    short_frame.advance(quick_dash,open,{},.01);
+    require(!quick_dash.player.dash_available&&quick_dash.player.vx>0&&quick_dash.player.vy<0,
+      "released direction steers a queued dash at the next physics tick");
+
+    auto impulse=new_state(open),expected=impulse;
+    FixedStepper impulse_step,expected_step;
+    Controls tap_right;tap_right.move_pressed=1;
+    Controls hold_right;hold_right.move=1;
+    impulse_step.advance(impulse,open,tap_right,3./120.);
+    expected_step.advance(expected,open,hold_right,1./120.);
+    expected_step.advance(expected,open,{},2./120.);
+    require(impulse.player.x>20&&std::abs(impulse.player.x-expected.player.x)<1e-9,
+      "a released direction moves for just its first physics tick");
     SshInput legacy(true);
     legacy.feed("d");
     require(legacy.consume(.01).move == 1, "SSH basic starts movement");

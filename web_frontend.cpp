@@ -62,7 +62,13 @@ EMSCRIPTEN_KEEPALIVE void web_enter_campaign() {
 EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int cols,int rows,int focused) {
   if(!web_game)return;
   auto h=[&](int key){return bool(held&(1u<<key));};auto p=[&](int key){return bool(pressed&(1u<<key));};
+  auto direction_pressed=[&](int negative,int positive)->std::optional<int>{
+    if(h(negative)&&h(positive))return 0;
+    if(p(negative)||p(positive))return int(p(positive))-int(p(negative));
+    return std::nullopt;
+  };
   Controls c;c.move=int(h(1))-int(h(0));c.aim_y=int(h(3))-int(h(2));
+  c.move_pressed=direction_pressed(0,1);c.aim_pressed=direction_pressed(2,3);
   c.jump_held=h(4)||h(2);c.jump_pressed=p(4)||p(2);c.dash_pressed=p(5);c.fast_fall=h(3);
   c.interact=p(6);c.inspect=p(7);c.confirm=p(8);c.pause=p(9);c.journal=p(10);c.map=p(11);
   c.menu_request=p(12);c.restart=p(13);c.new_run=p(14);c.language=p(15);c.mute_audio=p(16);

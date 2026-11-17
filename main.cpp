@@ -139,6 +139,7 @@ struct Controls {
   bool next_seed = false, menu_request = false, mute_audio = false;
   bool interact = false, inspect = false, map = false, language = false;
   int navigate = 0;
+  std::optional<int> move_pressed={}, aim_pressed={};
 };
 
 struct HeldKeys {
@@ -1133,8 +1134,14 @@ public:
     pending.jump_pressed |= input.jump_pressed;
     pending.dash_pressed |= input.dash_pressed;
     pending.restart |= input.restart;
+    if(input.move_pressed)pending.move_pressed=input.move_pressed;
+    if(input.aim_pressed)pending.aim_pressed=input.aim_pressed;
+    const int held_move=input.move, held_aim=input.aim_y;
     accumulator += clamp(elapsed, 0.0, 0.1);
     while (accumulator + 1e-10 >= 1.0 / 120.0) {
+      // A released direction can still aim a queued dash, then expires.
+      input.move=held_move?held_move:pending.move_pressed.value_or(0);
+      input.aim_y=held_aim?held_aim:pending.aim_pressed.value_or(0);
       input.jump_pressed = pending.jump_pressed;
       input.dash_pressed = pending.dash_pressed;
       input.restart = pending.restart;
