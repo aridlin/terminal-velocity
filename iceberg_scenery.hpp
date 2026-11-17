@@ -32,11 +32,40 @@
     int wake=int(state_.elapsed*4)%3;
     world_art(deck.x-3*scale_,deck.y+2*row,{wake==0?"∿  ∿":" ∿  ∿"},0x527a89);
   }
-  void draw_pipe_drip(double x,double roof,double floor,double offset) {
+  void draw_scenery_pipe(std::initializer_list<std::pair<double,double>> path,uint32_t color) {
+    auto paint=[&](int x,int y,const char *glyph) {
+      if(x<0||x>=cols_||y<4||y>=rows_-3)return;
+      const double wx=state_.camera_x+x*scale_, row=aspect_*scale_;
+      const double wy=state_.camera_y+(y-4)*row;
+      if(grid_.solid_at(int(std::floor(wx+.5*scale_)),int(std::floor(wy+.5*row)))||
+         grid_.hazard_at(int(std::floor(wx)),int(std::floor(wy)))||
+         state_.player.rect().intersects({wx,wy,scale_,row}))return;
+      put(y,x,{glyph,Color::Decor,false,false,0,color});
+    };
+    // Each turn is snapped once so both runs share the same corner cell.
+    for(auto a=path.begin(),b=a+1;b!=path.end();++a,++b) {
+      auto [ax,ay]=screen(a->first,a->second);
+      auto [bx,by]=screen(b->first,b->second);
+      const bool horizontal=a->second==b->second;
+      if(horizontal&&ay>=4&&ay<rows_-3)
+        for(int x=std::max(0,std::min(ax,bx)+1);x<=std::min(cols_-1,std::max(ax,bx)-1);++x)
+          paint(x,ay,std::abs(x-ax)%13==0?"╪":"═");
+      if(!horizontal&&ax>=0&&ax<cols_)
+        for(int y=std::max(4,std::min(ay,by)+1);y<=std::min(rows_-4,std::max(ay,by)-1);++y)
+          paint(ax,y,std::abs(y-ay)%6==0?"╫":"║");
+      if(a==path.begin())paint(ax,ay,horizontal?"╪":"╫");
+      if(b+1==path.end()){paint(bx,by,horizontal?"╪":"╫");continue;}
+      const auto &next=*(b+1);
+      const bool right=horizontal?a->first>b->first:next.first>b->first;
+      const bool down=horizontal?next.second>b->second:a->second>b->second;
+      paint(bx,by,down?(right?"╔":"╗"):(right?"╚":"╝"));
+    }
+  }
+
+  void draw_pipe_drip(double x,double lip,double floor,double offset) {
     double row=aspect_*scale_;
-    world_art(x-12*scale_,roof,{"══╪╪════╪╪══╗","──┼┼────┼┼─╮║","           ╰╨"},0xa1a8a1);
+    world_art(x,lip,{"╨"},0xa1a8a1);
     double phase=std::fmod(state_.adventure.presentation_time+offset,2.35);
-    double lip=roof+2*row;
     if(phase<.6)world_art(x,lip+row,{"·"},0x8baab6);
     else if(phase<1.45) {
       double fall=(phase-.6)/.85;
@@ -62,7 +91,8 @@
   void draw_dock_worker(double x,double feet,double phase) {
     const double row=aspect_*scale_;
     const double top=feet-4*row;
-    world_art(x,top,{" ▄▄▄ ","  ▐▌ "},0xb98b64);
+    world_art(x,top,{" ▄▄▄▄"},0x849ca2);
+    world_art(x,top+row,{"  ██ "},0xb98b64);
     world_art(x,top+2*row,{" ▐██▌"," ▐▌▐▌"},0x7d91a5);
     world_art(x+4*scale_,top+2*row,{phase<.45?"▄":"╶"},0xb98b64);
     world_art(x+5*scale_,feet-2*row,{"┌─┬─┐","└─┴─┘"},0x897253);
@@ -101,6 +131,8 @@
       world_art(4+std::min(feed,2.5)*3*scale_,48-3*row,{"✉"},d.light);
       world_art(40,39-7*aspect_*scale_,{"    ╱────────────╲","╭──╧──────────────╧──╮","│  ▣   ▣   ▣   ▣     │","├────────────────────┤","│  ╭──╮    ╭──╮      │","│  │  │    │  │      │","╰──┴──┴────┴──┴──────╯"},d.stone);
       world_art(59,43-5*aspect_*scale_,{"╭───────────────────╮",tr("│ KAWA • NAPRAWY    │","│ COFFEE • REPAIRS  │"),"├───────────────────┤","│ ▤▤ ▤▤   ╭────╮    │","╰─────────┴────┴────╯"},0x5f777b,true);
+      draw_scenery_pipe({{57,40.5},{57,34},{76,34},{76,43.5}},0x596d73);
+      draw_scenery_pipe({{76,35.6},{81,35.6},{81,44}},0x52686f);
       draw_quay_hoist();
       world_art(106,48-6*aspect_*scale_,{" ╱▔▔╲╱▔▔╲╱▔▔╲╱▔▔╲","│                 │","│  ♧  ▰  ♧  ▰    │","├─────────────────┤","│                 │","╰───┬─────────┬───╯"},d.stone);
       draw_dock_worker(94,48,std::fmod(time,2.4));
@@ -155,16 +187,22 @@
         }
         world_art(126,41-6*aspect_*scale_,{"    ╱╲","   ╱  ╲","  ╱    ╲"," ╱______╲","     │","─────┴──────"},d.stone);
       } else if(id==505) {
-        draw_pipe_drip(44,34.5,41,0);
-        draw_pipe_drip(78,38.5,45,1.1);
-        draw_pipe_drip(102,31,48,.3);
-        for(int x=72;x<grid_.width()-12;x+=25)world_art(x,28,{"╔══════════════════╗","╚══════════════════╝","     ║       ║"},0x38535a);
+        draw_scenery_pipe({{39,32},{39,35.2},{44,35.2},{44,37.3}},0x879396);
+        draw_pipe_drip(44,37.3,41,0);
+        draw_scenery_pipe({{72,36.5},{72,39.2},{78,39.2},{78,41.4}},0x879396);
+        draw_pipe_drip(78,41.4,45,1.1);
+        draw_scenery_pipe({{72,26},{91,26},{91,28.4},{102,28.4},{102,34}},0x788d92);
+        draw_pipe_drip(102,34,48,.3);
+        draw_scenery_pipe({{69,24},{69,27.6},{126,27.6},{126,32.8},{163,32.8},{163,40.8}},0x49656d);
+        draw_scenery_pipe({{164,41},{164,35.4},{202,35.4},{202,38}},0x49656d);
         world_art(98,48-5*aspect_*scale_,{"╭─────────────╮","│  ◴     ◷    │","╰──┬─────┬────╯","   ║     ║","═══╩═════╩════"},d.stone);
       } else if(id==506) {
         for(size_t i=1;i<p.path.size();i+=2) {
           auto a=p.path[i];world_art(a.x+5,a.y-7*aspect_*scale_,{"╭───╮","│ ▣ │","╰─┬─╯","  │","  │","  │","══╧══"},0xa18d67);
         }
       } else if(id==507) {
+        draw_scenery_pipe({{54,48.5},{54,36},{80,36},{80,33.6},{104,33.6},{104,42.5}},0x61757a);
+        draw_scenery_pipe({{112,42.6},{112,34.4},{139,34.4},{139,39.5}},0x516a71);
         world_art(74,45-6*aspect_*scale_,{" ╱▔▔╲╱▔▔╲╱▔▔╲╱▔▔╲","│                 │","│  ♧  ▰  ♧  ▰    │","├─────────────────┤","│  ╲    ╱ ╲    ╱  │","╰───╲──╱───╲──╱───╯"},d.stone);
       } else if(id==508) {
         world_art(90,47-8*aspect_*scale_,{"                ┃","          ╭─────┼─────╮","          │ ▣▣  ┃  ▣▣ │","     ╭────┴─────┻─────┴────╮","     │  ○  ○  ○  ○  ○  ○   │","  ╲══╧═════════════════════╧══╱","   ╲_________________________╱","      ║                 ║"},d.stone);
@@ -222,6 +260,9 @@
       world_art(86,44-6*aspect_*scale_,{"╔════════════╗","║  16° / 8°  ║","╚══╤════╤════╝","   ║    ║","═══╩════╩══════"},d.stone);
       world_art(185,32-7*aspect_*scale_,{"   ╔══════════════╗",tr("   ║ ŚLUZA POCZTY ║","   ║ POST AIRLOCK ║"),"═══╣              ╠═══","   ║   ╭──────╮   ║","   ║   │ ░░░░ │   ║","   ║   │ ░░░░ │   ║","   ╚═══╧══════╧═══╝"},d.stone);
     } else if(id==312) {
+      draw_scenery_pipe({{10,53},{10,42.4},{67,42.4},{67,45.6}},0x526971);
+      draw_scenery_pipe({{74,46.5},{74,36.4},{138,36.4},{138,39.5}},(grid_.switch_flags&4)?0x86ab9c:0x526971);
+      draw_scenery_pipe({{143,39.2},{143,33.4},{171,33.4},{171,35.6}},(grid_.switch_flags&8)?0xc0956e:0x526971);
       world_art(7,55-7*aspect_*scale_,{"╔════════════╗","║ 16 →   8 ← ║","╚══╤════╤════╝","   ║    ║","═══╩════╩══════"},d.accent);
       world_art(68,47-7*aspect_*scale_,{"╔══════════════╗","║   ╭────╮     ║","║   │ ◉  │     ║","║   ╰────╯     ║","╚═══╤════╤═════╝","    ║    ║","════╩════╩══════"},d.stone);
       world_art(136,39-6*aspect_*scale_,{"   ╱╲"," ╱────╲"," │ ▣▣ │"," ╰─┬──╯","   ║","═══╩════"},(grid_.switch_flags&4)?0xb8dfb7:d.accent);
