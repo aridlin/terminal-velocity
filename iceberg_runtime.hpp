@@ -57,6 +57,13 @@ public:
   }
   ~AdventureSession() = default;
   std::string t(const char *pl,const char *en) const { return iceberg::tr(profile.language,pl,en); }
+  int music_track() const {
+    // The short snow theme belongs to inhabited resting places. Long route
+    // pieces keep an expedition from repeating a 25-second musical phrase.
+    if(grid.room_role==iceberg::RoomRole::Settlement)return 2;
+    if(grid.room_role==iceberg::RoomRole::Interlude)return 1;
+    return grid.district==0?0:1;
+  }
   void notice(const std::string &text, double seconds=3) {
     state.adventure.notice=text;state.adventure.notice_left=seconds;
   }
@@ -86,7 +93,8 @@ public:
         v.trials[size_t(challenge.district)]=challenge.record;
     }
     v.discoveries=profile.discoveries;
-    v.switches=grid.switch_flags;v.room_name=grid.room_name.get(profile.language);
+    v.switches=grid.switch_flags;v.room_name=(grid.room_role==iceberg::RoomRole::Settlement?
+      iceberg::Districts[size_t(grid.district)].subtitle:grid.room_name).get(profile.language);
     v.music_volume=profile.music_volume;v.effects_volume=profile.effects_volume;v.ambience_volume=profile.ambience_volume;
     state.audio_muted=audio.muted;state.audio_error=audio.error();
   }
@@ -497,11 +505,11 @@ public:
     if(!focused)c={};
     auto &v=state.adventure;
     v.notice_left=std::max(0.,v.notice_left-dt);
-    if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,district==0||district==4?2:district>=1?1:0,dt,focused);return;}
+    if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request){persist();state.menu=true;v.dialogue={};stepper={};sync_view();return;}
     if(v.dialogue.active()) {
       if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
-      audio.update(AudioScene::Paused,district==0||district==4?2:district>=1?1:0,dt,focused);sync_view();return;
+      audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
     if(c.journal){state.journal=!state.journal;v.map=false;stepper={};}
     if(c.map){v.map=!v.map;state.journal=false;stepper={};}
@@ -518,7 +526,7 @@ public:
       } else if(c.confirm){state.journal=false;v.map=false;}
     }
     bool blocked=state.paused||state.journal||v.map||columns<76||rows<24;
-    audio.update(blocked?AudioScene::Paused:AudioScene::Play,district==0||district==4?2:district>=1?1:0,dt,focused);
+    audio.update(blocked?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
     if(blocked){sync_view();return;}
     if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
     if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}

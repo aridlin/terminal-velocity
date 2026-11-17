@@ -42,6 +42,23 @@ int main() {
       walk_to(game,goal);interact(game);finish_dialogue(game);
       require_quest(game.profile.quests[size_t(quest)]==3&&(game.profile.cosmetics&(1u<<(quest%7+1))),"character turn-in grants its persistent reward");
     }
+    {
+      AdventureSession recovered(options,std::filesystem::temp_directory_path()/"tv-recovery-quest-nosave");
+      recovered.begin_campaign(true);recovered.profile.story=63;
+      for(int q:{0,1,7})recovered.profile.quests[size_t(q)]=1;
+      for(int id:{0,4,8,12,16,20,13,17,21}) {
+        auto original=iceworld::build_room(id,73,id/12);
+        install_test_room(recovered,recovery_room_for(original));
+        auto task=std::find_if(recovered.grid.interactions.begin(),recovered.grid.interactions.end(),
+          [](const Interaction &node){return node.kind==InteractionKind::Task;});
+        require_quest(task!=recovered.grid.interactions.end()&&task->id==original.interactions[0].id&&task->detail==original.interactions[0].detail,
+          "generic recovery preserves the reserved task identity");
+        walk_to(recovered,reach_area(task->area));interact(recovered);walk_to(recovered,recovered.grid.goal);
+        require_quest(recovered.state.won,"recovery task ledge has a playable exit");
+      }
+      for(int q:{0,1,7})require_quest(recovered.profile.quests[size_t(q)]==2,
+        "character task remains completable even if all its rooms use recovery routes");
+    }
     EngineGrid practice(200,60);practice.adventure_level=true;practice.event_level=false;
     practice.add_solid_rect(0,50,200,10);practice.spawn_x=4;practice.spawn_y=50-kPlayerHeight;practice.goal={190,45,2,5};
     install_test_room(game,std::move(practice));game.profile.quests[6]=1;game.profile.quest_counts[6]=0;

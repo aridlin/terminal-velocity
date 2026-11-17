@@ -1010,11 +1010,18 @@ int terminal_window_main(int argc,char **argv) {
       }
       if(scene=="dialogue"){session.state.menu=false;session.talk(iceberg::introduction(0));}
       if(options.no_save&&scene=="journal"){session.state.menu=false;session.state.journal=true;session.profile.quests[0]=1;session.sync_view();}
+      if(options.no_save&&scene=="map"){session.state.menu=false;session.state.adventure.map=true;session.profile.unlocked=1;session.sync_view();}
       if(args.smoke){session.state.menu=false;maxframes=120;}
       std::array<bool,SDL_NUM_SCANCODES> held{};
       bool focused=true,fullscreen=false;
       cell_frame_sink=[&](const CellFrame &frame){
         color(ink);SDL_RenderClear(ren);
+        // Draw the same per-cell backgrounds as ANSI, coalesced into row runs.
+        for(size_t y=0;y<frame.size();++y)for(size_t x=0;x<frame[y].size();) {
+          uint32_t rgb=cell_background(frame[y][x]);size_t end=x+1;
+          while(end<frame[y].size()&&cell_background(frame[y][end])==rgb)++end;
+          box(int(x)*10,int(y)*20,int(end-x)*10,20,{Uint8(rgb>>16),Uint8(rgb>>8),Uint8(rgb),255});x=end;
+        }
         for(size_t y=0;y<frame.size();++y)for(size_t x=0;x<frame[y].size();++x)
           font.cell(frame[y][x],int(x)*10,int(y)*20,10,20);
       };
@@ -1056,10 +1063,10 @@ int terminal_window_main(int argc,char **argv) {
         int cols=std::clamp(w/10,1,240),rows=std::clamp(h/20,1,100);
         auto now=std::chrono::steady_clock::now();
         double dt=args.smoke?1./120:std::chrono::duration<double>(now-last).count();last=now;
-        bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused;
+        bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map;
         if(c.debug)session.state.debug=!session.state.debug;
         session.tick(c,dt,focused,cols,rows,2);
-        bool blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused;
+        bool blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map;
         if(was_blocked!=blocked)held.fill(false);
         if(now>=render_at||args.smoke||!screenshot.empty()) {
           RenderGrid(session.grid,session.state,rows,cols,2).draw();

@@ -113,6 +113,17 @@ inline RouteResult verify_route(const EngineGrid &g,int max_ticks=120*120) {
 }
 // Generation has a hard two-candidate bound. Failure falls back to a separately
 // tested authored recovery route; death/resume rebuilds the same candidate.
+inline EngineGrid recovery_room_for(const EngineGrid &requested) {
+  int id=requested.district*12+7;
+  auto fallback=iceworld::build_room(id,requested.seed,requested.district,false,true);
+  const auto &layout=iceworld::pattern(id);size_t branch=0;
+  for(auto node:requested.interactions)if(node.kind==InteractionKind::Task) {
+    auto pad=layout.optional.empty()?layout.path.front():layout.optional[branch++%layout.optional.size()];
+    node.area={pad.x+1.,pad.y-2.,2,2};
+    fallback.interactions.push_back(node);
+  }
+  fallback.generation_fallback=2;return fallback;
+}
 inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=false) {
   auto candidate=iceworld::build_room(id,seed,district,expert);
   auto result=verify_route(candidate);
@@ -120,5 +131,5 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   candidate=iceworld::build_room(id,seed,district,expert,true);
   result=verify_route(candidate);
   if(result.complete){candidate.verification_policy=result.policy;candidate.generation_fallback=1;return candidate;}
-  candidate=iceworld::build_room(7,seed,district,false,true);candidate.generation_fallback=2;return candidate;
+  return recovery_room_for(candidate);
 }

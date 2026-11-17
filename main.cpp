@@ -1688,6 +1688,7 @@ struct Cell {
   bool bold = false;
   unsigned braille_mask = 0;
   uint32_t rgb = 0;
+  uint32_t background = 0;
 };
 using CellFrame = std::vector<std::vector<Cell>>;
 std::function<void(const CellFrame &)> cell_frame_sink;
@@ -1709,6 +1710,7 @@ uint32_t cell_color(const Cell &cell) {
   default:return 0xc8bbb8;
   }
 }
+uint32_t cell_background(const Cell &cell) {return cell.background?cell.background:0x191418;}
 
 std::string utf8(char32_t value) {
   std::string out;
@@ -1984,13 +1986,15 @@ private:
     return b;
   }
   void put(int row, int col, Cell c) {
-    if (row >= 0 && row < rows_ && col >= 0 && col < cols_)
+    if (row >= 0 && row < rows_ && col >= 0 && col < cols_) {
+      if(!c.background)c.background=buffer_[row][col].background;
       buffer_[row][col] = std::move(c);
+    }
   }
   void fill(int row, int col, int w, int h, Color c) {
     for (int y = row; y < row + h; ++y)
       for (int x = col; x < col + w; ++x)
-        put(y, x, {" ", c});
+        put(y, x, {" ", c,false,false,0,0,iceberg_base_background()});
   }
   void text(int row, int col, const std::string &s, Color c = Color::Text) {
     for (auto ch : glyphs(s))
@@ -2222,7 +2226,8 @@ private:
            Color::Gold);
     center(17, "[N] PONÓW   [G] NOWY SEED   [M] MENU   [Q] WYJŚCIE");
   }
-  void flush() const {
+  void flush() {
+    for(auto &row:buffer_)for(auto &cell:row)if(!cell.background)cell.background=iceberg_base_background();
     if (cell_frame_sink) {cell_frame_sink(buffer_);return;}
     static std::vector<std::vector<Cell>> previous;
     bool full = previous.size() != buffer_.size() || previous.empty() ||
@@ -2234,6 +2239,7 @@ private:
     Color current = Color::Default;
     bool bold = false;
     uint32_t last_rgb = 0;
+    uint32_t last_background = 0;
     out += ansi_for(current, false, false);
     for (int y = 0; y < rows_; ++y) {
       bool positioned = false;
@@ -2242,6 +2248,7 @@ private:
         bool changed = full || c.glyph != previous[y][x].glyph ||
                        c.color != previous[y][x].color ||
                        c.rgb != previous[y][x].rgb ||
+                       c.background != previous[y][x].background ||
                        c.bold != previous[y][x].bold;
         if (!changed) {
           positioned = false;
@@ -2253,14 +2260,17 @@ private:
           positioned = true;
         }
         uint32_t rgb=cell_color(c);
-        if (current != c.color || bold != c.bold || rgb != last_rgb) {
-          out += "\x1b[0m\x1b[48;2;25;20;24m";
+        uint32_t background=cell_background(c);
+        if (current != c.color || bold != c.bold || rgb != last_rgb || background != last_background) {
+          out += "\x1b[0m\x1b[48;2;"+std::to_string((background>>16)&255)+";"+
+            std::to_string((background>>8)&255)+";"+std::to_string(background&255)+"m";
           if(c.bold)out+="\x1b[1m";
           out += "\x1b[38;2;"+std::to_string((rgb>>16)&255)+";"+
             std::to_string((rgb>>8)&255)+";"+std::to_string(rgb&255)+"m";
           current = c.color;
           bold = c.bold;
           last_rgb=rgb;
+          last_background=background;
         }
         out += c.glyph;
       }

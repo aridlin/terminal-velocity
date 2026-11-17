@@ -44,13 +44,23 @@ class Terminal:
         os.write(self.master, keys.encode())
 
     def close(self):
+        def drain_until_exit(seconds):
+            end=time.monotonic()+seconds
+            while self.process.poll() is None and time.monotonic()<end:
+                if select.select([self.master], [], [], .02)[0]:
+                    try: os.read(self.master, 131072)
+                    except OSError: break
+            return self.process.poll() is not None
         if self.process.poll() is None:
             self.send('q')
-            try:
-                self.process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
+            # A real terminal keeps consuming output while the game exits.
+            # Waiting without draining a full PTY can block the renderer before
+            # it reaches Q, especially during an actively scrolling frame.
+            if not drain_until_exit(3):
                 self.process.terminate()
-                self.process.wait(timeout=3)
+                if not drain_until_exit(3):
+                    self.process.kill()
+            self.process.wait(timeout=3)
         restored = termios.tcgetattr(self.slave) == self.original
         os.close(self.master)
         os.close(self.slave)

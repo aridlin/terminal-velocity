@@ -6,6 +6,7 @@ from pathlib import Path
 import struct
 import tempfile
 import termios
+import time
 import pyte
 from test_tui import Terminal, pump
 
@@ -13,7 +14,9 @@ def screen(t):
     return '\n'.join(t.screen.display)
 
 def expect(t, text):
-    pump([t], .16)
+    deadline=time.monotonic()+2
+    pump([t], .10)
+    while text not in screen(t) and time.monotonic()<deadline:pump([t], .03)
     assert text in screen(t), f'Missing {text!r}:\n{screen(t)}'
 
 def resize(t, cols, rows):
@@ -28,8 +31,10 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         expect(t,'ROZPOCZNIJ PODRÓŻ')
         t.send('l');expect(t,'BEGIN JOURNEY')
         t.send('\r');expect(t,'LOWER HARBOR')
-        t.send('i');pump([t],.07)
-        assert any(c.fg=='83c5ce' for row in t.screen.buffer.values() for c in row.values()),'Basic SSH upward dash did not spend the dash'
+        t.send('i');deadline=time.monotonic()+.6
+        def dash_spent():return any(c.fg=='83c5ce' for row in t.screen.buffer.values() for c in row.values())
+        while not dash_spent() and time.monotonic()<deadline:pump([t],.02)
+        assert dash_spent(),'Basic SSH upward dash did not spend the dash\n'+screen(t)
         t.send('r');pump([t],.12)
         t.send('d');pump([t],.30);t.send('s');pump([t],.05)
         t.send('e');expect(t,'HELENA')

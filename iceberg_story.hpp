@@ -45,7 +45,7 @@ inline std::vector<DialogueLine> introduction(int district) {
   case 0: return {
     {0,{"Jesteś. Dobrze. Miałam wysłać po ciebie kuriera, ale to byś znowu był ty.","You're here. Good. I was going to send a courier for you, but that would be you again."}},
     {0,{"Górne dzielnice milczą od rana. Witek twierdzi, że ciepło znika z rur, zanim dotrze do mieszkań.","The upper districts have been silent all morning. Witek says heat is disappearing from the pipes before it reaches the homes."}},
-    {0,{"Na tablicy są trzy odcinki: odpływ, przepompownia i droga do ciepłowni. Sprawdź połączenia po kolei.","The board has three routes: the drain, the pumping station, and the heating works approach. Check the connections in order."}},
+    {0,{"Na tablicy na końcu nabrzeża są trzy odcinki: odpływ, przepompownia i droga do ciepłowni. Sprawdź połączenia po kolei.","The board at the far end of the quay has three routes: the drain, the pumping station, and the heating works approach. Check the connections in order."}},
     {0,{"Nie musisz być szybki. Musisz wrócić. Na pomostach świecą lampy powrotne. R zabierze cię do ostatniej.","You don't need to be fast. You need to come back. Return lamps mark the boardwalks. R takes you to the last one."}},
     {6,{"A jeśli jednak będziesz szybki, nie mów Helenie, że ci pokazałem. Skok po zrywie niesie dalej niż sam zryw.","And if you do happen to be fast, don't tell Helena I showed you. A jump out of a dash carries you farther than the dash alone."}},
     {0,{"Wszyscy mieszkamy w lodzie. Nie wszyscy musimy mieć lód w głowie. Idź ostrożnie.","We all live in ice. We don't all need ice in our heads. Take care."}}
@@ -53,7 +53,7 @@ inline std::vector<DialogueLine> introduction(int district) {
   case 1: return {
     {1,{"O, poczta. Rachunek? Jeśli tak, wrzuć do pieca. Przynajmniej da trochę ciepła.","Oh, mail. A bill? Put it in the furnace. At least it will give us some heat."}},
     {1,{"Ktoś zamknął powrót z góry. Mogę zwiększyć ciśnienie, ale wtedy stopimy ścianę, na której stoi pół osiedla.","Someone shut the return line from above. I can raise the pressure, but we'd melt the wall holding half the estate."}},
-    {1,{"Uruchom trzy odnogi awaryjne. Windy parowe podnoszą cię z rozpędu. Skocz, kiedy platforma rusza w górę.","Start the three emergency branches. Steam lifts carry momentum. Jump while the platform is rising."}}
+    {1,{"Uruchom trzy odnogi awaryjne. Tablica stoi za kotłem. Windy parowe podnoszą cię z rozpędu. Skocz, kiedy platforma rusza w górę.","Start the three emergency branches. The board is beyond the boiler. Steam lifts carry momentum. Jump while the platform is rising."}}
   };
   case 2: return {
     {2,{"Tramwaj nie jeździ. Nie oznacza to, że nie obowiązuje rozkład.","The tram isn't running. That doesn't mean the timetable no longer applies."}},

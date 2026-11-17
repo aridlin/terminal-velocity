@@ -1,4 +1,30 @@
 // RenderGrid member functions: one Unicode cell framebuffer for terminal and SDL.
+  uint32_t iceberg_base_background() const {
+    if(!grid_.adventure_level)return 0x191418;
+    if(grid_.room_role==iceberg::RoomRole::Secret)return 0x090e13;
+    static const uint32_t colors[]={0x101923,0x20181b,0x1c1825,0x101622,0x11201d,0x161c28};
+    return colors[std::clamp(grid_.district,0,5)];
+  }
+  static uint32_t blend_light(uint32_t from,uint32_t to,double amount) {
+    uint32_t result=0;
+    for(int shift:{0,8,16})result|=uint32_t(((from>>shift)&255)*(1-amount)+((to>>shift)&255)*amount)<<shift;
+    return result;
+  }
+  uint32_t iceberg_light(double wx,double wy) const {
+    uint32_t base=iceberg_base_background();
+    if(grid_.room_role==iceberg::RoomRole::Secret)return base;
+    double warm=0,cold=0;
+    for(auto [x,y]:grid_.checkpoint_points) {
+      double dx=wx-x,dy=wy-(y-.8);
+      warm=std::max(warm,std::max(0.,1-(dx*dx+dy*dy*.7)/23));
+    }
+    for(size_t i=0;i<grid_.refills.size();++i)if(state_.refill_cooldown[i]<=0) {
+      auto [x,y]=grid_.refills[i];double dx=wx-x,dy=wy-y;
+      cold=std::max(cold,std::max(0.,1-(dx*dx+dy*dy)/8));
+    }
+    warm=std::floor(warm*6)/6;cold=std::floor(cold*4)/4;
+    return blend_light(blend_light(base,0x68502b,warm*.23),0x214d58,cold*.25);
+  }
   std::string tr(const char *pl,const char *en) const {
     return iceberg::tr(state_.adventure.language,pl,en);
   }
@@ -160,7 +186,11 @@
   }
   void draw_iceberg_world() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
-    for(int y=0;y<play_rows_;++y)for(int x=0;x<cols_;++x)buffer_[y+4][x]=world_cell(x,y);
+    for(int y=0;y<play_rows_;++y)for(int x=0;x<cols_;++x) {
+      auto cell=world_cell(x,y);
+      cell.background=iceberg_light(state_.camera_x+x*scale_,state_.camera_y+y*aspect_*scale_);
+      buffer_[y+4][x]=std::move(cell);
+    }
     draw_iceberg_landmarks();
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       auto [x,y]=grid_.sweets[i];world_text(x,y,"◆",d.accent);
@@ -325,10 +355,34 @@
     frame(4,2,cols_-4,rows_-7,0x637f8e);
     center(6,v.map?tr("DZIELNICE GÓRY LODOWEJ","DISTRICTS OF THE ICEBERG"):tr("DZIENNIK KURIERA","COURIER'S JOURNAL"),Color::Gold);
     if(v.map) {
+      bool wide=cols_>=100&&rows_>=32;
+      static const std::array<std::array<const char *,3>,6> strata{{
+        {{"             ╱╲", "            ╱◈ ╲", "      ∿∿∿∿╱────╲∿∿∿∿"}},
+        {{"          ╱ ♧ ♧  ╲", "         ╱────────╲", "        ╱  ♧   ♧   ╲"}},
+        {{"       ╱ ▤▤ ▤▤ ▤▤ ▤▤ ╲", "       │─────────────│", "      ╱  ▤▤ ▤▤ ▤▤ ▤▤  ╲"}},
+        {{"     ╱ ┌┐ ┌┐ ┌┐ ┌┐ ┌┐ ╲", "     │ └┘ └┘ └┘ └┘ └┘ │", "    ╱═══════════════════╲"}},
+        {{"   ╱   ▥▥    ◉    ▥▥     ╲", "   │═════════════════════│", "   │   ║             ║   │"}},
+        {{"    ╲  ║ ∿∿  ◈ ∿∿    ║  ╱", "     ╲─────────────────╱", "       ╲_____________╱"}}
+      }};
       for(int i=5;i>=0;--i) {
-        int y=8+(5-i)*2;
+        int y=8+(5-i)*(wide?3:2);
         if(y>=rows_-5)break;
-        center(y,(i==v.selected?"▸ ":"  ")+iceberg::Districts[size_t(i)].name.get(l),i<=v.unlocked?Color::Player:Color::Ice);
+        std::string label=(i==v.selected?"▸ ":"  ")+iceberg::Districts[size_t(i)].name.get(l);
+        if(wide) {
+          const auto &district=iceberg::Districts[size_t(i)];
+          uint32_t shade=i<=v.unlocked?district.accent:0x34434d;
+          for(int line=0;line<3;++line)paint_text(y+line,7,strata[size_t(5-i)][size_t(line)],shade);
+          text(y,cols_/2,label,i==v.selected?Color::Gold:i<=v.unlocked?Color::Player:Color::Ice);
+          paint_text(y+1,cols_/2+2,i==v.district?tr("tu jesteś","you are here"):
+            i<=v.unlocked?tr("połączenie czynne","connection open"):tr("brak połączenia","not connected"),i<=v.unlocked?0xc8bbb8:0x63788b);
+        } else center(y,label,i==v.selected?Color::Gold:i<=v.unlocked?Color::Player:Color::Ice);
+        const auto &record=v.records[size_t(i)];
+        if(record.complete) {
+          std::string best=tr("Najlepiej: ","Best: ")+fixed(record.best_seconds)+"s / "+
+            std::to_string(record.best_deaths)+tr(" powr. / "," retries / ")+std::to_string(record.best_treasures)+" ◆";
+          if(wide)paint_text(y+2,cols_/2+2,best,iceberg::Districts[size_t(i)].accent);
+          else center(y+1,best,Color::Text);
+        }
       }
     } else {
       int q=std::clamp(v.selected,0,7);
@@ -351,7 +405,10 @@
           std::to_string(v.quest_counts[size_t(q)])+" / "+std::to_string(iceberg::Quests[size_t(q)].required),Color::Gold);
       }
     }
-    center(rows_-4,v.map?tr("W/S wybierz   ENTER podróż   J powrót","W/S select   ENTER travel   J return"):tr("W/S wybierz   E czytaj nagrodę   TAB wróć","W/S select   E read reward   TAB return"));
+    center(rows_-4,v.map?(v.mode==iceberg::Mode::Campaign?
+      tr("W/S wybierz   ENTER podróż   J powrót","W/S select   ENTER travel   J return"):
+      tr("W/S wybierz   ENTER / J wróć","W/S select   ENTER / J return")):
+      tr("W/S wybierz   E czytaj nagrodę   TAB wróć","W/S select   E read reward   TAB return"));
   }
   void draw_iceberg_dialogue() {
     const auto &dialogue=state_.adventure.dialogue;
@@ -382,7 +439,7 @@
     paint_text(1,2,v.room_name,d.light);
     if(cols_>90)paint_text(0,cols_-27,tr("TRASA ","SEED ")+std::to_string(v.seed),d.stone);
     std::string mode=v.revisit?tr("POWRÓT NA TRASĘ","REVISIT"):v.mode==iceberg::Mode::Campaign?tr("PODRÓŻ","JOURNEY"):v.mode==iceberg::Mode::Endless?tr("BEZ KOŃCA","ENDLESS"):tr("PRÓBA","TRIAL");
-    paint_text(2,2,mode+"   ◆ "+std::to_string(state_.sweets_count())+"/"+std::to_string(grid_.sweets.size())+
+    paint_text(2,2,mode+(grid_.sweets.empty()?"":"   ◆ "+std::to_string(state_.sweets_count())+"/"+std::to_string(grid_.sweets.size()))+
       tr("   Powroty ","   Retries ")+std::to_string(state_.deaths)+
       (v.mode==iceberg::Mode::Endless?tr("   Głębokość ","   Depth ")+std::to_string(v.depth):
        grid_.room_role==iceberg::RoomRole::Traverse?"   "+std::to_string(v.room+1)+"/"+std::to_string(iceberg::RoomsPerLeg):"")+
