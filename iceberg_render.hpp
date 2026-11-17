@@ -451,6 +451,11 @@
     frame(0,0,cols_,rows_,0x637f8e);
     paint_text(1,2,v.map?tr("MAPA PODRÓŻY","JOURNEY MAP"):tr("KSIĘGA ZADAŃ","QUEST BOOK"),d.accent,true);
     if(v.map) {
+      if(v.mode!=iceberg::Mode::Campaign) {
+        draw_iceberg_route_map(3,rows_-7);
+        paint_text(rows_-2,2,tr("J/P wróć","J/P return"),d.light);
+        return;
+      }
       paint_text(3,2,v.map_route?tr("  Dzielnice  ·  [Trasa]","  Districts  ·  [Route]"):tr("[Dzielnice]  ·   Trasa","[Districts]  ·   Route"),d.light);
       if(v.map_route)draw_iceberg_route_map(5,rows_-9);
       else {

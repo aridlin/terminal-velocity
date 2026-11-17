@@ -73,5 +73,35 @@ int main(){try {
   game.tick(tab,1./120);approach(InteractionKind::Valve,1);game.tick(use,1./120);
   approach(InteractionKind::Valve,0);game.tick(use,1./120);
   ui_check((game.grid.switch_flags&3)==3,"observed gauge evidence allows bypass then pump without redundant E reading");
+  game.profile.quests[6]=3;
+  for(auto mode:{iceberg::Mode::Endless,iceberg::Mode::Trial}) {
+    game.begin_run(mode,true);
+    for(int i=0;i<(mode==iceberg::Mode::Endless?9:2);++i)game.advance_room();
+    auto x=game.state.player.x;
+    game.tick(map,1./120);
+    ui_check(game.state.adventure.map&&game.state.adventure.map_route,"J opens the active expedition route");
+    Controls up;up.navigate=-1;
+    game.tick(tab,1./120);game.tick(up,1./120);game.tick(enter,1./120);
+    const auto &v=game.state.adventure;
+    ui_check(v.map&&v.map_route&&v.route_page==-1&&game.state.player.x==x,"expedition map stays on the current route during district inputs");
+    const int room=mode==iceberg::Mode::Endless?1:2;
+    ui_check(v.route.available&&v.route.current==room&&v.route.visited==(1u<<(room+1))-1,"expedition route marks only the rooms reached in this leg");
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      game.profile.language=language;game.sync_view();
+      for(auto size:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
+        const bool en=language==iceberg::Language::English;
+        const auto text=ui_text(frame);
+        const char *title=mode==iceberg::Mode::Endless?(en?"ENDLESS EXPEDITION":"WYPRAWA BEZ KOŃCA"):(en?"MASTERY TRIAL":"PRÓBA MISTRZOWSKA");
+        const char *progress=mode==iceberg::Mode::Endless?(en?"Leg 2 · Depth 9":"Odcinek 2 · Głębokość 9"):(en?"Room 3 / 8":"Pokój 3 / 8");
+        ui_check(text.find(title)!=std::string::npos&&text.find(progress)!=std::string::npos&&
+          text.find(en?"Now: ":"Teraz: ")!=std::string::npos&&text.find(en?"Planned: ":"Plan: ")!=std::string::npos,
+          "expedition map shows mode, progress and room labels at all supported sizes");
+      }
+    }
+    game.tick(map,1./120);ui_check(!v.map,"J closes the expedition map");
+  }
+  game.begin_campaign(false);game.tick(map,1./120);
+  ui_check(game.state.adventure.map&&!game.state.adventure.map_route,"returning to the campaign opens district travel");
   cell_frame_sink={};return 0;
 }catch(const std::exception &error){std::cerr<<"FAIL "<<error.what()<<'\n';return 1;}}

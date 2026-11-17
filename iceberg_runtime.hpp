@@ -231,6 +231,7 @@ public:
     configure_route_room();
     auto old_view=state.adventure;
     state=new_state(grid);state.adventure=std::move(old_view);
+    if(state.adventure.mode!=mode)state.adventure.map_route=false;
     state.adventure.dialogue={};state.adventure.map=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
     state.adventure.door_left=.42;state.adventure.door_open=0;state.adventure.machinery_left=0;
     state.adventure.lamp_left=0;state.adventure.npc_reaction_left=0;
@@ -765,7 +766,10 @@ public:
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
     if(c.journal){state.journal=!state.journal;v.map=false;v.selected=0;auto entries=iceberg::journal_entries(v);for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);stepper={};}
-    if(c.map){v.map=!v.map;state.journal=false;v.selected=grid.district;v.route_page=-1;stepper={};}
+    if(c.map) {
+      v.map=!v.map;state.journal=false;v.selected=grid.district;v.route_page=-1;stepper={};
+      if(mode!=iceberg::Mode::Campaign)v.map_route=true;
+    }
     if(c.pause){if(state.journal||v.map){state.journal=false;v.map=false;}else state.paused=!state.paused;stepper={};}
     if(state.paused&&c.confirm)state.paused=false;
     if(state.journal) {
@@ -783,12 +787,12 @@ public:
         }
       }
     }
-    if(v.map) {
+    if(v.map&&mode==iceberg::Mode::Campaign) {
       if(c.inspect)v.map_route=!v.map_route;
       if(c.navigate&&!v.map_route)v.selected=(v.selected-c.navigate+iceberg::DistrictCount)%iceberg::DistrictCount;
-      if(c.navigate&&v.map_route&&v.route.available&&mode==iceberg::Mode::Campaign)v.route_page=std::clamp((v.route_page<0?v.route.leg:v.route_page)+c.navigate,0,2);
+      if(c.navigate&&v.map_route&&v.route.available)v.route_page=std::clamp((v.route_page<0?v.route.leg:v.route_page)+c.navigate,0,2);
       if(c.confirm&&!v.map_route) {
-        bool available=mode==iceberg::Mode::Campaign&&profile.hidden_room<0&&!profile.revisit.active&&v.selected<=profile.unlocked&&
+        bool available=profile.hidden_room<0&&!profile.revisit.active&&v.selected<=profile.unlocked&&
           (v.selected!=grid.district||(v.selected==district&&profile.visit_district>=0))&&v.can_travel;
         if(available) {
           int destination=v.selected;persist();profile.visit_district=destination==district?-1:destination;
