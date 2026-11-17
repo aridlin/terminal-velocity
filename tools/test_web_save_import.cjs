@@ -23,12 +23,34 @@ const path=require('node:path');
   };
   const current=await download('#export-save');
   assert.match(current.toString(),/^TVICE6 /);
+  await page.evaluate(()=>{
+   const tick=Module._web_tick;
+   window.simulatedTime=0;
+   Module._web_tick=(dt,...args)=>{
+    window.simulatedTime+=dt;
+    return tick(dt,...args);
+   };
+  });
+  const [canceledPicker]=await Promise.all([
+   page.waitForEvent('filechooser'),page.locator('#import-save').click()
+  ]);
+  const pickerTime=await page.evaluate(()=>window.simulatedTime);
+  await page.evaluate(async()=>{
+   for(let i=0;i<8;i++)await new Promise(requestAnimationFrame);
+  });
+  assert.equal(await page.evaluate(()=>window.simulatedTime),pickerTime,
+   'gameplay stays still while the file picker is open');
+  await canceledPicker.setFiles([]);
+  await page.waitForFunction(()=>document.activeElement.id==='game');
+  await page.waitForFunction(time=>window.simulatedTime>time,pickerTime);
+
   const legacy=await readFile(path.join(__dirname,'../tests/fixtures/iceberg-v4.dat'));
   const pick=async (buffer,accept)=>{
    const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.locator('#import-save').click()]);
    page.once('dialog',dialog=>accept?dialog.accept():dialog.dismiss());
    await chooser.setFiles({name:'journey.iceberg',mimeType:'application/octet-stream',buffer});
    await page.waitForFunction(()=>!document.querySelector('#import-save').disabled);
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'game');
   };
   await pick(legacy,false);
   assert.equal(await page.evaluate(()=>Module._web_saved_language()),1,'cancel keeps the English journey');
@@ -39,20 +61,28 @@ const path=require('node:path');
   assert.equal(await page.evaluate(()=>Module._web_saved_language()),1,'invalid file leaves save intact');
   assert.equal(await page.locator('#export-previous-save').isVisible(),false);
 
+  await page.evaluate(()=>{
+   const importSave=Module._web_import_save;
+   Module._web_import_save=()=>{
+    window.replacedSave=Array.from(Module.FS.readFile('/persist/progress.dat.iceberg'));
+    return importSave();
+   };
+  });
   await pick(legacy,true);
   await page.waitForFunction(()=>!syncing&&(uiFlags&256)&&!(uiFlags&1));
   assert.equal(await page.evaluate(()=>Module._web_saved_language()),0,'legacy import resumes the Polish campaign');
+  const replaced=Buffer.from(await page.evaluate(()=>window.replacedSave));
   await page.reload();
   await page.locator('#start').click();
   await page.waitForFunction(()=>started&&!syncing);
   assert.equal(await page.evaluate(()=>Module._web_saved_language()),0);
   const backup=await download('#export-previous-save');
-  assert.deepEqual(backup,current,'downloadable copy matches the save replaced by the import');
+  assert.deepEqual(backup,replaced,'downloadable copy matches the exact save replaced by the import');
 
-  await pick(current,true);
+  await pick(backup,true);
   await page.waitForFunction(()=>!syncing);
   assert.equal(await page.evaluate(()=>Module._web_saved_language()),1,'re-importing the backup restores the original campaign');
   assert.deepEqual(errors,[]);
-  console.log('PASS browser download, canceled and invalid import, legacy import, reload, and recovery of the previous save.');
+  console.log('PASS file picker suspends gameplay and restores focus, and save import preserves a recoverable backup.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

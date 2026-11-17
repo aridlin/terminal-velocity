@@ -198,6 +198,7 @@ const importSave=document.querySelector('#import-save');
 const exportPreviousSave=document.querySelector('#export-previous-save');
 const saveFile=document.querySelector('#save-file');
 const previousImportPath='/persist/before-manual-import.iceberg';
+let importPending=false;
 
 function downloadSave(path,name) {
  try {
@@ -215,17 +216,29 @@ exportSave.onclick=()=>{
  downloadSave('/persist/progress.dat.iceberg','terminal-velocity.iceberg');
 };
 exportPreviousSave.onclick=()=>downloadSave(previousImportPath,'terminal-velocity-previous.iceberg');
-importSave.onclick=()=>saveFile.click();
+function finishImport(){
+ importPending=false;
+ importSave.disabled=false;
+ clearInput();
+ last=performance.now();
+ if(!accounts.active)canvas.focus();
+}
+importSave.onclick=()=>{
+ importPending=true;
+ importSave.disabled=true;
+ clearInput();
+ saveFile.click();
+};
+saveFile.oncancel=finishImport;
 saveFile.onchange=async()=>{
  const file=saveFile.files[0];
  saveFile.value='';
- if(!file)return;
- if(!file.size||file.size>65536) {
-  saveStatus.textContent=tr('Nieprawidłowy plik zapisu','Invalid save file');
-  return;
- }
- importSave.disabled=true;
  try {
+  if(!file)return;
+  if(!file.size||file.size>65536) {
+   saveStatus.textContent=tr('Nieprawidłowy plik zapisu','Invalid save file');
+   return;
+  }
   const bytes=new Uint8Array(await file.arrayBuffer());
   if(accounts.active||accounts.busy||accounts.mode==='choose'){
    saveStatus.textContent=tr('Zakończ obsługę konta przed wczytaniem zapisu','Finish the account action before importing a save');
@@ -236,6 +249,7 @@ saveFile.onchange=async()=>{
    :tr('Zastąpić obecny zapis w tej przeglądarce?','Replace the current save in this browser?');
   if(!window.confirm(question))return;
   const fs=Module.FS;
+  Module._web_save();
   const previous=fs.readFile('/persist/progress.dat.iceberg');
   const incoming='/persist/import.iceberg';
   fs.writeFile(incoming,bytes);
@@ -247,17 +261,15 @@ saveFile.onchange=async()=>{
   } finally {fs.unlink(incoming);}
   fs.writeFile(previousImportPath,previous);
   exportPreviousSave.hidden=false;
-  clearInput();
   Module._web_enter_campaign();
   flushBrowserStorage();
-  canvas.focus();
  } catch {
   saveStatus.textContent=tr('Nie udało się wczytać zapisu','Could not import save');
  } finally {
-  importSave.disabled=false;
+  finishImport();
  }
 };
-function frame(now){if(accounts.active)accounts.draw();else if(started){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);pressed=0;}last=now;requestAnimationFrame(frame);}
+function frame(now){if(accounts.active)accounts.draw();else if(started&&!importPending){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);pressed=0;}last=now;requestAnimationFrame(frame);}
 start.onclick=()=>{
  if(!ready||started)return;
  try {
