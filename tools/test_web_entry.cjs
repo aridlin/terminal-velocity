@@ -108,6 +108,22 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(()=>document.activeElement.dataset.tap),'12','Tab reaches the toolbar while paused');
     await page.locator('#game').focus();
+    await page.keyboard.press('F2');
+    const accountFocus=()=>page.evaluate(()=>{
+     if(document.activeElement===accounts.name)return 'name';
+     if(document.activeElement===accounts.pass)return 'password';
+     return document.activeElement===canvas?accounts.selected:null;
+    });
+    const walkAccount=async key=>{
+     const visits=[await accountFocus()];
+     for(let i=0;i<5;i++){await page.keyboard.press(key);visits.push(await accountFocus());}
+     return visits;
+    };
+    assert.deepEqual(await walkAccount('Tab'),['name','password',0,1,2,'name']);
+    assert.deepEqual(await walkAccount('Shift+Tab'),['name',2,1,0,'password','name']);
+    await page.keyboard.press('F2');
+    await page.waitForFunction(()=>!accounts.active&&(uiFlags&2)&&canvas===document.activeElement);
+    console.log('PASS account keyboard traversal returns to both fields and F2 returns to the paused game');
     await page.keyboard.press('Enter');
     await page.waitForFunction(()=>!(uiFlags&2));
 
