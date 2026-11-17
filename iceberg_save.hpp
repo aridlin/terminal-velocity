@@ -129,6 +129,8 @@ class SaveStore {
     return true;
   }
 public:
+  // Importers validate the exact file, without consulting recovery siblings.
+  static bool validate_file(const std::filesystem::path &file,Profile &profile) {return read(file,profile);}
   bool recovered = false, protected_future = false;
   explicit SaveStore(std::filesystem::path path = default_file()) : path_(std::move(path)) {}
   static std::filesystem::path default_file() {

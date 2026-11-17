@@ -5,6 +5,7 @@
 namespace {
 std::unique_ptr<AdventureSession> web_game;
 std::vector<uint32_t> web_cells;
+bool web_account_was_paused=false;
 EM_JS(void, browser_frame, (const uint32_t *cells,int cols,int rows), {
   if(window.tvFrame)window.tvFrame(HEAPU32.subarray(cells>>>2,(cells>>>2)+cols*rows*4),cols,rows);
 });
@@ -63,5 +64,23 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   RenderGrid(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2).draw();send_web_ui();
 }
 EMSCRIPTEN_KEEPALIVE void web_save() {if(web_game)web_game->persist();}
+EMSCRIPTEN_KEEPALIVE int web_import_save() {
+  iceberg::Profile imported;
+  if(!iceberg::SaveStore::validate_file("/persist/import.iceberg",imported))return 0;
+  // Validate before replacing anything. SaveStore preserves the prior profile.
+  if(!web_game||!web_game->saves.save(imported))return 0;
+  web_game.reset();web_start(imported.seed);return 1;
+}
+EMSCRIPTEN_KEEPALIVE void web_guest_profile() {
+  if(!web_game)return;
+  iceberg::Profile fresh;fresh.seed=unsigned(std::chrono::system_clock::now().time_since_epoch().count());
+  web_game->saves.save(fresh);web_game.reset();web_start(fresh.seed);
+}
+EMSCRIPTEN_KEEPALIVE void web_account_pause() {
+  if(web_game){web_account_was_paused=web_game->state.paused;web_game->state.paused=!web_game->state.menu;web_game->audio.update(AudioScene::Paused,web_game->music_track(),.05,true);}
+}
+EMSCRIPTEN_KEEPALIVE void web_account_resume() {
+  if(web_game)web_game->state.paused=web_account_was_paused;
+}
 }
 int main(){return 0;}

@@ -9,7 +9,7 @@ mkdir -p web/dist
   --preload-file assets/audio@/assets/audio \
   -o web/dist/terminal-velocity.js
 
-cp web/index.html web/game.css web/game.js web/dist/
+cp web/index.html web/game.css web/game.js web/accounts.js web/dist/
 cp assets/cell-font.ttf web/dist/
 cp assets/audio/CREDITS.txt web/dist/AUDIO-CREDITS.txt
 cp assets/audio/manifest.json web/dist/audio-manifest.json
