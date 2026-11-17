@@ -24,46 +24,52 @@
   bool quay_ferry(size_t platform) const {
     return grid_.template_id==504||(grid_.template_id==601&&platform==0);
   }
-  void draw_quay_ferry(const Rect &deck) {
+  void draw_ferry_gunwale(const Rect &deck,int first_col,int last_col) {
+    const auto [left,y]=screen(deck.x,deck.y-.001);
+    if(y<4||y>=rows_-3)return;
+    const int right=screen(deck.right(),deck.y).first;
+    for(int x=std::max({0,left,first_col});x<std::min({cols_,right,last_col});++x) {
+      const int wx=int(std::floor(deck.x+(x-left)*scale_));
+      const int wy=int(std::floor(deck.y-.001));
+      if(grid_.solid_at(wx,wy)||grid_.hazard_at(wx,wy))continue;
+      put(y,x,{"▀",Color::Decor,false,false,0,0xb18b61,0x6d513f});
+    }
+  }
+  void draw_quay_ferry(size_t platform,const Rect &deck) {
     const double row=aspect_*scale_;
-    const int width=std::max(6,int(deck.w/scale_));
+    const auto [left,deck_row]=screen(deck.x,deck.y-.001);
+    const int width=screen(deck.right(),deck.y).first-left;
+    if(width<4)return;
     world_art(deck.x+deck.w*.38,deck.y-6*row,
       {"     ▆▆","     ▓▓","  ▟██████▙","  ▌▥ ▥ ▥ ▐","╔═╧══════╧══╗","║ ○       ○ ║"},0x82999a);
 
-    // The painted basin sits 2.6 world units below the walkable deck.
-    const int surface=screen(deck.x,deck.y+2.6+.5*row).second;
-    const int deck_row=screen(deck.x,deck.y).second;
-    std::string rim="╞";
-    for(int i=2;i<width;++i)rim+="═";
-    world_art(deck.x,deck.y,{rim+"╡"},0xc0a378);
-    std::string gunwale;
-    for(int i=0;i<width;++i)gunwale+="▄";
-    world_art(deck.x,deck.y-.001,{gunwale},0x9d7c58);
-    for(int y=deck_row+1;y<=surface;++y) {
+    const Rect &berth=grid_.platforms[platform].base;
+    const double center=berth.x+berth.w*.5;
+    const auto basin=std::find_if(grid_.water_basins.begin(),grid_.water_basins.end(),
+      [center](const Rect &water){return center>=water.x&&center<water.right();});
+    if(basin==grid_.water_basins.end())return;
+    const int surface=screen(deck.x,basin->y+.5*row).second;
+    draw_ferry_gunwale(deck,0,cols_);
+    for(int y=deck_row+1;y<=surface+1;++y) {
       const int inset=std::min((width-4)/2,y-deck_row-1);
       const int inner=width-2*inset-2;
-      std::string body=y==surface?"╰":"╲";
+      const bool submerged=y>=surface;
+      const bool keel=y==surface+1;
+      std::string body=keel?"╰":"╲";
       for(int i=0;i<inner;++i)
-        body+=y==surface?"━":y==deck_row+1&&i%7==3?"○":"▒";
-      body+=y==surface?"╯":"╱";
-      world_art(deck.x+inset*scale_,deck.y+(y-deck_row)*row,{body},y==surface?0x6897a9:0xa58460);
+        body+=keel?"━":y==deck_row+1&&i%7==3?"○":"▒";
+      body+=keel?"╯":"╱";
+      const double wx=state_.camera_x+(left+inset+.5)*scale_;
+      const double wy=state_.camera_y+(y-4+.5)*row;
+      world_art(wx,wy,{body},submerged?0x477080:0xa58460);
     }
   }
   void draw_ferry_foreground() {
     const int platform=state_.player.support;
     if(platform<0||size_t(platform)>=grid_.platforms.size()||!quay_ferry(size_t(platform)))return;
     const Rect deck=grid_.platforms[size_t(platform)].at(state_.elapsed);
-    auto [left,row]=screen(deck.x,deck.y-.001);
-    if(row<4||row>=rows_-3)return;
-    const int right=left+int(deck.w/scale_);
     const int rider=screen(state_.player.x,deck.y).first;
-    for(int x=std::max({0,left,rider});x<std::min({cols_,right,rider+4});++x) {
-      const Cell &under=buffer_[row][x];
-      // Keep the upper half of the sprite cell. The solid near gunwale
-      // covers the courier's boots when the platform is carrying them.
-      const uint32_t above=under.glyph=="▀"?under.rgb:under.background;
-      put(row,x,{"▄",Color::Decor,false,false,0,0x9d7c58,above});
-    }
+    draw_ferry_gunwale(deck,rider,rider+4);
   }
   void draw_scenery_pipe(std::initializer_list<std::pair<double,double>> path,uint32_t color) {
     auto paint=[&](int x,int y,const char *glyph) {

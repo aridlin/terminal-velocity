@@ -234,7 +234,7 @@
     }
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto r=grid_.platforms[i].at(state_.elapsed);
-      if(quay_ferry(i)){draw_quay_ferry(r);continue;}
+      if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}
       std::string line;
       int n=std::max(2,int(r.w/scale_));
       for(int i=0;i<n;++i)line+=(i==0?"╞":i==n-1?"╡":"═");

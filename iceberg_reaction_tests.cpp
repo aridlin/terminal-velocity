@@ -97,14 +97,26 @@ int main(){try{
    "ferry water has a visible surface and depth beneath the deck");
  const auto deck=game.grid.platforms[0].at(game.state.elapsed);
  game.state.player.x=deck.x+deck.w*.7;game.state.player.y=deck.y-kPlayerHeight;
- const int foot_row=4+int(std::floor((deck.y-.001-game.state.camera_y)/.8));
- const int rider_col=int(std::floor((game.state.player.x-game.state.camera_x)/.4));
- RenderGrid(game.grid,game.state,34,110,2).draw();auto ashore=frame;
- game.state.player.support=0;
- RenderGrid(game.grid,game.state,34,110,2).draw();
- require_reaction(frame[foot_row][rider_col+1].rgb==0x9d7c58&&
-   frame[foot_row][rider_col+1].glyph=="▄"&&ashore[foot_row][rider_col+1].rgb!=0x9d7c58&&
-   frame[foot_row-1][rider_col+1].glyph==ashore[foot_row-1][rider_col+1].glyph,
-   "the foreground gunwale hides the rider's boots and leaves the upper sprite visible");
+ for(double camera_y:{39.73,40.,40.39}) {
+   game.state.camera_y=camera_y;
+   const int foot_row=4+int(std::floor((deck.y-.001-camera_y)/.8));
+   const int rider_col=int(std::floor((game.state.player.x-game.state.camera_x)/.4));
+   const int midpoint=int(std::floor((deck.x+deck.w*.5-game.state.camera_x)/.4));
+   const int surface=4+int(std::ceil((game.grid.water_basins[0].y-camera_y)/.8-.5));
+   game.state.player.support=-1;
+   RenderGrid(game.grid,game.state,34,110,2).draw();auto unsupported=frame;
+   game.state.player.support=0;
+   RenderGrid(game.grid,game.state,34,110,2).draw();
+   require_reaction(frame[foot_row][rider_col+1].rgb==0xb18b61&&
+     frame[foot_row][rider_col+1].background==0x6d513f&&
+     unsupported[foot_row][rider_col+1].rgb!=0xb18b61&&
+     frame[foot_row-1][rider_col+1].glyph==unsupported[foot_row-1][rider_col+1].glyph&&
+     frame[foot_row-1][rider_col+1].rgb==unsupported[foot_row-1][rider_col+1].rgb,
+     "the foreground gunwale covers the rider's lower sprite and leaves the torso visible");
+   require_reaction(frame[surface][midpoint].rgb==0x477080&&
+     frame[surface][midpoint].background==0x214b62&&
+     frame[surface+1][midpoint].glyph=="━"&&frame[surface+1][midpoint].background==0x14394e,
+     "the hull intersects the waterline and extends below it");
+ }
  return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}
