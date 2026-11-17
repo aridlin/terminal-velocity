@@ -15,6 +15,7 @@ enum class Mode { Campaign, Endless, Trial };
 enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret, Interlude };
 enum class Rhythm { Flow, Precision, Vertical, Timing, Explore, Recovery };
 enum class Mechanic { None, Current, Steam, Conveyor, Echo, Growth, Wind };
+enum class InspectionArt { Parcel, Valve, Signal, Address, File, Seeds, Speaker, Thermometer, Sign, Dedication, Board, Door, Coin, Refill, Lamp, Character, Delivery };
 struct Text {
   const char *pl = "";
   const char *en = "";
@@ -150,6 +151,8 @@ struct View {
   std::array<Record, DistrictCount> records{}, trials{};
   bool inspecting=false;
   std::string inspect_title, inspect_body, inspect_icon;
+  InspectionArt inspect_art=InspectionArt::Parcel;
+  int inspect_detail=0, inspect_page=0;
   double pickup_left=0, pickup_x=0, pickup_y=0;
   int pickup_kind=0;
   Dialogue dialogue;

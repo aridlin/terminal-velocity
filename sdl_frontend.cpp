@@ -1023,6 +1023,12 @@ int terminal_window_main(int argc,char **argv) {
       if(scene=="dialogue"){session.state.menu=false;session.talk(iceberg::introduction(0));}
       if(options.no_save&&scene=="journal"){session.state.menu=false;session.state.journal=true;session.profile.quests[0]=1;session.sync_view();}
       if(options.no_save&&scene=="map"){session.state.menu=false;session.state.adventure.map=true;session.profile.unlocked=1;session.sync_view();}
+      if(options.no_save&&scene.rfind("inspect:",0)==0) {
+        int id=std::clamp(std::atoi(scene.c_str()+8),0,16);
+        auto &v=session.state.adventure;session.state.menu=false;
+        v.inspecting=true;v.inspect_art=iceberg::InspectionArt(id);v.inspect_title="Studium przedmiotu / Object study";
+        v.inspect_body="Każda rysa i każde zagięcie należą do przedmiotu. Ilustracja z bliska jest osobnym rysunkiem, a nie powiększeniem znaku z planszy.";
+      }
       if(args.smoke){session.state.menu=false;maxframes=120;}
       std::array<bool,SDL_NUM_SCANCODES> held{};
       bool focused=true,fullscreen=false;

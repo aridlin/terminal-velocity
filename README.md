@@ -42,8 +42,8 @@ The default Linux input backend reads real evdev key presses and releases. If ac
 | X or Shift + direction | Dash |
 | S/down | Fast fall; drop through a moving platform |
 | E/F | Talk, operate machinery, collect a task object |
-| B | Inspect a nearby object or character; closes without using it |
-| E/Enter | Continue dialogue or leave a completed room |
+| B | Detailed illustrated inspection of a nearby object or character; B closes without using it |
+| E/Enter | Continue dialogue/inspection text or leave a completed room |
 | R | Fast checkpoint retry |
 | Tab | Journal; select a completed task and E to read its reward |
 | J | District map; W/S selects, Enter travels when available |

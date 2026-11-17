@@ -4,6 +4,7 @@
 #include "iceberg_types.hpp"
 #include "iceberg_save.hpp"
 #include "iceberg_story.hpp"
+#include "iceberg_inspection.hpp"
 #include <csignal>
 #ifndef _WIN32
 #include <fcntl.h>

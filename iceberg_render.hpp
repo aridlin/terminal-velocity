@@ -285,14 +285,26 @@
   }
   void draw_iceberg_inspection() {
     const auto &v=state_.adventure;
-    int top=std::max(5,(rows_-15)/2),height=std::min(16,rows_-top-3);
-    frame(top,3,cols_-6,height,0xe4ad68);
-    paint_text(top+1,6,tr("OGLĘDZINY","INSPECT"),0x9dd4dd);
-    paint_text(top+3,6,v.inspect_icon,0xe4ad68);
-    paint_text(top+3,10,v.inspect_title,0xf5cd79,true);
-    auto lines=wrap(v.inspect_body,cols_-14);
-    for(size_t i=0;i<lines.size()&&int(i)<height-7;++i)text(top+5+int(i),7,lines[i]);
-    text(top+height-2,7,tr("B / ESC / ENTER — zamknij","B / ESC / ENTER — close"),Color::Gold);
+    auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,cols_,rows_);
+    frame(0,0,cols_,rows_,0x8c7559);
+    paint_text(1,2,tr("OGLĘDZINY","INSPECT"),0x9dd4dd,true);
+    for(size_t i=0;i<layout.title.size();++i)paint_text(3+int(i),2,layout.title[i],0xf5cd79,true);
+    auto art=iceberg::inspection_art(v.inspect_art,v.inspect_detail);
+    for(size_t y=0;y<art.size();++y) {
+      auto line=glyphs(art[y]);
+      for(size_t x=0;x<line.size();++x) {
+        uint32_t color=line[x]=="░"?0x716352:line[x]=="█"||line[x]=="▌"||line[x]=="▐"?0xd8ae76:0xcfc2a7;
+        if(v.inspect_art==iceberg::InspectionArt::Character)color=iceberg::Npcs[size_t(std::clamp(v.inspect_detail,0,7))].color;
+        paint_text(layout.art_y+int(y),layout.art_x+int(x),line[x],color);
+      }
+    }
+    int page=std::clamp(v.inspect_page,0,layout.pages-1);
+    for(int i=0;i<layout.text_rows;++i) {
+      int at=page*layout.text_rows+i;if(at>=int(layout.body.size()))break;
+      paint_text(layout.text_y+i,layout.text_x,layout.body[size_t(at)],0xeee7d6);
+    }
+    if(layout.pages>1)paint_text(1,cols_-9,std::to_string(page+1)+" / "+std::to_string(layout.pages),0x9dd4dd);
+    paint_text(rows_-2,2,page+1<layout.pages?tr("E dalej · B zamknij","E next · B close"):tr("B / E / ENTER — zamknij","B / E / ENTER — close"),0xe4ad68);
   }
   void draw_iceberg_menu() {
     auto &v=state_.adventure;

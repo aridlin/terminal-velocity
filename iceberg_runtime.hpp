@@ -404,37 +404,40 @@ public:
   }
   void inspect_nearby() {
     auto &v=state.adventure;
-    auto describe=[&](std::string title,std::string body,const char *icon) {
-      v.inspect_title=std::move(title);v.inspect_body=std::move(body);v.inspect_icon=icon;
+    v.inspect_page=0;v.inspect_detail=0;
+    using Art=iceberg::InspectionArt;
+    auto describe=[&](std::string title,std::string body,const char *icon,Art art) {
+      v.inspect_title=std::move(title);v.inspect_body=std::move(body);v.inspect_icon=icon;v.inspect_art=art;
       v.inspecting=true;stepper={};audio.play(AudioCue::Paper);
     };
     int at=near_interaction();
     if(at<0) {
       auto close=[&](double x,double y){return std::hypot(state.player.x+.45-x,state.player.y+.6-y)<2.8;};
       for(size_t i=0;i<grid.sweets.size();++i)if(!state.collected[i]&&close(grid.sweets[i].first,grid.sweets[i].second)) {
-        describe(t("Żeton transportowy","Transit token"),t("Mosiężny krążek z pieczęcią poczty. Znajdźki liczą się osobno od czasu i powrotów — możesz szukać ich spokojnie albo zbierać podczas próby.","A brass token stamped by the postal service. Collection records are separate from time and retries — explore for them at your own pace or collect them during a trial."),"◉");return;
+        describe(t("Żeton transportowy","Transit token"),t("Mosiężny krążek z pieczęcią poczty. Znajdźki liczą się osobno od czasu i powrotów — możesz szukać ich spokojnie albo zbierać podczas próby.","A brass token stamped by the postal service. Collection records are separate from time and retries — explore for them at your own pace or collect them during a trial."),"◉",Art::Coin);return;
       }
       for(size_t i=0;i<grid.refills.size();++i)if(close(grid.refills[i].first,grid.refills[i].second)) {
-        describe(t("Ogniwo zrywu","Dash cell"),t("Szklana osłona chroni naładowany rdzeń. Dotknij go, żeby odzyskać zryw w powietrzu. Puste ogniwo odnowi się po chwili.","A glass casing protects a charged core. Touch it to restore an airborne dash. An empty cell recharges after a moment."),"▥");return;
+        describe(t("Ogniwo zrywu","Dash cell"),t("Szklana osłona chroni naładowany rdzeń. Dotknij go, żeby odzyskać zryw w powietrzu. Puste ogniwo odnowi się po chwili.","A glass casing protects a charged core. Touch it to restore an airborne dash. An empty cell recharges after a moment."),"▥",Art::Refill);return;
       }
       for(auto [x,y]:grid.checkpoint_points)if(close(x,y)) {
-        describe(t("Lampa powrotna","Return lamp"),t("Światło zapamiętuje bezpieczne miejsce na trasie. Po upadku wrócisz tutaj. Listy, naprawy i sprawy mieszkańców zostają załatwione.","The light marks a safe place on your route. A fall returns you here. Collected letters, repairs and completed character tasks stay done."),"▣");return;
+        describe(t("Lampa powrotna","Return lamp"),t("Światło zapamiętuje bezpieczne miejsce na trasie. Po upadku wrócisz tutaj. Listy, naprawy i sprawy mieszkańców zostają załatwione.","The light marks a safe place on your route. A fall returns you here. Collected letters, repairs and completed character tasks stay done."),"▣",Art::Lamp);return;
       }
     }
     if(at<0||grid.interactions[size_t(at)].kind==InteractionKind::Secret) {
       notice(t("Podejdź do przedmiotu lub postaci, żeby obejrzeć z bliska.","Approach an object or character to inspect it."));return;
     }
     const auto &node=grid.interactions[size_t(at)];
-    v.inspect_title=node.label.get(profile.language);v.inspect_icon="▤";
+    v.inspect_title=node.label.get(profile.language);v.inspect_icon="▤";v.inspect_art=Art::Door;v.inspect_detail=node.id;
     switch(node.kind) {
     case InteractionKind::Npc:case InteractionKind::Rescue:
-      v.inspect_title=iceberg::Npcs[size_t(node.id)].name;
+      v.inspect_art=Art::Character;v.inspect_title=iceberg::Npcs[size_t(node.id)].name;
       v.inspect_body=iceberg::Npcs[size_t(node.id)].title.get(profile.language)+t(". E — rozmowa. Zlecenia i odebrane wiadomości znajdziesz w dzienniku.",". E — talk. Tasks and received messages are kept in your journal.");v.inspect_icon="◉";break;
     case InteractionKind::Carry:
-      v.inspect_title=t("Termometr transportowy","Transit thermometer");v.inspect_icon="▣";
+      v.inspect_art=Art::Thermometer;v.inspect_title=t("Termometr transportowy","Transit thermometer");v.inspect_icon="▣";
       v.inspect_body=t("Szklana rurka jest zawieszona w skrzynce na dwóch sprężynach. Strzałka na wieku wskazuje górę. Możesz biec i skakać, ale zryw uszkodziłby pomiar. Po odebraniu przesyłki zryw wróci.","A glass tube hangs inside the case on two springs. The lid's arrow points up. Running and jumping are safe, but a dash would spoil the reading. Dashing returns after delivery.");break;
     case InteractionKind::Task:
-      v.inspect_title=iceberg::Quests[size_t(node.id)].title.get(profile.language);
+      static const Art task_art[]={Art::Parcel,Art::Valve,Art::Signal,Art::Address,Art::File,Art::Seeds,Art::Character,Art::Speaker};
+      v.inspect_art=task_art[std::clamp(node.id,0,7)];v.inspect_title=iceberg::Quests[size_t(node.id)].title.get(profile.language);
       v.inspect_icon=node.id==1?"⊗":node.id==7?"▤":"▣";
       v.inspect_body=node.id==1?t("Mosiężne koło jest ciepłe. Biała kreska na rurze oznacza położenie otwarte. Przekręć zawór i zgłoś Witkowi przywrócony obieg.","The brass wheel is warm. A white mark on the pipe indicates the open position. Turn the valve and report the restored circuit to Witek."):
         node.id==7?t("Pod siatką ktoś wsunął kartkę z częstotliwością. Głośnik wciąż ma zasilanie; trzeba dostroić odbiornik, nie uderzać w obudowę.","Someone slipped a frequency note beneath the grille. The speaker still has power; its receiver needs tuning, not a hit on the casing."):
@@ -446,15 +449,17 @@ public:
       if(profile.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))v.inspect_body+=t("\nJuż załatwione.","\nAlready handled.");
       break;
     case InteractionKind::Valve:
-      v.inspect_icon="⊗";v.inspect_body=t("Korba steruje pobliską maszyną. Ciemne koło jest zamknięte; jasny środek oznacza otwarty obieg. Stan mechanizmu pozostaje zapisany po powrocie do lampy.","The crank controls the nearby machinery. A dark wheel is closed; a bright centre marks an open circuit. The mechanism stays set after a checkpoint retry.");break;
+      v.inspect_art=Art::Valve;v.inspect_icon="⊗";v.inspect_body=t("Korba steruje pobliską maszyną. Ciemne koło jest zamknięte; jasny środek oznacza otwarty obieg. Stan mechanizmu pozostaje zapisany po powrocie do lampy.","The crank controls the nearby machinery. A dark wheel is closed; a bright centre marks an open circuit. The mechanism stays set after a checkpoint retry.");break;
     case InteractionKind::Note:
-      v.inspect_title=node.id==30?t("Akt fundacyjny","Dedication"):t("Tablica informacyjna","Information sign");
+      v.inspect_art=node.id==30?Art::Dedication:node.id<10?Art::Sign:Art::File;v.inspect_title=node.id==30?t("Akt fundacyjny","Dedication"):t("Tablica informacyjna","Information sign");
       if(node.id==30){auto lines=iceberg::jubilee_dedication();v.inspect_body=lines[0].text.get(profile.language)+" "+lines[1].text.get(profile.language);}
       else if(node.id<10)v.inspect_body=iceberg::training_sign(node.id).get(profile.language);
       else v.inspect_body=t("Kartka zachowała się za osłoną. Możesz odczytać ją w całości, naciskając E.","The sheet survived behind its cover. Press E to read the complete record.");
       break;
+    case InteractionKind::Deliver:
+      v.inspect_art=Art::Delivery;v.inspect_body=t("Gniazdo pomiarowe przyjmuje skrzynkę z termometrem. Zatrzaski utrzymują ją pionowo podczas odczytu.","The measuring socket accepts the thermometer case. Its catches keep the case upright during the reading.");break;
     case InteractionKind::Board:
-      v.inspect_body=iceberg::route_title(district,stage).get(profile.language);break;
+      v.inspect_art=Art::Board;v.inspect_body=iceberg::route_title(district,stage).get(profile.language);break;
     default:v.inspect_body=t("E — użyj. Możesz zamknąć ten widok bez wykonywania działania.","E — use. You can close this view without performing the action.");break;
     }
     v.inspecting=true;stepper={};audio.play(AudioCue::Paper);
@@ -583,7 +588,11 @@ public:
     if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request){persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};sync_view();return;}
     if(v.inspecting) {
-      if(c.inspect||c.pause||c.confirm||c.interact)v.inspecting=false;
+      auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,columns,rows);
+      v.inspect_page=std::clamp(v.inspect_page,0,layout.pages-1);
+      if(c.inspect||c.pause)v.inspecting=false;
+      else if(c.confirm||c.interact){if(v.inspect_page+1<layout.pages)++v.inspect_page;else v.inspecting=false;}
+      else if(c.navigate)v.inspect_page=std::clamp(v.inspect_page+c.navigate,0,layout.pages-1);
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
     if(c.inspect&&!v.dialogue.active()&&!state.paused&&!state.journal&&!v.map) {

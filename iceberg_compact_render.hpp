@@ -75,10 +75,5 @@
       y=11;compact_paragraph(y,line.text.get(v.language),rows_-2);
       paint_text(rows_-2,2,tr("E / ENTER dalej","E / ENTER continue"),npc.color);
     }
-    if(v.inspecting) {
-      panel(tr("OGLĘDZINY","INSPECT"));y=4;
-      compact_paragraph(y,v.inspect_icon+" "+v.inspect_title,rows_-3,d.accent);++y;
-      compact_paragraph(y,v.inspect_body,rows_-3);
-      paint_text(rows_-2,2,tr("B / ENTER zamknij","B / ENTER close"),d.light);
-    }
+    if(v.inspecting)draw_iceberg_inspection();
   }

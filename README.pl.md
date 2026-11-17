@@ -42,8 +42,8 @@ Domyślne wejście linuksowe używa zdarzeń naciśnięcia i zwolnienia klawiszy
 | X lub Shift + kierunek | Zryw |
 | S/dół | Szybkie opadanie; zejście przez ruchomą platformę |
 | E/F | Rozmowa, obsługa maszyny, zabranie przedmiotu zadania |
-| B | Oględziny przedmiotu lub postaci; zamknięcie nie wykonuje działania |
-| E/Enter | Dalsza rozmowa albo przejście po ukończeniu sali |
+| B | Oględziny z osobną, szczegółową ilustracją; B zamyka bez wykonania działania |
+| E/Enter | Dalsza rozmowa/opis oględzin albo przejście po ukończeniu sali |
 | R | Szybki powrót do lampy |
 | Tab | Dziennik; E przy ukończonym zadaniu otwiera jego nagrodę |
 | J | Mapa; W/S wybiera, Enter podróżuje, gdy przejazd jest dostępny |
