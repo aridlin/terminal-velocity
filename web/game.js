@@ -9,6 +9,7 @@ try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en')
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastUI='',lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootStatus='',explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
 const pointers=new Map(),keyboard=new Set(),tiles=new Map();
+let dashShift='';
 let storageFlushQueued=false;
 let cellPixels=10;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
@@ -50,7 +51,7 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-pl]'))b.textContent=tr(b.dataset.pl,b.dataset.en);
  for(const b of document.querySelectorAll('[data-aria-pl]'))b.setAttribute('aria-label',tr(b.dataset.ariaPl,b.dataset.ariaEn));
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
- document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X/Shift zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X/Shift dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
+ document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  document.querySelector('#touch-use').textContent=lastBlocked?'↵':tr('Użyj','Use');
  if(!started){start.textContent=ready?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');saveStatus.textContent=ready?tr('Gotowe','Ready'):tr('Ładowanie gry…','Loading game…');}
 }
@@ -82,17 +83,24 @@ function recompute(){
  for(const {key} of pointers.values())held|=1<<key;
 }
 addEventListener('keydown',e=>{
+ const shiftKey=e.code==='ShiftLeft'||e.code==='ShiftRight';
+ if(!shiftKey&&!e.repeat)dashShift='';
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||(uiFlags&2)))return;
  if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
  if(accounts.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
+ // Shift also starts browser shortcuts. Dash only if it was tapped alone.
+ if(shiftKey){dashShift=e.code;return;}
  tap(keyMap[e.code]);
  keyboard.add(e.code);
  recompute();
 });
 canvas.addEventListener('blur',clearInput);
-addEventListener('keyup',e=>{if(keyboard.delete(e.code))recompute();});
+addEventListener('keyup',e=>{
+ if(e.code===dashShift){dashShift='';tap(5);}
+ if(keyboard.delete(e.code))recompute();
+});
 for(const button of document.querySelectorAll('[data-key]')){
  button.addEventListener('pointerdown',e=>{
   if(accounts.active||!started)return;
@@ -109,7 +117,7 @@ for(const button of document.querySelectorAll('[data-key]')){
  });
 }
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{tap(+b.dataset.tap);canvas.focus();};
-function clearInput(){keyboard.clear();pointers.clear();held=pressed=0;document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
+function clearInput(){keyboard.clear();pointers.clear();dashShift='';held=pressed=0;document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function flushBrowserStorage(){
  if(syncing){storageFlushQueued=true;return;}
  syncing=true;

@@ -59,7 +59,22 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>!(uiFlags&2));
     console.log('PASS short focus loss between animation frames pauses and resumes with cleared input');
 
-    await page.keyboard.press('Shift+Tab');
+    await page.evaluate(()=>{
+     const tick=Module._web_tick;
+     window.dashEdges=0;
+     Module._web_tick=(dt,held,pressed,...rest)=>{
+      if(pressed&(1<<5))window.dashEdges++;
+      return tick(dt,held,pressed,...rest);
+     };
+    });
+    await page.keyboard.down('Shift');
+    await page.evaluate(async()=>{
+     for(let i=0;i<4;i++)await new Promise(requestAnimationFrame);
+    });
+    assert.equal(await page.evaluate(()=>window.dashEdges),0,
+      'holding Shift before reverse Tab navigation does not dash');
+    await page.keyboard.press('Tab');
+    await page.keyboard.up('Shift');
     assert.equal(await page.evaluate(()=>document.activeElement.id),'fullscreen',
       'Shift+Tab moves out of the game to the preceding browser control');
     assert.equal(await page.evaluate(()=>!!(uiFlags&64)),false,'browser navigation does not toggle Quests');
@@ -94,6 +109,12 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('Enter');await page.waitForTimeout(80);assert.match(await page.evaluate(()=>entryFrame),/Start at the board/,'next essential objective shown in one press after reveal');
     await page.keyboard.press('Enter');await page.waitForFunction(()=>!(entryFlags&4));
     console.log('PASS locked map explanation, route tab, quest book and shortened reveal/continue flow through browser controls');
+    await page.keyboard.press('Shift');
+    await page.waitForFunction(()=>window.dashEdges===1);
+    await page.keyboard.down('x');
+    await page.waitForFunction(()=>window.dashEdges===2);
+    await page.keyboard.up('x');
+    console.log('PASS Shift+Tab exits without dashing, tap Shift dashes, and X still dashes on keydown');
     const currentRoundtrip=await page.evaluate(()=>{
       Module._web_save();const exported=Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'});
       Module._web_set_language(0);Module._web_save();const changed=Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'});
