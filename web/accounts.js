@@ -8,7 +8,7 @@ window.TVAccounts=class {
   this.pass=input('password','current-password','Hasło / Password');this.pass.maxLength=72;
   this.name.addEventListener('focus',()=>this.draw());this.pass.addEventListener('focus',()=>this.draw());
   addEventListener('keydown',e=>{if(e.code==='F2'){e.preventDefault();this.active?this.close():this.open();}else if(this.active&&e.key==='Escape'){e.preventDefault();this.close();}else if(this.active&&['ArrowDown','ArrowUp','Tab'].includes(e.key)){e.preventDefault();const direction=e.key==='ArrowUp'||e.shiftKey?-1:1;this.selected=(this.selected+direction+this.buttons.length)%this.buttons.length;this.draw();}else if(this.active&&e.key==='Enter'){e.preventDefault();this.buttons[this.selected]?.fn();}});
-  document.querySelector('#game').addEventListener('pointerdown',e=>{if(!this.active)return;const r=e.target.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*this.width,y=(e.clientY-r.top)/r.height*this.height;for(const b of this.buttons)if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+2){e.preventDefault();b.fn();break;}});
+  document.querySelector('#game').addEventListener('pointerdown',e=>{if(e.button!==0||!this.active)return;const r=e.target.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*this.width,y=(e.clientY-r.top)/r.height*this.height;for(const b of this.buttons)if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+2){e.preventDefault();b.fn();break;}});
  }
  tr(pl,en){return this.host.english()?en:pl;}
  read(path){try{return Module.FS.readFile(path,{encoding:'utf8'});}catch{return '';}}

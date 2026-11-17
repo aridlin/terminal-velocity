@@ -147,6 +147,17 @@ const horizontalTouchControls='#touch .directions :is(button[data-key="0"], butt
 function releaseHighlight(button){
  if(button&&![...pointers.values()].some(pointer=>pointer.button===button))button.classList.remove('held');
 }
+function finishPointer(id,completed){
+ const pointer=pointers.get(id);
+ if(!pointer)return;
+ pointers.delete(id);
+ if(completed)completedPresses|=pointer.pending;
+ // A cancelled contact must not erase other inputs of the same action.
+ pressed=completedPresses;
+ for(const active of pointers.values())pressed|=active.pending;
+ releaseHighlight(pointer.button);
+ recompute();
+}
 for(const button of document.querySelectorAll('[data-key]')){
  const action=()=>button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;
  button.addEventListener('click',e=>{
@@ -156,8 +167,9 @@ for(const button of document.querySelectorAll('[data-key]')){
   tap(action());
  });
  button.addEventListener('pointerdown',e=>{
-  if(accounts.active||!started)return;
+  if(e.button!==0||accounts.active||!started)return;
   e.preventDefault();
+  canvas.focus({preventScroll:true});
   const key=action();
   button.setPointerCapture(e.pointerId);
   const canSlide=e.pointerType==='touch'&&button.matches(horizontalTouchControls);
@@ -167,7 +179,14 @@ for(const button of document.querySelectorAll('[data-key]')){
  });
  button.addEventListener('pointermove',e=>{
   const pointer=pointers.get(e.pointerId);
-  if(!pointer?.canSlide)return;
+  if(!pointer)return;
+  // Mouse chords report the primary release as a move until every button is up.
+  if(e.pointerType==='mouse'&&!(e.buttons&1)){
+   finishPointer(e.pointerId,true);
+   if(button.hasPointerCapture(e.pointerId))button.releasePointerCapture(e.pointerId);
+   return;
+  }
+  if(!pointer.canSlide)return;
   // Passing over the jump button while sliding horizontally leaves movement neutral.
   const next=document.elementFromPoint(e.clientX,e.clientY)?.closest(horizontalTouchControls)??null;
   if(pointer.button===next)return;
@@ -178,17 +197,8 @@ for(const button of document.querySelectorAll('[data-key]')){
   if(next){next.classList.add('held');pointerPress(pointer);}
   recompute();
  });
- for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>{
-  const pointer=pointers.get(e.pointerId);
-  if(!pointer)return;
-  pointers.delete(e.pointerId);
-  if(type==='pointerup')completedPresses|=pointer.pending;
-  // A cancelled contact must not erase other inputs of the same action.
-  pressed=completedPresses;
-  for(const active of pointers.values())pressed|=active.pending;
-  releaseHighlight(pointer.button);
-  recompute();
- });
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])
+  button.addEventListener(type,e=>finishPointer(e.pointerId,type==='pointerup'));
 }
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{tap(+b.dataset.tap);canvas.focus();};
 function clearInput(){keyboard.clear();pointers.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}

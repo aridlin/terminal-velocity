@@ -249,6 +249,21 @@ const server=http.createServer((req,res)=>{
   await dashControl.focus();
   await page.keyboard.press('Enter');
   assert.deepEqual(await takeTouchControlEdges(),[1<<5],'Enter activates the focused Dash button');
+  await page.evaluate(()=>document.addEventListener('contextmenu',e=>e.preventDefault(),{once:true}));
+  await dashControl.click({button:'right'});
+  await dashControl.click({button:'middle'});
+  assert.deepEqual(await takeTouchControlEdges(),[],'secondary mouse buttons do not dash');
+  // Isolate chord cleanup from Chromium's additional blur on right-click.
+  await page.evaluate(()=>canvas.removeEventListener('blur',clearInput));
+  await page.mouse.move(right.x,right.y);
+  await page.mouse.down();
+  await page.waitForFunction(()=>held===2);
+  await page.mouse.down({button:'right'});
+  await page.mouse.up();
+  await page.waitForFunction(()=>held===0&&!document.querySelector('#touch .held'));
+  await page.mouse.up({button:'right'});
+  await page.evaluate(()=>canvas.addEventListener('blur',clearInput));
+  assert.deepEqual(await takeTouchControlEdges(),[1<<1],'releasing left ends the chord with a single movement press');
   await jumpControl.tap();
   assert.deepEqual(await takeTouchControlEdges(),[1<<4],'a touch tap still sends Jump once');
   await page.evaluate(()=>window.restoreTouchControlTick());
