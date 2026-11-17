@@ -16,6 +16,7 @@
 
 /* Glyphs are rasterized at display density, including high-DPI screens. */
 #game{image-rendering:auto}
+#game:focus-visible{outline:2px solid #e4ad68;outline-offset:-2px}
 
 .account-open #touch,.account-open footer,.account-open #fullscreen-tools{display:none!important}
 

@@ -50,7 +50,7 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-pl]'))b.textContent=tr(b.dataset.pl,b.dataset.en);
  for(const b of document.querySelectorAll('[data-aria-pl]'))b.setAttribute('aria-label',tr(b.dataset.ariaPl,b.dataset.ariaEn));
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
- document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X/Shift zryw · E użyj · B obejrzyj · P pauza','A/D move · Space jump · X/Shift dash · E use · B inspect · P pause');
+ document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X/Shift zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X/Shift dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  document.querySelector('#touch-use').textContent=lastBlocked?'↵':tr('Użyj','Use');
  if(!started){start.textContent=ready?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');saveStatus.textContent=ready?tr('Gotowe','Ready'):tr('Ładowanie gry…','Loading game…');}
 }
@@ -82,7 +82,8 @@ function recompute(){
  for(const {key} of pointers.values())held|=1<<key;
 }
 addEventListener('keydown',e=>{
- if(e.target instanceof HTMLButtonElement&&['Tab','Enter','Space'].includes(e.code))return;
+ if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||(uiFlags&2)))return;
+ if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
  if(accounts.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
@@ -90,6 +91,7 @@ addEventListener('keydown',e=>{
  keyboard.add(e.code);
  recompute();
 });
+canvas.addEventListener('blur',clearInput);
 addEventListener('keyup',e=>{if(keyboard.delete(e.code))recompute();});
 for(const button of document.querySelectorAll('[data-key]')){
  button.addEventListener('pointerdown',e=>{
@@ -271,7 +273,9 @@ start.onclick=()=>{
  }
 };
 canvas.onclick=()=>{if(!started)start.click();else if(!accounts.active&&(uiFlags&(2|4|1024)))tap(8);};
-addEventListener('keydown',e=>{if(!started&&e.code==='Enter')start.click();});
+addEventListener('keydown',e=>{
+ if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
+});
 var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mount(Module.IDBFS,{},'/persist');Module.FS.syncfs(true,error=>{
  // A valid game save is authoritative even before the player presses Start.
  // An explicit selection made while loading takes precedence over that save.

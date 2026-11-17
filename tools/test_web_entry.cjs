@@ -59,6 +59,24 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>!(uiFlags&2));
     console.log('PASS short focus loss between animation frames pauses and resumes with cleared input');
 
+    await page.keyboard.press('Shift+Tab');
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'fullscreen',
+      'Shift+Tab moves out of the game to the preceding browser control');
+    assert.equal(await page.evaluate(()=>!!(uiFlags&64)),false,'browser navigation does not toggle Quests');
+    await page.locator('header a').focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'pl',
+      'Tab moves from the site link to the first language control');
+    await page.locator('#game').focus();
+    await page.keyboard.press('p');
+    await page.waitForFunction(()=>!!(uiFlags&2));
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(()=>document.activeElement.dataset.tap),'12','Tab reaches the toolbar while paused');
+    await page.locator('#game').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>!(uiFlags&2));
+
+
     await page.screenshot({path:path.join(out,'web-opening-en.png')});
     await page.keyboard.press('j');await page.waitForFunction(()=>!!(window.entryFlags&128));
     await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await page.waitForTimeout(100);
