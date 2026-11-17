@@ -204,7 +204,8 @@ public:
           iceberg::mix(profile.seed ^ unsigned(district*104729+leg*31+room)),district);
       } else {
         auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
-        if(e.itinerary.size()!=iceberg::RoomsPerLeg)e.itinerary=iceworld::make_itinerary(run_seed,district,iceberg::RoomsPerLeg,e.layout_version);
+        if(e.itinerary.size()!=iceberg::RoomsPerLeg)
+          e.itinerary=iceworld::make_itinerary(run_seed,district,iceberg::RoomsPerLeg,e.layout_version,mode);
         grid=verified_room(e.itinerary[size_t(room % iceberg::RoomsPerLeg)],
           iceberg::mix(run_seed+unsigned(depth)),district,mode==iceberg::Mode::Trial);
         if(mode==iceberg::Mode::Endless&&e.layout_version>=4) {

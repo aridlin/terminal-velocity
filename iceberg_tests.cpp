@@ -2,6 +2,7 @@
 #include "main.cpp"
 #include "iceberg_validation.hpp"
 #include <stdexcept>
+#include <set>
 void check(bool value,const char *message) {
   if(!value)throw std::runtime_error(message);
   std::cout<<"PASS "<<message<<'\n';
@@ -18,6 +19,19 @@ int main(int argc,char **argv) {
       for(size_t i=1;i<route.size();++i)if(route[i]==route[i-1]||!iceworld::connects(iceworld::pattern(route[i-1]),iceworld::pattern(route[i])))throw std::runtime_error("repeated adjacent room");
     }
     check(true,"structural seed determinism and adjacency checks");
+    for(int d=1;d<iceberg::AuthoredDistrictCount;++d)for(int seed=0;seed<128;++seed) {
+      auto route=iceworld::make_itinerary(seed,d,iceberg::RoomsPerLeg,iceberg::ContentVersion,iceberg::Mode::Endless);
+      auto early=route.begin()+4;
+      if(std::none_of(route.begin(),early,[&](int id){return iceworld::has_expedition_mechanic(d,id);})||
+        std::set<int>(route.begin(),route.end()).size()!=route.size())
+        throw std::runtime_error("early Endless mechanic or unique room missing");
+      const auto legacy=iceworld::make_itinerary(seed,d,iceberg::RoomsPerLeg,2);
+      const auto trial=iceworld::make_itinerary(seed,d,iceberg::RoomsPerLeg);
+      if(legacy!=iceworld::make_itinerary(seed,d,iceberg::RoomsPerLeg,2,iceberg::Mode::Endless)||
+        trial!=iceworld::make_itinerary(seed,d,iceberg::RoomsPerLeg,iceberg::ContentVersion,iceberg::Mode::Trial))
+        throw std::runtime_error("another mode or layout inherited the Endless room reserve");
+    }
+    check(true,"new Endless legs include a local mechanic by room four without changing legacy routes or Trials");
     for(int d=0;d<2;++d) {
       auto old_route=iceworld::make_itinerary(73,d,24,2);
       check(std::all_of(old_route.begin(),old_route.end(),[](int id){return id<24;}),"legacy route version retains the released room library");
@@ -281,6 +295,18 @@ int main(int argc,char **argv) {
     crown_run.layout_version=2;crown.load_room();
     check(crown.grid.template_id==63&&crown.grid.air_fields[0].ax==-4.,
       "legacy Crown expeditions keep their original wind strength");
+    AdventureSession prior_leg(options,path);
+    prior_leg.begin_campaign(true);
+    prior_leg.profile.unlocked=2;prior_leg.run_district=2;
+    auto &estate_run=prior_leg.profile.expeditions[0];estate_run={};
+    estate_run.active=true;estate_run.district=2;estate_run.seed=estate_run.origin_seed=73;
+    const auto saved_order=iceworld::make_itinerary(73,2,iceberg::RoomsPerLeg);
+    estate_run.itinerary=saved_order;estate_run.depth=estate_run.room=7;
+    prior_leg.begin_run(iceberg::Mode::Endless);
+    check(estate_run.itinerary==saved_order&&prior_leg.room==7,"an existing Endless leg resumes with its saved room order");
+    prior_leg.advance_room();
+    check(prior_leg.depth==8&&prior_leg.room==0&&std::find(estate_run.itinerary.begin(),estate_run.itinerary.begin()+4,24)!=estate_run.itinerary.begin()+4,
+      "an existing expedition gets the district mechanic when generating its next leg");
     std::filesystem::remove(path);std::filesystem::remove(backup);
     return 0;
   } catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
