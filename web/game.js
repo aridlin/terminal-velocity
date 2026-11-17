@@ -168,14 +168,79 @@ document.querySelector('#fullscreen').onclick=toggleFullscreen;
 document.querySelector('#leave-fullscreen').onclick=toggleFullscreen;
 document.addEventListener('fullscreenchange',fullscreenLayout);
 new ResizeObserver(resize).observe(stage);
-document.querySelector('#export-save').onclick=()=>{if(!started)return;Module._web_save();try{const bytes=Module.FS.readFile('/persist/progress.dat.iceberg');const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=document.createElement('a');a.href=url;a.download='terminal-velocity.iceberg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{saveStatus.textContent=tr('Brak zapisu do pobrania','No save to download');}};
+const exportSave=document.querySelector('#export-save');
+const importSave=document.querySelector('#import-save');
+const exportPreviousSave=document.querySelector('#export-previous-save');
+const saveFile=document.querySelector('#save-file');
+const previousImportPath='/persist/before-manual-import.iceberg';
+
+function downloadSave(path,name) {
+ try {
+  const bytes=Module.FS.readFile(path);
+  const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
+  const link=document.createElement('a');
+  link.href=url;link.download=name;link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+ } catch {
+  saveStatus.textContent=tr('Brak zapisu do pobrania','No save to download');
+ }
+}
+exportSave.onclick=()=>{
+ Module._web_save();
+ downloadSave('/persist/progress.dat.iceberg','terminal-velocity.iceberg');
+};
+exportPreviousSave.onclick=()=>downloadSave(previousImportPath,'terminal-velocity-previous.iceberg');
+importSave.onclick=()=>saveFile.click();
+saveFile.onchange=async()=>{
+ const file=saveFile.files[0];
+ saveFile.value='';
+ if(!file)return;
+ if(!file.size||file.size>65536) {
+  saveStatus.textContent=tr('Nieprawidłowy plik zapisu','Invalid save file');
+  return;
+ }
+ importSave.disabled=true;
+ try {
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  if(accounts.active||accounts.busy||accounts.mode==='choose'){
+   saveStatus.textContent=tr('Zakończ obsługę konta przed wczytaniem zapisu','Finish the account action before importing a save');
+   return;
+  }
+  const question=accounts.user
+   ?tr('Zastąpić obecny zapis? Nowy zapis będzie synchronizowany z kontem.','Replace your current save? The imported save will sync to your account.')
+   :tr('Zastąpić obecny zapis w tej przeglądarce?','Replace the current save in this browser?');
+  if(!window.confirm(question))return;
+  const fs=Module.FS;
+  const previous=fs.readFile('/persist/progress.dat.iceberg');
+  const incoming='/persist/import.iceberg';
+  fs.writeFile(incoming,bytes);
+  try {
+   if(!Module._web_import_save()){
+    saveStatus.textContent=tr('Nieprawidłowy plik zapisu','Invalid save file');
+    return;
+   }
+  } finally {fs.unlink(incoming);}
+  fs.writeFile(previousImportPath,previous);
+  exportPreviousSave.hidden=false;
+  clearInput();
+  Module._web_enter_campaign();
+  flushBrowserStorage();
+  canvas.focus();
+ } catch {
+  saveStatus.textContent=tr('Nie udało się wczytać zapisu','Could not import save');
+ } finally {
+  importSave.disabled=false;
+ }
+};
 function frame(now){if(accounts.active)accounts.draw();else if(started){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);pressed=0;}last=now;requestAnimationFrame(frame);}
 start.onclick=()=>{
  if(!ready||started)return;
  try {
   Module._web_start(Date.now()>>>0,english?1:0);
   Module._web_enter_campaign();
-  started=true;start.hidden=true;syncSave();accounts.start();resize();last=performance.now();canvas.focus();requestAnimationFrame(frame);
+  started=true;start.hidden=true;exportSave.disabled=importSave.disabled=false;
+  exportPreviousSave.hidden=!Module.FS.analyzePath(previousImportPath).exists;
+  syncSave();accounts.start();resize();last=performance.now();canvas.focus();requestAnimationFrame(frame);
  } catch(error) {
   console.error(error);started=false;ready=false;start.disabled=true;
   bootStatus=tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
