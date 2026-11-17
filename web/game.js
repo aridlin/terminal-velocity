@@ -65,7 +65,14 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-aria-pl]'))b.setAttribute('aria-label',tr(b.dataset.ariaPl,b.dataset.ariaEn));
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
  document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
- document.querySelector('#touch-use').textContent=lastBlocked?'↵':tr('Użyj','Use');
+ const touchUse=document.querySelector('#touch-use');
+ touchUse.textContent=lastBlocked?'↵':tr('Użyj','Use');
+ touchUse.setAttribute('aria-label',lastBlocked?tr('Zatwierdź','Confirm'):tr('Użyj','Use'));
+ const districtControl=!!(uiFlags&16384);
+ for(const button of document.querySelectorAll('[data-tap="11"]')){
+  button.textContent=districtControl?tr('Dzielnica','District'):tr('Mapa','Map');
+  button.setAttribute('aria-label',districtControl?tr('Zmień dzielnicę','Change district'):button.textContent);
+ }
  const touchInspect=document.querySelector('#touch-inspect');
  touchInspect.hidden=!!((uiFlags&128)&&(uiFlags&8192));
  if(uiFlags&128)touchInspect.textContent=uiFlags&2048?tr('Dzielnice','Districts'):tr('Trasa','Route');

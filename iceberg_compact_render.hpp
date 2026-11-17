@@ -34,10 +34,16 @@
       paint_text(3,2,tr("POD POWIERZCHNIĄ","BENEATH THE SURFACE"),d.light);
       const std::array<std::string,6> labels{
         v.can_continue?tr("Kontynuuj podróż","Continue journey"):tr("Rozpocznij podróż","Begin journey"),
-        tr("Nowa historia","New story"),tr("Wyprawa bez końca","Endless expedition"),tr("Próba mistrzowska","Mastery trial"),
+        tr("Nowa historia","New story"),
+        v.endless_resume?tr("Wznów wyprawę","Resume expedition"):tr("Wyprawa bez końca","Endless expedition"),
+        v.trial_resume?tr("Wznów próbę","Resume trial"):tr("Próba mistrzowska","Mastery trial"),
         tr("Ustawienia","Settings"),tr("Trasy klasyczne","Classic courses")};
       for(int i=0;i<6;++i)paint_text((rows_<24?4+i:5+i*2),2,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+" "+labels[size_t(i)],v.selected==i?d.accent:0xc8bbb8);
-      if(v.selected==2||v.selected==3){y=rows_<24?12:18;compact_paragraph(y,"J: "+iceberg::Districts[size_t(v.run_district)].name.get(v.language),rows_-3,d.light);}
+      if(v.selected==2||v.selected==3) {
+        y=rows_<24?12:18;
+        paint_text(y++,2,iceberg::Districts[size_t(v.run_district)].name.get(v.language),d.light);
+        paint_text(y,2,tr("J zmień dzielnicę","J change district"),d.light);
+      }
       if(v.notice_left>0){y=rows_<24?14:20;compact_paragraph(y,v.notice,rows_-3,d.accent);}
       paint_text(rows_-3,2,tr("↑↓ wybór · ENTER graj","↑↓ choose · ENTER play"),d.light);
       paint_text(rows_-2,2,tr("R nowa wyprawa · L język","R new expedition · L language"),d.light);return;

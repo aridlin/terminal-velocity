@@ -115,5 +115,23 @@ int main(){try {
   }
   game.begin_campaign(false);game.tick(map,1./120);
   ui_check(game.state.adventure.map&&!game.state.adventure.map_route,"returning to the campaign opens district travel");
+  Controls menu;menu.menu_request=true;game.tick(menu,1./120);
+  game.profile.expeditions[0].active=true;game.profile.expeditions[0].district=0;
+  Controls choose;choose.select_level=3;game.tick(choose,1./120);
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    game.profile.language=language;game.sync_view();
+    for(auto size:{std::pair{34,24},std::pair{60,20}}) {
+      RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
+      const auto text=ui_text(frame);
+      const bool en=language==iceberg::Language::English;
+      ui_check(text.find(en?"Resume expedition":"Wznów wyprawę")!=std::string::npos&&
+          text.find(en?"J change district":"J zmień dzielnicę")!=std::string::npos&&
+          text.find(iceberg::Districts[0].name.get(language))!=std::string::npos,
+        "the compact menu identifies a saved expedition and its district control");
+    }
+  }
+  game.tick(map,1./120);
+  ui_check(game.run_district==1&&!game.state.adventure.endless_resume,
+    "district cycling leaves the saved expedition available in its own district");
   cell_frame_sink={};return 0;
 }catch(const std::exception &error){std::cerr<<"FAIL "<<error.what()<<'\n';return 1;}}

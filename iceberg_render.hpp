@@ -421,7 +421,7 @@
     for(int i=0;i<6;++i)menu_line(first+i,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+"  "+labels[size_t(i)],v.selected==i?Color::Gold:Color::Text);
     if(v.selected==2||v.selected==3) {
       int r=std::min(first+7,rows_-7);
-      menu_line(r,tr("J dzielnica: ","J district: ")+iceberg::Districts[size_t(v.run_district)].name.get(v.language),Color::Player);
+      menu_line(r,tr("J zmień dzielnicę · ","J change district · ")+iceberg::Districts[size_t(v.run_district)].name.get(v.language),Color::Player);
       const auto &record=v.trials[size_t(v.run_district)];
       if(v.selected==3&&record.complete)menu_line(r+1,tr("Rekordy: ","Records: ")+fixed(record.best_seconds)+"s  /  "+
         std::to_string(record.best_deaths)+tr(" powrotów  /  "," retries  /  ")+std::to_string(record.best_treasures)+" ◆",Color::Gold);
