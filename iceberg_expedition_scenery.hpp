@@ -63,7 +63,7 @@
 // behind the route so decorations never become apparent stepping stones.
   void draw_expedition_infrastructure() {
     if(state_.adventure.mode==iceberg::Mode::Campaign||grid_.district==0||
-       grid_.room_role!=iceberg::RoomRole::Traverse)return;
+       grid_.room_role!=iceberg::RoomRole::Traverse||grid_.template_id==50)return;
     const double row=aspect_*scale_;
     const auto &district=iceberg::Districts[size_t(grid_.district)];
     for(size_t i=1;i+1<grid_.route_points.size();i+=2) {

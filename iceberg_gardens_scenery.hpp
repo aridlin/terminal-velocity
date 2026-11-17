@@ -1,4 +1,24 @@
 // RenderGrid members. Glass, irrigation and rootwork share the world camera.
+  void draw_leaf_ferry(const MovingPlatform &platform,const Rect &leaf) {
+    const int cells=std::max(4,int(leaf.w/scale_));
+    const int middle=cells/2;
+    const double row=aspect_*scale_;
+    std::string rim="╶",veins="╲";
+    for(int i=1;i<cells-1;++i) {
+      rim+="━";
+      veins+=i==middle?"╿":i%4==2?(i<middle?"╲":"╱"):"▒";
+    }
+    world_text(leaf.x,leaf.y,rim+"╴",0xb6d778);
+    world_art(leaf.x,leaf.y+row,{veins+"╱"},0x638b55);
+    const int inset=std::max(1,cells/6);
+    std::string underside="╰";
+    for(int i=inset+1;i<cells-inset-1;++i)underside+=i==middle?"┬":"─";
+    world_art(leaf.x+inset*scale_,leaf.y+2*row,{underside+"╯"},0x789759);
+    const double travel=(1+platform.offset(state_.elapsed))*.5;
+    const int glint=1+int(travel*(cells-3));
+    world_text(leaf.x+glint*scale_,leaf.y,"━",0xd5eda9);
+  }
+
   void draw_garden_landmarks() {
     const auto &d=iceberg::Districts[4];double clock=state_.adventure.presentation_time;
     auto greenhouse=[&](double x,double y){world_art(x,y,{
@@ -21,6 +41,9 @@
       world_art(96,39,{"╭────────────────────╮",tr("│  ZAMYKAĆ ZA SOBĄ   │","│ CLOSE BEHIND YOU   │"),"╰─────────┬──────────╯","          │"},d.light);
     } else {
       for(size_t i=0;i<grid_.route_points.size();++i){auto [x,y]=grid_.route_points[i];
+        if(grid_.template_id==50&&std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[&](const MovingPlatform &p){
+          return p.base.y==y&&p.base.x<=x&&x<p.base.right();
+        }))continue;
         if(i%3==0)greenhouse(x-8,y-16);
         if(i%3==1)bed(x-5,y+2);
         if(i%3==2)world_art(x,y+2,{"╲       ╱"," ╲ ╭─╮ ╱","  ╲│ │╱","   │ │","  ╱│ │╲"," ╱ ╰─╯ ╲"},d.shadow);
@@ -40,7 +63,7 @@
       for(int i=0;i<width;i+=3)world_art(bridge.area.x+i,bridge.area.y+2,{"╲│╱"," │ "," ╰╮"},d.accent);
       if(alive&&bridge.amount<1)world_text(bridge.area.x+width,bridge.area.y,"╭╯",d.light);
     }
-    for(const auto &platform:grid_.platforms){auto r=platform.at(state_.elapsed);world_art(r.x,r.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱"},d.stone);}
+    if(grid_.template_id!=50)for(const auto &platform:grid_.platforms){auto r=platform.at(state_.elapsed);world_art(r.x,r.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱"},d.stone);}
     // Pollen stays muted and sparse; collision edges remain the brightest layer.
     for(int i=0;i<8;++i)world_text(std::fmod(i*23.1+std::sin(clock*.3+i)*2+grid_.width(),double(grid_.width())),std::fmod(i*8.7+clock*.4,58.),i%2?"⠁":"·",d.shadow);
   }
