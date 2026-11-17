@@ -1024,6 +1024,21 @@ int terminal_window_main(int argc,char **argv) {
         }
         update_camera(session.state,session.grid,110,27,2,10);
       }
+      if(options.no_save&&scene.rfind("archive",0)==0) {
+        session.grid=scene=="archive"?iceworld::build_archive_settlement():iceworld::build_archive_sequence(true);
+        session.district=3;session.state=new_state(session.grid);session.state.menu=false;session.sync_view();
+        if(scene=="archive:finale") {session.state.player.x=174;session.state.player.y=32-kPlayerHeight;session.grid.switch_flags=3;}
+        update_camera(session.state,session.grid,110,27,2,10);
+      }
+      if(options.no_save&&scene=="dock:tram") {
+        session.grid=iceworld::build_harbor_mission(0);session.grid.switch_flags=1;
+        session.district=0;session.state=new_state(session.grid);session.state.menu=false;
+        session.state.player.x=144;session.state.player.y=44-kPlayerHeight;session.sync_view();
+        Controls use;use.interact=true;session.tick(use,1./120);
+        for(int i=0;i<3;++i){Controls c;c.confirm=true;session.tick(c,1./120);}
+        for(int i=0;i<84;++i)session.tick({},1./120);
+        update_camera(session.state,session.grid,110,27,2,10);
+      }
       if(options.no_save&&scene=="heat") {
         session.profile.started=true;session.district=1;session.stage=0;session.load_room();session.state.menu=false;
       }

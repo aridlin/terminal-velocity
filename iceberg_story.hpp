@@ -61,9 +61,9 @@ inline std::vector<DialogueLine> introduction(int district) {
     {2,{"Przywróć rozjazdy i otwórz drogę do archiwum. Na starym planie jest przewód, którego Witek nigdy nie widział.","Restore the junctions and open the archive route. The old plan shows a pipe Witek has never seen."}}
   };
   case 3: return {
-    {4,{"Oryginał? Oczywiście. Proszę podać numer kopii, z której mam odtworzyć oryginał.","The original? Of course. Please provide the copy number from which I should reconstruct the original."}},
-    {4,{"Żartuję. Odkąd zgasło ogrzewanie, żartuję coraz gorzej. Ale te braki w planach nie są żartem.","I'm joking. Since the heating stopped, my jokes have been getting worse. But these gaps in the plans are no joke."}},
-    {4,{"Podczas dawnego załamania lodu zamknięto cały obieg. Dokumenty mówią: nikogo nie było. Listy lokatorów mówią co innego.","During the old ice collapse, an entire circuit was sealed. The reports say nobody was there. The resident lists disagree."}}
+    {4,{"Rozkład od Bogdana? Połóż go na bibule. Tusz już puszcza. Dobrze, że Grażyna zrobiła kopię.","Bogdan's timetable? Put it on the blotting paper. The ink is running. Good thing Grażyna made a copy."}},
+    {4,{"Mam plan sprzed przebudowy. Leży w głównej szafie, za zamarzniętymi regałami. Trzeba uruchomić ich napęd i otworzyć katalog.","I have a plan from before the reconstruction. It's in the main cabinet, beyond the frozen stacks. Restart their drive and open the catalogue."}},
+    {4,{"Nie wszystko zniszczyła wilgoć. Ktoś wyciął tę samą ulicę z każdego nowszego wydania. Oryginał pokaże, dokąd prowadził jej przewód.","Damp didn't destroy everything. Someone cut the same street from every newer edition. The original will show where its pipe went."}}
   };
   case 4: return {
     {5,{"Nie depcz koperku. Ratowanie cywilizacji nie zwalnia z podstawowej kultury.","Don't step on the dill. Saving civilization doesn't excuse bad manners."}},
@@ -264,7 +264,7 @@ inline std::vector<DialogueLine> parcel_delivered() {
 
 namespace iceberg {
 inline const Text &training_sign(int id) {
-  static const std::array<Text,8> signs{{
+  static const std::array<Text,10> signs{{
         {"A/D: ruch. Spacja: skok. Przytrzymaj, żeby skoczyć wyżej. Czerwone krawędzie są niebezpieczne. Lampy zapisują miejsce powrotu.","A/D: move. Space: jump. Hold for a higher jump. Red edges are dangerous. Lamps save your return point."},
         {"Zryw: X albo Shift z kierunkiem. Żółta postać ma gotowy zryw. Na ziemi: zryw, potem szybko skok — zachowasz rozpęd.","Dash: X or Shift with a direction. A yellow character has a dash ready. On the ground: dash, then quickly jump to keep your momentum."},
         {"Przy ścianie zrób zryw w górę, a potem skocz. Na windzie skacz w chwili ruchu w górę. Górna znajdźka jest opcjonalna.","Dash upward beside a wall, then jump. On a lift, jump as it rises. The upper treasure is optional."},
@@ -272,8 +272,17 @@ inline const Text &training_sign(int id) {
         {"Żółte kropki oznaczają, że zawór zaraz wypuści parę. Czerwony słup parzy. Zaczekaj albo przeskocz nad nim; zryw nie chroni przed ciepłem.","Yellow dots mean a vent is about to release steam. The red column burns. Wait or jump over it; a dash doesn't protect against heat."},
         {"Górne platformy są dla ciekawskich. Skok z wznoszącej windy, potem zryw w górę. Jeśli się nie uda, lampa jest tuż obok. Niczego nie tracisz.","The upper platforms are for the curious. Jump from a rising lift, then dash upward. If it doesn't work, the lamp is nearby. You lose nothing."},
         {"Tramwaj oddaje rozpęd przy skoku. Skacz, gdy jedzie w stronę następnego pomostu. Jeśli miniesz przystanek, S albo dół pozwoli zejść przez podłogę wagonika.","A tram shares its momentum when you jump. Leap while it moves toward the next landing. If you miss a stop, S or down lets you drop through its floor."},
-        {"Balkony po drugiej stronie są opcjonalne. Główna trasa biegnie przez oświetlone przystanki. Nad klatkami można łączyć skok ze zrywu z odbiciem od ściany.","The balconies on the far side are optional. The main route follows the lit stops. Above the stairwells, you can combine dash jumps with wall bounces."}
+        {"Balkony po drugiej stronie są opcjonalne. Główna trasa biegnie przez oświetlone przystanki. Nad klatkami można łączyć skok ze zrywu z odbiciem od ściany.","The balconies on the far side are optional. The main route follows the lit stops. Above the stairwells, you can combine dash jumps with wall bounces."},
+        {"Wózki przejeżdżają między półkami. Możesz przejść przez nie od dołu. S albo dół pozwala zejść przez ruchomy blat; pełna półka zatrzyma upadek.","Carts travel between the shelves. You can pass through them from below. S or down drops through a moving deck; a solid shelf catches your fall."},
+        {"Korba zwalnia zasuwę na końcu magazynu. Najpierw koło, potem przejście. Naprawiona zasuwa pozostaje otwarta także po powrocie do lampy.","The crank releases the shutter at the end of the repository. Turn the wheel, then cross. A repaired shutter stays open after a checkpoint retry."}
   }};
-  return signs[size_t(std::clamp(id,0,7))];
+  return signs[size_t(std::clamp(id,0,9))];
+}
+}
+
+namespace iceberg {
+inline std::vector<DialogueLine> archive_record() {
+  return {{-1,{"Na pierwotnym planie powrót ciepła biegnie przez ogrody. Późniejszy dopisek każe odciąć tę odnogę po pęknięciu ściany. Nie ma podpisu odbioru prac.","On the original plan, the heat return runs through the gardens. A later note orders that branch sealed after the wall fractured. There is no signature accepting the work."}},
+    {4,{"Tu Irena. Widzę oznaczenie na twojej kopii. Nie musimy ponownie otwierać uszkodzonej ściany — jest obejście pod szklarniami. Zabierz cały arkusz. Tym razem niczego nie wycinamy.","Irena here. I can see the mark on your copy. We don't need to reopen the damaged wall — there's a bypass beneath the greenhouses. Bring the whole sheet. We aren't cutting anything out this time."}}};
 }
 }

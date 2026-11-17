@@ -8,11 +8,11 @@ A courier platformer inside an inhabited iceberg. Carry the mail, reconnect the 
 
 ## The playable opening
 
-Explore the **Lower Harbor**, **Lazarus Heating Works** and **Windowsill Estate**: three settlements, 48 authored traversal templates, lessons, machinery, moving barges, a stranded conductor and a fragile delivery. Six optional character tasks unlock letters, service and tram shortcuts, a rooftop garden, outfits and movement trials. The opening resolves the lower network's immediate emergency; the ascent through the upper city continues in a later content release.
+Explore the **Lower Harbor**, **Lazarus Heating Works** **Windowsill Estate** and the **Archive of Silence**: four settlements, 60 authored traversal templates, lessons, machinery, moving barges, a stranded conductor and a fragile delivery. Seven optional character tasks unlock letters, service and tram shortcuts, a rooftop garden, outfits and movement trials. The opening resolves the lower network's immediate emergency; the ascent through the upper city continues in a later content release.
 
-The current journey reaches the restored residential tram line. Automated traversal with all six tasks plus estimated reading is about 25 minutes; this is **not a measured first-player duration**. This release is not the planned two-hour campaign, and the number of seeds is not a promise of hundreds of distinct hours.
+The current journey reaches the original network plan in the frozen archive. Automated traversal with all seven tasks plus estimated reading is about 32 minutes; this is **not a measured first-player duration**. This release is not the planned two-hour campaign, and the number of seeds is not a promise of hundreds of distinct hours.
 
-Afterwards, revisit settlements and authored routes, start endless expeditions, or attempt the three district mastery trials. Each trial combines seven expert rooms with a final movement examination. Time, fewest retries and collection records are independent. Explicit seeds have separate records; mastery unlocks a visible badge and outfit.
+Afterwards, revisit settlements and authored routes, start endless expeditions, or attempt the four district mastery trials. Each trial combines seven expert rooms with a final movement examination. Time, fewest retries and collection records are independent. Explicit seeds have separate records; mastery unlocks a visible badge and outfit.
 
 Polish is the default. **L** in the menu switches to English, including dialogue, objectives and controls. Observation and exploration are rewarded, but optional discoveries never gate the ordinary story.
 

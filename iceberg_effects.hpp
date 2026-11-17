@@ -1,16 +1,20 @@
 // RenderGrid members. Reactions are cosmetic, bounded and deterministic.
+  void draw_dock_tram(double x,double y) {
+    world_art(x,y,{"    ╭────────────────────────╮","    │ ▯▯  ▯▯  ▯▯  ▯▯  ▯▯    │","    ├────────────────────────┤","    │   T R A M W A J   02   │","    ╰───◉───────────────◉────╯"},iceberg::Districts[0].accent);
+  }
   void draw_machinery_reaction() {
     const auto &v=state_.adventure;if(v.machinery_left<=0)return;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     double time=v.machinery_duration-v.machinery_left;
     double x=v.machinery_x,y=v.machinery_y;
-    if(v.machinery_kind==2) {
+    if(v.machinery_kind==2||v.machinery_kind==4) {
       // The restored crownward tram crosses the overhead rail, shedding frost
       // behind its wheels. The route remains visible beneath its silhouette.
-      double rail=y-10,car=x-29+time*time*15;
+      double rail=v.machinery_kind==4?40+4*aspect_*scale_:y-10,car=x-29+time*time*15;
       std::string track;for(int i=0;i<int(100/scale_);++i)track+="═";
       world_text(x-35,rail+aspect_*scale_,track,d.stone);
-      world_art(car,rail-3*aspect_*scale_,{"      ╱╲                ","╭─────┴┴────────────────╮","│ ▯ ▯ ▯ ▯  ║  ▯ ▯ ▯ ▯  │","╰──◉───────╨───────◉───╯"},d.light);
+      if(v.machinery_kind==4)draw_dock_tram(car,40);
+      else world_art(car,rail-3*aspect_*scale_,{"      ╱╲                ","╭─────┴┴────────────────╮","│ ▯ ▯ ▯ ▯  ║  ▯ ▯ ▯ ▯  │","╰──◉───────╨───────◉───╯"},d.light);
       for(int i=0;i<34;++i) {
         double born=.12+i*.055,age=time-born;
         if(age<0||age>1.15)continue;
@@ -26,6 +30,10 @@
       for(int i=0;i<12;++i) {
         double age=time-i*.035;if(age<0||age>.8)continue;
         world_text(x-5+i*.9,y-6+age*age*5,i%3?"·":"⠄",0x8d9098);
+      }
+      if(v.machinery_kind==3)for(int i=0;i<6;++i) {
+        double age=time-i*.08;if(age<0)continue;
+        world_text(x-6+i*2+std::sin(age*8+i)*.7,y-7+age*age*5,int(age*8+i)%2?"▱":"╱",0xb9c9d1);
       }
       if(v.machinery_kind==1&&time<.55)for(int i=0;i<7;++i) {
         double angle=i*1.15+time*2;

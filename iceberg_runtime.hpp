@@ -398,7 +398,7 @@ public:
   int near_interaction() const {
     auto p=state.player.rect();p.x-=1.6;p.y-=1.;p.w+=3.2;p.h+=2.;
     for(size_t i=0;i<grid.interactions.size();++i)
-      if(p.intersects(grid.interactions[i].area))return int(i);
+      if(!(grid.interactions[i].kind==InteractionKind::Evidence&&(grid.switch_flags&4))&&p.intersects(grid.interactions[i].area))return int(i);
     return -1;
   }
   void animate_pickup(const Interaction &node,int kind) {
@@ -408,7 +408,7 @@ public:
   }
   void activate_machinery(const Interaction &node,bool tram=false) {
     auto &v=state.adventure;v.machinery_duration=tram?2.8:1.05;
-    v.machinery_left=v.machinery_duration;v.machinery_kind=tram?2:node.kind==InteractionKind::Task&&node.id==2?1:0;
+    v.machinery_left=v.machinery_duration;v.machinery_kind=tram?2:grid.district==3?3:node.kind==InteractionKind::Task&&node.id==2?1:0;
     v.machinery_x=node.area.x+node.area.w*.5;v.machinery_y=node.area.bottom();
     v.machinery_changed=node.kind==InteractionKind::Valve?uint64_t(1)<<node.id:0;
     audio.play(AudioCue::Motor,tram?1.f:.6f);audio.play(AudioCue::Rumble,tram?1.f:.45f);
@@ -468,6 +468,8 @@ public:
       else if(node.id<10)v.inspect_body=iceberg::training_sign(node.id).get(profile.language);
       else v.inspect_body=t("Kartka zachowała się za osłoną. Możesz odczytać ją w całości, naciskając E.","The sheet survived behind its cover. Press E to read the complete record.");
       break;
+    case InteractionKind::Evidence:
+      v.inspect_art=Art::File;v.inspect_body=t("Stary plan sieci, oprawiony między dwie płyty szkła. Przy pieczęci pozostała data sprzed przebudowy. Irena prosiła o cały arkusz.","An old network plan held between two glass plates. The date beside its seal predates the reconstruction. Irena asked for the whole sheet.");break;
     case InteractionKind::Deliver:
       v.inspect_art=Art::Delivery;v.inspect_body=t("Gniazdo pomiarowe przyjmuje skrzynkę z termometrem. Zatrzaski utrzymują ją pionowo podczas odczytu.","The measuring socket accepts the thermometer case. Its catches keep the case upright during the reading.");break;
     case InteractionKind::Board:
@@ -491,7 +493,7 @@ public:
       else talk(iceberg::small_talk(node.id,quest<0?0:profile.quests[size_t(quest)]),quest>=0&&profile.quests[size_t(quest)]==0?100+quest:0);
     } else if(node.kind==InteractionKind::Rescue) {
       if(!(grid.switch_flags&1)){talk({{2,{"Najpierw wyciąg. Czerwona korba, dwa pomosty wyżej. To ten element, który wygląda, jakby od dawna chciał się urwać.","The winch first. Red crank, two landings above. The bit that looks as though it's wanted to fall off for years."}}});return;}
-      if(!(grid.switch_flags&2)){grid.switch_flags|=2;talk(iceberg::rescued_conductor());persist();}
+      if(!(grid.switch_flags&2)){grid.switch_flags|=2;activate_machinery(node,true);state.adventure.machinery_kind=4;state.adventure.machinery_x=166;talk(iceberg::rescued_conductor());persist();}
     } else if(node.kind==InteractionKind::Carry) {
       if(!(grid.switch_flags&1)) {
         animate_pickup(node,0);grid.switch_flags|=1;state.player.dash_time_left=state.player.dash_buffer_left=state.player.momentum_left=0;
@@ -501,6 +503,9 @@ public:
     } else if(node.kind==InteractionKind::Deliver) {
       if(!(grid.switch_flags&1)){notice(t("Najpierw zabierz skrzynkę przy wejściu.","First collect the box by the entrance."),5);return;}
       if(!(grid.switch_flags&2)){animate_pickup(node,9);grid.switch_flags|=2;talk(iceberg::parcel_delivered());audio.play(AudioCue::Cloth);audio.play(AudioCue::Win);persist();}
+    } else if(node.kind==InteractionKind::Evidence) {
+      if((grid.switch_flags&3)!=3){notice(t("Najpierw otwórz szafę planów.","Open the map cabinet first."));return;}
+      if(!(grid.switch_flags&4)){animate_pickup(node,4);grid.switch_flags|=4;profile.story|=uint64_t(1)<<41;talk(iceberg::archive_record());audio.play(AudioCue::Paper);persist();}
     } else if(node.kind==InteractionKind::Replay) {
       audio.play(AudioCue::Door);persist();profile.revisit={};profile.revisit.active=true;
       profile.revisit.district=grid.district;profile.revisit.scene=node.id;
@@ -524,7 +529,7 @@ public:
       animate_pickup(node,1);
       grid.switch_flags|=uint64_t(1)<<node.id;
       activate_machinery(node,grid.template_id==77&&grid.switch_flags==7);
-      audio.play(AudioCue::Valve);notice(t("OBIEG OTWARTY","CIRCUIT OPEN"));persist();
+      audio.play(AudioCue::Valve);notice(grid.district==3?t("ZASUWA OTWARTA","SHUTTER RELEASED"):t("OBIEG OTWARTY","CIRCUIT OPEN"));persist();
     } else if(node.kind==InteractionKind::Task) {
       int bit=node.detail;auto mask=uint64_t(1)<<(bit%64);
       if(!(profile.task_items[size_t(bit/64)]&mask)) {
@@ -604,7 +609,7 @@ public:
     if(focused&&!state.paused&&!state.menu&&!v.inspecting&&!state.journal&&!v.map) {
       v.presentation_time+=dt;v.npc_reaction_left=std::max(0.,v.npc_reaction_left-dt);
       v.machinery_left=std::max(0.,v.machinery_left-dt);v.lamp_left=std::max(0.,v.lamp_left-dt);
-      if(v.dialogue.active()&&v.pickup_kind==9)v.pickup_left=std::max(0.,v.pickup_left-dt);
+      if(v.dialogue.active())v.pickup_left=std::max(0.,v.pickup_left-dt);
     }
     if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request){persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};sync_view();return;}

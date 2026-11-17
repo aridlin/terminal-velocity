@@ -25,10 +25,10 @@ struct RoutePilot {
     // A launch can legitimately skip a landing on a folding stairwell. Once
     // standing on a later landing, continue from there instead of steering
     // back into the underside of the platform that was passed in the air.
-    if(g.district==2&&p.grounded&&target>1&&target<=g.route_points.size()&&p.y+kPlayerHeight>g.route_points[target-1].second+3) {
+    if(g.district>=2&&p.grounded&&target>1&&target<=g.route_points.size()&&p.y+kPlayerHeight>g.route_points[target-1].second+3) {
       for(size_t i=0;i+1<target;++i)if(std::abs(p.y+kPlayerHeight-g.route_points[i].second)<1.1&&std::abs(p.x+kPlayerWidth*.5-g.route_points[i].first)<4.5){target=i+1;break;}
     }
-    if(g.district==2&&p.grounded)for(size_t i=target+1;i<g.route_points.size();++i) {
+    if(g.district>=2&&p.grounded)for(size_t i=target+1;i<g.route_points.size();++i) {
       auto [x,y]=g.route_points[i];
       if(std::abs(p.y+kPlayerHeight-y)<1.1&&std::abs(p.x+kPlayerWidth*.5-x)<4.5)target=i+1;
     }
@@ -40,7 +40,7 @@ struct RoutePilot {
     if(target<g.route_points.size()){tx=g.route_points[target].first;ty=g.route_points[target].second;}
     // Aim at the platform's current height, including the tall counterweights.
     // A nominal three-unit climb may actually be five units at this phase.
-    if(g.district==2)for(const auto &platform:g.platforms)if(std::abs(tx-platform.base.x-platform.base.w*.5)<.1&&std::abs(ty-platform.base.y)<.1) {
+    if(g.district>=2)for(const auto &platform:g.platforms)if(std::abs(tx-platform.base.x-platform.base.w*.5)<.1&&std::abs(ty-platform.base.y)<.1) {
       auto at=platform.at(s.elapsed);tx=at.x+at.w*.5;ty=at.y;break;
     }
     double dx=tx-(p.x+kPlayerWidth*.5);
@@ -52,13 +52,13 @@ struct RoutePilot {
     bool rise=g.solid_at(int(std::floor(ahead)),foot-1);
     if(p.support>=0) {
       auto platform=g.platforms[size_t(p.support)].at(s.elapsed);
-      gap=platform.w>=(g.district==2?9:12)?(c.move>0?p.x+kPlayerWidth>=platform.right()-.3:p.x<=platform.x+.3):true;
+      gap=platform.w>=(g.district>=2?9:12)?(c.move>0?p.x+kPlayerWidth>=platform.right()-.3:p.x<=platform.x+.3):true;
     }
     if(p.grounded&&target<g.route_points.size())
       c.jump_pressed=(gap||rise)&&std::abs(dx)>1;
     // Descending passages are entered by dropping from the edge. A full jump
     // can put the courier on a roof instead of inside the passage.
-    if((g.template_id>=400||(g.template_id>=24&&g.template_id<36))&&p.grounded&&ty>p.y+kPlayerHeight+2&&p.dash_available)c.jump_pressed=false;
+    if((g.template_id>=400||(g.template_id>=24&&g.template_id<48))&&p.grounded&&ty>p.y+kPlayerHeight+2&&p.dash_available)c.jump_pressed=false;
     if(p.grounded&&c.move) {
       int danger_x=int(std::floor(p.x+(c.move>0?kPlayerWidth+1.7:-1.7)));
       if(g.hazard_at(danger_x,foot-1)||g.hazard_at(danger_x,foot-2))c.jump_pressed=true;

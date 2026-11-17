@@ -24,7 +24,7 @@ int main() {
     } else {
       c=pilot.controls(game.grid,game.state);
       int at=game.near_interaction();
-      if(at>=0&&(game.grid.interactions[size_t(at)].kind==InteractionKind::Valve||game.grid.interactions[size_t(at)].kind==InteractionKind::Rescue||game.grid.interactions[size_t(at)].kind==InteractionKind::Carry||game.grid.interactions[size_t(at)].kind==InteractionKind::Deliver))c.interact=true;
+      if(at>=0&&(game.grid.interactions[size_t(at)].kind==InteractionKind::Valve||game.grid.interactions[size_t(at)].kind==InteractionKind::Rescue||game.grid.interactions[size_t(at)].kind==InteractionKind::Carry||game.grid.interactions[size_t(at)].kind==InteractionKind::Deliver||game.grid.interactions[size_t(at)].kind==InteractionKind::Evidence))c.interact=true;
     }
     game.tick(c,1./120);
     played+=1./120;

@@ -85,8 +85,9 @@
       if(b%14==7&&a%5==1)return c("▪",d.stone);
       break;
     case 3:
-      if(b%7==0)return c("─",shade);
-      if(b%7>=3&&a%5<3)return c(a%2?"▥":"▤",shade);
+      if(a%23==0)return c("│",shade);
+      if(b%13==0&&a%23<16)return c("─",shade);
+      if((b%13==4||b%13==6||b%13==8)&&a%23>=3&&a%23<13)return c(a%2?"▥":"▤",shade);
       break;
     case 4:
       if(a%21==0)return c("│",shade);
@@ -124,10 +125,12 @@
 #include "iceberg_props.hpp"
 #include "iceberg_jubilee_scenery.hpp"
 #include "iceberg_estate_scenery.hpp"
+#include "iceberg_archive_scenery.hpp"
   void draw_iceberg_landmarks() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     if(grid_.template_id==303){draw_jubilee_monument();return;}
     if(grid_.district==2&&grid_.room_role!=iceberg::RoomRole::Secret){draw_estate_landmarks();return;}
+    if(grid_.district==3&&grid_.room_role!=iceberg::RoomRole::Secret){draw_archive_landmarks();return;}
     bool secret=grid_.room_role==iceberg::RoomRole::Secret;
     if(secret) {
       if(grid_.template_id==200) {
@@ -147,8 +150,8 @@
       return;
     }
     if(grid_.template_id==300) {
-      if(!(grid_.switch_flags&2))world_art(137,40,{"    ╭────────────────────────╮","    │ ▯▯  ▯▯  ▯▯  ▯▯  ▯▯    │","    ├────────────────────────┤","    │   T R A M W A J   02   │","    ╰───◉───────────────◉────╯","══════════════════════════════════"},d.accent);
-      else world_art(137,42,{"══════════════════════════════════","  ·   ·   ·   ·   ·   ·   ·   ·"},d.stone);
+      if(!(grid_.switch_flags&2))draw_dock_tram(137,40);
+      world_art(137,40+5*aspect_*scale_,{"══════════════════════════════════","  ·   ·   ·   ·   ·   ·   ·   ·"},d.stone);
       world_art(94,29,{"     ╭───╮","═════╡ ◉ ╞═════","     ╰─┬─╯","       │","       │"},d.stone);
     } else if(grid_.template_id==301) {
       world_art(4,44,{"╭──────────────────╮",tr("│ ↑ NIE PRZEWRACAĆ ↑│","│ ↑ KEEP UPRIGHT ↑  │"),"╰──────────────────╯"},d.accent);
@@ -250,6 +253,8 @@
         resident_sprite(node.id,sx,sy);
       } else if(node.kind==InteractionKind::Carry) {
         if(!(grid_.switch_flags&1))world_art(x,y-2.4,{"╭─↑─╮","│ ▯ │","╰───╯"},d.accent);
+      } else if(node.kind==InteractionKind::Evidence) {
+        if(!(grid_.switch_flags&4))prop_art(x+1.5,y,{"╭─────╮","│┌─┬─┐│","│├─┘ ││","│└───┘│","╰─────╯"},d.light);
       } else if(node.kind==InteractionKind::Deliver) {
         world_art(x,y-3.2,{"╭─────╮","│ ▥▥▥ │","│  ▱  │","╰─────╯"},d.accent);
       } else if(node.kind==InteractionKind::Board) {

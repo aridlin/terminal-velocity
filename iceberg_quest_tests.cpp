@@ -48,8 +48,8 @@ int main() {
         "inspection does not reveal or enter hidden entrances");
     }
     game.profile.story=63;
-    for(int q:{0,1,2,3,7})game.profile.quests[size_t(q)]=1;
-    for(int id:{0,4,8,12,16,20,13,17,21,24,28,32,26,30,34}) {
+    for(int q:{0,1,2,3,4,7})game.profile.quests[size_t(q)]=1;
+    for(int id:{0,4,8,12,16,20,13,17,21,24,28,32,26,30,34,36,40,44}) {
       install_test_room(game,verified_room(id,73,id/12));
       Interaction target{};bool found=false;
       for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Task){target=node;found=true;}
@@ -60,7 +60,7 @@ int main() {
       walk_to(game,game.grid.goal);
       require_quest(game.state.won,"optional branch has a playable return to the main exit");
     }
-    for(int quest:{0,1,2,3,7}) {
+    for(int quest:{0,1,2,3,4,7}) {
       require_quest(game.profile.quests[size_t(quest)]==2,"all three unique objectives make the task ready");
       install_test_room(game,iceworld::build_settlement(iceberg::Quests[size_t(quest)].district),3);
       Rect goal{};for(auto node:game.grid.interactions)
@@ -71,8 +71,8 @@ int main() {
     {
       AdventureSession recovered(options,std::filesystem::temp_directory_path()/"tv-recovery-quest-nosave");
       recovered.begin_campaign(true);recovered.profile.story=63;
-      for(int q:{0,1,2,3,7})recovered.profile.quests[size_t(q)]=1;
-      for(int id:{0,4,8,12,16,20,13,17,21,24,28,32,26,30,34}) {
+      for(int q:{0,1,2,3,4,7})recovered.profile.quests[size_t(q)]=1;
+      for(int id:{0,4,8,12,16,20,13,17,21,24,28,32,26,30,34,36,40,44}) {
         auto original=iceworld::build_room(id,73,id/12);
         install_test_room(recovered,recovery_room_for(original));
         auto task=std::find_if(recovered.grid.interactions.begin(),recovered.grid.interactions.end(),
@@ -82,7 +82,7 @@ int main() {
         walk_to(recovered,reach_area(task->area));interact(recovered);walk_to(recovered,recovered.grid.goal);
         require_quest(recovered.state.won,"recovery task ledge has a playable exit");
       }
-      for(int q:{0,1,2,3,7})require_quest(recovered.profile.quests[size_t(q)]==2,
+      for(int q:{0,1,2,3,4,7})require_quest(recovered.profile.quests[size_t(q)]==2,
         "character task remains completable even if all its rooms use recovery routes");
     }
     EngineGrid practice(200,60);practice.adventure_level=true;practice.event_level=false;

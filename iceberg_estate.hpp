@@ -9,7 +9,8 @@ inline EngineGrid build_estate_settlement() {
   g.add_solid_rect(100,34,17,1);
   g.platforms.push_back({{91,38,7,.5},0,2,4,0});
   g.spawn_x=6;g.spawn_y=48-kPlayerHeight;g.checkpoint_points={{6,g.spawn_y}};
-  g.route_points={{6,48},{16,44},{26,41},{35,41},{53,41},{84,43},{121,48}};
+  // The public street stays on the ground; balconies are optional exploration.
+  g.route_points={{6,48},{121,48}};
   g.goal={120,44,3,4};g.sweets={{105,32},{111,32}};
   g.interactions.push_back({{11,44,4,4},InteractionKind::Npc,2,{"Porozmawiaj","Talk"}});
   // The housing desk is on the public street. Balcony climbing is optional;

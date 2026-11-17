@@ -68,15 +68,15 @@ int main() {
         }
       }
       int at=game.near_interaction();
-      if(at>=0&&(game.grid.interactions[size_t(at)].kind==InteractionKind::Valve||game.grid.interactions[size_t(at)].kind==InteractionKind::Rescue||game.grid.interactions[size_t(at)].kind==InteractionKind::Carry||game.grid.interactions[size_t(at)].kind==InteractionKind::Deliver))c.interact=true;
+      if(at>=0&&(game.grid.interactions[size_t(at)].kind==InteractionKind::Valve||game.grid.interactions[size_t(at)].kind==InteractionKind::Rescue||game.grid.interactions[size_t(at)].kind==InteractionKind::Carry||game.grid.interactions[size_t(at)].kind==InteractionKind::Deliver||game.grid.interactions[size_t(at)].kind==InteractionKind::Evidence))c.interact=true;
       game.tick(c,1./120);
       if(game.state.deaths>15)throw std::runtime_error("Repeated failure in "+identity);
     }
     if(!game.profile.at_content_boundary&&!game.profile.finished)throw std::runtime_error("Story review timed out");
     review.residents();
-    for(int quest:{0,1,2,3,6,7})if(game.profile.quests[size_t(quest)]!=3)
+    for(int quest:{0,1,2,3,4,6,7})if(game.profile.quests[size_t(quest)]!=3)
       throw std::runtime_error("Task unfinished: "+std::to_string(quest));
-    std::cout<<"PASS continuous journey with all six available tasks, no room teleporting\n"
+    std::cout<<"PASS continuous journey with all seven available tasks, no room teleporting\n"
       <<"rooms="<<rooms<<" active_seconds="<<game.profile.campaign_seconds<<" deaths="<<game.profile.campaign_deaths
       <<" dialogue_pages="<<review.pages<<" dialogue_words="<<review.words
       <<" reading_estimate_180wpm_seconds="<<review.reading_estimate

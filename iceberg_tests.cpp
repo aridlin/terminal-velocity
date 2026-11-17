@@ -13,7 +13,7 @@ int main(int argc,char **argv) {
       int biome=seed%iceberg::AuthoredDistrictCount;
       auto route=iceworld::make_itinerary(unsigned(seed),biome);
       if(route!=iceworld::make_itinerary(unsigned(seed),biome))throw std::runtime_error("nondeterministic itinerary");
-      for(int required:biome==0?std::vector<int>{0,4,8}:biome==1?std::vector<int>{12,13,16,17,20,21}:std::vector<int>{24,26,28,30,32,34})
+      for(int required:biome==0?std::vector<int>{0,4,8}:biome==1?std::vector<int>{12,13,16,17,20,21}:biome==2?std::vector<int>{24,26,28,30,32,34}:std::vector<int>{36,40,44})
         if(std::find(route.begin(),route.begin()+16,required)==route.begin()+16)throw std::runtime_error("task reserved after final settlement visit");
       for(size_t i=1;i<route.size();++i)if(route[i]==route[i-1]||!iceworld::connects(iceworld::pattern(route[i-1]),iceworld::pattern(route[i])))throw std::runtime_error("repeated adjacent room");
     }

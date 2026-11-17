@@ -10,7 +10,7 @@ int main(int argc,char **argv) {
       for(const auto &pattern:iceworld::patterns()) {
         uint32_t seed=variant==0?73:iceberg::mix(unsigned(variant*149));
         auto grid=verified_room(pattern.id,seed,iceworld::district_of(pattern),expert);
-        if(grid.template_id!=pattern.id)throw std::runtime_error("template unexpectedly replaced");
+        if(grid.template_id!=pattern.id)throw std::runtime_error("template unexpectedly replaced: requested="+std::to_string(pattern.id)+" actual="+std::to_string(grid.template_id)+" expert="+std::to_string(expert)+" seed="+std::to_string(seed));
         auto state=new_state(grid);FixedStepper stepper;
         auto reach=[&](Rect target,bool landing) {
           auto path=find_motion_path(grid,state,target,[&](const GameState &s){return !landing||s.player.grounded;});
