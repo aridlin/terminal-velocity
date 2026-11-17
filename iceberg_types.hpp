@@ -8,7 +8,7 @@ namespace iceberg {
 inline constexpr unsigned ContentVersion = 3;
 inline constexpr int DistrictCount = 6;
 // Content registry boundary: increment when another district is fully authored.
-inline constexpr int AuthoredDistrictCount = 2;
+inline constexpr int AuthoredDistrictCount = 3;
 inline constexpr int RoomsPerLeg = 8;
 enum class Language { Polish, English };
 enum class Mode { Campaign, Endless, Trial };
@@ -57,13 +57,14 @@ inline const std::array<District, DistrictCount> Districts{{
 
 inline Text route_title(int district,int stage) {
   int leg=stage<=3?0:stage<=5?1:2;
-  static const Text routes[2][3]={
+  static const Text routes[3][3]={
     {{"Kanał odpływowy","Drainage channel"},{"Pomosty przepompowni","Pumping station boardwalks"},{"Rurociąg do Łazarza","Pipeline to Lazarus"}},
-    {{"Dopływ pary","Steam supply"},{"Obieg mieszkań","Residential circuit"},{"Powrót awaryjny","Emergency return"}}
+    {{"Dopływ pary","Steam supply"},{"Obieg mieszkań","Residential circuit"},{"Powrót awaryjny","Emergency return"}},
+    {{"Ulica na linach","The street on cables"},{"Klatki bez numerów","Unnumbered stairwells"},{"Pętla archiwalna","The archive loop"}}
   };
   if(stage==3)leg=1;
   if(stage==5)leg=2;
-  return district<2?routes[district][leg]:Districts[size_t(district)].objective;
+  return district<3?routes[district][leg]:Districts[size_t(district)].objective;
 }
 struct Record {
   double best_seconds = 0;

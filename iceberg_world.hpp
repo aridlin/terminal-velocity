@@ -53,6 +53,7 @@ inline const std::vector<Pattern> &patterns() {
 
 #include "iceberg_rooms_heat.inc"
 #include "iceberg_rooms_revision.inc"
+#include "iceberg_rooms_estate.inc"
   };
   return values;
 }
@@ -79,7 +80,7 @@ inline RoomMetadata describe(const Pattern &p) {
   RoomMetadata m{};m.entrance={a.x+2.,double(a.y),a.w,true};m.exit={b.x+b.w-2.,double(b.y),b.w,true};
   m.permits_wider_landings=p.rhythm!=Rhythm::Vertical;
   m.difficulty=p.rhythm==Rhythm::Precision?3:p.rhythm==Rhythm::Vertical||p.rhythm==Rhythm::Timing?2:1;
-  for(auto pad:p.path)if(pad.w>=7&&pad.kind!='m')m.resting_points.push_back({pad.x+pad.w*.5,double(pad.y)});
+  for(auto pad:p.path)if(pad.w>=7&&pad.kind!='m'&&pad.kind!='h'&&pad.kind!='v')m.resting_points.push_back({pad.x+pad.w*.5,double(pad.y)});
   for(auto pad:p.optional)m.optional_branch.push_back({pad.x+pad.w*.5,double(pad.y)});
   if(!p.optional.empty())m.optional_required|=WallJump|DashJump;
   return m;
@@ -114,7 +115,7 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
         // Expanding the library must not move a task's last object beyond its
         // owner's last ordinary turn-in opportunity.
         auto reserved=[&](int id){return district==0?(id==0||id==4||id==8):
-          district==1?(id==12||id==13||id==16||id==17||id==20||id==21):false;};
+          district==1?(id==12||id==13||id==16||id==17||id==20||id==21):district==2?(id==24||id==26||id==28||id==30||id==32||id==34):false;};
         if(layout_version>=3&&count>=16&&result.size()<16) {
           int outstanding=int(std::count_if(bag.begin(),bag.end(),reserved));
           if(16-int(result.size())<=outstanding&&!reserved(bag[i]))score+=10000;
@@ -176,14 +177,14 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
     g.sweets.push_back({p.x + p.w * .5, p.y - 1.5});
     if (i % 2 == 0) g.refills.push_back({p.x - 2., p.y + 1.});
   }
-  if (id<24 && !spec.optional.empty() && (id % 12 == 0 || id % 12 == 4 || id % 12 == 8)) {
+  if (id<72 && !spec.optional.empty() && (id % 12 == 0 || id % 12 == 4 || id % 12 == 8)) {
     auto p = spec.optional.back();
     int quest = district == 0 ? 0 : district == 1 ? 1 : district == 2 ? 2 : district == 3 ? 4 : 5;
     g.interactions.push_back({{p.x + 1.,p.y - 2.,2,2},InteractionKind::Task,quest,
       quest==1?Text{"Otwórz zawór","Open valve"}:quest==2?Text{"Napraw sygnał","Repair signal"}:quest==4?Text{"Zabierz teczkę","Recover file"}:
       quest==5?Text{"Zabierz nasiona","Take seeds"}:Text{"Zbadaj przesyłkę","Inspect parcel"},quest * 3 + (id % 12) / 4});
   }
-  if(id<24 && !spec.optional.empty() && ((district==2&&id%4==2)||(district==1&&id%4==1))) {
+  if(id<72 && !spec.optional.empty() && ((district==2&&id%4==2)||(district==1&&id%4==1))) {
     auto p=spec.optional.back();int quest=district==2?3:7;
     g.interactions.push_back({{p.x+1.,p.y-2.,2,2},InteractionKind::Task,quest,
       quest==3?Text{"Sprawdź tabliczkę","Read the plaque"}:Text{"Dostrój głośnik","Tune speaker"},quest*3+(id%12)/4});
@@ -211,12 +212,14 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
 }
 
 #include "iceberg_sequences.hpp"
+#include "iceberg_estate.hpp"
 #include "iceberg_missions.hpp"
 #include "iceberg_jubilee.hpp"
 #include "iceberg_mastery.hpp"
 
 inline EngineGrid build_authored(int district, bool finale) {
   if(district==1)return build_heatworks_sequence(finale);
+  if(district==2)return build_estate_sequence(finale);
   EngineGrid g(finale ? 144 : 128, 64);
   g.event_level = false; g.adventure_level = true; g.district = district;
   g.template_id = 72 + district * 2 + int(finale);
@@ -259,6 +262,7 @@ inline EngineGrid build_authored(int district, bool finale) {
 
 inline EngineGrid build_settlement(int district) {
   if(district==1)return build_heatworks_settlement();
+  if(district==2)return build_estate_settlement();
   EngineGrid g(94, 58);
   g.event_level = false; g.adventure_level = true; g.district = district;
   g.template_id = 100 + district; g.room_role = RoomRole::Settlement;

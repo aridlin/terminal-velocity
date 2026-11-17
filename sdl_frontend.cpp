@@ -1014,6 +1014,11 @@ int terminal_window_main(int argc,char **argv) {
         if(scene.find(":mid")!=std::string::npos){session.state.player.x=110;session.state.player.y=24-kPlayerHeight;}
         session.sync_view();update_camera(session.state,session.grid,110,27,2,10);
       }
+      if(options.no_save&&(scene=="estate"||scene=="estate:finale")) {
+        session.grid=scene=="estate"?iceworld::build_estate_settlement():iceworld::build_estate_sequence(true);
+        session.district=2;session.state=new_state(session.grid);session.state.menu=false;session.sync_view();
+        update_camera(session.state,session.grid,110,27,2,10);
+      }
       if(options.no_save&&scene=="heat") {
         session.profile.started=true;session.district=1;session.stage=0;session.load_room();session.state.menu=false;
       }
@@ -1025,9 +1030,21 @@ int terminal_window_main(int argc,char **argv) {
       if(options.no_save&&scene=="map"){session.state.menu=false;session.state.adventure.map=true;session.profile.unlocked=1;session.sync_view();}
       if(options.no_save&&scene.rfind("inspect:",0)==0) {
         int id=std::clamp(std::atoi(scene.c_str()+8),0,16);
-        auto &v=session.state.adventure;session.state.menu=false;
-        v.inspecting=true;v.inspect_art=iceberg::InspectionArt(id);v.inspect_title="Studium przedmiotu / Object study";
-        v.inspect_body="Każda rysa i każde zagięcie należą do przedmiotu. Ilustracja z bliska jest osobnym rysunkiem, a nie powiększeniem znaku z planszy.";
+        session.grid.interactions.clear();session.grid.sweets.clear();session.grid.refills.clear();session.grid.checkpoint_points.clear();
+        Interaction node{{5,40,3,4},InteractionKind::Task,0,{"Drzwi przejściowe","Passage door"}};
+        if(id<=6){const int quests[]={0,1,2,3,4,5,7};node.id=quests[id];node.detail=node.id*3;}
+        else if(id==7)node.kind=InteractionKind::Carry;
+        else if(id==8||id==9){node.kind=InteractionKind::Note;node.id=id==9?30:0;}
+        else if(id==10)node.kind=InteractionKind::Board;
+        else if(id==11)node.kind=InteractionKind::Replay;
+        else if(id==15)node.kind=InteractionKind::Npc;
+        else if(id==16)node.kind=InteractionKind::Deliver;
+        if(id==12)session.grid.sweets={{5.5,41.5}};
+        else if(id==13)session.grid.refills={{5.5,41.5}};
+        else if(id==14)session.grid.checkpoint_points={{5.5,41.5}};
+        else session.grid.interactions.push_back(node);
+        session.state=new_state(session.grid);session.state.menu=false;
+        session.state.player.x=5;session.state.player.y=41;session.sync_view();session.inspect_nearby();
       }
       if(args.smoke){session.state.menu=false;maxframes=120;}
       std::array<bool,SDL_NUM_SCANCODES> held{};

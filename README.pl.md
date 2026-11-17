@@ -8,9 +8,9 @@ Platformówka o kurierze w mieście zbudowanym wewnątrz ogromnej góry lodowej.
 
 ## Co można zagrać
 
-Otwarcie obejmuje **Dolną Przystań** i **Ciepłownię Łazarz**: dwie osady, 36 zaprojektowanych szablonów tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Cztery zadania mieszkańców dają dostęp do listów, skrótu serwisowego, strojów i prób mistrzowskich.
+Otwarcie obejmuje **Dolną Przystań**, **Ciepłownię Łazarz** i **Osiedle Parapet**: trzy osady, 48 zaprojektowanych szablonów tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Sześć zadań mieszkańców daje dostęp do listów, skrótów serwisowych i tramwajowych, ogrodu na dachu, strojów i prób mistrzowskich.
 
-Przywrócenie dolnych obiegów zamyka bieżącą awarię. Dalsza wspinaczka przez górne dzielnice jest przeznaczona na kolejne wydanie. To otwarcie celuje w około 20 minut z rozmowami i eksploracją. Automatyczne przejście z szacowanym czasem czytania daje około 18 minut — **nie jest to zmierzony czas pierwszego gracza**. Pełna dwugodzinna kampania nie jest jeszcze gotowa.
+Przywrócenie dolnych obiegów zamyka bieżącą awarię. Dalsza wspinaczka przez górne dzielnice jest przeznaczona na kolejne wydanie. Obecna podróż prowadzi do przywróconej linii tramwajowej. Automatyczne przejście ze wszystkimi sześcioma zadaniami i szacowanym czasem czytania daje około 25 minut — **nie jest to zmierzony czas pierwszego gracza**. Pełna dwugodzinna kampania nie jest jeszcze gotowa.
 
 Po zakończeniu można wrócić do mieszkańców i stałych tras, ruszyć na wyprawę bez końca albo sprawdzić się w dwóch próbach mistrzowskich. Każda składa się z siedmiu trudniejszych sal i egzaminu ruchowego. Rekord czasu, najmniejsza liczba powrotów i najlepszy zbiór zapisują się niezależnie. Własne seedy mają osobne rekordy. Ukończenie próby daje odznakę widoczną na postaci i strój.
 

@@ -123,9 +123,11 @@
 #include "iceberg_sprites.hpp"
 #include "iceberg_props.hpp"
 #include "iceberg_jubilee_scenery.hpp"
+#include "iceberg_estate_scenery.hpp"
   void draw_iceberg_landmarks() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     if(grid_.template_id==303){draw_jubilee_monument();return;}
+    if(grid_.district==2&&grid_.room_role!=iceberg::RoomRole::Secret){draw_estate_landmarks();return;}
     bool secret=grid_.room_role==iceberg::RoomRole::Secret;
     if(secret) {
       if(grid_.template_id==200) {

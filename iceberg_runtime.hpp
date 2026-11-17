@@ -185,14 +185,16 @@ public:
     }
     if(mode==iceberg::Mode::Campaign && profile.quests[1]==3 && district==1 && room==0 && grid.room_role==iceberg::RoomRole::Traverse)
       grid.interactions.push_back({{grid.spawn_x+2,grid.spawn_y-1,3,3},InteractionKind::Shortcut,0,{"Przejście serwisowe","Service passage"}});
+    if(mode==iceberg::Mode::Campaign&&profile.quests[2]==3&&district==2&&room==0&&grid.room_role==iceberg::RoomRole::Traverse)
+      grid.interactions.push_back({{grid.spawn_x+2,grid.spawn_y-1,3,3},InteractionKind::Shortcut,2,{"Tramwaj pospieszny","Express tram"}});
     if(profile.quests[3]==3 && grid.district==2 && grid.room_role==iceberg::RoomRole::Settlement) {
-      grid.add_solid_rect(55,31,11,1);grid.springs.push_back({50,38.7,1.5,.3});
+      grid.add_solid_rect(55,31,11,1);grid.springs.push_back({50,40.7,1.5,.3});
       grid.sweets.push_back({60,29});grid.sweets.push_back({63,29});
     }
     if(mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&
         (profile.story&(uint64_t(1)<<(grid.district+8)))) {
       int ground=grid.district==1?48:43;
-      for(int i=0;i<2;++i)grid.interactions.push_back({{i?grid.district==1?67.:62.:24.,ground-3.,2,3},
+      for(int i=0;i<2;++i)grid.interactions.push_back({{i?grid.district==1?67.:grid.district==2?82.:62.:24.,ground-3.,2,3},
         InteractionKind::Replay,i,i?iceberg::Text{"Wróć do stacji pomp","Revisit the pumping station"}:
         iceberg::Text{"Trasa szkoleniowa","Training route"}});
     }
@@ -494,7 +496,7 @@ public:
       load_room();if(node.id==2&&!(profile.story&(uint64_t(1)<<40)))talk(iceberg::jubilee_arrival());persist();return;
     } else if(node.kind==InteractionKind::Shortcut) {
       room=std::min(iceberg::RoomsPerLeg-1,room+3);clear_room_record();load_room();persist();
-      notice(t("WITEK: Uważaj na głowę. To nie był projekt dla ludzi.","WITEK: Mind your head. This wasn't designed for people."),5);return;
+      notice(node.id==2?t("BOGDAN: Trzy przystanki bez zatrzymania. Bilet proszę zachować.","BOGDAN: Three stops without stopping. Keep your ticket."):t("WITEK: Uważaj na głowę. To nie był projekt dla ludzi.","WITEK: Mind your head. This wasn't designed for people."),5);return;
     } else if(node.kind==InteractionKind::Return) {
       advance_room();return;
     } else if(node.kind==InteractionKind::Secret) {

@@ -17,7 +17,7 @@ struct StoryReview {
   void interact(){Controls c;c.interact=true;game.tick(c,1./120);read_dialogue();}
   void walk(Rect target) {
     ++searches;auto path=find_motion_path(game.grid,game.state,target);
-    if(!path.reached)throw std::runtime_error("No ordinary-input interaction path, template="+std::to_string(game.grid.template_id));
+    if(!path.reached)throw std::runtime_error("No ordinary-input interaction path, template="+std::to_string(game.grid.template_id)+" target="+std::to_string(target.x)+","+std::to_string(target.y)+" from="+std::to_string(game.state.player.x)+","+std::to_string(game.state.player.y)+" nearest="+std::to_string(path.nearest));
     for(auto c:path.actions)game.tick(c,.1);
     if(!game.state.player.rect().intersects(target))throw std::runtime_error("Input path replay diverged");
   }
@@ -74,9 +74,9 @@ int main() {
     }
     if(!game.profile.at_content_boundary&&!game.profile.finished)throw std::runtime_error("Story review timed out");
     review.residents();
-    for(int quest:{0,1,6,7})if(game.profile.quests[size_t(quest)]!=3)
+    for(int quest:{0,1,2,3,6,7})if(game.profile.quests[size_t(quest)]!=3)
       throw std::runtime_error("Task unfinished: "+std::to_string(quest));
-    std::cout<<"PASS continuous journey with all four available tasks, no room teleporting\n"
+    std::cout<<"PASS continuous journey with all six available tasks, no room teleporting\n"
       <<"rooms="<<rooms<<" active_seconds="<<game.profile.campaign_seconds<<" deaths="<<game.profile.campaign_deaths
       <<" dialogue_pages="<<review.pages<<" dialogue_words="<<review.words
       <<" reading_estimate_180wpm_seconds="<<review.reading_estimate
