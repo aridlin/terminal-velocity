@@ -85,7 +85,8 @@ addEventListener('keydown',e=>{
  if(e.target instanceof HTMLButtonElement&&['Tab','Enter','Space'].includes(e.code))return;
  if(accounts.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
- if(!e.repeat)tap(keyMap[e.code]);
+ if(e.repeat)return;
+ tap(keyMap[e.code]);
  keyboard.add(e.code);
  recompute();
 });
@@ -128,8 +129,21 @@ function syncSave(){
  Module._web_save();
  flushBrowserStorage();
 }
-addEventListener('blur',()=>{focused=false;clearInput();syncSave();});addEventListener('focus',()=>{focused=true;last=performance.now();});
-document.addEventListener('visibilitychange',()=>{focused=!document.hidden;if(!focused){clearInput();syncSave();}last=performance.now();});
+function updateFocus(hasFocus){
+ const next=hasFocus&&!document.hidden;
+ if(focused===next)return;
+ focused=next;
+ last=performance.now();
+ if(focused)return;
+ clearInput();
+ // A hidden tab can lose every animation frame between blur and focus.
+ // Deliver the focus edge without advancing the game clock.
+ if(started&&!accounts.active)Module._web_tick(0,0,0,cols,rows,0);
+ syncSave();
+}
+addEventListener('blur',()=>updateFocus(false));
+addEventListener('focus',()=>updateFocus(true));
+document.addEventListener('visibilitychange',()=>updateFocus(document.hasFocus()));
 function resize(){
  const compact=mobile()&&!!(uiFlags&255),landscape=innerHeight<500&&stage.clientWidth>560;
  cols=compact?(landscape?60:38):Math.max(76,Math.min(160,Math.floor(stage.clientWidth/10)));

@@ -45,6 +45,20 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.up('ArrowRight');
     assert.equal(await page.evaluate(()=>held&(1<<1)),0,'right releases after both physical keys are up');
 
+    await page.keyboard.down('d');
+    const focusPause=await page.evaluate(()=>{
+      // Simulate a focus round trip with no animation frame between events.
+      window.dispatchEvent(new Event('blur'));
+      window.dispatchEvent(new Event('focus'));
+      window.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyD',repeat:true}));
+      return {paused:!!(uiFlags&2),held,pressed};
+    });
+    await page.keyboard.up('d');
+    assert.deepEqual(focusPause,{paused:true,held:0,pressed:0},'short focus loss pauses immediately and drops held input');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>!(uiFlags&2));
+    console.log('PASS short focus loss between animation frames pauses and resumes with cleared input');
+
     await page.screenshot({path:path.join(out,'web-opening-en.png')});
     await page.keyboard.press('j');await page.waitForFunction(()=>!!(window.entryFlags&128));
     await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await page.waitForTimeout(100);
