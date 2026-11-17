@@ -20,11 +20,13 @@ int main(int argc,char **argv) {
   if(scene.rfind("run:",0)==0) {
    int id=std::stoi(scene.substr(4));const auto &p=iceworld::pattern(id);
    game.grid=verified_room(id,73,iceworld::district_of(p));
-  } else if(scene=="tram") {
+  } else if(scene=="jubilee")game.grid=iceworld::build_jubilee();
+  else if(scene=="tram") {
    game.grid=iceworld::build_estate_sequence(true);game.grid.switch_flags=3;
   } else if(scene=="inspect")game.grid=iceworld::build_room(0,73,0);
   else game.grid=iceworld::build_settlement(0);
   game.district=game.grid.district;game.state=new_state(game.grid);game.state.menu=scene=="menu";
+  if(scene=="jubilee"){game.state.player.x=105;game.state.player.y=24-kPlayerHeight;game.grid.switch_flags=3;}
   if(scene=="tram"){game.state.player.x=130;game.state.player.y=23-kPlayerHeight;}
   if(scene=="dialogue"||scene=="inspect") {
    auto kind=scene=="dialogue"?InteractionKind::Npc:InteractionKind::Task;
@@ -48,11 +50,11 @@ int main(int argc,char **argv) {
    for(size_t y=0;y<frame.size();++y)for(size_t x=0;x<frame[y].size();++x)
     font.cell(frame[y][x],int(x)*cw,oy+int(y)*ch,cw,ch);
   };
-  RoutePilot pilot;pilot.predictive=game.grid.verification_policy;
+  RoutePilot pilot;pilot.predictive=game.grid.verification_policy;if(scene=="jubilee")pilot.target=9;
   std::vector<unsigned char> pixels(1920*1080*4);std::vector<float> samples(400*2);
   for(int frame=0;frame<count;++frame) {
    for(int tick=0;tick<2;++tick) {
-    Controls c;if(scene.rfind("run:",0)==0)c=pilot.controls(game.grid,game.state);
+    Controls c;if(scene.rfind("run:",0)==0||scene=="jubilee")c=pilot.controls(game.grid,game.state);
     if(frame==30&&tick==0) {if(scene=="tram"||scene=="dialogue")c.interact=true;if(scene=="inspect")c.inspect=true;}
     game.tick(c,1./120,true,cols,rows,2);
     if(!game.audio.render(samples.data(),400)){result=2;break;}

@@ -14,4 +14,7 @@
 
 .cell-input{position:absolute;z-index:2;opacity:.01;border:0;padding:0;font:16px Cell,monospace;caret-color:transparent;background:transparent;color:transparent;touch-action:manipulation}
 
+/* Glyphs are rasterized at display density, including high-DPI screens. */
+#game{image-rendering:auto}
+
 .account-open #touch,.account-open footer{display:none!important}

@@ -4,10 +4,11 @@ const stage=document.querySelector('#stage'),start=document.querySelector('#star
 const mobile=()=>matchMedia('(pointer:coarse)').matches||innerWidth<760||(innerHeight<500&&innerWidth<1100);
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastUI='',lastBlocked=false,uiFlags=0,english=false,bootStatus='Ładowanie gry…';
 const pointers=new Map(),keyboard=new Set(),tiles=new Map();
+let cellPixels=10;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
 function tile(code,fg,bg,bold){
  const key=[code,fg,bg,bold].join(':');if(tiles.has(key))return tiles.get(key);
- const c=document.createElement('canvas');c.width=10;c.height=20;const p=c.getContext('2d');p.fillStyle=colour(bg);p.fillRect(0,0,10,20);p.fillStyle=colour(fg);
+ const c=document.createElement('canvas');c.width=cellPixels;c.height=cellPixels*2;const p=c.getContext('2d');p.scale(cellPixels/10,cellPixels/10);p.fillStyle=colour(bg);p.fillRect(0,0,10,20);p.fillStyle=colour(fg);
  if(code>=0x2581&&code<=0x2588){const h=Math.floor(20*(code-0x2580)/8);p.fillRect(0,20-h,10,h);}
  else if(code===0x2580)p.fillRect(0,0,10,10);
  else if(code>=0x2589&&code<=0x258f)p.fillRect(0,0,Math.floor(10*(0x2590-code)/8),20);
@@ -21,9 +22,13 @@ function tile(code,fg,bg,bold){
  if(tiles.size>8192)tiles.clear();tiles.set(key,c);return c;
 }
 window.tvFrame=(data,w,h)=>{
- if(canvas.width!==w*10||canvas.height!==h*20){canvas.width=w*10;canvas.height=h*20;previous=new Uint32Array(0);}
  const scale=Math.min(stage.clientWidth/(w*10),stage.clientHeight/(h*20));canvas.style.width=w*10*scale+'px';canvas.style.height=h*20*scale+'px';
- for(let i=0;i<w*h;i++){const n=i*4;if(previous.length===data.length&&data[n]===previous[n]&&data[n+1]===previous[n+1]&&data[n+2]===previous[n+2]&&data[n+3]===previous[n+3])continue;ctx.drawImage(tile(data[n],data[n+1],data[n+2],data[n+3]),(i%w)*10,Math.floor(i/w)*20);}
+ // Rasterize glyphs for the actual display density instead of enlarging a
+ // fixed 10x20 bitmap. Whole-pixel cells keep adjacent block art seamless.
+ const pixels=Math.max(1,Math.ceil(10*scale*(window.devicePixelRatio||1)));
+ if(cellPixels!==pixels){cellPixels=pixels;tiles.clear();}
+ if(canvas.width!==w*pixels||canvas.height!==h*pixels*2){canvas.width=w*pixels;canvas.height=h*pixels*2;previous=new Uint32Array(0);}
+ for(let i=0;i<w*h;i++){const n=i*4;if(previous.length===data.length&&data[n]===previous[n]&&data[n+1]===previous[n+1]&&data[n+2]===previous[n+2]&&data[n+3]===previous[n+3])continue;ctx.drawImage(tile(data[n],data[n+1],data[n+2],data[n+3]),(i%w)*pixels,Math.floor(i/w)*pixels*2);}
  previous=new Uint32Array(data);
 };
 const tap=(...keys)=>{for(const k of keys)pressed|=1<<k;};
