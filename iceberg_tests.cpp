@@ -154,9 +154,18 @@ int main(int argc,char **argv) {
       {std::ofstream out(path,std::ios::binary);out<<bytes;}
     }
     profile.room=5;check(save.save(profile),"replacement save retains recovery copy");
+    auto backup=path;backup+=".bak";
+    const auto older=std::filesystem::file_time_type::clock::now()-std::chrono::hours(1);
+    std::filesystem::last_write_time(path,older);
+    std::filesystem::last_write_time(backup,older);
+    const auto primary_time=std::filesystem::last_write_time(path);
+    const auto backup_time=std::filesystem::last_write_time(backup);
+    check(save.save(profile)&&save.save(profile)&&std::filesystem::last_write_time(path)==primary_time&&
+      std::filesystem::last_write_time(backup)==backup_time,
+      "identical autosaves leave both the current file and distinct recovery file in place");
     {std::ofstream out(path);out<<"damaged";}
     check(save.load(loaded)&&save.recovered&&loaded.room==4,"damaged primary recovers prior good save");
-    std::filesystem::remove(path);auto backup=path;backup+=".bak";std::filesystem::remove(backup);
+    std::filesystem::remove(path);std::filesystem::remove(backup);
     iceberg::SessionOptions options;options.mute=true;options.seed=123;
     {
       AdventureSession session(options,path);session.begin_campaign(true);

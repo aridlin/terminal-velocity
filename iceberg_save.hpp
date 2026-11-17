@@ -44,7 +44,7 @@ class SaveStore {
   // Store the preference in a reserved flag in the existing TVICE6 record.
   // Older clients ignore and preserve it when rewriting their saves.
   static constexpr uint32_t focus_pause_disabled = uint32_t(1)<<31;
-  static bool read(const std::filesystem::path &file, Profile &p) {
+  static bool read(const std::filesystem::path &file, Profile &p, const std::string *matching_payload=nullptr) {
     std::error_code size_error;auto bytes=std::filesystem::file_size(file,size_error);
     if(size_error||bytes>65536)return false;
     std::ifstream in(file, std::ios::binary);
@@ -53,6 +53,7 @@ class SaveStore {
     if (!(in >> magic >> hash) || (magic != "TVICE2" && magic != "TVICE3" && magic != "TVICE4" && magic != "TVICE5" && magic != "TVICE6")) return false;
     in.get();
     std::string payload((std::istreambuf_iterator<char>(in)), {});
+    if (matching_payload && (magic != "TVICE6" || payload != *matching_payload)) return false;
     if (payload.size() > 65536 || checksum(payload) != hash) return false;
     std::istringstream data(payload);
     Profile q;
@@ -214,6 +215,10 @@ public:
     for(int d=0;d<DistrictCount;++d)
       body<<p.route_visited[size_t(d)]<<' '<<p.route_choices[size_t(d)]<<' '<<p.route_decisions[size_t(d)]<<'\n';
     auto payload = body.str();
+    Profile verified;
+    // Idle autosaves must leave the previous distinct progress in the recovery file.
+    if (read(path_, verified, &payload)) return true;
+
     std::error_code ec;
     if (!path_.parent_path().empty()) std::filesystem::create_directories(path_.parent_path(), ec);
     if (ec) return false;
@@ -229,7 +234,6 @@ public:
       out.close();
       if (!out) return false;
     }
-    Profile verified;
     if (!sync_file(temp) || !read(temp, verified)) { std::filesystem::remove(temp, ec); return false; }
     Profile current;
     // Never replace a healthy recovery copy with a damaged primary save.
