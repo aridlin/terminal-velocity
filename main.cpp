@@ -2004,6 +2004,7 @@ public:
   }
 
 private:
+  static constexpr uint32_t water_surface_background=0x214b62;
 #include "iceberg_render.hpp"
   const EngineGrid &grid_;
   const GameState &state_;
@@ -2117,7 +2118,7 @@ private:
         if(wx<water.x||wx>=water.right()||depth<0||depth>=water.h)continue;
         const int ripple=int(wx/scale_+state_.elapsed*6);
         if(depth<aspect_*scale_)
-          return {ripple%8<3?"∿":"─",Color::Decor,false,false,0,0x8ed9e5,0x214b62};
+          return {ripple%8<3?"∿":"─",Color::Decor,false,false,0,0x8ed9e5,water_surface_background};
         if(ripple%13==int(depth*2)%13)
           return {"·",Color::Decor,false,false,0,0x5196ab,0x14394e};
         return {" ",Color::Decor,false,false,0,0,0x14394e};

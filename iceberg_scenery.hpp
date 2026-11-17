@@ -49,6 +49,24 @@
       [center](const Rect &water){return center>=water.x&&center<water.right();});
     if(basin==grid_.water_basins.end())return;
     const int surface=screen(deck.x,basin->y+.5*row).second;
+    if(surface>=4&&surface<rows_-3) {
+      const auto &ferry=grid_.platforms[platform];
+      const int inset=std::clamp(surface-deck_row-1,0,(width-4)/2);
+      const double draft_inset=inset*scale_;
+      // Sample earlier stern positions so the foam stays on the water and
+      // fades behind the ferry even while it turns at the berth.
+      for(double age:{.80,.58,.38,.22,.10}) {
+        const double time=state_.elapsed-age;
+        if(time<0)continue;
+        const auto previous=ferry.at(time);
+        const double travel=previous.x-ferry.at(time-.10).x;
+        if(std::abs(travel)<.08)continue;
+        const double stern=travel>0?previous.x+draft_inset:previous.right()-draft_inset;
+        const int x=screen(stern-travel,basin->y).first;
+        if(x<0||x>=cols_||buffer_[surface][x].background!=water_surface_background)continue;
+        put(surface,x,{age<.3?"≈":age<.6?"∼":"·",Color::Decor,false,false,0,age<.3?0xb6eef1u:0x75bbc8u});
+      }
+    }
     draw_ferry_gunwale(deck,0,cols_);
     for(int y=deck_row+1;y<=surface+1;++y) {
       const int inset=std::min((width-4)/2,y-deck_row-1);

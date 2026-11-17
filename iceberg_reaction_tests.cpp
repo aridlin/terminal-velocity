@@ -118,5 +118,24 @@ int main(){try{
      frame[surface+1][midpoint].glyph=="━"&&frame[surface+1][midpoint].background==0x14394e,
      "the hull intersects the waterline and extends below it");
  }
+ game.state.player.support=-1;
+ game.state.camera_y=40.;
+ for(double time:{1.6,5.0}) {
+   game.state.elapsed=time;
+   RenderGrid(game.grid,game.state,34,110,2).draw();
+   const auto sailing=game.grid.platforms[0].at(time);
+   const double center=sailing.x+sailing.w*.5;
+   int foam=0;
+   for(size_t y=4;y+3<frame.size();++y)for(size_t x=0;x<frame[y].size();++x) {
+     const auto &cell=frame[y][x];
+     if(cell.rgb!=0xb6eef1&&cell.rgb!=0x75bbc8)continue;
+     ++foam;
+     const double wx=game.state.camera_x+x*.4;
+     const bool trailing=time<3.4?wx<center:wx>center;
+     if(!trailing||cell.background!=0x214b62)
+       throw std::runtime_error("ferry wake must trail the boat on the water surface");
+   }
+   require_reaction(foam>=2,"ferry leaves visible foam behind it in either direction");
+ }
  return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}
