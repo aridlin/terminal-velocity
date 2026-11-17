@@ -63,8 +63,10 @@ function selectLanguage(language){
 for(const b of document.querySelectorAll('[data-language]'))b.onclick=()=>selectLanguage(b.dataset.language);
 for(const b of document.querySelectorAll('[data-language-toggle]'))b.onclick=()=>selectLanguage(english?'pl':'en');
 window.tvUI=u=>{
- const blocked=!!(u.flags&(1|2|4|8|64|128|1024));
- if(blocked!==lastBlocked){clearInput();lastBlocked=blocked;}
+ const modalFlags=1|2|4|8|64|128;
+ // A doorway still reads held movement while its shutter opens.
+ if(!!(u.flags&modalFlags)!==!!(uiFlags&modalFlags))clearInput();
+ lastBlocked=!!(u.flags&(modalFlags|1024));
  const before=uiFlags;uiFlags=u.flags;
  if((before&(255|1024))!==(uiFlags&(255|1024)))resize();
  const nextEnglish=!!(u.flags&512);
@@ -73,10 +75,35 @@ window.tvUI=u=>{
  translateUI();
 };
 const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25};
-function recompute(){held=0;for(const k of keyboard)held|=1<<k;for(const k of pointers.values())held|=1<<k;}
-addEventListener('keydown',e=>{if(e.target instanceof HTMLButtonElement&&['Tab','Enter','Space'].includes(e.code))return;if(accounts.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;e.preventDefault();const k=keyMap[e.code];if(!e.repeat)tap(k);keyboard.add(k);recompute();});
-addEventListener('keyup',e=>{if(keyMap[e.code]!==undefined){keyboard.delete(keyMap[e.code]);recompute();}});
-for(const button of document.querySelectorAll('[data-key]')){button.addEventListener('pointerdown',e=>{if(accounts.active||!started)return;e.preventDefault();const k=button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;button.setPointerCapture(e.pointerId);pointers.set(e.pointerId,k);button.classList.add('held');tap(k);recompute();});for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>{pointers.delete(e.pointerId);button.classList.remove('held');recompute();});}
+function recompute(){
+ held=0;
+ for(const code of keyboard)held|=1<<keyMap[code];
+ for(const {key} of pointers.values())held|=1<<key;
+}
+addEventListener('keydown',e=>{
+ if(e.target instanceof HTMLButtonElement&&['Tab','Enter','Space'].includes(e.code))return;
+ if(accounts.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
+ e.preventDefault();
+ if(!e.repeat)tap(keyMap[e.code]);
+ keyboard.add(e.code);
+ recompute();
+});
+addEventListener('keyup',e=>{if(keyboard.delete(e.code))recompute();});
+for(const button of document.querySelectorAll('[data-key]')){
+ button.addEventListener('pointerdown',e=>{
+  if(accounts.active||!started)return;
+  e.preventDefault();
+  const key=button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;
+  button.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId,{key,button});
+  button.classList.add('held');tap(key);recompute();
+ });
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>{
+  pointers.delete(e.pointerId);
+  if(![...pointers.values()].some(pointer=>pointer.button===button))button.classList.remove('held');
+  recompute();
+ });
+}
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{tap(+b.dataset.tap);canvas.focus();};
 function clearInput(){keyboard.clear();pointers.clear();held=pressed=0;document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function syncSave(){if(!started||syncing)return;Module._web_save();syncing=true;Module.FS.syncfs(false,error=>{syncing=false;if(!error)try{localStorage.removeItem(pendingLanguageKey);}catch{}saveStatus.textContent=error?(english?'Save failed — download a copy':'Błąd zapisu — pobierz kopię'):(english?'Saved in this browser ✓':'Zapis w tej przeglądarce ✓');});}

@@ -17,8 +17,21 @@ const fs=require('node:fs'),path=require('node:path');
   await page.locator('#start').click();
   await page.waitForFunction(()=>started && (uiFlags&256) && !(uiFlags&1));
   const lesson=legacy?"School without a bell":"Lessons on the quay";
+  await page.keyboard.down('d');
+  const heldAtDoor=await page.evaluate(()=>{
+   const draw=window.tvFrame;window.tvFrame=()=>{};
+   try {
+    for(let i=0;i<300&&!(uiFlags&1024);i++)
+     Module._web_tick(.1,held|16,i%7===0?16:0,90,32,1);
+    return !!(uiFlags&1024)&&!!(held&2);
+   }finally{window.tvFrame=draw;}
+  });
+  assert.ok(heldAtDoor,'a real held key survives reaching the first WASM doorway');
+  await page.waitForFunction(()=>!!(uiFlags&4)||!(uiFlags&1024));
+  await page.keyboard.up('d');
+
   const result=await page.evaluate(lesson=>{
-   const realFrame=window.tvFrame;let title='',arrived=false,briefing=false,door=false,frames=0;
+   const realFrame=window.tvFrame;let title='',arrived=false,briefing=false,frames=0;
    let firstLessonFrame='',lastLessonFrame='',lessonTicks=0;
    window.tvFrame=(cells,w,h)=>{
     const row=y=>Array.from({length:w},(_,x)=>String.fromCodePoint(cells[(y*w+x)*4])).join('');
@@ -33,15 +46,15 @@ const fs=require('node:fs'),path=require('node:path');
    try {
     for(let i=0;i<650;i++){
      if(arrived&&++lessonTicks>35)break;
-     if(uiFlags&4)briefing=true;if(uiFlags&1024)door=true;
+     if(uiFlags&4)briefing=true;
      // Walk and jump east, acknowledge briefing pages, never confirm a door.
      Module._web_tick(.1,2|16,(uiFlags&4)?256:(i%7===0?16:0),90,32,1);
     }
-    return {title,arrived,briefing,door,frames,lessonTicks,moved:firstLessonFrame!==lastLessonFrame};
+    return {title,arrived,briefing,frames,lessonTicks,moved:firstLessonFrame!==lastLessonFrame};
    }finally{window.tvFrame=realFrame;}
   },lesson);
   console.log(result);
-  assert.ok(result.briefing&&result.door&&result.arrived&&result.moved);
+  assert.ok(result.briefing&&result.arrived&&result.moved);
   await page.evaluate(()=>new Promise((resolve,reject)=>{Module._web_save();Module.FS.syncfs(false,e=>e?reject(e):resolve());}));
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#start').disabled);
   await page.locator('#start').click();

@@ -39,6 +39,12 @@ const server=http.createServer((req,res)=>{
    if(locale==='en-US'){
     await page.evaluate(()=>{const frame=window.tvFrame,ui=window.tvUI;window.tvFrame=(cells,w,h)=>{window.entryFrame=Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>String.fromCodePoint(cells[(y*w+x)*4])).join('')).join('\n');frame(cells,w,h);};window.tvUI=u=>{window.entryFlags=u.flags;ui(u);};});
     await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);
+    await page.keyboard.down('d');await page.keyboard.down('ArrowRight');
+    await page.keyboard.up('d');
+    assert.ok(await page.evaluate(()=>held&(1<<1)),'right remains held through the other physical key');
+    await page.keyboard.up('ArrowRight');
+    assert.equal(await page.evaluate(()=>held&(1<<1)),0,'right releases after both physical keys are up');
+
     await page.screenshot({path:path.join(out,'web-opening-en.png')});
     await page.keyboard.press('j');await page.waitForFunction(()=>!!(window.entryFlags&128));
     await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await page.waitForTimeout(100);
