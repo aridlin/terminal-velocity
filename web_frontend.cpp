@@ -53,6 +53,9 @@ EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language) {
   EM_ASM({console.info("Terminal Velocity audio: ready="+$0+", loaded clips="+$1);},web_game->audio.ready(),int(web_game->audio.loaded_clips()));
   if(!web_game->audio.ready())web_game->notice(web_game->t("Dźwięk niedostępny w tej przeglądarce.","Audio is unavailable in this browser."),8);
 }
+EMSCRIPTEN_KEEPALIVE void web_enter_campaign() {
+  if(web_game)web_game->begin_campaign(false);
+}
 EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int cols,int rows,int focused) {
   if(!web_game)return;
   auto h=[&](int key){return bool(held&(1u<<key));};auto p=[&](int key){return bool(pressed&(1u<<key));};

@@ -1,5 +1,64 @@
 // RenderGrid members: authored silhouettes, positioned in world space and
 // painted behind gameplay objects. A room's landmark is not a collision mask.
+  void draw_quay_hoist() {
+    const auto &d=iceberg::Districts[0];
+    const double row=aspect_*scale_;
+    for(double x=81;x<=106;x+=scale_)
+      world_art(x,25,{"═","╳","═"},0x748a8c);
+    for(double y=25;y<48;y+=row)
+      world_art(105,y,{"╫╳╫"},0x72878b);
+    for(const auto &sling:grid_.platforms) {
+      const Rect deck=sling.at(state_.elapsed);
+      double center=deck.x+deck.w*.5;
+      world_art(center-2*scale_,25-row,{"╭───╮","│ ◉ │","╰─┬─╯"},d.accent);
+      for(double y=25+row;y<deck.y-3*row;y+=row)
+        world_art(center,y,{"│"},0x889a95);
+      world_art(center-3*scale_,deck.y-3*row,{"   ∧","  ╱ ╲"," ╱   ╲"},0x9daaa3);
+      int width=std::max(4,int(deck.w/scale_));
+      std::string edge="╲";
+      for(int i=2;i<width;++i)edge+=i%4==0?"┴":"─";
+      world_art(deck.x,deck.y+row,{edge+"╱"},d.accent);
+      world_art(center-5*scale_,deck.y+2*row,{"┏━━━━┳━━━━┓","┃╲   ┃   ╱┃","┃ ╲  ┃  ╱ ┃","┗━━╧━┻━╧━━┛"},0xbd9364);
+    }
+  }
+  void draw_quay_ferry(const Rect &deck) {
+    const double row=aspect_*scale_;
+    int width=std::max(6,int(deck.w/scale_));
+    std::string hull="╲";
+    for(int i=2;i<width;++i)hull+=i%7==0?"○":"━";
+    world_art(deck.x,deck.y+row,{hull+"╱"},0xa58460);
+    world_art(deck.x+deck.w*.38,deck.y-6*row,
+      {"     ▆▆","     ▓▓","  ▟██████▙","  ▌▥ ▥ ▥ ▐","╔═╧══════╧══╗","║ ○       ○ ║"},0x82999a);
+    int wake=int(state_.elapsed*4)%3;
+    world_art(deck.x-3*scale_,deck.y+2*row,{wake==0?"∿  ∿":" ∿  ∿"},0x527a89);
+  }
+  void draw_pipe_drip(double x,double roof,double floor,double offset) {
+    double row=aspect_*scale_;
+    world_art(x-12*scale_,roof,{"══╪╪════╪╪══╗","──┼┼────┼┼─╮║","           ╰╨"},0xa1a8a1);
+    double phase=std::fmod(state_.adventure.presentation_time+offset,2.35);
+    double lip=roof+2*row;
+    if(phase<.6)world_art(x,lip+row,{"·"},0x8baab6);
+    else if(phase<1.45) {
+      double fall=(phase-.6)/.85;
+      world_art(x,lip+row+(floor-lip-2*row)*fall*fall,{"╵"},0xa0c4d0);
+    } else if(phase<1.8)
+      world_art(x-2*scale_,floor-row,{phase<1.60?"  ˇ":"· ∙ ·"},0x8baab6);
+  }
+  void draw_sorting_belts() {
+    for(const auto &belt:grid_.sorting_belts) {
+      const double row=aspect_*scale_;
+      const int count=std::max(3,int(belt.width/scale_));
+      world_art(belt.speed>0?belt.x:belt.x+belt.width-3,belt.y-6*row,
+        {"▌     ▐","╲     ╱"," ╲   ╱","  ║ ║","  ╚═╝"},0x7e9297);
+      const int travel=int(std::floor(state_.elapsed*belt.speed/scale_));
+      std::string tread="◉";
+      for(int i=2;i<count;++i)tread+=(i-travel)%5==0?(belt.speed>0?"›":"‹"):"─";
+      world_text(belt.x,belt.y+row,tread+"◉",0xab946f);
+      double pos=std::fmod(state_.elapsed*std::abs(belt.speed),belt.width-2);
+      if(belt.speed<0)pos=belt.width-2-pos;
+      world_art(belt.x+pos,belt.y-3*row,{"┏━┯━┓","┃╲│╱┃","┗━┷━┛"},0xc6a078);
+    }
+  }
   void draw_harbor_landmarks() {
     const auto &d=iceberg::Districts[0];const int id=grid_.template_id;
     const double time=state_.adventure.presentation_time;
@@ -25,9 +84,16 @@
     }
     if(id==600) {
       world_art(3,48-9*aspect_*scale_,{"      ╱──────────────────╲"," ╔═══╧════════════════════╧═══╗",tr(" ║       P O C Z T A          ║"," ║         P O S T            ║")," ╟───────────────────────────╢"," ║ ▤▤  ▤▤  ▤▤   ╭─────╮  ▤▤ ║"," ║              │ ░░░ │     ║"," ║  ▱▱▱         │ ░░░ │     ║"," ╚══════════════╧═════╧═════╝"},d.stone);
+      // A letter feeds under the descending stamp inside the postal window.
+      double feed=std::fmod(time,3.);
+      double row=aspect_*scale_;
+      world_art(4,48-5*row,{"╔══════╗","║      ║","║      ║","╠══════╩══════╗","╨             ╨"},0x947959);
+      world_art(4+5*scale_,48-(feed>1.5&&feed<2.?3:4)*row,{"▐█▌"},0xb39878);
+      world_art(4+std::min(feed,2.5)*3*scale_,48-3*row,{"✉"},d.light);
       world_art(40,39-7*aspect_*scale_,{"    ╱────────────╲","╭──╧──────────────╧──╮","│  ▣   ▣   ▣   ▣    │","├───────────────────┤","│  ╭──╮    ╭──╮     │","│  │  │    │  │     │","╰──┴──┴────┴──┴─────╯"},d.stone);
       world_art(59,43-5*aspect_*scale_,{"╭───────────────────╮",tr("│ KAWA • NAPRAWY     │","│ COFFEE • REPAIRS   │"),"├───────────────────┤","│ ▤▤ ▤▤   ╭────╮    │","╰─────────┴────┴────╯"},0x5f777b);
-      world_art(88,48-6*aspect_*scale_,{" ╱▔▔╲╱▔▔╲╱▔▔╲╱▔▔╲","│                 │","│  ♧  ▰  ♧  ▰    │","├─────────────────┤","│                 │","╰───┬─────────┬───╯"},d.stone);
+      draw_quay_hoist();
+      world_art(106,48-6*aspect_*scale_,{" ╱▔▔╲╱▔▔╲╱▔▔╲╱▔▔╲","│                 │","│  ♧  ▰  ♧  ▰    │","├─────────────────┤","│                 │","╰───┬─────────┬───╯"},d.stone);
       world_art(94+std::sin(time*.7)*1.5,48-3*aspect_*scale_,{" ▄ ",int(time*2)%2?"╭▤╯":"╰▤╮","╱ ╲"},0x728b8b);
       for(int x=83;x<123;x+=12)world_art(x,58,{"║","║","╨"},d.stone);
       world_art(112,48-8*aspect_*scale_,{"╭─────╮","│  ◷  │","╰──┬──╯","   │","   │"},d.accent);
@@ -35,6 +101,9 @@
     }
     if(id==601) {
       world_art(8,55-8*aspect_*scale_,{"╭─────────────────────────╮",tr("│ SZKOŁA NA NABRZEŻU       │","│ LESSONS ON THE QUAY      │"),"├─────────────────────────┤","│ ▤▤ ▤▤ ▤▤  ╭─────╮  ▤▤   │","│           │     │       │","│           │  ○  │       │","╰───────────┴─────┴───────╯"},d.stone);
+      draw_quay_ferry(grid_.platforms.front().at(state_.elapsed));
+      for(double x=92;x<120;x+=3.7)
+        world_art(x+.4*std::sin(time+x),49.7+.35*std::sin(x+time),{"∿─∿"},0x658895);
       world_art(70,49-5*aspect_*scale_,{"╭──────────────────╮","│ ▥▥▥  ▥▥▥  ▥▥▥    │","├──────────────────┤","│  ▱▱▱  ▱▱▱  ▱▱▱   │","╰──────────────────╯"},d.stone);
       world_art(137,43-7*aspect_*scale_,{"        ╔══════════════╗","        ║              │","        ║              │","        ║             ╱╲","        ║            ▐▣▣▌","        ║","════════╩═══════════════"},d.stone);
       world_art(171,40-5*aspect_*scale_,{"╭───────────────────╮",tr("│ DO DOKÓW       →  │","│ TO THE DOCKS   →  │"),"╰──┬─────────────┬──╯","   │             │","═══╧═════════════╧═══"},d.stone);
@@ -43,7 +112,7 @@
     if(iceworld::harbor_v4_room(id)) {
       const auto &p=iceworld::pattern(id);
       auto entrance=p.path.front();
-      world_art(entrance.x+3,entrance.y-6*aspect_*scale_,
+      if(id!=503&&id!=504&&id!=505&&id!=509)world_art(entrance.x+3,entrance.y-6*aspect_*scale_,
         {"╭─────────────╮","│ ▣▣   ╭───╮  │","│      │   │  │","│  ◴   │ ○ │  │","│      │   │  │","╰──────┴───┴──╯"},d.stone);
       for(size_t i=0;i<p.path.size();++i) {
         auto a=p.path[i];
@@ -72,14 +141,17 @@
         world_art(52,10,{"                ╔══════════════════╗","               ╱║                  │","              ╱ ║                  │","             ╱  ║                 ╱╲","            ╱   ║                ▐▣▣▌","           ╱    ║","          ╱     ║","         ╱      ║","        ╱       ║","       ╱        ║","      ╱         ║"},d.stone);
       } else if(id==503) {
         world_art(88,43-6*aspect_*scale_,{" ╭──────────────────╮",tr(" │ SORTOWNIA  02    │"," │ SORTING    02    │")," │ ▯ ▯ ▯ ▯ ▯ ▯ ▯ ▯  │"," ╰───╥────────╥─────╯","     ║        ║","═════╩════════╩══════"},d.stone);
-        world_art(89+std::fmod(time*1.3,12.),43-2*aspect_*scale_,{"▱"},0x8b9a96);
+        draw_sorting_belts();
       } else if(id==504) {
         for(const auto &platform:grid_.platforms) {
           auto boat=platform.at(state_.elapsed);
-          world_art(boat.x,boat.y+.8,{"╲___________╱"," ∿∿∿∿∿∿∿∿∿∿∿"},d.stone);
+          draw_quay_ferry(boat);
         }
         world_art(126,41-6*aspect_*scale_,{"    ╱╲","   ╱  ╲","  ╱    ╲"," ╱______╲","     │","─────┴──────"},d.stone);
       } else if(id==505) {
+        draw_pipe_drip(44,34.5,41,0);
+        draw_pipe_drip(78,38.5,45,1.1);
+        draw_pipe_drip(102,31,48,.3);
         for(int x=72;x<grid_.width()-12;x+=25)world_art(x,28,{"╔══════════════════╗","╚══════════════════╝","     ║       ║"},0x38535a);
         world_art(98,48-5*aspect_*scale_,{"╭─────────────╮","│  ◴     ◷    │","╰──┬─────┬────╯","   ║     ║","═══╩═════╩════"},d.stone);
       } else if(id==506) {
@@ -153,7 +225,6 @@
   void draw_room_identity() {
     int id=grid_.template_id;
     if(id>=400){draw_revision_landmark();return;}
-    if(id<0||id>=int(iceworld::patterns().size()))return;
     static const std::vector<std::vector<std::string>> landmarks{
       {"      ╭───────╮", "──────┤ POCZTA├──────", "      ╰───┬───╯", "   ╭──────┴──────╮", "   │ ▣   ▣   ▣   │", "   ╰──────┬──────╯", "          │"},
       {"   ║      ║", "╭──╨──────╨──╮", "│  ≋≋≋≋≋≋≋≋  │", "│  ╭──────╮  │", "│  │  ◉   │  │", "│  ╰──────╯  │", "╰──╥──────╥──╯", "   ║      ║"},
@@ -180,6 +251,7 @@
       {"     │         │", "   ╭─┼─╮     ╭─┼─╮", "   │ ◉ │─────│ ◉ │", "   ╰─┬─╯     ╰─┬─╯", "     │         │", "╔════╧═════════╧════╗", "║ ▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤  ║", "╚═══════════════════╝"},
       {"╔══════════════════════╗", "║ ▣ ▣ ▣ ▣ │ ━━━ ━━━    ║", "║ ▣ ▣ ▣ ▣ │ ━━━ ━━━    ║", "╟─────────┼────────────╢", "║  ◉  ○   │  ◴    ◷    ║", "╚═════════╧════════════╝", "  ║                 ║"}
     };
+    if(id<0||size_t(id)>=landmarks.size())return;
     const auto &pattern=iceworld::pattern(id);
     const auto &pad=pattern.path[pattern.path.size()/2];
     const auto &d=iceberg::Districts[size_t(grid_.district)];

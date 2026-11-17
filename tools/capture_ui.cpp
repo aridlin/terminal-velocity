@@ -15,7 +15,9 @@ int main(int argc,char **argv) {
   options.language_override=true;options.language=std::string(argv[4])=="pl"?iceberg::Language::Polish:iceberg::Language::English;
   AdventureSession game(options,std::filesystem::path{});game.begin_campaign(true);
   if(scene=="lesson")game.grid=iceworld::build_harbor_lesson_v4();
-  if(scene=="room500")game.grid=iceworld::build_room(500,73,0);
+  if(scene=="room500"||scene=="sorting"||scene=="pipe")game.grid=iceworld::build_room(scene=="sorting"?503:scene=="pipe"?505:500,73,0);
+ if(scene=="ferry")game.grid=iceworld::build_harbor_lesson_v4();
+ if(scene=="boiler")game.grid=game.campaign_authored(1,false);
   if(scene=="mission310")game.grid=iceworld::build_harbor_mission_v4(0);
   if(scene=="archive"||scene=="archive:dialogue")game.grid=iceworld::build_archive_settlement();
   if(scene=="archive:finale")game.grid=iceworld::build_archive_sequence(true);
@@ -26,6 +28,15 @@ int main(int argc,char **argv) {
    if(npc!=game.grid.interactions.end()){game.state.player.x=npc->area.x;game.state.player.y=npc->area.bottom()-kPlayerHeight;}
   }
   if(scene=="archive:finale"){game.state.player.x=174;game.state.player.y=32-kPlayerHeight;game.grid.switch_flags=3;}
+  if(scene=="hoist"||scene=="ferry"||scene=="sorting"||scene=="pipe"||scene=="boiler"){
+   auto &p=game.state.player;
+   if(scene=="hoist"){p.x=87;p.y=40-kPlayerHeight;}
+   if(scene=="ferry"){p.x=110;p.y=47-kPlayerHeight;}
+   if(scene=="sorting"){p.x=44;p.y=49-kPlayerHeight;}
+   if(scene=="pipe"){p.x=46;p.y=41-kPlayerHeight;}
+   if(scene=="boiler"){p.x=59;p.y=41-kPlayerHeight;}
+   game.state.elapsed=game.state.adventure.presentation_time=1.3;
+  }
   game.sync_view();update_camera(game.state,game.grid,cols,rows-7,2,10);game.tick({},0,true,cols,rows,2);game.state.adventure.door_left=0;
   if(scene=="dialogue"||scene=="archive:dialogue"){game.talk(iceberg::introduction(game.grid.district));game.dialogue_next();}
   if(scene=="quest") {game.profile.quests[0]=1;game.profile.quest_counts[0]=1;game.profile.quest_focus=0;game.sync_view();game.state.journal=true;game.state.adventure.selected=1;}

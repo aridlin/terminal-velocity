@@ -23,6 +23,12 @@ inline void decorate_harbor_room(EngineGrid &g,const Pattern &spec) {
         bottom=std::min(bottom,lower.y-7);
     if(bottom>p.y+2)g.add_solid_rect(p.x+2,p.y+2,std::max(1,p.w-4),bottom-p.y-2);
   }
+  if(g.template_id==503) {
+    for(size_t i=1;i+1<spec.path.size();++i) {
+      auto pad=spec.path[i];
+      g.sorting_belts.push_back({pad.x+2.,double(pad.y),pad.w-4.,i%2?5.:-4.});
+    }
+  }
   int item=harbor_mail_item(g.template_id);
   if(item>=0) {
     auto p=spec.optional.back();
@@ -45,6 +51,11 @@ inline EngineGrid build_harbor_settlement_v4() {
   g.add_solid_rect(17,46,6,2);g.add_solid_rect(35,43,8,5);
   g.spawn_x=6;g.spawn_y=48-kPlayerHeight;g.goal={119,44,3,4};
   g.checkpoint_points={{6,g.spawn_y}};
+  // Paired slings on one drum. Both can be boarded from the quay;
+  // missing the aerial transfer lands the courier on the market floor.
+  g.platforms.push_back({{83,40,8,.5},0,6.5,6,.25});
+  g.platforms.push_back({{96,40,8,.5},0,-6.5,6,.25});
+  g.sweets.push_back({93,30});
   g.springs.push_back({17,45.7,1.5,.3});
   g.interactions.push_back({{11,44,4,4},InteractionKind::Npc,0,{"Porozmawiaj","Talk"}});
   g.interactions.push_back({{44,35,4,4},InteractionKind::Npc,6,{"Porozmawiaj","Talk"}});
@@ -58,7 +69,16 @@ inline EngineGrid build_harbor_lesson_v4() {
   g.room_name={"Szkoła na nabrzeżu","Lessons on the quay"};
   const std::vector<Pad> path{{3,55,28},{36,52,24},{68,49,24},{100,46,24},{132,43,24},{164,40,28}};
   for(size_t i=0;i<path.size();++i) {
-    auto p=path[i];g.add_solid_rect(p.x,p.y,p.w,2);g.add_solid_rect(p.x+2,p.y+2,p.w-4,62-p.y-2);
+    auto p=path[i];
+    if(i==3) {
+      // This berth spans the channel between two fixed quay walls.
+      // The short landing remains reachable if the player misses the ferry.
+      g.add_solid_rect(p.x+p.w-4,p.y,4,62-p.y);
+      g.platforms.push_back({{104,47,12,.6},8,0,6.8,.75});
+    } else {
+      g.add_solid_rect(p.x,p.y,p.w,2);
+      g.add_solid_rect(p.x+2,p.y+2,p.w-4,62-p.y-2);
+    }
     g.route_points.push_back({p.x+p.w*.5,double(p.y)});
     if(i%2==0)g.checkpoint_points.push_back({p.x+2.,p.y-kPlayerHeight});
     if(i)g.sweets.push_back({p.x+p.w*.5,p.y-2.});

@@ -38,7 +38,7 @@ const server=http.createServer((req,res)=>{
    await page.waitForTimeout(100);assert.equal(await page.locator('html').getAttribute('lang'),expected,locale+' fresh game');
    if(locale==='en-US'){
     await page.evaluate(()=>{const frame=window.tvFrame,ui=window.tvUI;window.tvFrame=(cells,w,h)=>{window.entryFrame=Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>String.fromCodePoint(cells[(y*w+x)*4])).join('')).join('\n');frame(cells,w,h);};window.tvUI=u=>{window.entryFlags=u.flags;ui(u);};});
-    await page.keyboard.press('Enter');await page.waitForTimeout(650);
+    await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);
     await page.screenshot({path:path.join(out,'web-opening-en.png')});
     await page.keyboard.press('j');await page.waitForFunction(()=>!!(window.entryFlags&128));
     await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await page.waitForTimeout(100);
@@ -95,7 +95,7 @@ const server=http.createServer((req,res)=>{
   const mobile=await browser.newContext({locale:'pl-PL',viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
   const page=await mobile.newPage();page.on('pageerror',e=>errors.push(String(e)));await page.goto(url);await page.waitForFunction(()=>!document.querySelector('#start').disabled);
   await page.locator('[data-language="en"]').click();await page.locator('#start').click();await page.waitForTimeout(150);
-  await page.keyboard.press('Enter');await page.waitForTimeout(650);await page.screenshot({path:path.join(out,'web-mobile-opening.png')});
+  await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);await page.screenshot({path:path.join(out,'web-mobile-opening.png')});
   for(const size of [{width:390,height:844},{width:844,height:390},{width:760,height:600},{width:1920,height:1080}]){
    await page.setViewportSize(size);await page.waitForTimeout(100);
    const ratio=await page.locator('#game').evaluate(c=>({bitmap:c.width/c.height,display:c.getBoundingClientRect().width/c.getBoundingClientRect().height}));

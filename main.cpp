@@ -340,7 +340,15 @@ struct Interaction {
   iceberg::Text label;
   int detail = 0;
 };
-struct AirField { Rect area; double ax = 0, ay = 0, period = 0, phase = 0; uint64_t disabled_by = 0; };
+struct SortingBelt { double x, y, width, speed; };
+struct AirField {
+  Rect area;
+  double ax=0, ay=0, period=0, phase=0;
+  uint64_t disabled_by=0;
+  double strength(double elapsed) const {
+    return period<=0 ? 1. : .5+.5*std::sin((elapsed/period+phase)*6.283185307);
+  }
+};
 struct Gate { Rect area; uint64_t flag = 0; };
 struct GrowingBridge { Rect area; uint64_t flag = 0; double amount = 1.; };
 struct PulseHazard {
@@ -447,6 +455,7 @@ public:
   std::vector<std::pair<double,double>> checkpoint_points, route_points;
   std::vector<Interaction> interactions;
   std::vector<AirField> air_fields;
+  std::vector<SortingBelt> sorting_belts;
   std::vector<PulseHazard> pulses;
   std::vector<Gate> gates;
   std::vector<GrowingBridge> growth;
@@ -975,6 +984,21 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       p.y += now.y - old.y;
     }
   }
+  if (p.grounded && p.support < 0) {
+    for (const auto &belt : g.sorting_belts) {
+      const auto feet = p.rect();
+      if (std::abs(feet.bottom() - belt.y) > .1 ||
+          feet.right() <= belt.x || feet.left() >= belt.x + belt.width) continue;
+      double run_speed = p.vx;
+      p.vx = belt.speed;
+      move_axis(g, p, dt, 'x');
+      p.vx = run_speed;
+      p.lift_x = belt.speed;
+      p.lift_y = 0;
+      p.lift_left = .12;
+      break;
+    }
+  }
   Rect old = p.rect();
   bool dashing = p.dash_time_left > 0;
   s.elapsed += dt;
@@ -985,8 +1009,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
     return;
   for (const auto &field : g.air_fields)
     if (!(field.disabled_by&&(g.switch_flags&field.disabled_by)==field.disabled_by) && p.rect().intersects(field.area) && p.dash_time_left <= 0) {
-      double amount = field.period <= 0 ? 1. :
-        .5 + .5 * std::sin((s.elapsed / field.period + field.phase) * 6.283185307);
+      double amount = field.strength(s.elapsed);
       p.vx += field.ax * amount * dt;
       p.vy += field.ay * amount * dt;
       p.vx = clamp(p.vx, -38., 38.);

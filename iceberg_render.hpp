@@ -107,15 +107,20 @@
     // Decoration is behind collision and characters, even when the camera
     // exposes only a few cells of a large architectural landmark.
     auto [origin_x,origin_y]=screen(x,y);
+    if(origin_x>=cols_||origin_y>=rows_-3||origin_y+int(lines.size())<=4)return;
     for(size_t r=0;r<lines.size();++r) {
+      int sy=origin_y+int(r);
+      if(sy<4||sy>=rows_-3)continue;
+      // UTF-8 byte length is a conservative upper bound on occupied cells.
+      if(origin_x+int(lines[r].size())<=0)continue;
       auto glyph=glyphs(lines[r]);
       for(size_t c=0;c<glyph.size();++c) {
-        if(glyph[c]==" ")continue;
+        int sx=origin_x+int(c);
+        if(sx<0||sx>=cols_||glyph[c]==" ")continue;
         double wx=x+c*scale_,wy=y+r*aspect_*scale_;
         if(grid_.solid_at(int(std::floor(wx)),int(std::floor(wy)))||grid_.hazard_at(int(std::floor(wx)),int(std::floor(wy)))||
            state_.player.rect().intersects({wx,wy,scale_,aspect_*scale_}))continue;
-        int sx=origin_x+int(c),sy=origin_y+int(r);
-        if(sy>=4&&sy<rows_-3)paint_text(sy,sx,glyph[c],rgb);
+        put(sy,sx,{glyph[c],Color::Text,false,false,0,rgb});
       }
     }
   }
@@ -209,6 +214,16 @@
       buffer_[y+4][x]=std::move(cell);
     }
     draw_iceberg_landmarks();
+    if(grid_.template_id==74)for(const auto &jet:grid_.air_fields) {
+      double x=jet.area.x, bottom=jet.area.bottom(), strength=jet.strength(state_.elapsed);
+      world_art(x,bottom,{"╔╧╧╧╧╧╗","╚══╤══╝","╭──┴──╮","│ ◴   │","╞═════╡","│░░░░░│","╰─┬─┬─╯"},d.accent);
+      for(int k=0;k<12;++k) {
+        double rise=std::fmod(state_.elapsed*.75+k/12.,1.);
+        if(rise>strength)continue;
+        world_art(x+jet.area.w*(.4+.35*std::sin(k*3.+rise*6)),bottom-rise*jet.area.h,
+          {rise>.65?"∿":k%2?"╰∿":"∿╯"},strength>.6?0xc6b9ab:d.stone);
+      }
+    }
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       auto [x,y]=grid_.sweets[i];token_art(x,y,d.accent);
     }
@@ -547,6 +562,7 @@
       center(14,tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."));
     }
     if(state_.won&&!v.dialogue.active()) {
+      fill(rows_-3,0,cols_,2,Color::Default);
       paint_text(rows_-3,2,tr("E / ENTER — przejdź przez drzwi","E / ENTER — go through the door"),d.accent,true);
       paint_text(rows_-2,2,tr("R — wróć do lampy","R — return to the lamp"),d.light);
     }

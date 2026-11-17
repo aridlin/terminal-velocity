@@ -122,8 +122,19 @@ document.addEventListener('fullscreenchange',fullscreenLayout);
 new ResizeObserver(resize).observe(stage);
 document.querySelector('#export-save').onclick=()=>{if(!started)return;Module._web_save();try{const bytes=Module.FS.readFile('/persist/progress.dat.iceberg');const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=document.createElement('a');a.href=url;a.download='terminal-velocity.iceberg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{saveStatus.textContent=tr('Brak zapisu do pobrania','No save to download');}};
 function frame(now){if(accounts.active)accounts.draw();else if(started){Module._web_tick(Math.min(.1,Math.max(0,(now-last)/1000)),held,pressed,cols,rows,focused?1:0);pressed=0;}last=now;requestAnimationFrame(frame);}
-start.onclick=()=>{if(!ready||started)return;started=true;Module._web_start(Date.now()>>>0,english?1:0);start.hidden=true;syncSave();accounts.start();resize();last=performance.now();canvas.focus();requestAnimationFrame(frame);};
-canvas.onclick=()=>{if(!started)start.click();};
+start.onclick=()=>{
+ if(!ready||started)return;
+ try {
+  Module._web_start(Date.now()>>>0,english?1:0);
+  Module._web_enter_campaign();
+  started=true;start.hidden=true;syncSave();accounts.start();resize();last=performance.now();canvas.focus();requestAnimationFrame(frame);
+ } catch(error) {
+  console.error(error);started=false;ready=false;start.disabled=true;
+  bootStatus=tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
+  saveStatus.textContent=bootStatus;drawBoot();
+ }
+};
+canvas.onclick=()=>{if(!started)start.click();else if(!accounts.active&&(uiFlags&(2|4|1024)))tap(8);};
 addEventListener('keydown',e=>{if(!started&&e.code==='Enter')start.click();});
 var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mount(Module.IDBFS,{},'/persist');Module.FS.syncfs(true,error=>{
  // A valid game save is authoritative even before the player presses Start.

@@ -163,7 +163,15 @@ public:
     return area==0&&profile.layout_version>=4?iceworld::build_harbor_settlement_v4():iceworld::build_settlement(area);
   }
   EngineGrid campaign_authored(int area,bool finale) const {
-    return area==0&&!finale&&profile.layout_version>=4?iceworld::build_harbor_lesson_v4():iceworld::build_authored(area,finale);
+    if(area==0&&!finale&&profile.layout_version>=4)return iceworld::build_harbor_lesson_v4();
+    auto course=iceworld::build_authored(area,finale);
+    if(area==1&&!finale&&profile.layout_version>=4) {
+      // Relief valves under the high service galleries pulse out of phase.
+      // Ride a plume, then steer sideways before the steam thins.
+      course.air_fields.push_back({{56,33,3.5,19},0,-170,4.8,0});
+      course.air_fields.push_back({{91,26,3.5,20},0,-170,4.8,.5});
+    }
+    return course;
   }
   void load_room(bool resume=false) {
     if(mode==iceberg::Mode::Campaign && profile.hidden_room>=0) {
@@ -777,7 +785,14 @@ public:
     if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}
     if(state.won) {
       if(c.restart||c.new_run){state.won=false;stepper={};}
-      else {if(c.confirm||c.interact)advance_room();sync_view();return;}
+      else {
+        // The opening threshold is a walk-through door. Let its shutter
+        // finish before advancing, including after Helena's first briefing.
+        bool first_exit=mode==iceberg::Mode::Campaign&&district==0&&stage<=1&&
+          profile.hidden_room<0&&profile.visit_district<0&&!profile.revisit.active;
+        if(c.confirm||c.interact||(first_exit&&v.door_open>=1.))advance_room();
+        sync_view();return;
+      }
     }
     if(c.new_run){c.restart=true;}
     Player before=state.player;

@@ -37,6 +37,26 @@ int main() {
     std::filesystem::remove(file);std::filesystem::remove(file.string()+".bak");
     iceberg::SessionOptions options;options.mute=true;options.seed=73;options.seed_override=true;
     AdventureSession s(options,file);
+    auto sorting=iceworld::build_room(503,73,0);
+    for(const auto &belt:sorting.sorting_belts) {
+      auto rider=new_state(sorting);rider.player.x=belt.x+belt.width*.5;
+      rider.player.y=belt.y-kPlayerHeight;rider.player.grounded=true;
+      double x=rider.player.x;
+      for(int tick=0;tick<48;++tick)world_step(rider,sorting,{},1./120);
+      check_harbor(std::abs(rider.player.x-x-belt.speed*.4)<.02,"sorting tread carries a standing courier at the speed of its parcels");
+      Controls leap;leap.jump_pressed=leap.jump_held=true;world_step(rider,sorting,leap,1./120);
+      check_harbor(rider.player.vy<0&&rider.player.vx*belt.speed>0,"leaving the belt transfers its direction into the jump");
+    }
+    auto quay=iceworld::build_harbor_settlement_v4();
+    auto riding=new_state(quay);auto sling=quay.platforms.front().at(0);
+    riding.player.x=sling.x+3;riding.player.y=sling.y-kPlayerHeight;
+    for(int tick=0;tick<360;++tick)world_step(riding,quay,{},1./120);
+    check_harbor(riding.player.support==0&&sling.y-riding.player.rect().bottom()>12,"the quay sling lifts a rider to the high transfer");
+    auto boiler=s.campaign_authored(1,false);auto plume=boiler.air_fields.front();
+    auto rising=new_state(boiler);rising.elapsed=.6;rising.player.x=plume.area.x+1;
+    rising.player.y=plume.area.bottom()-3;double y=rising.player.y;
+    for(int tick=0;tick<96;++tick)world_step(rising,boiler,{},1./120);
+    check_harbor(y-rising.player.y>7,"the pressure plume lifts an airborne courier without a jump or dash");
     start_harbor_mission(s,0);
     auto rescue=s.grid.interactions.front();s.harbor_interact(rescue);
     check_harbor(!(s.grid.switch_flags&8),"Bogdan cannot depart before the physical power contacts");
