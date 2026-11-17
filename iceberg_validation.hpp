@@ -156,6 +156,16 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   return recovery_room_for(candidate);
 }
 
+inline void add_expedition_ice(EngineGrid &room) {
+  if(room.district!=4)return;
+  if(room.template_id==48)room.ice_strips={{8,56,12,1},{48,50,9,1},{68,47,12,1},{108,47,9,1}};
+  else if(room.template_id==58)room.ice_strips={{8,30,9,1},{64,42,10,1},{104,50,9,1}};
+  else return;
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.ice_strips.clear();
+}
+
 inline void add_expedition_drawers(EngineGrid &room) {
   if(room.district!=3||room.template_id!=39)return;
   room.interactions.push_back({{57,41,3,3},InteractionKind::Valve,0,

@@ -490,6 +490,14 @@ public:
   std::vector<Interaction> interactions;
   std::vector<AirField> air_fields;
   std::vector<SortingBelt> sorting_belts;
+  std::vector<Rect> ice_strips;
+  bool on_ice(const Player &player) const {
+    if(!player.grounded)return false;
+    const double center=player.x+kPlayerWidth*.5,feet=player.rect().bottom();
+    return std::any_of(ice_strips.begin(),ice_strips.end(),[&](const Rect &strip){
+      return center>=strip.left()&&center<strip.right()&&std::abs(feet-strip.top())<.12;
+    });
+  }
   std::vector<Rect> water_basins; // Scenery behind the walkable surfaces.
   std::vector<PulseHazard> pulses;
   std::vector<Gate> gates;
@@ -936,17 +944,18 @@ void update_step(GameState &state, const EngineGrid &grid,
     }
   }
 
+  const bool ice=grid.on_ice(player);
   if (controls.move != 0 && player.wall_lock_left <= 0.0) {
     player.facing = controls.move;
     const double apex_bonus =
         (std::abs(player.vy) < 3.0 && !player.grounded) ? kApexAccelBonus : 0.0;
-    const double accel = player.grounded ? kMoveAccel : kAirAccel + apex_bonus;
+    const double accel = player.grounded ? (ice ? 46.0 : kMoveAccel) : kAirAccel + apex_bonus;
     const double target = controls.move * kMaxRunSpeed;
     if (!(player.momentum_left > 0 && !player.grounded &&
           player.vx * controls.move > kMaxRunSpeed))
       player.vx += clamp(target - player.vx, -accel * dt, accel * dt);
   } else if (player.grounded) {
-    player.vx = approach_zero(player.vx, kGroundFriction * dt);
+    player.vx = approach_zero(player.vx, (ice ? 20.0 : kGroundFriction) * dt);
   } else if (controls.move == 0 && player.wall_lock_left <= 0.0) {
     player.vx = approach_zero(player.vx, 24.0 * dt);
   }

@@ -232,6 +232,31 @@ int main(int argc,char **argv) {
     archive.advance_room();
     check(archive.grid.growth.empty()&&archive.grid.switch_flags==0,
       "drawer state does not carry into the next expedition room");
+    AdventureSession gardens(options,path);
+    gardens.begin_campaign(true);
+    gardens.profile.unlocked=4;gardens.run_district=4;
+    auto &garden_run=gardens.profile.expeditions[0];
+    garden_run={};garden_run.active=true;garden_run.district=4;garden_run.seed=garden_run.origin_seed=73;
+    garden_run.itinerary={48,49,50,51,52,53,54,58};
+    gardens.begin_run(iceberg::Mode::Endless);
+    const auto &frozen=gardens.grid;
+    check(frozen.template_id==48&&frozen.ice_strips.size()==4&&verify_route(frozen).complete,
+      "current Underfrost expeditions have verified patches of ice");
+    auto dry=frozen;dry.ice_strips.clear();
+    auto skating=new_state(frozen);
+    skating.player.x=11.;skating.player.grounded=true;skating.player.vx=10.;
+    auto walking=skating;
+    for(int tick=0;tick<30;++tick) {
+      world_step(skating,frozen,{},1./120);
+      world_step(walking,dry,{},1./120);
+    }
+    check(skating.player.x-walking.player.x>1.2&&skating.player.vx>4.&&walking.player.vx==0.,
+      "the same move release coasts along ice and brakes on dry ground");
+    auto above=skating.player;above.grounded=false;
+    check(!frozen.on_ice(above),"airborne movement retains its normal traction rules");
+    garden_run.layout_version=2;gardens.load_room();
+    check(gardens.grid.template_id==48&&gardens.grid.ice_strips.empty(),
+      "a legacy Underfrost save keeps its prior dry surfaces");
     std::filesystem::remove(path);std::filesystem::remove(backup);
     return 0;
   } catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}

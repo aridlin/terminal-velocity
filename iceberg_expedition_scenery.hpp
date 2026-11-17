@@ -38,6 +38,27 @@
     }
   }
 
+  void draw_garden_ice() {
+    const double row=aspect_*scale_;
+    for(const auto &strip:grid_.ice_strips) {
+      std::string rim="╶",facet="╲";
+      const int cells=std::max(2,int(strip.w/scale_));
+      for(int i=1;i<cells-1;++i) {
+        rim+="━";
+        facet+=i%7==2?"╱":i%7==3?"╲":i%4==0?"·":"─";
+      }
+      world_text(strip.x,strip.y,rim+"╴",0xa6e9ea);
+      world_text(strip.x,strip.y+row,facet+"╱",0x578fa2);
+      const int glint=int(state_.adventure.presentation_time*7+strip.x)%cells;
+      world_text(strip.x+glint*scale_,strip.y,"✦",0xe1fbff);
+    }
+    const auto &player=state_.player;
+    if(grid_.on_ice(player)&&std::abs(player.vx)>3.) {
+      const double behind=player.vx>0?player.x-1.2:player.rect().right()+.4;
+      world_text(behind,player.rect().bottom()-row,int(state_.elapsed*16)%2?"⠂·":"·⠂",0xb4dee6);
+    }
+  }
+
 // Repeated infrastructure follows the landings in expeditions. Keep the art
 // behind the route so decorations never become apparent stepping stones.
   void draw_expedition_infrastructure() {
