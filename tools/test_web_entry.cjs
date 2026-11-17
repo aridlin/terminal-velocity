@@ -358,14 +358,22 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(flag=>!!(uiFlags&flag),flag);
     if(flag===128) {
      const route=page.locator('#touch-inspect');
-     const showingRoute=await page.evaluate(()=>!!(uiFlags&2048));
-     assert.equal(await route.innerText(),showingRoute?'Districts':'Route');
+     const use=page.locator('#touch-use');
+     if(await page.evaluate(()=>!!(uiFlags&2048))){
+      assert.equal(await route.innerText(),'Districts');
+      await route.tap();
+      await page.waitForFunction(()=>!(uiFlags&2048));
+     }
+     assert.equal(await route.innerText(),'Route');
+     assert.equal(await use.getAttribute('aria-label'),'Confirm');
      await route.tap();
-     await page.waitForFunction(before=>!!(uiFlags&2048)!==before,showingRoute);
-     assert.equal(await route.innerText(),showingRoute?'Route':'Districts');
-    }
-    await button.tap();
+     await page.waitForFunction(()=>!!(uiFlags&2048));
+     assert.equal(await route.innerText(),'Districts');
+     assert.equal(await use.getAttribute('aria-label'),'Close map');
+     await use.tap();
+    }else await button.tap();
     await page.waitForFunction(flag=>!(uiFlags&flag),flag);
+    assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
    }
    const bounds=await tools.locator('button:visible').evaluateAll(buttons=>buttons.every(button=>{
     const rect=button.getBoundingClientRect();

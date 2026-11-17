@@ -74,6 +74,7 @@ function clearPresses(){
  pressed=completedPresses=0;
  for(const pointer of pointers.values())pointer.pending=0;
 }
+const routeMapOpen=()=>(uiFlags&(2|128|2048))===(128|2048);
 function translateUI(){
  document.documentElement.lang=english?'en':'pl';
  document.title='Terminal Velocity — '+tr('Pod powierzchnią','Below the surface');
@@ -82,8 +83,13 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
  document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  const touchUse=document.querySelector('#touch-use');
- touchUse.textContent=lastBlocked?'↵':tr('Użyj','Use');
- touchUse.setAttribute('aria-label',lastBlocked?tr('Zatwierdź','Confirm'):tr('Użyj','Use'));
+ if(routeMapOpen()){
+  touchUse.textContent=tr('Wróć','Back');
+  touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));
+ }else{
+  touchUse.textContent=lastBlocked?'↵':tr('Użyj','Use');
+  touchUse.setAttribute('aria-label',lastBlocked?tr('Zatwierdź','Confirm'):tr('Użyj','Use'));
+ }
  const districtControl=!!(uiFlags&16384);
  for(const button of document.querySelectorAll('[data-tap="11"]')){
   button.textContent=districtControl?tr('Dzielnica','District'):tr('Mapa','Map');
@@ -159,7 +165,11 @@ function finishPointer(id,completed){
  recompute();
 }
 for(const button of document.querySelectorAll('[data-key]')){
- const action=()=>button.id==='touch-use'&&lastBlocked?((uiFlags&64)?6:8):+button.dataset.key;
+ const action=()=>{
+  if(button.id!=='touch-use'||!lastBlocked)return +button.dataset.key;
+  if(routeMapOpen())return 11;
+  return uiFlags&64?6:8;
+ };
  button.addEventListener('click',e=>{
   // Pointer clicks already sent their input on pointerdown.
   if(e.detail!==0||accounts.active||!started)return;
