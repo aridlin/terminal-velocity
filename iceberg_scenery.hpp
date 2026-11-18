@@ -150,13 +150,16 @@
     }
   }
   void draw_dock_worker(double x,double feet,double phase) {
-    const double row=aspect_*scale_;
-    const double top=feet-4*row;
-    world_art(x,top,{" ▄▄▄▄"},0x849ca2);
-    world_art(x,top+row,{"  ██ "},0xb98b64);
-    world_art(x,top+2*row,{" ▐██▌"," ▐▌▐▌"},0x7d91a5);
-    world_art(x+4*scale_,top+2*row,{phase<.45?"▄":"╶"},0xb98b64);
-    world_art(x+5*scale_,feet-2*row,{"┌─┬─┐","└─┴─┘"},0x897253);
+    const double top=feet-4*aspect_*scale_;
+    const bool checking_tag=phase<.45;
+    // Share one cell origin so the reflective band, hand and crate stay aligned as the camera moves.
+    world_art(x,top,{" ▄██▄"},0xc8a562);
+    world_art(x,top,{"",""," ▐██▌"},0xac7341);
+    world_art(x,top,{"","","  ▄▄"},0xd5c48b);
+    world_art(x,top,{"","",""," ▟▌▐▙"},0x6d8590);
+    world_art(x,top,{"","","     ┌──┬─┐","     └──┴─┘"},0x997653);
+    world_art(x,top,{"","      ▤"},0xbbae86);
+    world_art(x,top,{"",checking_tag?"  ██ ╱":"  ██",checking_tag?"":"    ╸"},0xbf967b);
   }
 
   void draw_harbor_landmarks() {

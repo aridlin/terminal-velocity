@@ -138,6 +138,32 @@ int main() {
     auto worker=std::find_if(s.grid.interactions.begin(),s.grid.interactions.end(),
       [](const Interaction &node){return node.kind==InteractionKind::DockWorker;});
     check_harbor(worker!=s.grid.interactions.end(),"the quay dockworker has a real conversation target");
+    auto worker_view=s.state;
+    worker_view.camera_y=worker->area.bottom()-11.17;
+    worker_view.adventure.door_left=0;
+    CellFrame worker_frame;
+    cell_frame_sink=[&](const CellFrame &frame){worker_frame=frame;};
+    for(const int width:{34,110})for(const double phase:{.1,1.}) {
+      worker_view.camera_x=worker->area.x-(width==34?4.87:13.13);
+      worker_view.adventure.presentation_time=phase;
+      RenderGrid(s.grid,worker_view,24,width,2).draw();
+      const auto cell_at=[&](uint32_t color,const std::string &glyph) {
+        for(int y=4;y<21;++y)for(int x=0;x<width;++x) {
+          const auto &cell=worker_frame[y][x];
+          if(cell.rgb==color&&cell.glyph==glyph)return std::pair{x,y};
+        }
+        return std::pair{-1,-1};
+      };
+      const auto [helmet_x,helmet_y]=cell_at(0xc8a562,"█");
+      const auto stripe=cell_at(0xd5c48b,"▄");
+      const auto tag=cell_at(0xbbae86,"▤");
+      const auto hand=cell_at(0xbf967b,phase<.45?"╱":"╸");
+      check_harbor(helmet_x>=0&&stripe==std::pair{helmet_x,helmet_y+2}&&
+        tag==std::pair{helmet_x+4,helmet_y+1}&&
+        hand==(phase<.45?std::pair{helmet_x+3,helmet_y+1}:std::pair{helmet_x+2,helmet_y+2}),
+        "dockworker clothing and both cargo-tag poses align at compact and wide widths");
+    }
+    cell_frame_sink={};
     auto talk_area=worker->area;
     talk_area.x-=1.4;talk_area.w+=2.8;
     walk_harbor(s,talk_area,true);
