@@ -21,15 +21,40 @@ class SaveStore {
     bool okay=::fsync(fd)==0;::close(fd);return okay;
 #endif
   }
+  static bool sync_parent(const std::filesystem::path &file) {
+#ifdef _WIN32
+    // Windows replacements below request a write-through move.
+    (void)file;
+    return true;
+#else
+    auto parent=file.parent_path();if(parent.empty())parent=".";
+    int fd=::open(parent.c_str(),O_RDONLY|O_DIRECTORY);if(fd<0)return false;
+    bool okay=::fsync(fd)==0;::close(fd);return okay;
+#endif
+  }
   static bool replace_file(const std::filesystem::path &from,const std::filesystem::path &to) {
 #ifdef _WIN32
     return MoveFileExW(from.c_str(),to.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)!=FALSE;
 #else
-    std::error_code ec;std::filesystem::rename(from,to,ec);if(ec)return false;
-    auto parent=to.parent_path();if(parent.empty())parent=".";
-    int fd=::open(parent.c_str(),O_RDONLY|O_DIRECTORY);if(fd<0)return false;
-    bool okay=::fsync(fd)==0;::close(fd);return okay;
+    std::error_code ec;std::filesystem::rename(from,to,ec);
+    return !ec&&sync_parent(to);
 #endif
+  }
+  static bool preserve_unreadable_file(const std::filesystem::path &file) {
+    std::error_code ec;
+    if(!std::filesystem::exists(file,ec))return !ec;
+
+    auto base=file;base+=".unreadable";
+    for(unsigned index=0;;++index) {
+      auto copy=base;
+      if(index)copy+="."+std::to_string(index);
+      if(std::filesystem::copy_file(file,copy,std::filesystem::copy_options::none,ec)) {
+        if(sync_file(copy)&&sync_parent(copy))return true;
+        std::filesystem::remove(copy,ec);
+        return false;
+      }
+      if(ec!=std::errc::file_exists)return false;
+    }
   }
   static uint64_t checksum(const std::string &s) {
     uint64_t h = 1469598103934665603ull;
@@ -244,9 +269,16 @@ public:
     // Never replace a healthy recovery copy with a damaged primary save.
     if (read(path_, current)) {
       auto backup = path_; backup += ".bak";
+      if(!read(backup,verified)&&!preserve_unreadable_file(backup)) {
+        std::filesystem::remove(temp,ec);
+        return false;
+      }
       auto backup_temp=temp;backup_temp+=".backup";
       std::filesystem::copy_file(path_, backup_temp, std::filesystem::copy_options::overwrite_existing, ec);
       if (ec || !sync_file(backup_temp) || !replace_file(backup_temp,backup)) { std::filesystem::remove(temp, ec); return false; }
+    } else if(!preserve_unreadable_file(path_)) {
+      std::filesystem::remove(temp,ec);
+      return false;
     }
     bool ok=replace_file(temp,path_);
     if (!ok) std::filesystem::remove(temp, ec);

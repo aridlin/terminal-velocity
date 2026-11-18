@@ -343,11 +343,14 @@ function flushBrowserStorage(){
   renderSaveStatus();
  });
 }
-window.tvSaveReady=flushBrowserStorage;
+window.tvSaveReady=()=>{
+ refreshUnreadableSaveControls();
+ flushBrowserStorage();
+};
 function syncSave(){
  if(!started||inTour())return;
  Module._web_save();
- flushBrowserStorage();
+ window.tvSaveReady();
 }
 function updateFocus(hasFocus){
  const next=hasFocus&&!document.hidden;
@@ -429,18 +432,42 @@ new ResizeObserver(resize).observe(stage);
 const exportSave=document.querySelector('#export-save');
 const importSave=document.querySelector('#import-save');
 const exportPreviousSave=document.querySelector('#export-previous-save');
+const unreadableSaveButtons=[
+ document.querySelector('#export-unreadable-primary'),
+ document.querySelector('#export-unreadable-backup')
+];
+let unreadableSaveNames=[null,null];
 const saveFile=document.querySelector('#save-file');
 const slotPath=base=>selectedSlot===1?base:base+'.slot'+selectedSlot;
 const currentSavePath=()=>slotPath('/persist/progress.dat.iceberg');
 const previousImportPath=()=>slotPath('/persist/before-manual-import.iceberg');
 let importPending=false;
 
+function refreshUnreadableSaveControls(){
+ unreadableSaveNames=[null,null];
+ if(started&&!inTour()){
+  const base=currentSavePath().split('/').at(-1);
+  const prefixes=[base+'.unreadable',base+'.bak.unreadable'];
+  const names=Module.FS.readdir('/persist');
+  for(const [i,prefix] of prefixes.entries()){
+   let latest=-1;
+   for(const name of names){
+    const version=name===prefix?0:name.startsWith(prefix+'.')?Number(name.slice(prefix.length+1)):NaN;
+    if(!Number.isSafeInteger(version)||version<=latest)continue;
+    latest=version;
+    unreadableSaveNames[i]=name;
+   }
+  }
+ }
+ unreadableSaveButtons.forEach((button,i)=>{button.hidden=unreadableSaveNames[i]===null;});
+}
 function refreshSaveControls(){
  for(const button of document.querySelectorAll('#account,#account-fullscreen'))
   button.hidden=!accounts||!accountSlot();
  exportSave.disabled=!started||inTour();
  importSave.disabled=!started||inTour()||importPending;
  exportPreviousSave.hidden=!started||inTour()||!Module.FS.analyzePath(previousImportPath()).exists;
+ refreshUnreadableSaveControls();
 }
 function maybeStartAccount(){
  if(!accounts||!accountSlot()||!browserStorageWritable||accountStarted)return;
@@ -448,8 +475,9 @@ function maybeStartAccount(){
  accounts.start().finally(()=>{accountBooting=false;});
 }
 
-function readCurrentSave(){
+function readCurrentSave(forAccount=false){
  if(Module._web_save())return Module.FS.readFile(currentSavePath());
+ if(forAccount&&!Module._web_primary_usable_for_account())throw Error('save_write_failed');
  if(!Module._web_export_recovery())throw Error('save_write_failed');
  const recovery='/tmp/terminal-velocity-export.iceberg';
  try{return Module.FS.readFile(recovery);}
@@ -468,6 +496,12 @@ function downloadSave(name,read){
 }
 exportSave.onclick=()=>downloadSave('terminal-velocity.iceberg',readCurrentSave);
 exportPreviousSave.onclick=()=>downloadSave('terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath()));
+unreadableSaveButtons.forEach((button,i)=>{
+ button.onclick=()=>{
+  const name=unreadableSaveNames[i];
+  if(name)downloadSave(name,()=>Module.FS.readFile('/persist/'+name));
+ };
+});
 function finishImport(){
  importPending=false;
  refreshSaveControls();
@@ -554,6 +588,7 @@ function failStartup(error){
  clearInput();
  start.hidden=false;start.disabled=true;
  setGameButtons(false);exportPreviousSave.hidden=true;
+ refreshUnreadableSaveControls();
  translateUI();drawBoot();
 }
 addEventListener('error',event=>{
@@ -637,7 +672,8 @@ var Module={
 const accounts=typeof window.TVAccounts==='function'?new window.TVAccounts({
  english:()=>english,ready:()=>accountSlot()&&!accountBooting&&!importPending,clear:clearInput,frame:window.tvFrame,
  needsRedraw:()=>previous.length===0,flush:flushBrowserStorage,
- currentSave:()=>new TextDecoder().decode(readCurrentSave())
+ currentSave:()=>new TextDecoder().decode(readCurrentSave(true)),
+ recoveryCopy:()=>unreadableSaveNames[0]
 }):null;
 for(const button of document.querySelectorAll('#account,#account-fullscreen')){
  button.hidden=true;

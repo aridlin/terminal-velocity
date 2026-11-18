@@ -165,7 +165,24 @@ int main(int argc,char **argv) {
       "identical autosaves leave both the current file and distinct recovery file in place");
     {std::ofstream out(path);out<<"damaged";}
     check(save.load(loaded)&&save.recovered&&loaded.room==4,"damaged primary recovers prior good save");
-    std::filesystem::remove(path);std::filesystem::remove(backup);
+    const auto archived=std::filesystem::path(path.string()+".unreadable");
+    const auto second_archive=std::filesystem::path(archived.string()+".1");
+    const auto archived_backup=std::filesystem::path(backup.string()+".unreadable");
+    for(const auto &copy:{archived,second_archive,archived_backup})std::filesystem::remove(copy);
+    auto file_bytes=[](const auto &file) {
+      std::ifstream in(file,std::ios::binary);
+      return std::string(std::istreambuf_iterator<char>(in),{});
+    };
+    check(save.save(loaded)&&file_bytes(archived)=="damaged"&&save.load(loaded)&&!save.recovered&&loaded.room==4,
+      "a repaired primary preserves the exact unreadable file");
+    {std::ofstream out(path,std::ios::binary);out<<"second damage";}
+    check(save.save(loaded)&&file_bytes(archived)=="damaged"&&file_bytes(second_archive)=="second damage",
+      "later damage gets a separate preservation copy");
+    {std::ofstream out(backup,std::ios::binary);out<<"damaged backup";}
+    check(save.save(profile)&&file_bytes(archived_backup)=="damaged backup"&&
+        iceberg::SaveStore::validate_file(backup,loaded)&&loaded.room==4,
+      "rotating a good primary preserves the unreadable backup before replacing it");
+    for(const auto &copy:{path,backup,archived,second_archive,archived_backup})std::filesystem::remove(copy);
     iceberg::SessionOptions options;options.mute=true;options.seed=123;
     {
       AdventureSession session(options,path);session.begin_campaign(true);

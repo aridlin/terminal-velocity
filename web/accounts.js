@@ -93,7 +93,23 @@ window.TVAccounts=class {
  error(e){const map={invalid_credentials:['Nieprawidłowy login lub hasło.','Incorrect username or password.'],name_unavailable:['Ta nazwa jest już zajęta.','That username is taken.'],credentials_format:['Login: 3–24 znaki a–z, 0–9, _ lub -. Hasło: 8–72 bajty.','Username: 3–24 letters, digits, _ or -. Password: 8–72 bytes.'],rate_limit:['Za dużo prób. Spróbuj później.','Too many attempts. Try again later.'],save_invalid:['Nie można odczytać zapisu. Poprzednia gra pozostaje bez zmian.','Cannot read that save. Your previous game is unchanged.'],save_write_failed:['Nie udało się zapisać gry w tej przeglądarce.','Could not write the save in this browser.'],save_conflict:['Inne urządzenie zapisało nowszą grę. Wybierz zapis.','Another device saved a newer game. Choose a save.'],session_expired:['Zaloguj się ponownie. Zapis jest tutaj bezpieczny.','Sign in again. Your save is safe here.']};return (map[e.message]||['Konto jest chwilowo niedostępne. Zapis lokalny działa.','Accounts are temporarily unavailable. Local saves still work.'])[this.host.english()?1:0];}
  async start(){
   try{this.entries=Object.assign(Object.create(null),JSON.parse(this.read('/persist/accounts.json')||'{}'));}catch{this.entries=Object.create(null);}
-  try{const session=await this.request('session');this.csrf=session.csrf;if(session.username){this.pendingUser=session.username;const entry=this.entries[session.username];if(entry?.active){const remote=await this.request('save');this.candidate=this.local();this.remote=remote;if(remote.revision===entry.revision){this.bind(session.username,entry.revision,entry.synced);return;}if(this.candidate===entry.synced&&remote.save){this.apply(remote.save);this.bind(session.username,remote.revision,remote.save);return;}this.openChoice();}}}catch{}
+  try{
+   const session=await this.request('session');
+   this.csrf=session.csrf;
+   if(!session.username)return;
+   this.pendingUser=session.username;
+   const entry=this.entries[session.username];
+   if(!entry?.active)return;
+   const remote=await this.request('save');
+   this.candidate=this.local();
+   this.remote=remote;
+   const recoveryCopy=this.host.recoveryCopy?.();
+   const needsRecoveryChoice=remote.save&&recoveryCopy&&recoveryCopy!==entry.recoveryCopy&&this.candidate!==remote.save;
+   if(needsRecoveryChoice){this.openChoice();return;}
+   if(remote.revision===entry.revision){this.bind(session.username,entry.revision,entry.synced);return;}
+   if(this.candidate===entry.synced&&remote.save){this.apply(remote.save);this.bind(session.username,remote.revision,remote.save);return;}
+   this.openChoice();
+  }catch{}
  }
  open(){if(!this.host.ready())return;if(!this.active)Module._web_account_pause();this.active=true;document.body.classList.add('account-open');this.host.clear();if(this.mode!=='choose'){this.mode=this.user?'account':'login';this.message='';}this.draw();if(this.mode==='login'||this.mode==='register')this.name.focus();else document.querySelector('#game').focus();}
  close(){if(this.busy)return;this.active=false;this.lastDraw=null;document.body.classList.remove('account-open');Module._web_account_resume();this.name.hidden=this.pass.hidden=true;this.pass.value='';this.host.clear();document.querySelector('#game').focus();}
@@ -123,7 +139,7 @@ window.TVAccounts=class {
  bind(name,revision,synced){
   const local=this.local();
   this.user=name;this.revision=revision;this.synced=synced;
-  this.entries[name]={revision,synced,local,active:true};this.remember();
+  this.entries[name]={revision,synced,local,active:true,recoveryCopy:this.host.recoveryCopy?.()??null};this.remember();
  }
  async choose(remote){if(this.busy)return;this.busy=true;
   try{const latest=await this.request('save');if(latest.revision!==this.remote.revision){this.remote=latest;this.message=this.tr('Zapis konta znów się zmienił. Wybierz ponownie.','The account save changed again. Choose again.');return;}
@@ -132,14 +148,14 @@ window.TVAccounts=class {
    this.mode='account';this.message=this.tr('Zapis gotowy. Możesz kontynuować.','Save ready. You can continue.');
   }catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
  }
- async upload(save){const result=await this.request('save','PUT',{revision:this.revision,save});this.revision=result.revision;this.synced=save;this.entries[this.user]={revision:this.revision,synced:save,local:save,active:true};this.remember();}
+ async upload(save){const result=await this.request('save','PUT',{revision:this.revision,save});this.revision=result.revision;this.synced=save;this.entries[this.user]={...this.entries[this.user],revision:this.revision,synced:save,local:save,active:true};this.remember();}
  async sync(){
   if(!this.user||this.busy||this.mode==='choose')return;
   this.busy=true;
   let save;
   try{
    save=this.local();
-   this.entries[this.user]={revision:this.revision,synced:this.synced,local:save,active:true};
+   this.entries[this.user]={...this.entries[this.user],revision:this.revision,synced:this.synced,local:save,active:true};
    this.remember();
    if(save===this.synced)return;
    await this.upload(save);
@@ -155,7 +171,7 @@ window.TVAccounts=class {
   }finally{this.busy=false;if(this.active)this.draw();}
  }
  async logout(){if(this.busy)return;this.busy=true;
-  try{this.entries[this.user]={revision:this.revision,synced:this.synced,local:this.local(),active:false};this.remember();const result=await this.request('logout','POST',{});this.csrf=result.csrf;this.user=null;const guest=this.read('/persist/guest.iceberg');if(guest){this.apply(guest);Module.FS.unlink('/persist/guest.iceberg');}else Module._web_guest_profile();this.host.flush();this.mode='login';this.message=this.tr('Wylogowano. Niewysłany zapis konta zachowano w tej przeglądarce.','Signed out. Any unsent account save stays in this browser.');}catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
+  try{this.entries[this.user]={...this.entries[this.user],revision:this.revision,synced:this.synced,local:this.local(),active:false};this.remember();const result=await this.request('logout','POST',{});this.csrf=result.csrf;this.user=null;const guest=this.read('/persist/guest.iceberg');if(guest){this.apply(guest);Module.FS.unlink('/persist/guest.iceberg');}else Module._web_guest_profile();this.host.flush();this.mode='login';this.message=this.tr('Wylogowano. Niewysłany zapis konta zachowano w tej przeglądarce.','Signed out. Any unsent account save stays in this browser.');}catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
  }
  draw(){
   if(!this.active)return;

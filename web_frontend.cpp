@@ -105,6 +105,15 @@ EMSCRIPTEN_KEEPALIVE int web_save() {
   send_web_ui();
   return !web_game->state.adventure.save_error;
 }
+EMSCRIPTEN_KEEPALIVE int web_primary_usable_for_account() {
+  const auto file=iceberg::SaveStore::slot_file(web_save_base,web_slot);
+  std::error_code ec;
+  const bool exists=std::filesystem::exists(file,ec);
+  iceberg::Profile stored;
+  // If preservation failed, a blank in-memory profile must not replace a
+  // potentially healthy account save.
+  return !ec&&(!exists||iceberg::SaveStore::validate_file(file,stored));
+}
 EMSCRIPTEN_KEEPALIVE int web_export_recovery() {
   // The preceding save attempt has already snapped the live session into profile.
   return web_game&&web_game->tour_scene<0&&iceberg::SaveStore("/tmp/terminal-velocity-export.iceberg").save(web_game->profile);
