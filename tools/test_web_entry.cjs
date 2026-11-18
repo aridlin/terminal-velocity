@@ -298,6 +298,22 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>!(uiFlags&2));
     console.log('PASS short focus loss between animation frames pauses and resumes with cleared input');
 
+    const game=page.locator('#game');
+    await game.hover();
+    await page.mouse.down();
+    try{
+     await page.keyboard.press('p');
+     await page.waitForFunction(()=>uiFlags&2);
+    }finally{await page.mouse.up();}
+    await page.evaluate(async()=>{
+     for(let i=0;i<3;i++)await new Promise(requestAnimationFrame);
+    });
+    assert.equal(await page.evaluate(()=>!!(uiFlags&2)),true,
+     'a press that began during gameplay cannot dismiss a later pause');
+    await game.click();
+    await page.waitForFunction(()=>!(uiFlags&2));
+    console.log('PASS a fresh canvas click resumes a pause and a stale release is ignored');
+
     await page.evaluate(()=>{
      const tick=Module._web_tick;
      window.dashEdges=0;

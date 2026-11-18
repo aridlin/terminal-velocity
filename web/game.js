@@ -97,6 +97,7 @@ window.tvFrame=(data,w,h)=>{
  previous.set(data);
 };
 let completedPresses=0;
+let canvasPress=null;
 const tap=(...keys)=>{for(const k of keys){completedPresses|=1<<k;pressed|=1<<k;}};
 function pointerPress(pointer){
  dashShift='';
@@ -346,7 +347,7 @@ for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
  canvas.focus({preventScroll:true});
  tap(+b.dataset.tap);
 };
-function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
+function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';canvasPress=null;held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function updateBrowserSaveStatus(status){
  browserSaveStatus=status;
  renderSaveStatus();
@@ -661,11 +662,30 @@ start.onclick=()=>{
   failStartup(error);
  }
 };
-canvas.onclick=()=>{
+function canvasConfirmContext(){
+ const overlay=overlayFlags();
+ if(overlay&4)return 4;
+ if(overlay&(8|64|128))return 0;
+ return (overlay&2)||(overlay&1024);
+}
+canvas.addEventListener('pointerdown',event=>{
+ if(!event.isPrimary||event.button!==0||accounts?.active||importPending)return;
+ canvasPress={id:event.pointerId,context:canvasConfirmContext()};
+});
+canvas.addEventListener('pointercancel',event=>{
+ if(canvasPress?.id===event.pointerId)canvasPress=null;
+});
+canvas.onclick=event=>{
+ const press=canvasPress;
+ canvasPress=null;
  if(!started){start.click();return;}
  if(accounts?.active||importPending)return;
- const overlay=overlayFlags();
- if((overlay&4)||(!(overlay&(8|64|128))&&(overlay&(2|1024))))tap(8);
+ const context=canvasConfirmContext();
+ if(!context)return;
+ // A release over a new pause, conversation or door is not a confirm for it.
+ if(event.detail!==0&&(!press||press.context!==context||
+    (event.pointerId!==undefined&&press.id!==event.pointerId)))return;
+ tap(8);
 };
 addEventListener('keydown',e=>{
  if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
