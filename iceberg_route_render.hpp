@@ -4,7 +4,12 @@
     const bool has_boost=!grid_.springs.empty()||
       std::any_of(grid_.air_fields.begin(),grid_.air_fields.end(),[](const auto &field){return field.ay<0;});
     const bool has_features=has_water||has_boost||!grid_.sweets.empty();
-    const int width=std::min(cols_-8,72),map_rows=std::min(height-(has_features?6:5),18);
+    const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
+      return node.kind==InteractionKind::RouteChoice;
+    });
+    const bool fork=branch!=grid_.interactions.end();
+    const int legend_rows=1+int(has_features)+int(fork);
+    const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
     for(const auto &line:wrap(grid_.room_name.get(state_.adventure.language),cols_-6)) {
@@ -63,13 +68,14 @@
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
     }
-    auto mark=[&](double x,double y,const char *symbol,uint32_t color,bool feature=false){
+    auto mark=[&](double x,double y,const char *symbol,uint32_t color,int spread=0){
       int cx=column(x),cy=row(y);
       auto &line=map[size_t(cy)];
       // Nearby landmarks can project to the same cell on a narrow display.
-      if(feature&&line[size_t(cx)]=='@') {
-        if(cx+1<width&&line[size_t(cx+1)]!='@')++cx;
-        else if(cx>0&&line[size_t(cx-1)]!='@')--cx;
+      if(spread&&line[size_t(cx)]=='@') {
+        const int preferred=cx+spread,other=cx-spread;
+        if(preferred>=0&&preferred<width&&line[size_t(preferred)]!='@')cx=preferred;
+        else if(other>=0&&other<width&&line[size_t(other)]!='@')cx=other;
         else return;
       }
       line[size_t(cx)]='@';
@@ -79,38 +85,53 @@
       const auto [x,y]=grid_.checkpoint_points[i];
       mark(x+kPlayerWidth*.5,y,i==size_t(state_.checkpoint)?"◆":"◇",0x9dd4dd);
     }
+    auto courier=[&](){
+      mark(state_.player.x+kPlayerWidth*.5,state_.player.y+kPlayerHeight*.5,"@",0xffd68a);
+    };
+    if(fork)courier();
     if(show_goal) {
       const bool open=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
-      mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",open?0xd7e8cd:0x7c8492);
+      mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",open?0xd7e8cd:0x7c8492,fork?1:0);
+    }
+    if(fork) {
+      const auto &door=branch->area;
+      mark(door.x+door.w*.5,door.y+door.h*.5,"▧",0xe8a758,-1);
     }
     for(const auto &node:grid_.interactions) {
       const bool board=settlement&&node.kind==InteractionKind::Board;
       if(board||node.kind==InteractionKind::Return)
         mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,board?"▤":"▣",0xd7e8cd);
     }
-    mark(state_.player.x+kPlayerWidth*.5,state_.player.y+kPlayerHeight*.5,"@",0xffd68a);
+    if(!fork)courier();
     bool remaining_token=false;
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];
-      mark(x,y,"●",0xedc278,true);
+      mark(x,y,"●",0xedc278,1);
       remaining_token=true;
     }
     std::string boost_symbols;
     auto boost=[&](double x,double y,const char *symbol) {
-      mark(x,y,symbol,0x9dd39c,true);
+      mark(x,y,symbol,0x9dd39c,1);
       if(boost_symbols.find(symbol)==std::string::npos)boost_symbols+=symbol;
     };
     for(const auto &spring:grid_.springs)
       boost(spring.x+spring.w*.5,spring.y,spring.push_x>0?"↗":spring.push_x<0?"↖":"↑");
     for(const auto &field:grid_.air_fields)if(field.ay<0&&field.active(grid_.switch_flags))
       boost(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑");
-    const int legend=top+height-(has_features?2:1);
-    paint_text(legend,2,settlement?tr("@ Ty · ◆ Lampa · ▤ Tablica","@ You · ◆ Lamp · ▤ Board"):
-      tr("@ Ty · ◆ Lampa · ▣ Wyjście","@ You · ◆ Lamp · ▣ Exit"),0xc7d9df);
+    int legend=top+height-legend_rows;
+    if(fork) {
+      paint_text(legend++,2,tr("@ Ty · ◆ Lampa","@ You · ◆ Lamp"),0xc7d9df);
+      const auto main=tr("▣ Główne · ","▣ Main · ");
+      paint_text(legend,2,main,0xc7d9df);
+      paint_text(legend++,2+int(glyphs(main).size()),tr("▧ Przejście B","▧ Passage B"),0xe8a758);
+    } else {
+      paint_text(legend++,2,settlement?tr("@ Ty · ◆ Lampa · ▤ Tablica","@ You · ◆ Lamp · ▤ Board"):
+        tr("@ Ty · ◆ Lampa · ▣ Wyjście","@ You · ◆ Lamp · ▣ Exit"),0xc7d9df);
+    }
     int feature_col=2;
     auto label=[&](const std::string &entry,uint32_t color) {
-      if(feature_col>2){paint_text(legend+1,feature_col," · ",0xc7d9df);feature_col+=3;}
-      paint_text(legend+1,feature_col,entry,color);
+      if(feature_col>2){paint_text(legend,feature_col," · ",0xc7d9df);feature_col+=3;}
+      paint_text(legend,feature_col,entry,color);
       feature_col+=int(glyphs(entry).size());
     };
     if(remaining_token)label(tr("● Żeton","● Token"),0xedc278);

@@ -84,6 +84,35 @@ int main(){try {
   RenderGrid(features.grid,features.state,24,34,2).draw();
   ui_check(count_map("≈",0x66bfd7)>0&&ui_text(frame).find("≈ Water")!=std::string::npos,
     "the compact Harbor lesson map shows the real ferry waterline");
+  AdventureSession harbor_fork(options,"/tmp/tv-ui-room-fork-unused");harbor_fork.begin_campaign(true);
+  harbor_fork.stage=2;harbor_fork.room=1;harbor_fork.load_room();
+  const auto passage=std::find_if(harbor_fork.grid.interactions.begin(),harbor_fork.grid.interactions.end(),[](const auto &node){
+    return node.kind==InteractionKind::RouteChoice;
+  });
+  ui_check(passage!=harbor_fork.grid.interactions.end(),"the current Harbor room has a real alternate passage");
+  harbor_fork.tick(map,1./120);harbor_fork.tick(tab,1./120);harbor_fork.tick(tab,1./120);
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    harbor_fork.profile.language=language;harbor_fork.sync_view();
+    const bool en=language==iceberg::Language::English;
+    for(const auto &door:{harbor_fork.grid.goal,passage->area}) {
+      harbor_fork.state.player.x=door.x+(door.w-kPlayerWidth)*.5;
+      harbor_fork.state.player.y=door.y+(door.h-kPlayerHeight)*.5;
+      for(auto [cols,rows]: {std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(harbor_fork.grid,harbor_fork.state,rows,cols,2).draw();
+        const auto text=ui_text(frame);
+        int main_x=-1,branch_x=-1,player_marks=0;
+        for(int y=4;y<rows-8;++y)for(int x=0;x<cols;++x) {
+          const auto &cell=frame[size_t(y)][size_t(x)];
+          if(cell.glyph=="▧"&&cell.rgb==0xe8a758)branch_x=x;
+          if(cell.glyph=="▣"&&cell.rgb==0xd7e8cd)main_x=x;
+          if(cell.glyph=="@"&&cell.rgb==0xffd68a)++player_marks;
+        }
+        ui_check(branch_x>=0&&main_x>branch_x&&player_marks==1&&
+          text.find(en?"▣ Main · ▧ Passage B":"▣ Główne · ▧ Przejście B")!=std::string::npos,
+          "the map keeps both Harbor doors and the courier visible even at the fork");
+      }
+    }
+  }
   AdventureSession preview(options,"/tmp/tv-ui-route-preview-unused");preview.begin_campaign(true);
   preview.stage=2;preview.load_room();
   Controls next_leg;next_leg.navigate=1;
