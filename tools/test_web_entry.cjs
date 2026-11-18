@@ -536,7 +536,7 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('COURIER'));
     await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('Who called about the heat upstairs'));
     await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('HELENA'));
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('Bogdan will know.'));
     await page.keyboard.press('Enter');await page.waitForFunction(()=>!(entryFlags&4));
     assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
     console.log('PASS locked map explanation, route tab, quest book and briefing reply through browser controls');
