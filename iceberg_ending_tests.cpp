@@ -17,6 +17,11 @@ int main(){try{
   auto witness_file=folder/("witness-"+std::to_string(option));
   AdventureSession witness(options,witness_file);witness.begin_campaign(true);
   witness.stage=3;witness.load_room();witness.persist();
+  {
+   AdventureSession old(options,witness_file);old.begin_campaign(false);
+   require_end(!old.state.adventure.dialogue.active(),"older saves parked in town keep their free movement");
+  }
+  witness.talk_homecoming(0);witness.persist();
   AdventureSession resumed(options,witness_file);resumed.begin_campaign(false);
   read_to_reply(resumed);
   Controls next;next.navigate=-option;next.jump_pressed=option!=0;resumed.tick(next,1./60);

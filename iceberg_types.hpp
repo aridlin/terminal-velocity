@@ -139,6 +139,7 @@ inline constexpr int CourierSpeaker = -2;
 inline constexpr int ReplyPrompt = -3;
 inline constexpr uint64_t reply_value(int scene) { return uint64_t(1) << (48+scene); }
 inline constexpr uint64_t reply_recorded(int scene) { return uint64_t(1) << (55+scene); }
+inline constexpr uint64_t HomecomingReplyPending = uint64_t(1) << 62;
 struct Dialogue {
   std::vector<DialogueLine> lines;
   size_t page = 0;

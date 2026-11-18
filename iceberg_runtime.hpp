@@ -416,7 +416,7 @@ public:
         reply_dialogue(6,(profile.story&iceberg::reply_value(6))!=0,2);
       } else talk(iceberg::crown_cutscene(profile.story),2,6);
     } else if(resume&&mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&
-              stage==3&&profile.visit_district<0&&!(profile.story&iceberg::reply_recorded(district))) {
+              stage==3&&profile.visit_district<0&&(profile.story&iceberg::HomecomingReplyPending)) {
       talk_homecoming(0);
     }
   }
@@ -427,6 +427,7 @@ public:
     state.player.vx=0;frame_dialogue();
   }
   void talk_homecoming(int leg) {
+    if(leg==0)profile.story|=iceberg::HomecomingReplyPending;
     talk(iceberg::homecoming(district,leg,profile.story),0,leg==0?district:-1);
   }
   void reply_dialogue(int scene,int option,int action) {
@@ -515,6 +516,7 @@ public:
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
       if(tour_scene<0) {
+        if(scene<iceberg::DistrictCount)profile.story&=~iceberg::HomecomingReplyPending;
         profile.story|=iceberg::reply_recorded(scene);
         if(option)profile.story|=iceberg::reply_value(scene);
         else profile.story&=~iceberg::reply_value(scene);
