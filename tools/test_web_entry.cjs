@@ -797,6 +797,18 @@ const server=http.createServer((req,res)=>{
   await expedition.locator('[data-language="en"]').click();
   await expedition.locator('#start').click();
   await expedition.waitForFunction(()=>started&&!accountBooting);
+  const importControl=expedition.locator('#import-save');
+  await importControl.focus();
+  await expedition.waitForFunction(()=>document.activeElement===importSave&&document.hasFocus());
+  const [keyboardPicker]=await Promise.all([expedition.waitForEvent('filechooser'),importControl.press('Space')]);
+  assert.equal(await importControl.evaluate(button=>button===document.activeElement),true);
+  const decline=expedition.waitForEvent('dialog').then(dialog=>dialog.dismiss());
+  await keyboardPicker.setFiles(path.join(root,'tests/fixtures/iceberg-v4.dat'));
+  await decline;
+  await expedition.waitForFunction(()=>!importPending&&document.activeElement.id==='import-save');
+  await expedition.keyboard.press('Shift+Tab');
+  assert.equal(await expedition.evaluate(()=>document.activeElement.id),'export-save');
+  console.log('PASS keyboard save import preserves toolbar focus after cancellation');
   const desktopToolbar=expedition.locator('#toolbar');
   const desktopMap=desktopToolbar.locator('[data-tap="11"]');
   const desktopSwitch=desktopToolbar.locator('.map-view-switch');

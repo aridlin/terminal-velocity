@@ -608,7 +608,7 @@ const saveFile=document.querySelector('#save-file');
 const slotPath=base=>selectedSlot===1?base:base+'.slot'+selectedSlot;
 const currentSavePath=()=>slotPath(saveDirectory+'/progress.dat.iceberg');
 const previousImportPath=()=>slotPath(saveDirectory+'/before-manual-import.iceberg');
-let importPending=false;
+let importPending=false,keyboardImport=false;
 
 function refreshUnreadableSaveControls(){
  unreadableSaveNames=[null,null];
@@ -671,12 +671,13 @@ unreadableSaveButtons.forEach((button,i)=>{
   if(name)downloadSave(event,name,()=>Module.FS.readFile(saveDirectory+'/'+name));
  };
 });
-function finishImport(){
+function finishImport(returnToPicker=false){
  importPending=false;
  refreshSaveControls();
  clearInput();
  last=performance.now();
- if(!accounts?.active)canvas.focus({preventScroll:true});
+ const focusTarget=returnToPicker&&!importSave.disabled?importSave:canvas;
+ if(!accounts?.active)focusTarget.focus({preventScroll:true});
 }
 async function readImportFile(file){
  let deadline;
@@ -703,18 +704,27 @@ function applyManualImport(fs,previous){
   else if(fs.analyzePath(backup).exists)fs.unlink(backup);
  }
 }
-importSave.onclick=()=>{
+importSave.onclick=event=>{
+ keyboardImport=event.detail===0&&document.activeElement===importSave;
  clearInput();
- canvas.focus({preventScroll:true});
+ if(!keyboardImport)canvas.focus({preventScroll:true});
  saveFile.click();
 };
-saveFile.oncancel=()=>{if(!importPending)finishImport();};
+saveFile.oncancel=()=>{
+ if(importPending)return;
+ const returnToPicker=keyboardImport;
+ keyboardImport=false;
+ finishImport(returnToPicker);
+};
 saveFile.onchange=async()=>{
  const file=saveFile.files[0];
  saveFile.value='';
  // Only an actual selection starts an import. A picker dismissal may never
  // reach the page, so opening the picker cannot suspend the game loop.
  if(!file||importPending||inTour())return;
+ const returnToPicker=keyboardImport;
+ keyboardImport=false;
+ let loaded=false;
  importPending=true;
  importSave.disabled=true;
  setSaveActionError(null);
@@ -758,11 +768,12 @@ saveFile.onchange=async()=>{
   } finally {if(fs.analyzePath(incoming).exists)fs.unlink(incoming);}
   exportPreviousSave.hidden=false;
   Module._web_enter_campaign();
+  loaded=true;
   flushBrowserStorage();
  } catch {
   setSaveActionError(['Nie udało się wczytać zapisu','Could not import save']);
  } finally {
-  finishImport();
+  finishImport(returnToPicker&&!loaded);
  }
 };
 function frame(now){
