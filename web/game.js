@@ -625,7 +625,7 @@ function readCurrentSave(forAccount=false){
  try{return Module.FS.readFile(recovery);}
  finally{Module.FS.unlink(recovery);}
 }
-function downloadSave(name,read){
+function downloadSave(event,name,read){
  try {
   const url=URL.createObjectURL(new Blob([read()],{type:'application/octet-stream'}));
   const link=document.createElement('a');
@@ -634,14 +634,16 @@ function downloadSave(name,read){
   setSaveActionError(null);
  } catch {
   setSaveActionError(['Brak zapisu do pobrania','No save to download']);
+ } finally {
+  if(event.detail!==0)canvas.focus({preventScroll:true});
  }
 }
-exportSave.onclick=()=>downloadSave('terminal-velocity.iceberg',readCurrentSave);
-exportPreviousSave.onclick=()=>downloadSave('terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath()));
+exportSave.onclick=event=>downloadSave(event,'terminal-velocity.iceberg',readCurrentSave);
+exportPreviousSave.onclick=event=>downloadSave(event,'terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath()));
 unreadableSaveButtons.forEach((button,i)=>{
- button.onclick=()=>{
+ button.onclick=event=>{
   const name=unreadableSaveNames[i];
-  if(name)downloadSave(name,()=>Module.FS.readFile(saveDirectory+'/'+name));
+  if(name)downloadSave(event,name,()=>Module.FS.readFile(saveDirectory+'/'+name));
  };
 });
 function finishImport(){

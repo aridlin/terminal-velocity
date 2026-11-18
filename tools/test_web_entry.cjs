@@ -1061,13 +1061,14 @@ const server=http.createServer((req,res)=>{
     page.waitForEvent('download'),tools.locator('#export-save').tap(),
    ]);
    assert.match(fs.readFileSync(await fullscreenSave.path(),'utf8'),/^TVICE6 /);
-   await page.locator('#game').focus();
+   await page.waitForFunction(()=>document.activeElement===canvas&&focused);
 
    const sound=tools.locator('#sound');
+   const sounded=await sound.getAttribute('aria-pressed');
    await page.keyboard.press('u');
-   await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='false');
+   await page.waitForFunction(before=>document.querySelector('#sound').getAttribute('aria-pressed')!==before,sounded);
    await sound.tap();
-   await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='true');
+   await page.waitForFunction(before=>document.querySelector('#sound').getAttribute('aria-pressed')===before,sounded);
    if(fallback){
     await page.waitForFunction(()=>document.activeElement===canvas);
     await page.keyboard.press('Shift+Tab');
