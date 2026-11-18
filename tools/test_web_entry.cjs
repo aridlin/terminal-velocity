@@ -313,6 +313,24 @@ const server=http.createServer((req,res)=>{
     assert.ok(liveTicks>0,'the chooser alone cannot freeze the game');
     assert.equal(await importButton.isEnabled(),true);
     assert.equal(await page.evaluate(()=>canvas===document.activeElement),true);
+    const invalidPicker=await openPicker();
+    const acceptInvalid=page.waitForEvent('dialog').then(dialog=>dialog.accept());
+    await invalidPicker.setFiles({name:'broken.iceberg',mimeType:'application/octet-stream',buffer:Buffer.from('broken save')});
+    await acceptInvalid;
+    await page.waitForFunction(()=>saveStatus.textContent==='Invalid save file');
+    await page.evaluate(()=>{
+      const save=Module._web_save;
+      window.savesAfterRejectedImport=0;
+      Module._web_save=(...args)=>{window.savesAfterRejectedImport++;return save(...args);};
+    });
+    await page.waitForFunction(()=>window.savesAfterRejectedImport>0&&!syncing);
+    const saveMessage=page.locator('#save-status');
+    assert.equal(await saveMessage.textContent(),'Invalid save file','autosave preserves the import error');
+    await page.locator('[data-language="pl"]').click();
+    await page.waitForFunction(()=>!syncing);
+    assert.equal(await saveMessage.textContent(),'Nieprawidłowy plik zapisu','a pending import error follows the selected language');
+    await page.locator('[data-language="en"]').click();
+
     const picker=await openPicker();
     await page.evaluate(()=>{
       const runImport=Module._web_import_save;
@@ -338,6 +356,7 @@ const server=http.createServer((req,res)=>{
     assert.equal(imported.backup,imported.previous,'import retains the previous profile as rollback');
     assert.equal(imported.manual,imported.previous,'the previous-save download uses that same profile');
     await page.waitForFunction(()=>!syncing);
+    assert.equal(await saveMessage.textContent(),'Zapis w tej przeglądarce ✓','a valid retry clears the previous import error');
     await page.reload();
     await page.waitForFunction(()=>!document.querySelector('#start').disabled);
     await page.locator('#start').click();

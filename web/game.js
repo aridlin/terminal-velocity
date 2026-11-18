@@ -15,6 +15,17 @@ try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en')
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootFailed=false,explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
+let browserSaveStatus=['Gotowe','Ready'],saveActionError=null;
+function renderSaveStatus(){
+ const text=bootFailed?startupError():ready
+  ?tr(...(saveActionError??browserSaveStatus))
+  :tr('Ładowanie gry…','Loading game…');
+ if(saveStatus.textContent!==text)saveStatus.textContent=text;
+}
+function setSaveActionError(message){
+ saveActionError=message;
+ renderSaveStatus();
+}
 async function suggestLanguage(){
  if(hasStoredLanguage||explicitBootLanguage)return null;
  const controller=new AbortController();
@@ -123,10 +134,8 @@ function translateUI(){
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
- if(!started){
-  start.textContent=ready||bootFailed?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');
-  saveStatus.textContent=bootFailed?startupError():ready?tr('Gotowe','Ready'):tr('Ładowanie gry…','Loading game…');
- }
+ if(!started)start.textContent=ready||bootFailed?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');
+ renderSaveStatus();
 }
 function selectLanguage(language){
  english=language==='en';explicitBootLanguage=true;
@@ -271,9 +280,10 @@ function flushBrowserStorage(){
    return;
   }
   if(!error)try{localStorage.removeItem(pendingLanguageKey);}catch{}
-  saveStatus.textContent=error
-   ?tr('Błąd zapisu — pobierz kopię','Save failed — download a copy')
-   :tr('Zapis w tej przeglądarce ✓','Saved in this browser ✓');
+  browserSaveStatus=error
+   ?['Błąd zapisu — pobierz kopię','Save failed — download a copy']
+   :['Zapis w tej przeglądarce ✓','Saved in this browser ✓'];
+  renderSaveStatus();
  });
 }
 function syncSave(){
@@ -357,8 +367,9 @@ function downloadSave(path,name) {
   const link=document.createElement('a');
   link.href=url;link.download=name;link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+  setSaveActionError(null);
  } catch {
-  saveStatus.textContent=tr('Brak zapisu do pobrania','No save to download');
+  setSaveActionError(['Brak zapisu do pobrania','No save to download']);
  }
 }
 exportSave.onclick=()=>{
@@ -387,15 +398,16 @@ saveFile.onchange=async()=>{
  if(!file||importPending)return;
  importPending=true;
  importSave.disabled=true;
+ setSaveActionError(null);
  clearInput();
  try {
   if(!file.size||file.size>65536) {
-   saveStatus.textContent=tr('Nieprawidłowy plik zapisu','Invalid save file');
+   setSaveActionError(['Nieprawidłowy plik zapisu','Invalid save file']);
    return;
   }
   const bytes=new Uint8Array(await file.arrayBuffer());
   if(accounts?.active||accounts?.busy||accounts?.mode==='choose'){
-   saveStatus.textContent=tr('Zakończ obsługę konta przed wczytaniem zapisu','Finish the account action before importing a save');
+   setSaveActionError(['Zakończ obsługę konta przed wczytaniem zapisu','Finish the account action before importing a save']);
    return;
   }
   const question=accounts?.user
@@ -409,7 +421,7 @@ saveFile.onchange=async()=>{
   fs.writeFile(incoming,bytes);
   try {
    if(!Module._web_import_save()){
-    saveStatus.textContent=tr('Nieprawidłowy plik zapisu','Invalid save file');
+    setSaveActionError(['Nieprawidłowy plik zapisu','Invalid save file']);
     return;
    }
   } finally {fs.unlink(incoming);}
@@ -418,7 +430,7 @@ saveFile.onchange=async()=>{
   Module._web_enter_campaign();
   flushBrowserStorage();
  } catch {
-  saveStatus.textContent=tr('Nie udało się wczytać zapisu','Could not import save');
+  setSaveActionError(['Nie udało się wczytać zapisu','Could not import save']);
  } finally {
   finishImport();
  }
@@ -492,8 +504,8 @@ async function finishBoot(storageError){
   }
   if(bootFailed)return;
   try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}
+  if(storageError)browserSaveStatus=['Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups'];
   ready=true;start.disabled=false;translateUI();
-  if(storageError)saveStatus.textContent=tr('Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups');
   drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
  }catch(error){failStartup(error);}
 }
