@@ -1033,6 +1033,7 @@ public:
       }
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
+    const bool was_in_overlay=state.paused||state.journal||v.map;
     if(c.journal){state.journal=!state.journal;v.map=false;v.selected=0;auto entries=iceberg::journal_entries(v);for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);stepper={};}
     if(c.map) {
       v.map=!v.map;state.journal=false;v.selected=grid.district;stepper={};
@@ -1091,7 +1092,9 @@ public:
     }
     bool blocked=state.paused||state.journal||v.map||columns<34||rows<(columns>=56?20:24);
     audio.update(blocked?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
-    if(blocked){sync_view();return;}
+    // Closing an overlay consumes this input frame. Its confirm or direction
+    // may also be a doorway interaction or a movement action in the world.
+    if(blocked||was_in_overlay){sync_view();return;}
     v.pickup_left=std::max(0.,v.pickup_left-dt);
     v.door_left=std::max(0.,v.door_left-dt);
     const bool at_door=state.won;

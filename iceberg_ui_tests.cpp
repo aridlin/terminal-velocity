@@ -91,6 +91,23 @@ int main(){try {
   focus.tick(enter,0);focus.profile.pause_on_focus_loss=false;
   lose_and_regain_focus();
   ui_check(!focus.state.paused,"disabling focus pause still keeps active play unpaused");
+  AdventureSession overlay_exit(options,"/tmp/tv-ui-overlay-exit-unused");
+  overlay_exit.begin_campaign(true);
+  overlay_exit.stage=2;overlay_exit.load_room();
+  overlay_exit.tick(map,0);
+  const auto elapsed_before_map_close=overlay_exit.state.elapsed;
+  Controls map_and_jump=map;map_and_jump.jump_pressed=map_and_jump.jump_held=true;
+  overlay_exit.tick(map_and_jump,1./60);
+  ui_check(!overlay_exit.state.adventure.map&&overlay_exit.state.elapsed==elapsed_before_map_close,
+    "closing the map consumes the UI frame before a simultaneous jump can reach gameplay");
+  overlay_exit.state.won=true;
+  overlay_exit.tick(pause_overlay,0);
+  ui_check(overlay_exit.state.paused,"the doorway can be paused before confirmation");
+  overlay_exit.tick(enter,1./60);
+  ui_check(!overlay_exit.state.paused&&overlay_exit.state.won&&overlay_exit.room==0,
+    "confirming the pause resumes at the doorway without using it");
+  overlay_exit.tick(enter,1./60);
+  ui_check(overlay_exit.room==1,"a separate confirmation uses the doorway after resuming");
   AdventureSession camera_settings(options,"/tmp/tv-ui-camera-settings-unused");
   Controls settings;settings.select_level=5;settings.confirm=true;
   camera_settings.tick(settings,0);
