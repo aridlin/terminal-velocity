@@ -1127,6 +1127,24 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(await page.evaluate(()=>!!window.landscapeToolbarClicked),false,'swiping over a button does not activate it');
   console.log('PASS a real landscape swipe reaches the end of the toolbar without pressing a button');
+  await page.setViewportSize({width:480,height:240});
+  await page.locator('#fullscreen').tap();
+  await page.waitForFunction(()=>expanded());
+  const landscapeTools=page.locator('#fullscreen-tools');
+  const landscapeExit=landscapeTools.locator('#leave-fullscreen');
+  await landscapeTools.locator('[data-tap="11"]').tap();
+  await page.waitForFunction(()=>uiFlags&128);
+  assert.ok(await page.evaluate(()=>rows===20&&canvas.getBoundingClientRect().height>=innerHeight/2),
+   'the map keeps at least half of a short fullscreen available');
+  const exitBeforeScroll=await landscapeExit.boundingBox();
+  await landscapeTools.locator('#fullscreen-buttons').evaluate(row=>{row.scrollLeft=row.scrollWidth;});
+  assert.ok(await landscapeTools.locator('#fullscreen-buttons').evaluate(row=>row.scrollLeft>0));
+  assert.deepEqual(await landscapeExit.boundingBox(),exitBeforeScroll);
+  await landscapeExit.tap();
+  await page.waitForFunction(()=>!expanded());
+  await page.locator('#toolbar [data-tap="11"]').tap();
+  await page.waitForFunction(()=>!(uiFlags&128));
+  console.log('PASS short fullscreen keeps the map visible and Exit fixed beside the scrollable controls');
   await page.setViewportSize({width:390,height:844});
   const action=page.locator('#touch-use');
   const openMenu=async()=>{

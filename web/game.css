@@ -33,11 +33,19 @@
 #playfield{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;background:#101923}
 #playfield:fullscreen,#playfield.expanded{width:100vw;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 #fullscreen-tools{display:none;flex-shrink:0;flex-wrap:wrap;justify-content:center;gap:6px;padding:5px 8px}
+#fullscreen-buttons{display:contents}
 #save-controls{display:contents}
 #fullscreen-tools #save-status{flex:0 0 100%;min-width:0;text-align:center;font-size:12px;color:#9dd4dd;overflow-wrap:anywhere}
 #fullscreen-tools #settings-keys{flex:0 0 100%;padding:0}
 #fullscreen-tools button{font-size:12px;min-height:34px;padding:4px 8px}
 @media(pointer:coarse){#fullscreen-tools button{min-height:44px}}
+@media(orientation:landscape) and (max-height:500px){
+ #fullscreen-tools{gap:4px;padding:3px 8px}
+ #fullscreen-buttons{display:flex;flex:1;min-width:0;gap:6px;overflow-x:auto;touch-action:pan-x}
+ #fullscreen-buttons button{flex-shrink:0;white-space:nowrap;touch-action:pan-x}
+ #fullscreen-buttons button:focus-visible{outline-offset:-2px}
+ #fullscreen-tools #save-status{font-size:10px}
+}
 @media(max-width:360px){
  #touch{gap:8px;padding-inline:8px}
  #touch button{min-width:44px;padding-inline:6px}

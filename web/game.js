@@ -151,7 +151,7 @@ function translateUI(){
  const choosingProfile=!!(uiFlags&profilePickerFlag);
  const inSettings=!!(uiFlags&settingsFlag);
  if(inSettings){
-  for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-tools > [data-tap="9"]'))
+  for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-buttons > [data-tap="9"]'))
    button.textContent=tr('Wróć','Back');
  }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
@@ -472,7 +472,7 @@ addEventListener('blur',()=>updateFocus(false));
 addEventListener('focus',()=>updateFocus(true));
 document.addEventListener('visibilitychange',()=>updateFocus(document.hasFocus()));
 function resize(){
- const compact=mobile()&&!!(uiFlags&255),landscape=innerHeight<500&&stage.clientWidth>560;
+ const compact=mobile()&&!!(uiFlags&255),landscape=matchMedia('(orientation:landscape) and (max-height:500px)').matches;
  cols=compact?(landscape?60:38):Math.max(76,Math.min(160,Math.floor(stage.clientWidth/10)));
  rows=compact?(landscape?20:28):Math.max(24,Math.min(48,Math.floor(stage.clientHeight/(stage.clientWidth/cols*2))));
  previous=new Uint32Array(0);if(!started)drawBoot();
@@ -492,6 +492,7 @@ const retryButton=document.querySelector('#toolbar [data-tap="13"]');
 const soundButton=document.querySelector('#sound');
 const soundAnchor=soundButton.nextElementSibling;
 const toolbar=document.querySelector('#toolbar'),fullscreenTools=document.querySelector('#fullscreen-tools');
+const fullscreenButtons=document.querySelector('#fullscreen-buttons');
 const saveControls=document.querySelector('#save-controls'),fullscreenButton=document.querySelector('#fullscreen');
 const leaveFullscreen=document.querySelector('#leave-fullscreen');
 const pageControls=document.querySelectorAll('body > header, body > footer');
@@ -501,9 +502,9 @@ function fullscreenLayout(){
  const fallback=playfield.classList.contains('expanded');
  for(const controls of pageControls)controls.inert=fallback;
  if(active){
-  fullscreenTools.prepend(start);
+  fullscreenButtons.prepend(start);
   document.querySelector('#account-fullscreen').before(retryButton,soundButton);
-  leaveFullscreen.before(saveControls,languageToggle);
+  fullscreenButtons.append(saveControls,languageToggle);
   fullscreenTools.append(saveStatus,settingsKeys);
  }else{
   toolbar.prepend(start);
