@@ -724,8 +724,12 @@ const server=http.createServer((req,res)=>{
   await expedition.evaluate(()=>{
    const draw=window.tvFrame;
    window.tvFrame=(cells,w,h)=>{
-    if(uiFlags&128)window.desktopMapFrame=Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>
-     String.fromCodePoint(cells[4*(y*w+x)])).join('')).join('\n');
+    if(uiFlags&(128|1)){
+     const text=Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>
+      String.fromCodePoint(cells[4*(y*w+x)])).join('')).join('\n');
+     if(uiFlags&1)window.desktopMenuFrame=text;
+     else window.desktopMapFrame=text;
+    }
     draw(cells,w,h);
    };
   });
@@ -754,20 +758,25 @@ const server=http.createServer((req,res)=>{
   await expedition.waitForFunction(()=>!(uiFlags&128));
   assert.equal(await desktopSwitch.isVisible(),false);
   assert.equal(await desktopBrowse.isVisible(),false);
-  const pickerActions=expedition.locator('#profile-picker-actions');
+  const pickerActions=expedition.locator('#menu-selection-actions');
   assert.equal(await pickerActions.isVisible(),false);
   await desktopToolbar.locator('[data-tap="12"]').click();
-  await expedition.waitForFunction(()=>uiFlags&1);
-  await expedition.keyboard.press('Digit5');
-  await expedition.keyboard.press('Enter');
+  await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 1  '));
+  assert.equal(await pickerActions.getByRole('button',{name:'Back'}).isVisible(),false);
+  await pickerActions.getByRole('button',{name:'Previous option'}).click();
+  await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 6  '));
+  await pickerActions.getByRole('button',{name:'Previous option'}).click();
+  await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 5  SETTINGS'));
+  await pickerActions.getByRole('button',{name:'Select'}).click();
   await expedition.locator('#settings-keys [data-tap="25"]').click();
   await pickerActions.getByRole('button',{name:'Next option'}).click();
   await pickerActions.getByRole('button',{name:'Select'}).click();
   await expedition.waitForFunction(()=>selectedSlot===2&&!(uiFlags&(1<<23)));
-  assert.equal(await pickerActions.isVisible(),false);
+  assert.equal(await pickerActions.isVisible(),true,'switching slots returns to the main menu');
+  assert.equal(await pickerActions.getByRole('button',{name:'Back'}).isVisible(),false);
   await expedition.close();
   console.log('PASS desktop Expedition mouse navigation browses rooms and survives switching views');
-  console.log('PASS desktop mouse controls select a save slot');
+  console.log('PASS desktop mouse controls reach Settings and select a save slot');
 
   const mobile=await browser.newContext({locale:'pl-PL',viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
   const page=await mobile.newPage();page.on('pageerror',e=>errors.push(String(e)));await page.goto(url);await page.waitForFunction(()=>!document.querySelector('#start').disabled);

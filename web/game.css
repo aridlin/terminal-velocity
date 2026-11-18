@@ -5,6 +5,8 @@
 
 .route-browse{display:inline-flex;gap:6px}
 .menu-actions{display:flex;flex-shrink:0;justify-content:center;gap:8px;padding:6px 8px}
+/* Keep Select clear of the save replacement buttons if its prompt opens. */
+#menu-selection-actions{justify-content:flex-start}
 #replace-save{border-color:#e4ad68}
 @media(pointer:coarse),(max-width:760px),(orientation:landscape) and (max-height:500px){
  .map-view-switch,.route-browse,.menu-actions{display:none}

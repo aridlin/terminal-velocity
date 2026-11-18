@@ -149,7 +149,9 @@ function translateUI(){
  const replacingRun=!!(uiFlags&replaceRunFlag);
  const choosingProfile=!!(uiFlags&profilePickerFlag);
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
- document.querySelector('#profile-picker-actions').hidden=!choosingProfile;
+ const menuSelection=document.querySelector('#menu-selection-actions');
+ menuSelection.hidden=!(uiFlags&1)||!!(uiFlags&16)||replacingSave;
+ menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile;
  if(replacingSave){
   const replace=document.querySelector('#replace-save');
   replace.dataset.tap=replacingRun?'6':'8';
