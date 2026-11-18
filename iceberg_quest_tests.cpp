@@ -90,6 +90,7 @@ int main() {
     install_test_room(game,std::move(practice));game.profile.quests[6]=1;game.profile.quest_counts[6]=0;
     game.tick({},1./120);
     for(int attempt=0;attempt<3;++attempt) {
+      for(int tick=0;tick<30&&!game.state.player.can_dash();++tick)game.tick({},1./120);
       Controls c;c.move=1;c.dash_pressed=true;game.tick(c,1./120);
       c.dash_pressed=false;c.jump_pressed=c.jump_held=true;game.tick(c,1./120);
       c.jump_pressed=false;for(int tick=0;tick<160&&!game.state.player.grounded;++tick)game.tick(c,1./120);
