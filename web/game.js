@@ -121,6 +121,7 @@ function clearPresses(){
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
 const settingsFlag=1<<4;
 const confirmSaveFlag=1<<5;
+const doorReadyFlag=1<<10;
 const expeditionFlag=1<<13;
 const roomMapFlag=1<<17;
 const forkDoorFlag=1<<18;
@@ -161,9 +162,15 @@ function translateUI(){
  const replacingRun=!!(uiFlags&replaceRunFlag);
  const choosingProfile=!!(uiFlags&profilePickerFlag);
  const inSettings=!!(uiFlags&settingsFlag);
- if(inSettings){
+ const overlay=overlayFlags();
+ const showingPause=(overlay&(2|8|64|128))===2;
+ const reading=!!(overlay&4);
+ const inspecting=!!(overlay&8);
+ const browsingQuests=!!(overlay&64)&&!reading;
+ touchUse.hidden=inspecting;
+ if(inSettings||showingPause){
   for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-buttons > [data-tap="9"]'))
-   button.textContent=tr('Wróć','Back');
+   button.textContent=inSettings?tr('Wróć','Back'):tr('Wznów','Resume');
  }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  const menuSelection=document.querySelector('#menu-selection-actions');
@@ -183,14 +190,26 @@ function translateUI(){
  }else if(inSettings){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(showingPause){
+  touchUse.textContent=tr('Wznów','Resume');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(reading){
+  touchUse.textContent=tr('Dalej','Continue');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(browsingQuests){
+  touchUse.textContent=tr('Wybierz','Select');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(uiFlags&forkDoorFlag){
   touchUse.textContent=tr('Przejście B','Passage B');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(readOnlyMapOpen()){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));
- }else if(overlayFlags()&districtTravelFlag){
+ }else if(overlay&districtTravelFlag){
   touchUse.textContent=tr('Podróżuj','Travel');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(overlay&doorReadyFlag){
+  touchUse.textContent=tr('Wejdź','Enter');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else{
   touchUse.textContent=lastBlocked?'↵':tr('Użyj','Use');
@@ -209,10 +228,10 @@ function translateUI(){
   button.setAttribute('aria-label',districtControl?tr('Zmień dzielnicę','Change district'):button.textContent);
  }
  const touchInspect=document.querySelector('#touch-inspect');
- const overlay=overlayFlags();
  const touchControls=document.querySelector('#touch');
- if(inMenu||overlay&128){
-  const actionsOnly=inMenu?(inSettings||replacingSave):!!(overlay&roomMapFlag);
+ if(inMenu||overlay&128||showingPause||reading||inspecting||browsingQuests){
+  const browseTour=!!(overlay&tourFlag)&&!(overlay&4);
+  const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:reading||!!(overlay&roomMapFlag);
   touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
  }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
@@ -227,7 +246,8 @@ function translateUI(){
   button.textContent=mapViewLabel;
   button.setAttribute('aria-label',mapViewAction);
  }
- touchInspect.hidden=(inMenu&&!choosingProfile&&!replacingSave)||!!((overlay&128)&&(overlay&tourFlag));
+ touchInspect.hidden=showingPause||(reading&&!questRecordOpen())||
+  (inMenu&&!choosingProfile&&!replacingSave)||!!((overlay&128)&&(overlay&tourFlag));
  let inspectLabel;
  if(replacingSave){
   touchInspect.textContent=tr('Anuluj','Cancel');
@@ -238,10 +258,10 @@ function translateUI(){
  }else if(questRecordOpen()){
   touchInspect.textContent=tr('Wróć','Back');
   inspectLabel=tr('Wróć do księgi zadań','Back to quest book');
- }else if(overlay&8){
+ }else if(inspecting){
   touchInspect.textContent=tr('Zamknij','Close');
   inspectLabel=tr('Zamknij podgląd','Close inspection');
- }else if(overlay&64){
+ }else if(browsingQuests){
   touchInspect.textContent=tr('Zakładka','Tab');
   inspectLabel=tr('Następna zakładka','Next quest tab');
  }else if(overlay&128){
@@ -281,7 +301,7 @@ window.tvUI=u=>{
  const inputContextFlags=blockingFlags|2048|settingsFlag|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&inputContextFlags)!==(uiFlags&inputContextFlags))clearInput();
- lastBlocked=!!(u.flags&(blockingFlags|1024));
+ lastBlocked=!!(u.flags&(blockingFlags|doorReadyFlag));
  const before=uiFlags;uiFlags=u.flags;
  if((before&255)!==(uiFlags&255))resize();
  if((before^uiFlags)&soundMutedFlag)try{localStorage.setItem(mutePreferenceKey,uiFlags&soundMutedFlag?'1':'0');}catch{}
@@ -418,10 +438,13 @@ for(const button of document.querySelectorAll('[data-key]')){
  for(const type of ['pointerup','pointercancel','lostpointercapture'])
   button.addEventListener(type,e=>finishPointer(e.pointerId,type==='pointerup'));
 }
-for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
+for(const b of document.querySelectorAll('[data-tap]'))b.onclick=event=>{
  if(!started||accounts?.active||importPending)return;
- canvas.focus({preventScroll:true});
- tap(+b.dataset.tap);
+ const key=+b.dataset.tap;
+ // Keep keyboard focus on adjustments that leave the Settings panel open.
+ const adjustsSetting=settingsKeys.contains(b)&&key!==25;
+ if(event.detail!==0||!adjustsSetting)canvas.focus({preventScroll:true});
+ tap(key);
 };
 function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';canvasPress=null;held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function updateBrowserSaveStatus(status){
@@ -526,6 +549,7 @@ const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('e
 function fullscreenLayout(){
  const active=expanded();
  const fallback=playfield.classList.contains('expanded');
+ const settingsFocus=settingsKeys.contains(document.activeElement)?document.activeElement:null;
  for(const controls of pageControls)controls.inert=fallback;
  if(active){
   fullscreenButtons.prepend(start);
@@ -542,7 +566,8 @@ function fullscreenLayout(){
  clearInput();
  resize();
  const field=document.activeElement;
- if(!accounts?.active||(field!==accounts.name&&field!==accounts.pass))canvas.focus();
+ if(settingsFocus&&!settingsKeys.hidden)settingsFocus.focus({preventScroll:true});
+ else if(!accounts?.active||(field!==accounts.name&&field!==accounts.pass))canvas.focus();
  fullscreenButton.setAttribute('aria-pressed',String(active));
 }
 let fullscreenTransition=false;
@@ -583,7 +608,7 @@ const saveFile=document.querySelector('#save-file');
 const slotPath=base=>selectedSlot===1?base:base+'.slot'+selectedSlot;
 const currentSavePath=()=>slotPath(saveDirectory+'/progress.dat.iceberg');
 const previousImportPath=()=>slotPath(saveDirectory+'/before-manual-import.iceberg');
-let importPending=false;
+let importPending=false,importPicker=null;
 
 function refreshUnreadableSaveControls(){
  unreadableSaveNames=[null,null];
@@ -625,7 +650,7 @@ function readCurrentSave(forAccount=false){
  try{return Module.FS.readFile(recovery);}
  finally{Module.FS.unlink(recovery);}
 }
-function downloadSave(name,read){
+function downloadSave(event,name,read){
  try {
   const url=URL.createObjectURL(new Blob([read()],{type:'application/octet-stream'}));
   const link=document.createElement('a');
@@ -634,22 +659,25 @@ function downloadSave(name,read){
   setSaveActionError(null);
  } catch {
   setSaveActionError(['Brak zapisu do pobrania','No save to download']);
+ } finally {
+  if(event.detail!==0)canvas.focus({preventScroll:true});
  }
 }
-exportSave.onclick=()=>downloadSave('terminal-velocity.iceberg',readCurrentSave);
-exportPreviousSave.onclick=()=>downloadSave('terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath()));
+exportSave.onclick=event=>downloadSave(event,'terminal-velocity.iceberg',readCurrentSave);
+exportPreviousSave.onclick=event=>downloadSave(event,'terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath()));
 unreadableSaveButtons.forEach((button,i)=>{
- button.onclick=()=>{
+ button.onclick=event=>{
   const name=unreadableSaveNames[i];
-  if(name)downloadSave(name,()=>Module.FS.readFile(saveDirectory+'/'+name));
+  if(name)downloadSave(event,name,()=>Module.FS.readFile(saveDirectory+'/'+name));
  };
 });
-function finishImport(){
+function finishImport(returnToPicker=false){
  importPending=false;
  refreshSaveControls();
  clearInput();
  last=performance.now();
- if(!accounts?.active)canvas.focus({preventScroll:true});
+ const focusTarget=returnToPicker&&!importSave.disabled?importSave:canvas;
+ if(!accounts?.active)focusTarget.focus({preventScroll:true});
 }
 async function readImportFile(file){
  let deadline;
@@ -676,18 +704,34 @@ function applyManualImport(fs,previous){
   else if(fs.analyzePath(backup).exists)fs.unlink(backup);
  }
 }
-importSave.onclick=()=>{
+importSave.onclick=event=>{
+ const keyboard=event.detail===0&&document.activeElement===importSave;
+ importPicker={slot:selectedSlot,keyboard};
  clearInput();
- canvas.focus({preventScroll:true});
+ if(!keyboard)canvas.focus({preventScroll:true});
  saveFile.click();
 };
-saveFile.oncancel=()=>{if(!importPending)finishImport();};
+saveFile.oncancel=()=>{
+ if(importPending)return;
+ const returnToPicker=importPicker?.keyboard;
+ importPicker=null;
+ finishImport(returnToPicker);
+};
 saveFile.onchange=async()=>{
  const file=saveFile.files[0];
  saveFile.value='';
+ const picker=importPicker;
+ importPicker=null;
  // Only an actual selection starts an import. A picker dismissal may never
  // reach the page, so opening the picker cannot suspend the game loop.
  if(!file||importPending||inTour())return;
+ const returnToPicker=picker?.keyboard;
+ if(picker&&picker.slot!==selectedSlot){
+  setSaveActionError(['Zmieniono slot zapisu — wybierz plik ponownie','Save slot changed — choose the file again']);
+  finishImport(returnToPicker);
+  return;
+ }
+ let loaded=false;
  importPending=true;
  importSave.disabled=true;
  setSaveActionError(null);
@@ -731,11 +775,12 @@ saveFile.onchange=async()=>{
   } finally {if(fs.analyzePath(incoming).exists)fs.unlink(incoming);}
   exportPreviousSave.hidden=false;
   Module._web_enter_campaign();
+  loaded=true;
   flushBrowserStorage();
  } catch {
   setSaveActionError(['Nie udało się wczytać zapisu','Could not import save']);
  } finally {
-  finishImport();
+  finishImport(returnToPicker&&!loaded);
  }
 };
 function frame(now){
@@ -803,11 +848,15 @@ function canvasConfirmContext(){
  const overlay=overlayFlags();
  if(overlay&4)return 4;
  if(overlay&(8|64|128))return 0;
- return (overlay&2)||(overlay&1024);
+ return (overlay&2)||(overlay&doorReadyFlag);
 }
 canvas.addEventListener('pointerdown',event=>{
  if(!event.isPrimary||event.button!==0||accounts?.active||importPending)return;
- canvasPress={id:event.pointerId,context:canvasConfirmContext()};
+ canvasPress={id:event.pointerId,context:canvasConfirmContext(),x:event.clientX,y:event.clientY};
+});
+addEventListener('pointermove',event=>{
+ const press=canvasPress;
+ if(press?.id===event.pointerId&&Math.hypot(event.clientX-press.x,event.clientY-press.y)>8)canvasPress=null;
 });
 canvas.addEventListener('pointercancel',event=>{
  if(canvasPress?.id===event.pointerId)canvasPress=null;
@@ -815,14 +864,13 @@ canvas.addEventListener('pointercancel',event=>{
 canvas.onclick=event=>{
  const press=canvasPress;
  canvasPress=null;
- if(!started){start.click();return;}
  if(accounts?.active||importPending)return;
  const context=canvasConfirmContext();
- if(!context)return;
- // A release over a new pause, conversation or door is not a confirm for it.
+ // Only a click from the same context can start or confirm.
  if(event.detail!==0&&(!press||press.context!==context||
     (event.pointerId!==undefined&&press.id!==event.pointerId)))return;
- tap(8);
+ if(!started){start.click();return;}
+ if(context)tap(8);
 };
 addEventListener('keydown',e=>{
  if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();

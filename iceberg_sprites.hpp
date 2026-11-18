@@ -54,10 +54,17 @@
   void courier_sprite(int x,int feet,uint32_t coat) {
     const auto &p=state_.player;const auto &v=state_.adventure;
     uint32_t skin=0xe0b394,bag=0x9b7864,boot=0xc1cbd0,leg=0x55616f;
-    uint32_t body=p.dash_available&&!grid_.dash_locked()?0xf5cd79:0x83c5ce;
+    uint32_t body=p.can_dash()&&!grid_.dash_locked()?0xf5cd79:0x83c5ce;
     std::vector<std::array<uint32_t,4>> pixels{{0,coat,coat,0},{0,skin,0x51474b,0},
       {bag,body,body,0},{bag,body,body,skin},{0,leg,leg,0},{boot,0,boot,0}};
-    if(!p.grounded){pixels[4]={leg,leg,0,0};pixels[5]={boot,0,0,boot};}
+    if(p.ledge) {
+      const bool stepping=p.ledge_climb_left>0.&&p.ledge_climb_left<kLedgeClimbTime*.45;
+      pixels=stepping
+        ? std::vector<std::array<uint32_t,4>>{{0,coat,coat,0},{0,skin,0x51474b,0},{bag,body,body,skin},
+          {bag,body,leg,0},{0,leg,boot,0},{0,boot,0,0}}
+        : std::vector<std::array<uint32_t,4>>{{0,coat,coat,skin},{0,skin,0x51474b,skin},{bag,body,body,skin},
+          {bag,body,body,0},{0,leg,leg,0},{0,boot,0,boot}};
+    } else if(!p.grounded){pixels[4]={leg,leg,0,0};pixels[5]={boot,0,0,boot};}
     else if(std::abs(p.vx)>2) {
       if(int(state_.elapsed*14)%2){pixels[4]={0,leg,0,0};pixels[5]={0,boot,boot,0};}
       else {pixels[4]={0,0,leg,0};pixels[5]={boot,boot,0,0};}

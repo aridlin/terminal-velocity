@@ -9,6 +9,31 @@ int main(){try {
   iceberg::SessionOptions options;options.no_save=options.mute=true;
   AdventureSession game(options,"/tmp/tv-ui-test-unused");game.begin_campaign(true);
   CellFrame frame;cell_frame_sink=[&](const CellFrame &f){frame=f;};
+  {
+    auto at_door=game.state;
+    const auto &door=game.grid.goal;
+    const double marker_x=door.x+door.w*.5-.5, marker_y=door.y+1.6;
+    at_door.player.x=marker_x-.6;
+    at_door.player.y=marker_y-.7;
+    at_door.player.facing=1;
+    at_door.camera_x=marker_x-4.1;
+    at_door.camera_y=marker_y-4.1;
+    at_door.adventure.door_left=0;
+    at_door.won=true;
+    for(auto [columns,rows]:{std::pair{34,24},std::pair{110,34}}) {
+      at_door.adventure.door_open=.6;
+      RenderGrid(game.grid,at_door,rows,columns,2).draw();
+      const Cell courier=frame[9][10];
+      at_door.adventure.door_open=1.;
+      RenderGrid(game.grid,at_door,rows,columns,2).draw();
+      ui_check(courier.glyph=="▀"&&frame[9][10].glyph==courier.glyph&&frame[9][10].rgb==courier.rgb,
+        "the open doorway marker stays behind the courier");
+      at_door.player.x-=2.;
+      RenderGrid(game.grid,at_door,rows,columns,2).draw();
+      ui_check(frame[9][10].glyph=="▱","the open doorway marker remains visible when the courier moves away");
+      at_door.player.x+=2.;
+    }
+  }
   Controls enter;enter.confirm=true;Controls book;book.journal=true;Controls map;map.map=true;Controls tab;tab.inspect=true;Controls use;use.interact=true;
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
     game.profile.language=language;game.sync_view();game.state.adventure.map=true;game.state.adventure.selected=1;

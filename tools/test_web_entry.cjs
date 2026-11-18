@@ -498,6 +498,15 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.evaluate(()=>window.canvasConfirms),0,'clicking the paused quest book does not select an entry');
     await page.keyboard.press('Tab');
     await page.waitForFunction(()=>(uiFlags&(2|64))===2);
+    const pauseCanvas=await page.locator('#game').boundingBox();
+    const x=pauseCanvas.x+pauseCanvas.width/2,y=pauseCanvas.y+pauseCanvas.height/2;
+    await page.mouse.move(x,y);
+    await page.mouse.down();
+    await page.mouse.move(x+70,y,{steps:5});
+    await page.mouse.move(x,y,{steps:5});
+    await page.mouse.up();
+    await page.evaluate(async()=>{for(let i=0;i<3;i++)await new Promise(requestAnimationFrame);});
+    assert.equal(await page.evaluate(()=>window.canvasConfirms),0,'dragging away and back does not resume a pause');
     await clickGameCanvas();
     await page.waitForFunction(()=>!(uiFlags&2));
     assert.equal(await page.evaluate(()=>window.canvasConfirms),1,'clicking the pause screen still resumes');
@@ -517,9 +526,13 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('b');await page.waitForTimeout(100);await page.keyboard.press('Tab');await page.waitForFunction(()=>!(entryFlags&64));
     await page.keyboard.down('d');await page.waitForTimeout(360);await page.keyboard.up('d');await page.keyboard.press('e');
     await page.waitForFunction(()=>!!(entryFlags&4));await page.waitForTimeout(150);await page.screenshot({path:path.join(out,'web-dialogue.png')});
+    assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Continue');
+    assert.equal(await page.locator('#touch').getAttribute('data-compact-controls'),'actions');
+    assert.equal(await page.locator('#touch-inspect').getAttribute('hidden'),'');
     await page.keyboard.press('Enter');await page.waitForTimeout(80);assert.ok(await page.evaluate(()=>!!(entryFlags&4)),'reveal keeps unread objective on screen');
     await page.keyboard.press('Enter');await page.waitForTimeout(80);assert.match(await page.evaluate(()=>entryFrame),/Start at the board/,'next essential objective shown in one press after reveal');
     await page.keyboard.press('Enter');await page.waitForFunction(()=>!(entryFlags&4));
+    assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
     console.log('PASS locked map explanation, route tab, quest book and shortened reveal/continue flow through browser controls');
     await page.keyboard.press('Shift');
     await page.waitForFunction(()=>window.dashEdges===1);
@@ -784,6 +797,18 @@ const server=http.createServer((req,res)=>{
   await expedition.locator('[data-language="en"]').click();
   await expedition.locator('#start').click();
   await expedition.waitForFunction(()=>started&&!accountBooting);
+  const importControl=expedition.locator('#import-save');
+  await importControl.focus();
+  await expedition.waitForFunction(()=>document.activeElement===importSave&&document.hasFocus());
+  const [keyboardPicker]=await Promise.all([expedition.waitForEvent('filechooser'),importControl.press('Space')]);
+  assert.equal(await importControl.evaluate(button=>button===document.activeElement),true);
+  const decline=expedition.waitForEvent('dialog').then(dialog=>dialog.dismiss());
+  await keyboardPicker.setFiles(path.join(root,'tests/fixtures/iceberg-v4.dat'));
+  await decline;
+  await expedition.waitForFunction(()=>!importPending&&document.activeElement.id==='import-save');
+  await expedition.keyboard.press('Shift+Tab');
+  assert.equal(await expedition.evaluate(()=>document.activeElement.id),'export-save');
+  console.log('PASS keyboard save import preserves toolbar focus after cancellation');
   const desktopToolbar=expedition.locator('#toolbar');
   const desktopMap=desktopToolbar.locator('[data-tap="11"]');
   const desktopSwitch=desktopToolbar.locator('.map-view-switch');
@@ -836,6 +861,7 @@ const server=http.createServer((req,res)=>{
   assert.equal(await desktopBrowse.isVisible(),false);
   const pickerActions=expedition.locator('#menu-selection-actions');
   assert.equal(await pickerActions.isVisible(),false);
+  const [staleImport]=await Promise.all([expedition.waitForEvent('filechooser'),importControl.click()]);
   await desktopToolbar.locator('[data-tap="12"]').click();
   await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 3  RESUME ENDLESS EXPEDITION'));
   assert.equal(await pickerActions.getByRole('button',{name:'Back'}).isVisible(),false);
@@ -854,6 +880,14 @@ const server=http.createServer((req,res)=>{
   await expedition.waitForFunction(()=>selectedSlot===2&&!(uiFlags&(1<<23)));
   assert.equal(await pickerActions.isVisible(),true,'switching slots returns to the main menu');
   assert.equal(await pickerActions.getByRole('button',{name:'Back'}).isVisible(),false);
+  let replacementPrompt=false;
+  const declineStaleImport=async dialog=>{replacementPrompt=true;await dialog.dismiss();};
+  expedition.on('dialog',declineStaleImport);
+  try {
+   await staleImport.setFiles(path.join(root,'tests/fixtures/iceberg-v4.dat'));
+   await expedition.waitForFunction(()=>saveStatus.textContent==='Save slot changed — choose the file again');
+   assert.equal(replacementPrompt,false,'a stale picker cannot offer to replace the newly selected slot');
+  } finally {expedition.off('dialog',declineStaleImport);}
   await expedition.close();
   console.log('PASS desktop Expedition mouse navigation browses rooms and survives switching views');
   console.log('PASS desktop mouse controls reach Settings and select a save slot');
@@ -869,9 +903,13 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>!!(uiFlags&8));
   assert.equal(await inspectControl.getAttribute('aria-label'),'Close inspection');
   assert.deepEqual(await touchDirectionNames(),['Previous page','Next page']);
+  assert.deepEqual(await page.locator('#touch button:visible').evaluateAll(buttons=>
+   buttons.map(button=>button.dataset.key)),['2','3','7']);
   await inspectControl.tap();
   await page.waitForFunction(()=>!(uiFlags&8));
   assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
+  assert.equal(await page.locator('#touch-use').isVisible(),true,'Use returns after closing inspection');
+  assert.equal(await page.locator('#touch .jump').isVisible(),true,'Jump returns after closing inspection');
   const touchSession=await mobile.newCDPSession(page);
   const [left,up,right]=await Promise.all([0,2,1].map(async key=>{
    const box=await page.locator('#touch [data-key="'+key+'"]').boundingBox();
@@ -947,11 +985,17 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>(uiFlags&(64|128))===64);
   const directionState=()=>page.evaluate(()=>({held,highlight:!!document.querySelector('#touch .held')}));
   assert.deepEqual(await directionState(),{held:0,highlight:false},'opening the quest book clears the map contact');
+  assert.deepEqual(await page.locator('#touch button:visible').evaluateAll(buttons=>
+   buttons.map(button=>button.dataset.key)),['2','3','6','7']);
+  assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Select');
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[left]});
   assert.deepEqual(await directionState(),{held:0,highlight:false},'the old contact cannot activate another direction');
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[left]});
-  await page.waitForFunction(()=>held===1);
+  const questDown=await page.locator('#touch [data-key="3"]').boundingBox();
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[
+   {x:questDown.x+questDown.width/2,y:questDown.y+questDown.height/2,id:1}
+  ]});
+  await page.waitForFunction(()=>held===8);
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.keyboard.press('Tab');
   await page.waitForFunction(()=>!(uiFlags&64)&&held===0);
@@ -1024,6 +1068,22 @@ const server=http.createServer((req,res)=>{
     assert.equal(controls.overflow,false,'touch labels fit their buttons');
    }
   }
+  for(const size of [{width:280,height:190},{width:361,height:240}]){
+   await page.setViewportSize(size);
+   const forkControlsFit=await page.evaluate(width=>{
+    const before=uiFlags;
+    try{
+     window.tvUI({flags:(before&~512)|doorReadyFlag});
+     if(document.querySelector('#touch-use').textContent!=='Wejdź')return false;
+     window.tvUI({flags:(before&~512)|forkDoorFlag|1024});
+     const pad=document.querySelector('#touch');
+     return stage.clientHeight>20&&document.documentElement.scrollWidth===width&&
+      [...pad.querySelectorAll('button')].every(button=>
+       button.getBoundingClientRect().right<=width&&button.scrollWidth<=button.clientWidth);
+    }finally{window.tvUI({flags:before});}
+   },size.width);
+   assert.equal(forkControlsFit,true,'Polish door buttons fit at '+size.width+' CSS pixels in landscape');
+  }
   for(const fallback of [false,true]){
    if(fallback)await page.evaluate(()=>{
     window.fullscreenRequests=[];
@@ -1052,13 +1112,14 @@ const server=http.createServer((req,res)=>{
     page.waitForEvent('download'),tools.locator('#export-save').tap(),
    ]);
    assert.match(fs.readFileSync(await fullscreenSave.path(),'utf8'),/^TVICE6 /);
-   await page.locator('#game').focus();
+   await page.waitForFunction(()=>document.activeElement===canvas&&focused);
 
    const sound=tools.locator('#sound');
+   const sounded=await sound.getAttribute('aria-pressed');
    await page.keyboard.press('u');
-   await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='false');
+   await page.waitForFunction(before=>document.querySelector('#sound').getAttribute('aria-pressed')!==before,sounded);
    await sound.tap();
-   await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='true');
+   await page.waitForFunction(before=>document.querySelector('#sound').getAttribute('aria-pressed')===before,sounded);
    if(fallback){
     await page.waitForFunction(()=>document.activeElement===canvas);
     await page.keyboard.press('Shift+Tab');
@@ -1114,6 +1175,19 @@ const server=http.createServer((req,res)=>{
     assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
     assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
    }
+   const pauseButton=tools.locator('[data-tap="9"]');
+   const resume=page.locator('#touch-use');
+   await pauseButton.tap();
+   await page.waitForFunction(()=>!!(uiFlags&2));
+   assert.equal(await pauseButton.textContent(),'Resume');
+   assert.equal(await resume.getAttribute('aria-label'),'Resume');
+   assert.equal(await page.locator('#touch .directions').isVisible(),false);
+   assert.equal(await page.locator('#touch .jump').isVisible(),false);
+   assert.equal(await inspectControl.isVisible(),false);
+   await resume.tap();
+   await page.waitForFunction(()=>!(uiFlags&2));
+   assert.equal(await pauseButton.textContent(),'Pause');
+   assert.equal(await page.locator('#touch .jump').isVisible(),true);
    await tools.locator('[data-tap="10"]').tap();
    await page.waitForFunction(()=>!!(uiFlags&64));
    await tools.locator('[data-tap="12"]').tap();
@@ -1162,8 +1236,23 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(old=>window.volumeLine&&window.volumeLine!==old,oldVolume);
    const focusPause=settings.locator('#focus-pause');
    const initialFocusPause=await focusPause.getAttribute('aria-pressed');
-   if(initialFocusPause==='true')await focusPause.tap();
+   await focusPause.focus();
+   await page.keyboard.press('Enter');
+   await page.waitForFunction(before=>document.querySelector('#focus-pause').getAttribute('aria-pressed')!==before,initialFocusPause);
+   assert.equal(await focusPause.evaluate(button=>button===document.activeElement),true);
+   if(initialFocusPause==='false')await page.keyboard.press('Enter');
    await page.waitForFunction(()=>!(uiFlags&4096));
+   await page.keyboard.press('Tab');
+   assert.equal(await page.evaluate(()=>document.activeElement.dataset.tap),'25');
+   await page.keyboard.press('Tab');
+   const smoothCamera=page.locator('#smooth-camera');
+   assert.equal(await smoothCamera.evaluate(button=>button===document.activeElement),true);
+   await page.keyboard.press('Alt+Enter');
+   await page.waitForFunction(()=>!expanded()&&settingsKeys.parentElement.tagName==='FOOTER');
+   assert.equal(await smoothCamera.evaluate(button=>button===document.activeElement),true);
+   await page.keyboard.press('Alt+Enter');
+   await page.waitForFunction(()=>expanded()&&settingsKeys.parentElement.id==='fullscreen-tools');
+   assert.equal(await smoothCamera.evaluate(button=>button===document.activeElement),true);
    await page.screenshot({path:path.join(out,fallback?"web-settings-fallback.png":"web-settings-fullscreen.png")});
    await holdSettingsAction(false);
    await settingsTouch.detach();
@@ -1325,7 +1414,18 @@ const server=http.createServer((req,res)=>{
   });
   await action.tap();
   await page.waitForFunction(()=>window.tourUseReceived===true);
-  console.log('PASS Expedition maps and Debug Tour restore the normal touch Use action');
+  await page.locator('#toolbar [data-tap="9"]').tap();
+  await page.waitForFunction(()=>!!(uiFlags&2)&&window.expeditionFrame?.includes('Ferry crossing'));
+  assert.equal(await action.getAttribute('aria-label'),'Resume');
+  assert.equal(await inspectControl.isVisible(),false);
+  assert.equal(await page.locator('#touch .jump').isVisible(),false);
+  assert.deepEqual(await touchDirectionNames(),['Previous room','Next room']);
+  await page.locator('#touch').getByRole('button',{name:'Next room'}).tap();
+  await page.waitForFunction(()=>!!(uiFlags&2)&&window.expeditionFrame?.includes('Chimney without a sweep'));
+  await action.tap();
+  await page.waitForFunction(()=>!(uiFlags&2));
+  assert.equal(await action.getAttribute('aria-label'),'Use');
+  console.log('PASS Expedition maps, Pause and the Debug Tour keep the relevant touch actions');
   await mobile.close();
   assert.deepEqual(errors,[],'browser errors');console.log(visualOnly?'PASS current Chromium/WASM visual smoke':'PASS real Chromium/WASM entry, save-language restoration and responsive rendering');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

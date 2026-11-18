@@ -34,6 +34,10 @@
   std::string branch_door_hint() const {
     return tr("E: przejście B · ENTER: główne","E: passage B · ENTER: main");
   }
+  std::string ledge_hint() const {
+    return state_.ssh_basic?tr("Skok: wejdź · S: puść","Jump: climb · S: drop"):
+      tr("Skok: wejdź · Puść: spadnij","Jump: climb · Release: drop");
+  }
   void paint_text(int row,int col,const std::string &s,uint32_t rgb,bool bold=false) {
     for(auto ch:glyphs(s))put(row,col++,{ch,Color::Text,false,bold,0,rgb});
   }
@@ -325,6 +329,17 @@
     }
     draw_machinery_reaction();
     draw_water_splash();
+    auto goal=grid_.goal;
+    double opening=state_.adventure.door_open;
+    bool unlocked=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
+    double center=goal.x+goal.w*.5,door_feet=goal.bottom();
+    if(!unlocked)prop_art(center,door_feet,{"╔═══════╗","║┌──┬──┐║","║│  │  │║","║│ ▪│▪ │║","║│  │  │║","╚╧══╧══╧╝"},d.stone);
+    if(unlocked) {
+      const char *face=opening>.66?"║       ║":opening>.2?"║│     │║":"║│ ▪│▪ │║";
+      prop_art(center,door_feet,{"╔═══════╗",face,face,face,"║       ║","╚═══════╝"},d.accent);
+      if(opening>.66)world_text(center-.5,goal.y+1.6,"▱",d.light);
+    }
+
     // A small readable courier silhouette, with a scarf that follows motion.
     const auto &p=state_.player;
     static const uint32_t coats[]={0xe4ad68,0xdab0d5,0x88d3d9,0xc9bb85,0xabbcf4,0xb8dfb7,0xe99462,0xdce9ef};
@@ -352,17 +367,6 @@
         else {world_text(x-.4,y-.8,"╲ ╱",d.accent);world_text(x-.4,y,"╱ ╲",d.accent);}
       }
     }
-    auto goal=grid_.goal;
-    double opening=state_.adventure.door_open;
-    bool unlocked=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
-    double center=goal.x+goal.w*.5,door_feet=goal.bottom();
-    if(!unlocked)prop_art(center,door_feet,{"╔═══════╗","║┌──┬──┐║","║│  │  │║","║│ ▪│▪ │║","║│  │  │║","╚╧══╧══╧╝"},d.stone);
-    if(unlocked) {
-      const char *face=opening>.66?"║       ║":opening>.2?"║│     │║":"║│ ▪│▪ │║";
-      prop_art(center,door_feet,{"╔═══════╗",face,face,face,"║       ║","╚═══════╝"},d.accent);
-      if(opening>.66)world_text(center-.5,goal.y+1.6,"▱",d.light);
-    }
-
   }
   void draw_iceberg_inspection() {
     const auto &v=state_.adventure;
@@ -665,6 +669,8 @@
       tr("A/D ruch  SPACJA skok  X zryw  E użyj  B obejrzyj","A/D move  SPACE jump  X dash  E use  B inspect"),Color::Player);
     text(rows_-2,2,tr("R powrót  TAB zadania  J mapa  P pauza  M menu  U dźwięk","R retry  TAB quests  J map  P pause  M menu  U sound"));
     if(v.save_error)text(rows_-1,2,save_failure_hint(),Color::Hazard);
+    else if(state_.player.ledge&&state_.player.ledge_climb_left<=0.)
+      text(rows_-1,2,ledge_hint(),Color::Gold);
     else if(v.notice_left>0)text(rows_-1,2,v.notice,Color::Gold);
     else text(rows_-1,2,v.prompt.empty()?quest_focus_hint():v.prompt,Color::Gold);
     if(state_.debug)text(5,2,"vx "+fixed(state_.player.vx)+" vy "+fixed(state_.player.vy)+" 120 Hz",Color::Gold);
