@@ -260,8 +260,12 @@ public:
     configure_route_room();
     auto old_view=state.adventure;
     state=new_state(grid);state.adventure=std::move(old_view);
-    if(state.adventure.mode!=mode)state.adventure.map_route=false;
-    state.adventure.dialogue={};state.adventure.map=false;state.adventure.map_room=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
+    if(state.adventure.mode!=mode) {
+      state.adventure.map_route=false;
+      state.adventure.map_room=false;
+    }
+    state.adventure.route_page=-1;
+    state.adventure.dialogue={};state.adventure.map=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
     state.adventure.door_left=.42;state.adventure.door_open=0;state.adventure.machinery_left=0;
     state.adventure.lamp_left=0;state.adventure.npc_reaction_left=0;
     state.ssh=options.remote;
@@ -434,6 +438,7 @@ public:
       profile.cosmetics=previous.cosmetics;profile.outfit=previous.outfit;
       profile.music_volume=music;profile.effects_volume=effects;profile.ambience_volume=ambience;
       profile.pause_on_focus_loss=previous.pause_on_focus_loss;
+      state.adventure.map_route=state.adventure.map_room=false;
     }
     run_active=false;
     profile.started=true;mode=iceberg::Mode::Campaign;
@@ -859,8 +864,7 @@ public:
     }
     if(c.journal){state.journal=!state.journal;v.map=false;v.selected=0;auto entries=iceberg::journal_entries(v);for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);stepper={};}
     if(c.map) {
-      v.map=!v.map;state.journal=false;v.selected=grid.district;v.route_page=-1;stepper={};
-      v.map_room=false;
+      v.map=!v.map;state.journal=false;v.selected=grid.district;stepper={};
       if(mode!=iceberg::Mode::Campaign)v.map_route=true;
     }
     if(c.pause){if(state.journal||v.map){state.journal=false;v.map=false;}else state.paused=!state.paused;stepper={};}

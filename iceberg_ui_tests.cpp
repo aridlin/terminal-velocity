@@ -32,6 +32,8 @@ int main(){try {
       }
       ui_check(board&&!exit,"the settlement minimap shows its real route board");
     }
+    game.tick(map,1./120);game.tick(map,1./120);
+    ui_check(game.state.adventure.map&&game.state.adventure.map_room,"reopening the campaign map restores its room view");
     game.tick(tab,1./120);
     ui_check(!game.state.adventure.map_room&&!game.state.adventure.map_route,"B returns to the campaign district map");
   }
@@ -48,6 +50,16 @@ int main(){try {
     doors+=cell.glyph=="▣"&&cell.rgb==0xd7e8cd;
   ui_check(doors==1&&ui_text(frame).find("Service corridor")!=std::string::npos,
     "the detour minimap shows only its real return doorway");
+  AdventureSession preview(options,"/tmp/tv-ui-route-preview-unused");preview.begin_campaign(true);
+  preview.stage=2;preview.load_room();
+  Controls next_leg;next_leg.navigate=1;
+  preview.tick(map,1./120);preview.tick(tab,1./120);preview.tick(next_leg,1./120);
+  preview.tick(map,1./120);preview.tick(map,1./120);
+  ui_check(preview.state.adventure.map_route&&preview.state.adventure.route_page==1,
+    "reopening a route map keeps the previewed leg");
+  preview.advance_room();preview.tick(map,1./120);
+  ui_check(preview.state.adventure.map_route&&preview.state.adventure.route_page==-1,
+    "advancing a room returns the route view to the active leg");
   AdventureSession paused(options,"/tmp/tv-ui-paused-overlays-unused");paused.begin_campaign(true);
   paused.profile.language=iceberg::Language::English;
   paused.profile.quests[2]=3;paused.sync_view();
@@ -210,6 +222,12 @@ int main(){try {
       }
     }
     game.tick(map,1./120);ui_check(!v.map,"J closes the expedition map");
+    game.tick(map,1./120);
+    ui_check(v.map&&v.map_room,"reopening an expedition map remembers the room view");
+    game.tick(book,1./120);game.tick(map,1./120);
+    ui_check(v.map&&v.map_room&&!game.state.journal,"reopening after the quest book keeps the room view");
+    game.tick(map,1./120);game.advance_room();game.tick(map,1./120);
+    ui_check(v.map&&v.map_room&&v.route.current==room+1,"the next expedition room keeps the map view and updates the room");
   }
   game.begin_campaign(false);game.tick(map,1./120);
   ui_check(game.state.adventure.map&&!game.state.adventure.map_route,"returning to the campaign opens district travel");
