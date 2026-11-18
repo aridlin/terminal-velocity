@@ -176,6 +176,15 @@ inline void add_expedition_ice(EngineGrid &room) {
   else room.ice_strips.clear();
 }
 
+inline void add_expedition_root_pod(EngineGrid &room) {
+  if(room.district!=4||room.template_id!=49)return;
+  // The outer end of the turnaround lets riders reach the side shelves.
+  room.springs.push_back({71.5,46.5,2.5,1.5});
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.springs.pop_back();
+}
+
 inline void add_expedition_drawers(EngineGrid &room) {
   if(room.district!=3||room.template_id!=39)return;
   room.interactions.push_back({{57,41,3,3},InteractionKind::Valve,0,

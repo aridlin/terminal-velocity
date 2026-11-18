@@ -216,6 +216,7 @@ public:
           add_expedition_drawers(grid);
           add_expedition_copy_belts(grid);
           add_expedition_ice(grid);
+          add_expedition_root_pod(grid);
           strengthen_expedition_wind(grid);
         }
       }

@@ -19,6 +19,21 @@
     world_text(leaf.x+glint*scale_,leaf.y,"━",0xd5eda9);
   }
 
+  void draw_garden_pod(const Rect &pod) {
+    const double row=aspect_*scale_;
+    const int cells=std::max(3,int(std::round(pod.w/scale_)));
+    const double x=pod.x+(pod.w-cells*scale_)*.5;
+    std::string shell,stem;
+    for(int i=1;i<cells-1;++i) {
+      shell+=i==cells/2?"●":"─";
+      stem+=i==cells/2?"┬":"─";
+    }
+    for(double y=pod.y+row;y<pod.bottom();y+=row)
+      world_art(x+(cells/2)*scale_,y,{"│"},0x6d935c);
+    world_art(x,pod.y,{"╰"+stem+"╯"},0x6d935c);
+    world_art(x,pod.y-row,{"╭"+shell+"╮"},0xb9d77b);
+  }
+
   void draw_garden_landmarks() {
     const auto &d=iceberg::Districts[4];double clock=state_.adventure.presentation_time;
     auto greenhouse=[&](double x,double y){world_art(x,y,{

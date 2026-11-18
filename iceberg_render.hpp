@@ -258,7 +258,10 @@
         world_text(r.x,r.y+.8,hull,d.stone);
       }
     }
-    for(auto spring:grid_.springs)world_text(spring.x,spring.y-.5,"╱╲╱╲",0xd8cc87);
+    for(const auto &spring:grid_.springs) {
+      if(grid_.district==4)draw_garden_pod(spring);
+      else world_text(spring.x,spring.y-.5,"╱╲╱╲",0xd8cc87);
+    }
     for(size_t i=0;i<grid_.checkpoint_points.size();++i) {
       auto [x,y]=grid_.checkpoint_points[i];
       prop_art(x,y+kPlayerHeight,{"╭─╮",int(i)<=state_.checkpoint?"│▣│":"│□│","╰┬╯"," │ "},int(i)<=state_.checkpoint?d.accent:d.stone);

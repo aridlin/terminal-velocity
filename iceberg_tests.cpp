@@ -280,6 +280,26 @@ int main(int argc,char **argv) {
     garden_run.layout_version=2;gardens.load_room();
     check(gardens.grid.template_id==48&&gardens.grid.ice_strips.empty(),
       "a legacy Underfrost save keeps its prior dry surfaces");
+    gardens.advance_room();
+    check(gardens.grid.template_id==49&&gardens.grid.springs.empty(),
+      "a legacy Root Well retains its original landing");
+    garden_run.layout_version=iceberg::ContentVersion;gardens.load_room();
+    const auto &well=gardens.grid;
+    check(well.springs.size()==1&&verify_route(well).complete,
+      "current Root Well expeditions include a seedpod and retain a through-route");
+    auto bounce=new_state(well);
+    bounce.player.x=65;bounce.player.y=48-kPlayerHeight;bounce.player.grounded=true;
+    Controls approach;approach.move=1;approach.jump_held=true;
+    bool launched=false,reached_shelf=false;
+    for(int tick=0;tick<300&&!reached_shelf;++tick) {
+      approach.move=int(bounce.player.x<80.);
+      world_step(bounce,well,approach,1./120);
+      launched|=bounce.player.vy<-29;
+      reached_shelf=bounce.player.grounded&&bounce.player.x>=78&&bounce.player.x<86&&
+                   std::abs(bounce.player.y+kPlayerHeight-43)<.01;
+    }
+    check(launched&&reached_shelf&&bounce.deaths==0,
+      "running onto the seedpod reaches the optional shelf without a jump or dash press");
     AdventureSession crown(options,path);
     crown.begin_campaign(true);
     crown.profile.unlocked=5;crown.run_district=5;
