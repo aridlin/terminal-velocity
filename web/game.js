@@ -117,6 +117,26 @@ const replaceRunFlag=1<<19;
 const districtTravelFlag=1<<25;
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
+function nameTouchDirections(overlay){
+ let directions;
+ if((uiFlags&1)&&!(uiFlags&(16|confirmSaveFlag))){
+  directions=tr(['Poprzednia opcja','Następna opcja'],['Previous option','Next option']);
+ }else if(overlay&128){
+  if(overlay&roomMapFlag)directions=tr(['W górę','W dół'],['Up','Down']);
+  else if(overlay&expeditionFlag)directions=tr(['Poprzedni pokój','Następny pokój'],['Previous room','Next room']);
+  else if(overlay&2048)directions=tr(['Poprzedni odcinek','Następny odcinek'],['Previous leg','Next leg']);
+  else directions=tr(['Poprzednia dzielnica','Następna dzielnica'],['Previous district','Next district']);
+ }else if(overlay&8){
+  directions=tr(['Poprzednia strona','Następna strona'],['Previous page','Next page']);
+ }else if((overlay&64)&&!(overlay&4)){
+  directions=tr(['Poprzedni wpis','Następny wpis'],['Previous entry','Next entry']);
+ }else if((overlay&2)&&(overlay&tourFlag)&&!(overlay&4)){
+  directions=tr(['Poprzedni pokój','Następny pokój'],['Previous room','Next room']);
+ }
+ if(!directions)return;
+ document.querySelector('#touch [data-key="2"]').setAttribute('aria-label',directions[0]);
+ document.querySelector('#touch [data-key="3"]').setAttribute('aria-label',directions[1]);
+}
 function translateUI(){
  document.documentElement.lang=english?'en':'pl';
  document.title='Terminal Velocity — '+tr('Pod powierzchnią','Below the surface');
@@ -149,6 +169,7 @@ function translateUI(){
  }
  const touchInspect=document.querySelector('#touch-inspect');
  const overlay=overlayFlags();
+ nameTouchDirections(overlay);
  const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
  const showRoute=!!(overlay&roomMapFlag);
  for(const controls of document.querySelectorAll('.route-browse'))controls.hidden=!expeditionMap||showRoute;

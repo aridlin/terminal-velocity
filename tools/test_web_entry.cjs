@@ -703,9 +703,12 @@ const server=http.createServer((req,res)=>{
   await page.locator('[data-language="en"]').click();await page.locator('#start').click();await page.waitForTimeout(150);
   await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);await page.screenshot({path:path.join(out,'web-mobile-opening.png')});
   const inspectControl=page.locator('#touch-inspect');
+  const touchDirectionNames=()=>Promise.all([2,3].map(key=>
+   page.locator('#touch [data-key="'+key+'"]').getAttribute('aria-label')));
   await inspectControl.tap();
   await page.waitForFunction(()=>!!(uiFlags&8));
   assert.equal(await inspectControl.getAttribute('aria-label'),'Close inspection');
+  assert.deepEqual(await touchDirectionNames(),['Previous page','Next page']);
   await inspectControl.tap();
   await page.waitForFunction(()=>!(uiFlags&8));
   assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
@@ -885,9 +888,11 @@ const server=http.createServer((req,res)=>{
      }
      assert.equal(await route.innerText(),'Route');
      assert.equal(await use.getAttribute('aria-label'),'Close map');
+     assert.deepEqual(await touchDirectionNames(),['Previous district','Next district']);
      await route.tap();
      await page.waitForFunction(()=>!!(uiFlags&2048));
      assert.equal(await route.innerText(),'Room');
+     assert.deepEqual(await touchDirectionNames(),['Previous leg','Next leg']);
      await route.tap();
      await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
      assert.equal(await route.innerText(),'Districts');
@@ -900,6 +905,7 @@ const server=http.createServer((req,res)=>{
      await use.tap();
     }else {
      assert.equal(await inspectControl.getAttribute('aria-label'),'Next quest tab');
+     assert.deepEqual(await touchDirectionNames(),['Previous entry','Next entry']);
      await button.tap();
     }
     await page.waitForFunction(flag=>!(uiFlags&flag),flag);
@@ -994,6 +1000,7 @@ const server=http.createServer((req,res)=>{
   const openMenu=async()=>{
    await page.locator('footer #toolbar [data-tap="12"]').tap();
    await page.waitForFunction(()=>!!(uiFlags&1));
+   assert.deepEqual(await touchDirectionNames(),['Previous option','Next option']);
   };
   await openMenu();
   await page.keyboard.press('Digit3');
@@ -1017,7 +1024,11 @@ const server=http.createServer((req,res)=>{
    if(roomMap){
     await inspectControl.tap();
     await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
+    assert.deepEqual(await touchDirectionNames(),['Up','Down']);
    }else{
+    assert.deepEqual(await touchDirectionNames(),['Previous room','Next room']);
+    await page.locator('#touch').getByRole('button',{name:'Next room'}).tap();
+    await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 2:'));
     await page.keyboard.down('ArrowDown');
     try{
      await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 8:'),null,{timeout:5000});
@@ -1027,6 +1038,7 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(()=>!(uiFlags&128));
    assert.equal(await action.getAttribute('aria-label'),'Use',
     'closing either Expedition map restores the touch interaction action');
+   assert.deepEqual(await touchDirectionNames(),['Up / jump','Down']);
   }
 
   await openMenu();
