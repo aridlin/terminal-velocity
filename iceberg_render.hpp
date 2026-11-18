@@ -691,10 +691,11 @@
     const int courier=screen(state_.player.x,state_.player.y).second;
     const auto layout=iceberg::reply_layout(rows_,courier);
     const int top=layout.top;
+    reply_first_row_=top+3;
     frame(top,1,cols_-2,layout.height,0xe4ad68);
     paint_text(top+1,3,tr("TWOJA ODPOWIEDŹ","YOUR REPLY"),0xe4ad68,true);
     for(int i=0;i<2;++i) {
-      int row=top+3+i*2;
+      int row=reply_first_row_+i*2;
       const bool selected=i==dialogue.reply_option;
       paint_text(row,3,selected?"▸":" ",0xe4ad68);
       for(const auto &line:wrap(iceberg::civic_reply(dialogue.reply_scene,i).choice.get(state_.adventure.language),cols_-8))

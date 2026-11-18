@@ -2097,6 +2097,7 @@ public:
         play_rows_(std::max(1, rows - 7)) {
     buffer_.assign(rows_, std::vector<Cell>(cols_));
   }
+  int reply_first_row() const { return reply_first_row_; }
   void draw() {
     if (rows_ < (grid_.adventure_level&&cols_>=56?20:24) || cols_ < (grid_.adventure_level?34:76)) {
       text(1, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Powiększ okno: 34 × 24 lub 56 × 20.","Resize the window: 34 × 24 or 56 × 20."):"Powiększ terminal do co najmniej 76 × 24.");
@@ -2265,6 +2266,7 @@ private:
   int rows_, cols_;
   double aspect_,scale_;
   int play_rows_;
+  int reply_first_row_=-1;
   std::vector<std::vector<Cell>> buffer_;
   static std::vector<std::string> glyphs(const std::string &s) {
     std::vector<std::string> v;
