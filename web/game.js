@@ -45,6 +45,7 @@ const shiftKeys=new Set();
 let dashShift='';
 let frameWasStalled=false;
 let storageFlushQueued=false;
+let browserStorageRestored=false;
 let cellPixels=10;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
 function tile(code,fg,bg,bold){
@@ -274,6 +275,8 @@ for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
 };
 function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function flushBrowserStorage(){
+ // An incomplete startup restore cannot safely replace the IndexedDB contents.
+ if(!browserStorageRestored)return;
  if(syncing){storageFlushQueued=true;return;}
  syncing=true;
  Module.FS.syncfs(false,error=>{
@@ -508,7 +511,9 @@ start.onclick=()=>{
   Module._web_start(Date.now()>>>0,english?1:0,muted?1:0);
   Module._web_enter_campaign();
   started=true;
-  syncSave();accounts?.start();resize();
+  syncSave();
+  if(browserStorageRestored)accounts?.start();
+  resize();
   start.hidden=true;
   setGameButtons(true);
   exportPreviousSave.hidden=!Module.FS.analyzePath(previousImportPath).exists;
@@ -541,6 +546,7 @@ async function finishBoot(storageError){
   }
   if(bootFailed)return;
   try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}
+  browserStorageRestored=!storageError;
   if(storageError)browserSaveStatus=['Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups'];
   ready=true;start.disabled=false;translateUI();
   drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});

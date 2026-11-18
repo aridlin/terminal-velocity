@@ -50,6 +50,38 @@ const server=http.createServer((req,res)=>{
   assert.equal(await guest.locator('#export-save').isEnabled(),true);
   await guest.close();
   console.log('PASS local play starts when the optional account script is unavailable');
+  const interrupted=await browser.newPage({locale:'en-US'});
+  const legacySave=fs.readFileSync(path.join(root,'tests/fixtures/iceberg-v4.dat'),'utf8');
+  await interrupted.goto(url,{waitUntil:'domcontentloaded'});
+  await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled);
+  await interrupted.evaluate(bytes=>new Promise((resolve,reject)=>{
+   Module.FS.writeFile('/persist/progress.dat.iceberg',bytes);
+   Module.FS.syncfs(false,error=>error?reject(error):resolve());
+  }),legacySave);
+  await interrupted.addInitScript(()=>{
+   if(!sessionStorage.getItem('test-failed-restore'))return;
+   sessionStorage.removeItem('test-failed-restore');
+   const open=IDBFactory.prototype.open;
+   IDBFactory.prototype.open=function(name,...args){
+    if(name!=='/persist')return open.call(this,name,...args);
+    IDBFactory.prototype.open=open;
+    const request={};
+    queueMicrotask(()=>request.onerror?.({target:{error:new Error('Test storage read failure')},preventDefault(){}}));
+    return request;
+   };
+  });
+  await interrupted.evaluate(()=>sessionStorage.setItem('test-failed-restore','1'));
+  await interrupted.reload({waitUntil:'domcontentloaded'});
+  await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled);
+  await interrupted.locator('[data-language="en"]').click();
+  await interrupted.locator('#start').click();
+  await interrupted.waitForFunction(()=>started&&!syncing);
+  assert.equal(await interrupted.locator('#save-status').textContent(),'Browser storage unavailable — download backups');
+  await interrupted.reload({waitUntil:'domcontentloaded'});
+  await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled);
+  assert.equal(await interrupted.evaluate(()=>Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'})),legacySave);
+  await interrupted.close();
+  console.log('PASS an interrupted IndexedDB restore leaves the previous browser save intact');
   const located=await browser.newPage({locale:'en-US'});
   await located.route('**/language.php',route=>route.fulfill({json:{language:'pl'}}));
   await located.goto(url);
