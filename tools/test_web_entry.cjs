@@ -785,12 +785,25 @@ const server=http.createServer((req,res)=>{
   await action.tap();
   await page.waitForFunction(()=>(uiFlags&(8192|1))===8192);
   const expeditionMap=page.locator('footer #toolbar [data-tap="11"]');
+  await page.evaluate(()=>{
+   const render=window.tvFrame;
+   window.tvFrame=(cells,w,h)=>{
+    window.expeditionFrame=Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>
+     String.fromCodePoint(cells[4*(y*w+x)])).join('')).join('\n');
+    render(cells,w,h);
+   };
+  });
   for(const roomMap of [false,true]){
    await expeditionMap.tap();
    await page.waitForFunction(()=>!!(uiFlags&128));
    if(roomMap){
     await inspectControl.tap();
     await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
+   }else{
+    await page.keyboard.down('ArrowDown');
+    try{
+     await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 8:'),null,{timeout:5000});
+    }finally{await page.keyboard.up('ArrowDown');}
    }
    await action.tap();
    await page.waitForFunction(()=>!(uiFlags&128));
