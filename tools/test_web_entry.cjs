@@ -1052,6 +1052,8 @@ const server=http.createServer((req,res)=>{
    const forkControlsFit=await page.evaluate(width=>{
     const before=uiFlags;
     try{
+     window.tvUI({flags:(before&~512)|doorReadyFlag});
+     if(document.querySelector('#touch-use').textContent!=='Wejdź')return false;
      window.tvUI({flags:(before&~512)|forkDoorFlag|1024});
      const pad=document.querySelector('#touch');
      return stage.clientHeight>20&&document.documentElement.scrollWidth===width&&

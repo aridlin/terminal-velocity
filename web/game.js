@@ -121,6 +121,7 @@ function clearPresses(){
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
 const settingsFlag=1<<4;
 const confirmSaveFlag=1<<5;
+const doorReadyFlag=1<<10;
 const expeditionFlag=1<<13;
 const roomMapFlag=1<<17;
 const forkDoorFlag=1<<18;
@@ -204,8 +205,11 @@ function translateUI(){
  }else if(readOnlyMapOpen()){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));
- }else if(overlayFlags()&districtTravelFlag){
+ }else if(overlay&districtTravelFlag){
   touchUse.textContent=tr('Podróżuj','Travel');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(overlay&doorReadyFlag){
+  touchUse.textContent=tr('Wejdź','Enter');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else{
   touchUse.textContent=lastBlocked?'↵':tr('Użyj','Use');
@@ -297,7 +301,7 @@ window.tvUI=u=>{
  const inputContextFlags=blockingFlags|2048|settingsFlag|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&inputContextFlags)!==(uiFlags&inputContextFlags))clearInput();
- lastBlocked=!!(u.flags&(blockingFlags|1024));
+ lastBlocked=!!(u.flags&(blockingFlags|doorReadyFlag));
  const before=uiFlags;uiFlags=u.flags;
  if((before&255)!==(uiFlags&255))resize();
  if((before^uiFlags)&soundMutedFlag)try{localStorage.setItem(mutePreferenceKey,uiFlags&soundMutedFlag?'1':'0');}catch{}
@@ -826,7 +830,7 @@ function canvasConfirmContext(){
  const overlay=overlayFlags();
  if(overlay&4)return 4;
  if(overlay&(8|64|128))return 0;
- return (overlay&2)||(overlay&1024);
+ return (overlay&2)||(overlay&doorReadyFlag);
 }
 canvas.addEventListener('pointerdown',event=>{
  if(!event.isPrimary||event.button!==0||accounts?.active||importPending)return;
