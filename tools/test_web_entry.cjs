@@ -498,6 +498,15 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.evaluate(()=>window.canvasConfirms),0,'clicking the paused quest book does not select an entry');
     await page.keyboard.press('Tab');
     await page.waitForFunction(()=>(uiFlags&(2|64))===2);
+    const pauseCanvas=await page.locator('#game').boundingBox();
+    const x=pauseCanvas.x+pauseCanvas.width/2,y=pauseCanvas.y+pauseCanvas.height/2;
+    await page.mouse.move(x,y);
+    await page.mouse.down();
+    await page.mouse.move(x+70,y,{steps:5});
+    await page.mouse.move(x,y,{steps:5});
+    await page.mouse.up();
+    await page.evaluate(async()=>{for(let i=0;i<3;i++)await new Promise(requestAnimationFrame);});
+    assert.equal(await page.evaluate(()=>window.canvasConfirms),0,'dragging away and back does not resume a pause');
     await clickGameCanvas();
     await page.waitForFunction(()=>!(uiFlags&2));
     assert.equal(await page.evaluate(()=>window.canvasConfirms),1,'clicking the pause screen still resumes');

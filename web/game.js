@@ -807,7 +807,11 @@ function canvasConfirmContext(){
 }
 canvas.addEventListener('pointerdown',event=>{
  if(!event.isPrimary||event.button!==0||accounts?.active||importPending)return;
- canvasPress={id:event.pointerId,context:canvasConfirmContext()};
+ canvasPress={id:event.pointerId,context:canvasConfirmContext(),x:event.clientX,y:event.clientY};
+});
+addEventListener('pointermove',event=>{
+ const press=canvasPress;
+ if(press?.id===event.pointerId&&Math.hypot(event.clientX-press.x,event.clientY-press.y)>8)canvasPress=null;
 });
 canvas.addEventListener('pointercancel',event=>{
  if(canvasPress?.id===event.pointerId)canvasPress=null;
@@ -815,14 +819,13 @@ canvas.addEventListener('pointercancel',event=>{
 canvas.onclick=event=>{
  const press=canvasPress;
  canvasPress=null;
- if(!started){start.click();return;}
  if(accounts?.active||importPending)return;
  const context=canvasConfirmContext();
- if(!context)return;
- // A release over a new pause, conversation or door is not a confirm for it.
+ // Only a click from the same context can start or confirm.
  if(event.detail!==0&&(!press||press.context!==context||
     (event.pointerId!==undefined&&press.id!==event.pointerId)))return;
- tap(8);
+ if(!started){start.click();return;}
+ if(context)tap(8);
 };
 addEventListener('keydown',e=>{
  if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
