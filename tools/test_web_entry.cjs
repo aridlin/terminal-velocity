@@ -106,14 +106,21 @@ const server=http.createServer((req,res)=>{
   });
   await interrupted.evaluate(()=>sessionStorage.setItem('test-stalled-restore','1'));
   await interrupted.reload({waitUntil:'domcontentloaded'});
-  await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled,{},{timeout:9000});
   await interrupted.locator('[data-language="en"]').click();
-  await interrupted.locator('#start').click();
+  await interrupted.locator('#fullscreen').click();
+  await interrupted.waitForFunction(()=>document.fullscreenElement===playfield);
+  const fullscreen=interrupted.locator('#fullscreen-tools');
+  const fullscreenStart=fullscreen.locator('#start');
+  assert.equal(await fullscreenStart.count(),1,'entering fullscreen before boot keeps Start reachable');
+  await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled,{},{timeout:9000});
+  await fullscreenStart.press('Enter');
   await interrupted.waitForFunction(()=>started&&!syncing);
-  assert.equal(await interrupted.locator('#save-status').textContent(),'Browser storage unavailable — download backups');
-  assert.equal(await interrupted.locator('#account').isHidden(),true);
+  const fullscreenStatus=fullscreen.locator('#save-status');
+  assert.equal(await fullscreenStatus.isVisible(),true);
+  assert.equal(await fullscreenStatus.textContent(),'Browser storage unavailable — download backups');
+  assert.equal(await interrupted.locator('#account-fullscreen').isHidden(),true);
   const sessionDownload=await Promise.all([
-   interrupted.waitForEvent('download'),interrupted.locator('#export-save').click(),
+   interrupted.waitForEvent('download'),fullscreen.locator('#export-save').click(),
   ]);
   const sessionSave=fs.readFileSync(await sessionDownload[0].path(),'utf8');
   assert.match(sessionSave,/^TVICE6 /);
@@ -131,8 +138,12 @@ const server=http.createServer((req,res)=>{
    name:'recovered.iceberg',mimeType:'application/octet-stream',buffer:Buffer.from(legacySave),
   });
   await interrupted.waitForFunction(()=>!importPending&&Module._web_saved_language()===0);
-  assert.equal(await interrupted.locator('#export-previous-save').isVisible(),true);
+  assert.equal(await fullscreen.locator('#export-previous-save').isVisible(),true);
   assert.equal(await interrupted.evaluate(()=>Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'})),legacySave);
+  await fullscreen.locator('#leave-fullscreen').click();
+  await interrupted.waitForFunction(()=>!expanded());
+  await interrupted.locator('header #save-status').waitFor({state:'visible'});
+  await interrupted.locator('#toolbar #export-previous-save').waitFor({state:'visible'});
 
   await recovered.close();
   await interrupted.reload({waitUntil:'domcontentloaded'});
@@ -691,6 +702,13 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.evaluate(()=>!!document.fullscreenElement),!fallback);
    const tools=page.locator('#fullscreen-tools');
    await tools.locator('[data-tap="13"]').waitFor({state:'visible'});
+   assert.equal(await tools.locator('#save-status').isVisible(),true);
+   const [fullscreenSave]=await Promise.all([
+    page.waitForEvent('download'),tools.locator('#export-save').tap(),
+   ]);
+   assert.match(fs.readFileSync(await fullscreenSave.path(),'utf8'),/^TVICE6 /);
+   await page.locator('#game').focus();
+
    const sound=tools.locator('#sound');
    await page.keyboard.press('u');
    await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='false');

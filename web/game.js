@@ -396,6 +396,9 @@ const settingsKeys=document.querySelector('#settings-keys');
 const retryButton=document.querySelector('#toolbar [data-tap="13"]');
 const soundButton=document.querySelector('#sound');
 const soundAnchor=soundButton.nextElementSibling;
+const toolbar=document.querySelector('#toolbar'),fullscreenTools=document.querySelector('#fullscreen-tools');
+const saveControls=document.querySelector('#save-controls'),fullscreenButton=document.querySelector('#fullscreen');
+const leaveFullscreen=document.querySelector('#leave-fullscreen');
 const pageControls=document.querySelectorAll('body > header, body > footer');
 const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('expanded');
 function fullscreenLayout(){
@@ -403,19 +406,22 @@ function fullscreenLayout(){
  const fallback=playfield.classList.contains('expanded');
  for(const controls of pageControls)controls.inert=fallback;
  if(active){
+  fullscreenTools.prepend(start);
   document.querySelector('#account-fullscreen').before(retryButton,soundButton);
-  document.querySelector('#leave-fullscreen').before(languageToggle);
-  document.querySelector('#fullscreen-tools').append(settingsKeys);
+  leaveFullscreen.before(saveControls,languageToggle);
+  fullscreenTools.append(saveStatus,settingsKeys);
  }else{
+  toolbar.prepend(start);
   soundAnchor.before(retryButton,soundButton);
-  document.querySelector('#toolbar').append(languageToggle);
+  toolbar.append(saveControls,languageToggle);
+  fullscreenButton.before(saveStatus);
   document.querySelector('#hint').before(settingsKeys);
  }
  clearInput();
  resize();
  const field=document.activeElement;
  if(!accounts?.active||(field!==accounts.name&&field!==accounts.pass))canvas.focus();
- document.querySelector('#fullscreen').setAttribute('aria-pressed',String(active));
+ fullscreenButton.setAttribute('aria-pressed',String(active));
 }
 async function toggleFullscreen(){
  if(document.fullscreenElement){await document.exitFullscreen();return;}
@@ -434,8 +440,8 @@ addEventListener('keydown',e=>{
   if(!e.repeat)toggleFullscreen();
  }
 },{capture:true});
-document.querySelector('#fullscreen').onclick=toggleFullscreen;
-document.querySelector('#leave-fullscreen').onclick=toggleFullscreen;
+fullscreenButton.onclick=toggleFullscreen;
+leaveFullscreen.onclick=toggleFullscreen;
 document.addEventListener('fullscreenchange',fullscreenLayout);
 new ResizeObserver(resize).observe(stage);
 const exportSave=document.querySelector('#export-save');
