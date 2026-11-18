@@ -234,6 +234,7 @@ public:
           add_expedition_steam(grid);
           add_expedition_trams(grid);
           add_expedition_drawers(grid);
+          add_expedition_post_launchers(grid);
           add_expedition_copy_belts(grid);
           add_expedition_ice(grid);
           add_expedition_root_pod(grid);

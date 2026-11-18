@@ -264,7 +264,8 @@
       }
     }
     for(const auto &spring:grid_.springs) {
-      if(grid_.district==4)draw_garden_pod(spring);
+      if(spring.push_x!=0)draw_post_launcher(spring);
+      else if(grid_.district==4)draw_garden_pod(spring);
       else world_text(spring.x,spring.y-.5,"╱╲╱╲",0xd8cc87);
     }
     for(size_t i=0;i<grid_.checkpoint_points.size();++i) {

@@ -363,6 +363,11 @@ struct Interaction {
   int detail = 0;
 };
 struct SortingBelt { double x, y, width, speed; };
+struct SpringPad : Rect {
+  double push_x, push_y;
+  SpringPad(double x,double y,double w,double h,double push_x=0.,double push_y=-31.)
+    :Rect{x,y,w,h},push_x(push_x),push_y(push_y){}
+};
 struct AirField {
   Rect area;
   double ax=0, ay=0, period=0, phase=0;
@@ -526,7 +531,7 @@ public:
   std::vector<double> checkpoints;
   std::vector<MovingPlatform> platforms;
   std::vector<Patrol> enemies;
-  std::vector<Rect> springs;
+  std::vector<SpringPad> springs;
   std::vector<std::pair<double, double>> refills;
   double spawn_x = 5.0;
   double spawn_y = 36.0 - kPlayerHeight;
@@ -1109,7 +1114,13 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   }
   for (auto spring : g.springs)
     if (p.vy >= 0 && p.rect().intersects(spring)) {
-      p.vy = -31;
+      p.vy = spring.push_y;
+      if (spring.push_x != 0) {
+        p.vx = spring.push_x;
+        p.facing = spring.push_x > 0 ? 1 : -1;
+        p.dash_time_left = 0;
+        p.momentum_left = .5;
+      }
       p.grounded = false;
       p.coyote_left = 0;
       p.dash_available = true;

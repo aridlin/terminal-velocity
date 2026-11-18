@@ -93,6 +93,25 @@
     world_art(pot.x,pot.y+row,{soil+"╱",base},clay,true);
   }
 
+  void draw_post_launcher(const SpringPad &launcher) {
+    const double row=aspect_*scale_;
+    const double floor=launcher.bottom();
+    const double center=launcher.x+launcher.w*.5;
+    const double duct_y=floor+4.3*row;
+    const double tank_x=center-9*scale_;
+    constexpr uint32_t pipe=0x77919f,active=0xc8e6b2;
+    draw_scenery_pipe({{center,floor},{center,duct_y},{tank_x+5*scale_,duct_y}},pipe);
+    world_art(tank_x,duct_y-row,{"╭────╮","│ ◴  ╞","╰─┬──╯","  ╵"},pipe,true);
+    const double cycle=std::fmod(state_.adventure.presentation_time*.85+center*.07,1.);
+    world_art(tank_x+(5+3*cycle)*scale_,duct_y,{"▤"},active);
+    world_text(center-2*scale_,floor-row,"╔═›╗",active);
+    const auto &courier=state_.player;
+    if(courier.momentum_left>.31&&courier.vy<-18&&
+       courier.x>=launcher.x-1.2&&courier.x<launcher.right()+5) {
+      world_art(center+scale_,floor-2*row,{"⠠⠐"," ∿ "},active);
+    } else if(cycle>.73)world_art(center+2*scale_,floor-2*row,{"›"},pipe);
+  }
+
   void draw_expedition_steam_lift(const AirField &jet) {
     const auto &area=jet.area;
     const double row=aspect_*scale_,bottom=area.bottom(),center=area.x+area.w*.5;

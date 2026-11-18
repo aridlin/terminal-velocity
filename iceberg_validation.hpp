@@ -195,6 +195,16 @@ inline void add_expedition_fragile_pots(EngineGrid &room) {
   else room.platforms.resize(original);
 }
 
+inline void add_expedition_post_launchers(EngineGrid &room) {
+  if(room.district!=3||room.template_id!=38)return;
+  const size_t original=room.springs.size();
+  room.springs.emplace_back(55.8,37.65,1.6,.35,28.,-40.);
+  room.springs.emplace_back(72.,31.65,1.6,.35,28.,-34.);
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.springs.erase(room.springs.begin()+original,room.springs.end());
+}
+
 inline void add_expedition_drawers(EngineGrid &room) {
   if(room.district!=3||room.template_id!=39)return;
   room.interactions.push_back({{57,41,3,3},InteractionKind::Valve,0,

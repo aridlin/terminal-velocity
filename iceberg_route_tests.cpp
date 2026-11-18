@@ -88,6 +88,27 @@ int main() {
       for(int tick=0;tick<48;++tick)world_step(rider,archive.grid,{},1./120);
       require(std::abs(rider.player.x-x-belt.speed*.4)<.02,"a Copies Conveyor belt carries a standing courier in its indicated direction");
     }
+    copies.itinerary[0]=38;copies.layout_version=3;archive.load_room();
+    require(archive.grid.template_id==38&&archive.grid.springs.empty(),
+      "legacy Pneumatic Post saves keep their original route");
+    copies.layout_version=4;archive.load_room();
+    require(archive.grid.springs.size()==2&&verify_route(archive.grid).complete,
+      "current Pneumatic Post adds two launchers and keeps a verified through-route");
+    auto courier=new_state(archive.grid);
+    courier.player.x=53.5;courier.player.y=38-kPlayerHeight;courier.player.grounded=true;
+    Controls run_right;run_right.move=1;
+    for(auto [shelf_x,shelf_y]: {std::pair{66.,32.}, std::pair{82.,28.}}) {
+      int tick=0;
+      while(tick++<90&&courier.player.vy>=-27)
+        world_step(courier,archive.grid,run_right,1./120);
+      require(courier.player.vx==28.&&courier.player.vy<-27&&courier.player.dash_available,
+        "walking over a pressure nozzle launches diagonally and restores dash");
+      for(tick=0;tick<135&&!courier.player.grounded;++tick)
+        world_step(courier,archive.grid,{},1./120);
+      require(courier.player.grounded&&courier.player.x>=shelf_x-.9&&courier.player.x<shelf_x+8&&
+              std::abs(courier.player.rect().bottom()-shelf_y)<.01&&courier.deaths==0,
+        "a pressure launch delivers the courier to the next shelf with neutral input");
+    }
     for(int q:{500,503,506})require(std::find(original.begin(),original.begin()+16,q)!=original.begin()+16,"parcel landmark remains before the last turn-in");
     std::filesystem::remove(path);std::filesystem::remove(path.string()+".bak");
     return 0;
