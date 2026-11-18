@@ -69,6 +69,7 @@ class SaveStore {
   // Store the preference in a reserved flag in the existing TVICE6 record.
   // Older clients ignore and preserve it when rewriting their saves.
   static constexpr uint32_t focus_pause_disabled = uint32_t(1)<<31;
+  static constexpr uint32_t smooth_camera_enabled = uint32_t(1)<<30;
   static bool read(const std::filesystem::path &file, Profile &p, const std::string *matching_payload=nullptr) {
     std::error_code size_error;auto bytes=std::filesystem::file_size(file,size_error);
     if(size_error||bytes>65536)return false;
@@ -163,7 +164,8 @@ class SaveStore {
     data >> std::ws;
     if (!data.eof()) return false;
     q.pause_on_focus_loss=(q.cosmetics&focus_pause_disabled)==0;
-    q.cosmetics&=~focus_pause_disabled;
+    q.smooth_camera=(q.cosmetics&smooth_camera_enabled)!=0;
+    q.cosmetics&=~(focus_pause_disabled|smooth_camera_enabled);
     q.language = Language(language);
     p = std::move(q);
     return true;
@@ -207,7 +209,8 @@ public:
     body << std::setprecision(17) << p.content_version << ' ' << int(p.language) << ' '
       << p.started << ' ' << p.finished << ' ' << p.seed << ' ' << p.district << ' '
       << p.stage << ' ' << p.room << ' ' << p.unlocked << ' ' << p.story << ' '
-      << p.discoveries << ' ' << (p.cosmetics|(p.pause_on_focus_loss?0u:focus_pause_disabled)) << ' ' << p.outfit << ' '
+      << p.discoveries << ' ' << (p.cosmetics|(p.pause_on_focus_loss?0u:focus_pause_disabled)|
+        (p.smooth_camera?smooth_camera_enabled:0u)) << ' ' << p.outfit << ' '
       << p.campaign_seconds << ' ' << p.campaign_deaths << ' ' << p.endless_best << ' '
       << p.checkpoint << ' ' << p.collected << ' ' << p.switches << ' '
       << p.room_seconds << ' ' << p.room_deaths << ' ' << p.music_volume << ' '

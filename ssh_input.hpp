@@ -171,7 +171,7 @@ private:
       edges_.select_level = 1;
     if (k == '2')
       edges_.select_level = 2;
-    if (k >= '3' && k <= '6')
+    if (k >= '3' && k <= '7')
       edges_.select_level = int(k - '0');
     if (k == 'u')
       edges_.mute_audio = true;

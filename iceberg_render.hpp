@@ -515,7 +515,9 @@
       center(16,tr("5  Pauza po utracie fokusu ","5  Pause on focus loss ")+
         (v.pause_on_focus_loss?tr("wł.","on"):tr("wył.","off")));
       center(17,tr("6  Zapisy i przegląd zmian","6  Saves and debug tour"));
-      center(18,tr("L  Język: POLSKI","L  Language: ENGLISH"));
+      center(18,tr("7  Płynna kamera (test) ","7  Smooth camera (experimental) ")+
+        (v.smooth_camera?tr("wł.","on"):tr("wył.","off")));
+      center(19,tr("L  Język: POLSKI","L  Language: ENGLISH"));
       center(20,tr("ENTER wróć","ENTER return"));
     }
   }

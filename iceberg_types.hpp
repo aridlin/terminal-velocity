@@ -130,6 +130,7 @@ struct Profile {
   int room_deaths = 0;
   float music_volume = .65f, effects_volume = .75f, ambience_volume = .55f;
   bool pause_on_focus_loss = true;
+  bool smooth_camera = false;
 };
 
 struct DialogueLine { int speaker = 0; Text text; };
@@ -222,6 +223,7 @@ struct View {
   double notice_left = 0;
   float music_volume = .65f, effects_volume = .75f, ambience_volume = .55f;
   bool pause_on_focus_loss = true;
+  bool smooth_camera = false;
 };
 struct SessionOptions {
   uint32_t seed = 1;

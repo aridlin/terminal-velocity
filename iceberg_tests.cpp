@@ -135,6 +135,9 @@ int main(int argc,char **argv) {
     profile.challenges.push_back({74,0,iceberg::ContentVersion,{88,1,14,true}});
     auto &exp=profile.expeditions[0];exp.active=true;exp.seed=821;exp.depth=13;exp.room=5;exp.seconds=100;
     exp.itinerary=iceworld::make_itinerary(821,0,iceberg::RoomsPerLeg);exp.checkpoint=1;exp.switches=2;
+    profile.smooth_camera=true;
+    profile.pause_on_focus_loss=false;
+    profile.cosmetics=1u<<3;
     check(save.save(profile),"campaign save written and verified");
     iceberg::Profile loaded;check(save.load(loaded),"campaign save loaded");
     check(loaded.itinerary==profile.itinerary&&loaded.story==profile.story&&loaded.quest_counts[0]==3&&loaded.checkpoint==2,
@@ -143,6 +146,32 @@ int main(int argc,char **argv) {
       "expedition identity and checkpoint stored independently");
     check(loaded.revisit.active&&loaded.revisit.scene==1&&loaded.revisit.seconds==42.5&&loaded.revisit.switches==1&&loaded.interlude,"revisited story route persists its separate checkpoint and machinery");
     check(loaded.challenges.size()==2&&loaded.challenges[0].record.best_seconds==99&&loaded.challenges[1].seed==74,"seeded challenge records stay isolated by route identity");
+    check(loaded.smooth_camera&&!loaded.pause_on_focus_loss&&loaded.cosmetics==(1u<<3),
+      "camera and focus preferences round-trip independently of outfit unlocks");
+    check(!v4.smooth_camera,"older profiles use the standard camera by default");
+    auto camera=new_state(flat);
+    camera.player.x=32;camera.player.y=35;
+    update_camera(camera,flat,34,17,2,10);
+    const auto centered=camera;
+    auto standard=camera;
+    camera.player.x+=.4;standard.player.x+=.4;
+    update_camera(camera,flat,34,17,2,1./60,true);
+    update_camera(standard,flat,34,17,2,1./60);
+    check(camera.camera_x==centered.camera_x&&standard.camera_x>camera.camera_x,
+      "smooth camera holds framing for small movements while standard camera follows");
+    auto coarse=centered,fine=centered;
+    coarse.player.x+=2;fine.player.x+=2;
+    update_camera(coarse,flat,34,17,2,.1,true);
+    for(int frame=0;frame<12;++frame)update_camera(fine,flat,34,17,2,1./120,true);
+    check(std::abs(coarse.camera_x-fine.camera_x)<1e-6&&coarse.camera_x>centered.camera_x,
+      "smooth follow uses elapsed time and eases toward the courier");
+    camera.player.x+=12;camera.player.y-=9;
+    update_camera(camera,flat,34,17,2,1./120,true);
+    check(camera.player.x-camera.camera_x<34*.4*.65&&camera.player.y-camera.camera_y>0.,
+      "smooth follow bounds the lag during quick moves at compact sizes");
+    camera.player.x=4;camera.player.y=50-kPlayerHeight;
+    update_camera(camera,flat,34,17,2,10,true);
+    check(camera.camera_x<.001,"camera snaps back to the new starting position");
     // A correctly checksummed save from a later release must not be replaced,
     // including when an older healthy backup happens to be available.
     {std::ifstream in(path,std::ios::binary);std::string bytes((std::istreambuf_iterator<char>(in)),{});

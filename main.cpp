@@ -1333,10 +1333,24 @@ void update(GameState &state, const EngineGrid &grid, Controls input,
 }
 
 void update_camera(GameState &state, const EngineGrid &grid, int view_width,
-                   int play_height, double aspect, double dt) {
+                   int play_height, double aspect, double dt, bool smooth=false) {
   const double scale=grid.adventure_level?.40:kWorldUnitsPerRenderCol;
   const double visible_w = view_width * scale;
   const double visible_h = play_height * aspect * scale;
+  if(smooth&&grid.adventure_level&&dt>0&&dt<1.) {
+    // Hold the old framing for small adjustments. Limit lag during dashes
+    // so the courier remains visible even at the smallest viewport size.
+    const auto follow=[dt](double camera,double target,double visible,double extent,
+                          double dead_zone,double max_lag,double rate) {
+      const double limit=std::max(0.,extent-visible);
+      const double closest=clamp(camera,target-visible*dead_zone,target+visible*dead_zone);
+      camera+=(closest-camera)*(1.-std::exp(-dt*rate));
+      return clamp(camera,clamp(target-visible*max_lag,0.,limit),clamp(target+visible*max_lag,0.,limit));
+    };
+    state.camera_x=follow(state.camera_x,state.player.x-visible_w*.42,visible_w,grid.width(),.045,.22,3.5);
+    state.camera_y=follow(state.camera_y,state.player.y-visible_h*.68,visible_h,grid.height(),.055,.15,4.5);
+    return;
+  }
   double target_x = state.player.x - visible_w * 0.42 + state.player.vx * 0.15;
   double target_y = state.player.y - visible_h * (grid.adventure_level?.68:.55) + state.player.vy * 0.065;
   target_x = clamp(target_x, 0.0, std::max(0.0, grid.width() - visible_w));
@@ -1579,6 +1593,7 @@ public:
                      : press(KEY_4) ? 4
                      : press(KEY_5) ? 5
                      : press(KEY_6) ? 6
+                     : press(KEY_7) ? 7
                                     : 0;
     c.mute_audio = press(KEY_U);
     c.next_seed = press(KEY_G);
@@ -2583,6 +2598,8 @@ std::filesystem::path audio_directory() {
       input.clear();
       stepper = FixedStepper{};
     }
+    if (c.select_level == 7)
+      c.select_level = 0;
     if (c.select_level >= 4 && c.select_level - 3 > progress.unlocked) {
       c.select_level = 0;
       state.moment = "Ukończ poprzedni etap.";

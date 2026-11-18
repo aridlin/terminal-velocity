@@ -144,6 +144,7 @@ public:
       iceberg::Districts[size_t(grid.district)].subtitle:grid.room_name).get(profile.language);
     v.music_volume=profile.music_volume;v.effects_volume=profile.effects_volume;v.ambience_volume=profile.ambience_volume;
     v.pause_on_focus_loss=profile.pause_on_focus_loss;
+    v.smooth_camera=profile.smooth_camera;
     state.audio_muted=audio.muted;state.audio_error=audio.error();
     v.current_objective=iceworld::harbor_objective(grid.template_id,grid.switch_flags).get(profile.language);
     const int nearby=state.won?near_interaction():-1;
@@ -275,9 +276,9 @@ public:
 
     const auto language=profile.language;
     const auto music=profile.music_volume,effects=profile.effects_volume,ambience=profile.ambience_volume;
-    const bool focus_pause=profile.pause_on_focus_loss;
+    const bool focus_pause=profile.pause_on_focus_loss,smooth_camera=profile.smooth_camera;
     profile={};profile.language=language;profile.music_volume=music;
-    profile.effects_volume=effects;profile.ambience_volume=ambience;profile.pause_on_focus_loss=focus_pause;
+    profile.effects_volume=effects;profile.ambience_volume=ambience;profile.pause_on_focus_loss=focus_pause;profile.smooth_camera=smooth_camera;
     load_tour_scene(index);
   }
   void end_tour() {
@@ -383,7 +384,7 @@ public:
       state.elapsed=e.room_seconds;state.deaths=e.room_deaths;
     }
     stepper={};sync_view();
-    update_camera(state,grid,110,27,2,10);
+    update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10);
   }
   void talk(std::vector<iceberg::DialogueLine> lines,int action=0) {
     state.adventure.dialogue={std::move(lines),0,action};stepper={};
@@ -522,6 +523,7 @@ public:
       profile.cosmetics=previous.cosmetics;profile.outfit=previous.outfit;
       profile.music_volume=music;profile.effects_volume=effects;profile.ambience_volume=ambience;
       profile.pause_on_focus_loss=previous.pause_on_focus_loss;
+      profile.smooth_camera=previous.smooth_camera;
       state.adventure.map_route=state.adventure.map_room=false;
     }
     run_active=false;
@@ -925,6 +927,7 @@ public:
         persist();
       }
       if(c.select_level==5){profile.pause_on_focus_loss=!profile.pause_on_focus_loss;persist();}
+      if(c.select_level==7){profile.smooth_camera=!profile.smooth_camera;persist();}
       if(c.language){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
       if(c.confirm||c.pause){v.settings=false;v.selected=4;}
       return;
@@ -1141,7 +1144,8 @@ public:
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
     autosave_left-=dt;
     if(old_cp!=state.checkpoint||(state.won&&!at_door)||(retrying&&deaths>0)||autosave_left<=0)persist();
-    update_camera(state,grid,columns,std::max(1,rows-7),aspect,dt);
+    update_camera(state,grid,columns,std::max(1,rows-7),aspect,
+      profile.smooth_camera&&deaths>0?10.:dt,profile.smooth_camera);
     sync_view();
   }
 };

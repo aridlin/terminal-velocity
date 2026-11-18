@@ -1168,7 +1168,7 @@ int terminal_window_main(int argc,char **argv) {
           c.map|=key==SDL_SCANCODE_J;c.language|=key==SDL_SCANCODE_L;
           c.mute_audio|=key==SDL_SCANCODE_U;c.debug|=key==SDL_SCANCODE_F3;
           c.quit|=key==SDL_SCANCODE_Q;
-          if(key>=SDL_SCANCODE_1&&key<=SDL_SCANCODE_6)c.select_level=int(key-SDL_SCANCODE_1)+1;
+          if(key>=SDL_SCANCODE_1&&key<=SDL_SCANCODE_7)c.select_level=int(key-SDL_SCANCODE_1)+1;
           if(key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP)c.navigate=-1;
           if(key==SDL_SCANCODE_S||key==SDL_SCANCODE_DOWN)c.navigate=1;
           if(key==SDL_SCANCODE_F11){fullscreen=!fullscreen;SDL_SetWindowFullscreen(window,fullscreen?SDL_WINDOW_FULLSCREEN_DESKTOP:0);}

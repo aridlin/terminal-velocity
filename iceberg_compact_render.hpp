@@ -44,7 +44,9 @@
         paint_text(15,2,tr("5 Pauza po utracie fokusu ","5 Pause on focus loss ")+
           (v.pause_on_focus_loss?tr("wł.","on"):tr("wył.","off")),d.light);
         paint_text(16,2,tr("6 Zapisy i przegląd zmian","6 Saves and debug tour"),d.light);
-        paint_text(17,2,tr("L Język: POLSKI","L Language: ENGLISH"),d.light);
+        paint_text(17,2,tr("7 Płynna kamera (test) ","7 Smooth camera (exp.) ")+
+          (v.smooth_camera?tr("wł.","on"):tr("wył.","off")),d.light);
+        paint_text(18,2,tr("L Język: POLSKI","L Language: ENGLISH"),d.light);
         paint_text(rows_-2,2,tr("ENTER wróć","ENTER return"),d.accent);return;
       }
       paint_text(3,2,tr("POD POWIERZCHNIĄ","BENEATH THE SURFACE"),d.light);

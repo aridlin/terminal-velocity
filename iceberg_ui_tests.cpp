@@ -64,6 +64,23 @@ int main(){try {
   focus.tick(enter,0);focus.profile.pause_on_focus_loss=false;
   lose_and_regain_focus();
   ui_check(!focus.state.paused,"disabling focus pause still keeps active play unpaused");
+  AdventureSession camera_settings(options,"/tmp/tv-ui-camera-settings-unused");
+  Controls settings;settings.select_level=5;settings.confirm=true;
+  camera_settings.tick(settings,0);
+  ui_check(camera_settings.state.adventure.settings&&!camera_settings.profile.smooth_camera,
+    "smooth camera is opt-in from the settings menu");
+  Controls camera_choice;camera_choice.select_level=7;
+  camera_settings.tick(camera_choice,0);
+  camera_settings.profile.language=iceberg::Language::English;camera_settings.sync_view();
+  RenderGrid(camera_settings.grid,camera_settings.state,24,34,2).draw();
+  ui_check(camera_settings.profile.smooth_camera&&ui_text(frame).find("Smooth camera (exp.) on")!=std::string::npos,
+    "setting 7 enables smooth camera and shows its status on compact screens");
+  camera_settings.begin_campaign(true);
+  ui_check(camera_settings.profile.smooth_camera,"starting a new journey retains the camera preference");
+  camera_settings.start_tour(0);
+  ui_check(camera_settings.profile.smooth_camera,"debug tour uses the selected camera preference");
+  camera_settings.end_tour();
+  ui_check(camera_settings.profile.smooth_camera,"leaving the debug tour restores the profile camera preference");
   AdventureSession detour(options,"/tmp/tv-ui-room-detour-unused");detour.begin_campaign(true);
   detour.profile.language=iceberg::Language::English;
   detour.profile.hidden_room=0;detour.load_room();
