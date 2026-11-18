@@ -519,16 +519,21 @@ function fullscreenLayout(){
  if(!accounts?.active||(field!==accounts.name&&field!==accounts.pass))canvas.focus();
  fullscreenButton.setAttribute('aria-pressed',String(active));
 }
+let fullscreenTransition=false;
 async function toggleFullscreen(){
- if(document.fullscreenElement){await document.exitFullscreen();return;}
- if(playfield.classList.contains('expanded')){playfield.classList.remove('expanded');fullscreenLayout();return;}
- try {await playfield.requestFullscreen();}
- catch(error){
-  // Embedded browsers and some mobile browsers refuse the native API. The
-  // game still occupies the entire viewport, with an explicit way back out.
-  console.info('Native fullscreen unavailable; using game viewport',error.name);
-  playfield.classList.add('expanded');fullscreenLayout();
- }
+ if(fullscreenTransition)return;
+ fullscreenTransition=true;
+ try {
+  if(document.fullscreenElement){await document.exitFullscreen();return;}
+  if(playfield.classList.contains('expanded')){playfield.classList.remove('expanded');fullscreenLayout();return;}
+  try {await playfield.requestFullscreen();}
+  catch(error){
+   // Embedded browsers and some mobile browsers refuse the native API. The
+   // game still occupies the entire viewport, with an explicit way back out.
+   console.info('Native fullscreen unavailable; using game viewport',error.name);
+   playfield.classList.add('expanded');fullscreenLayout();
+  }
+ }finally{fullscreenTransition=false;}
 }
 addEventListener('keydown',e=>{
  if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&expanded()&&!accounts?.active)){

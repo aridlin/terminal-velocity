@@ -969,10 +969,23 @@ const server=http.createServer((req,res)=>{
   }
   for(const fallback of [false,true]){
    if(fallback)await page.evaluate(()=>{
-    document.querySelector('#playfield').requestFullscreen=async()=>{throw Error('fullscreen unavailable');};
+    window.fullscreenRequests=[];
+    playfield.requestFullscreen=()=>new Promise((_,reject)=>{
+     window.fullscreenRequests.push(()=>reject(Error('fullscreen unavailable')));
+    });
    });
    await page.setViewportSize({width:320,height:700});
    await page.locator('#fullscreen').tap();
+   if(fallback){
+    await page.waitForFunction(()=>window.fullscreenRequests.length===1);
+    await page.locator('#fullscreen').tap();
+    assert.equal(await page.evaluate(()=>window.fullscreenRequests.length),1,
+     'a second tap cannot start another fullscreen request');
+    await page.evaluate(()=>{
+     playfield.requestFullscreen=async()=>{throw Error('fullscreen unavailable');};
+     window.fullscreenRequests[0]();
+    });
+   }
    await page.waitForFunction(()=>expanded());
    assert.equal(await page.evaluate(()=>!!document.fullscreenElement),!fallback);
    const tools=page.locator('#fullscreen-tools');
