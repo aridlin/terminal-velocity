@@ -619,6 +619,23 @@ function finishImport(){
  last=performance.now();
  if(!accounts?.active)canvas.focus({preventScroll:true});
 }
+function applyManualImport(fs,previous){
+ const backup=previousImportPath(),retained=backup+'.previous';
+ const hadBackup=fs.analyzePath(backup).exists;
+ // Hold the older download until both its replacement and the import succeed.
+ if(hadBackup)fs.rename(backup,retained);
+ let result;
+ try{
+  fs.writeFile(backup,previous);
+  result=Module._web_import_save();
+  return result;
+ }finally{
+  if(result===1){
+   if(hadBackup)fs.unlink(retained);
+  }else if(hadBackup)fs.rename(retained,backup);
+  else if(fs.analyzePath(backup).exists)fs.unlink(backup);
+ }
+}
 importSave.onclick=()=>{
  clearInput();
  canvas.focus({preventScroll:true});
@@ -656,17 +673,16 @@ saveFile.onchange=async()=>{
   }
   const previous=fs.readFile(currentSavePath());
   const incoming=saveDirectory+'/import.iceberg';
-  fs.writeFile(incoming,bytes);
   try {
-   const imported=Module._web_import_save();
+   fs.writeFile(incoming,bytes);
+   const imported=applyManualImport(fs,previous);
    if(imported!==1){
     setSaveActionError(imported===0
      ?['Nieprawidłowy plik zapisu','Invalid save file']
      :['Nie udało się zapisać wczytywanej gry','Could not write the imported save']);
     return;
    }
-  } finally {fs.unlink(incoming);}
-  fs.writeFile(previousImportPath(),previous);
+  } finally {if(fs.analyzePath(incoming).exists)fs.unlink(incoming);}
   exportPreviousSave.hidden=false;
   Module._web_enter_campaign();
   flushBrowserStorage();

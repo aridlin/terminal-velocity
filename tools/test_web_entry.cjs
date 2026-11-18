@@ -618,6 +618,28 @@ const server=http.createServer((req,res)=>{
     assert.equal(await saveMessage.textContent(),'Nieprawidłowy plik zapisu','a pending import error follows the selected language');
     await page.locator('[data-language="en"]').click();
 
+    const backupFaultPicker=await openPicker();
+    await page.evaluate(sample=>{
+      const fs=Module.FS,backup='/persist/before-manual-import.iceberg';
+      fs.writeFile(backup,Uint8Array.from(sample));
+      const writeFile=fs.writeFile,applyImport=Module._web_import_save;
+      window.importAttemptsBeforeBackup=0;
+      Module._web_import_save=()=>{window.importAttemptsBeforeBackup++;return applyImport();};
+      fs.writeFile=function(file,bytes,...options){
+        if(file!==backup)return writeFile.call(this,file,bytes,...options);
+        writeFile.call(this,file,bytes.slice(0,8),...options);
+        throw new fs.ErrnoError(28);
+      };
+      window.releaseBackupFault=()=>{fs.writeFile=writeFile;Module._web_import_save=applyImport;};
+    },Array.from(sample));
+    const acceptBackupFault=page.waitForEvent('dialog').then(dialog=>dialog.accept());
+    await backupFaultPicker.setFiles({name:'polish.iceberg',mimeType:'application/octet-stream',buffer:sample});
+    await acceptBackupFault;
+    await page.waitForFunction(()=>!importPending&&saveStatus.textContent==='Could not import save');
+    assert.equal(await page.evaluate(()=>window.importAttemptsBeforeBackup),0,'backup failure stops replacement before the engine imports');
+    assert.equal(await page.evaluate(()=>Module._web_saved_language()),1);
+    await page.evaluate(()=>window.releaseBackupFault());
+
     const blockedPicker=await openPicker();
     await page.evaluate(()=>{
       const importSave=Module._web_import_save;
@@ -638,6 +660,8 @@ const server=http.createServer((req,res)=>{
     await acceptBlocked;
     await page.waitForFunction(()=>!importPending&&saveStatus.textContent==='Could not write the imported save');
     assert.equal(await page.locator('html').getAttribute('lang'),'en','the failed replacement leaves the old session active');
+    assert.equal(await page.evaluate(()=>Module.FS.readFile('/persist/before-manual-import.iceberg',{encoding:'utf8'})),
+      sample.toString('utf8'),'backup and replacement failures preserve the existing previous-save download');
     await page.evaluate(()=>window.restoreImportWrite());
 
     await page.keyboard.press('u');
