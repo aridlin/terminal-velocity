@@ -278,7 +278,7 @@ public:
       if(!grid.checkpoint_points.empty())grid.checkpoint_points.front()={entry.x,entry.y};
     }
     state=new_state(grid);state.ssh=options.remote;stepper={};
-    update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10);
+    update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
     notice(stop.change.get(profile.language),8);
     sync_view();
   }
@@ -399,7 +399,7 @@ public:
       state.elapsed=e.room_seconds;state.deaths=e.room_deaths;
     }
     stepper={};sync_view();
-    update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10);
+    update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
   }
   void talk(std::vector<iceberg::DialogueLine> lines,int action=0) {
     state.adventure.dialogue={std::move(lines),0,action};stepper={};
@@ -653,7 +653,7 @@ public:
             break;
           }
         }
-        update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10);
+        update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
       }
       persist();return;
     }
@@ -668,7 +668,7 @@ public:
       if(entrance!=grid.interactions.end()) {
         state.player.x=entrance->area.x;
         state.player.y=entrance->area.bottom()-kPlayerHeight;
-        update_camera(state,grid,last_columns,last_rows-7,last_aspect,10);
+        update_camera(state,grid,last_columns,last_rows-7,last_aspect,10,profile.smooth_camera);
       }
       if(jubilee){talk(iceberg::jubilee_complete());audio.play(AudioCue::Win);}
       persist();return;
@@ -993,7 +993,7 @@ public:
     dt=clamp(dt,0.,.1);
     if(columns!=last_columns||rows!=last_rows||aspect!=last_aspect) {
       if(columns!=last_columns||rows!=last_rows)reflow_dialogue(columns,rows);
-      update_camera(state,grid,columns,std::max(1,rows-7),aspect,10);
+      update_camera(state,grid,columns,std::max(1,rows-7),aspect,10,profile.smooth_camera);
       last_columns=columns;last_rows=rows;last_aspect=aspect;
       frame_dialogue();
     }

@@ -126,6 +126,20 @@ int main(){try {
     "setting 7 enables smooth camera and shows its status on compact screens");
   camera_settings.begin_campaign(true);
   ui_check(camera_settings.profile.smooth_camera,"starting a new journey retains the camera preference");
+  camera_settings.state.paused=true;
+  auto &camera_player=camera_settings.state.player;
+  camera_player.x=camera_settings.grid.width()*.5;camera_player.y=camera_settings.grid.height()*.5;
+  camera_player.vx=kDashSpeed*.7;camera_player.vy=-kDashSpeed*.7;
+  camera_settings.tick({},0,true,38,28,2);
+  ui_check(std::abs(camera_settings.state.camera_x-(camera_player.x-38*.4*.42))<.001&&
+    std::abs(camera_settings.state.camera_y-(camera_player.y-21*.8*.68))<.001,
+    "resizing during a dash centers the smooth camera without adding velocity lookahead");
+  camera_settings.profile.smooth_camera=false;
+  camera_settings.tick({},0,true,39,28,2);
+  ui_check(std::abs(camera_settings.state.camera_x-(camera_player.x-39*.4*.42+camera_player.vx*.15))<.001&&
+    std::abs(camera_settings.state.camera_y-(camera_player.y-21*.8*.68+camera_player.vy*.065))<.001,
+    "resizing retains the standard camera's velocity lookahead");
+  camera_settings.profile.smooth_camera=true;
   camera_settings.start_tour(0);
   ui_check(camera_settings.profile.smooth_camera,"debug tour uses the selected camera preference");
   camera_settings.end_tour();

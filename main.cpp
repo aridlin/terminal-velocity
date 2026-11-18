@@ -1347,7 +1347,8 @@ void update_camera(GameState &state, const EngineGrid &grid, int view_width,
   const double scale=grid.adventure_level?.40:kWorldUnitsPerRenderCol;
   const double visible_w = view_width * scale;
   const double visible_h = play_height * aspect * scale;
-  if(smooth&&grid.adventure_level&&dt>0&&dt<1.) {
+  const bool smooth_follow=smooth&&grid.adventure_level;
+  if(smooth_follow&&dt>0&&dt<1.) {
     // Hold the old framing for small adjustments. Limit lag during dashes
     // so the courier remains visible even at the smallest viewport size.
     const auto follow=[dt](double camera,double target,double visible,double extent,
@@ -1361,8 +1362,9 @@ void update_camera(GameState &state, const EngineGrid &grid, int view_width,
     state.camera_y=follow(state.camera_y,state.player.y-visible_h*.68,visible_h,grid.height(),.055,.15,4.5);
     return;
   }
-  double target_x = state.player.x - visible_w * 0.42 + state.player.vx * 0.15;
-  double target_y = state.player.y - visible_h * (grid.adventure_level?.68:.55) + state.player.vy * 0.065;
+  // A forced reframe uses the selected camera's anchor, even mid-dash.
+  double target_x = state.player.x - visible_w * 0.42 + (smooth_follow?0.:state.player.vx*.15);
+  double target_y = state.player.y - visible_h * (grid.adventure_level?.68:.55) + (smooth_follow?0.:state.player.vy*.065);
   target_x = clamp(target_x, 0.0, std::max(0.0, grid.width() - visible_w));
   target_y = clamp(target_y, 0.0, std::max(0.0, grid.height() - visible_h));
   const double blend = 1.0 - std::exp(-dt * 10.5);
