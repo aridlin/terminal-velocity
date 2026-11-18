@@ -526,9 +526,13 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('b');await page.waitForTimeout(100);await page.keyboard.press('Tab');await page.waitForFunction(()=>!(entryFlags&64));
     await page.keyboard.down('d');await page.waitForTimeout(360);await page.keyboard.up('d');await page.keyboard.press('e');
     await page.waitForFunction(()=>!!(entryFlags&4));await page.waitForTimeout(150);await page.screenshot({path:path.join(out,'web-dialogue.png')});
+    assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Continue');
+    assert.equal(await page.locator('#touch').getAttribute('data-compact-controls'),'actions');
+    assert.equal(await page.locator('#touch-inspect').getAttribute('hidden'),'');
     await page.keyboard.press('Enter');await page.waitForTimeout(80);assert.ok(await page.evaluate(()=>!!(entryFlags&4)),'reveal keeps unread objective on screen');
     await page.keyboard.press('Enter');await page.waitForTimeout(80);assert.match(await page.evaluate(()=>entryFrame),/Start at the board/,'next essential objective shown in one press after reveal');
     await page.keyboard.press('Enter');await page.waitForFunction(()=>!(entryFlags&4));
+    assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
     console.log('PASS locked map explanation, route tab, quest book and shortened reveal/continue flow through browser controls');
     await page.keyboard.press('Shift');
     await page.waitForFunction(()=>window.dashEdges===1);

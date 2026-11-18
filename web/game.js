@@ -163,6 +163,7 @@ function translateUI(){
  const inSettings=!!(uiFlags&settingsFlag);
  const overlay=overlayFlags();
  const showingPause=(overlay&(2|8|64|128))===2;
+ const reading=!!(overlay&4);
  if(inSettings||showingPause){
   for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-buttons > [data-tap="9"]'))
    button.textContent=inSettings?tr('Wróć','Back'):tr('Wznów','Resume');
@@ -187,6 +188,9 @@ function translateUI(){
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(showingPause){
   touchUse.textContent=tr('Wznów','Resume');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(reading){
+  touchUse.textContent=tr('Dalej','Continue');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(uiFlags&forkDoorFlag){
   touchUse.textContent=tr('Przejście B','Passage B');
@@ -215,9 +219,9 @@ function translateUI(){
  }
  const touchInspect=document.querySelector('#touch-inspect');
  const touchControls=document.querySelector('#touch');
- if(inMenu||overlay&128||showingPause){
+ if(inMenu||overlay&128||showingPause||reading){
   const browseTour=!!(overlay&tourFlag)&&!(overlay&4);
-  const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:!!(overlay&roomMapFlag);
+  const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:reading||!!(overlay&roomMapFlag);
   touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
  }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
@@ -232,7 +236,8 @@ function translateUI(){
   button.textContent=mapViewLabel;
   button.setAttribute('aria-label',mapViewAction);
  }
- touchInspect.hidden=showingPause||(inMenu&&!choosingProfile&&!replacingSave)||!!((overlay&128)&&(overlay&tourFlag));
+ touchInspect.hidden=showingPause||(reading&&!questRecordOpen())||
+  (inMenu&&!choosingProfile&&!replacingSave)||!!((overlay&128)&&(overlay&tourFlag));
  let inspectLabel;
  if(replacingSave){
   touchInspect.textContent=tr('Anuluj','Cancel');
