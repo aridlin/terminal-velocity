@@ -59,6 +59,29 @@
     }
   }
 
+  void draw_expedition_steam_lift(const AirField &jet) {
+    const auto &area=jet.area;
+    const double row=aspect_*scale_,bottom=area.bottom(),center=area.x+area.w*.5;
+    const double time=state_.elapsed;
+    const double pressure=jet.active(grid_.switch_flags)?jet.strength(time):0.;
+    constexpr uint32_t guide=0x4d7881,metal=0x739da3,steam=0xb4e3e3;
+
+    // The fixed guides show the full width even at low pressure.
+    for(double y=area.y+row;y<bottom-row;y+=3*row) {
+      world_art(area.x,y,{"╎"},guide);
+      world_art(area.right()-scale_,y,{"╎"},guide);
+    }
+    world_art(center-2*scale_,bottom-row,{"╞═╧═╡"},pressure>.55?steam:metal);
+    world_art(center-2*scale_,bottom,{"╚═╤═╝","  ║  "},metal);
+    const int wisps=int(pressure*12);
+    for(int k=0;k<wisps;++k) {
+      const double rise=std::fmod(time*.72+k/12.,1.);
+      const double x=center+std::sin(k*2.4+rise*5)*area.w*.24;
+      world_art(x,bottom-row-rise*(area.h-row),{pressure>.55&&k%3==0?"▴":"∿"},
+        pressure>.55?steam:metal);
+    }
+  }
+
 // Repeated infrastructure follows the landings in expeditions. Keep the art
 // behind the route so decorations never become apparent stepping stones.
   void draw_expedition_infrastructure() {
