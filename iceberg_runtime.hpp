@@ -29,8 +29,8 @@ public:
   double autosave_left = 15, run_seconds = 0;
   uint32_t save_revision = 0;
   int run_deaths = 0, run_treasures = 0;
-  int timeline_repeat_direction = 0;
-  double timeline_repeat_left = 0;
+  int navigation_repeat_direction = 0;
+  double navigation_repeat_left = 0;
   bool previous_focus = true;
   bool run_active = false;
 
@@ -914,7 +914,20 @@ public:
     }
     sync_view();
   }
-  void menu(Controls c) {
+  int repeated_navigation(const Controls &c,double dt) {
+    if(c.navigate) {
+      // Basic terminal events have no held state and keep their host repeat.
+      navigation_repeat_direction=c.navigate==c.aim_y?c.navigate:0;
+      navigation_repeat_left=.35;
+      return c.navigate;
+    }
+    if(navigation_repeat_direction&&(navigation_repeat_left-=dt)<=0) {
+      navigation_repeat_left=.1;
+      return navigation_repeat_direction;
+    }
+    return 0;
+  }
+  void menu(Controls c,double dt) {
     auto &v=state.adventure;
     if(v.save_picker||v.tour_picker) {
       const int count=v.save_picker?iceberg::SaveStore::SlotCount+1:int(iceberg::DebugTour.size());
@@ -923,7 +936,11 @@ public:
         else {v.save_picker=false;v.settings=true;}
         return;
       }
-      if(c.navigate)v.picker_choice=(v.picker_choice+c.navigate+count)%count;
+      const int direction=v.tour_picker?repeated_navigation(c,dt):c.navigate;
+      if(direction) {
+        const int next=v.picker_choice+direction;
+        v.picker_choice=c.navigate?(next+count)%count:std::clamp(next,0,count-1);
+      }
       if(c.select_level>=1&&c.select_level<=count)v.picker_choice=c.select_level-1;
       if(c.confirm) {
         if(v.tour_picker)start_tour(v.picker_choice);
@@ -1000,8 +1017,11 @@ public:
       stepper={};
     }
     previous_focus=focused;
-    if(!focused||state.menu||!v.map||v.map_room||c.map||c.journal||c.pause||c.menu_request||
-       c.inspect||c.aim_y!=timeline_repeat_direction)timeline_repeat_direction=0;
+    const bool tour_picker=state.menu&&v.tour_picker;
+    const bool expedition_timeline=!state.menu&&v.map&&!v.map_room&&mode!=iceberg::Mode::Campaign;
+    if(!focused||(!tour_picker&&!expedition_timeline)||c.map||c.journal||c.pause||c.menu_request||
+       c.inspect||(tour_picker&&(c.confirm||c.select_level))||
+       c.aim_y!=navigation_repeat_direction)navigation_repeat_direction=0;
     if(!focused)c={};
     v.notice_left=std::max(0.,v.notice_left-dt);
     if(!state.paused&&!state.menu&&!v.inspecting&&!state.journal&&!v.map) {
@@ -1010,7 +1030,7 @@ public:
       for(auto &bridge:grid.growth)if((grid.switch_flags&bridge.flag)==bridge.flag)bridge.amount=std::min(1.,bridge.amount+dt/1.15);
       if(v.dialogue.active())v.pickup_left=std::max(0.,v.pickup_left-dt);
     }
-    if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
+    if(state.menu) {menu(c,dt);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request&&tour_scene>=0){end_tour();return;}
     if(c.menu_request){persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};sync_view();return;}
     if(v.inspecting) {
@@ -1097,15 +1117,7 @@ public:
       } else v.map_room=!v.map_room;
     }
     if(v.map&&!v.map_room&&!c.inspect&&mode!=iceberg::Mode::Campaign&&!v.route.rooms.empty()) {
-      int direction=c.navigate;
-      if(direction) {
-        // Only input modes with real held-key state can start our own repeat.
-        timeline_repeat_direction=direction==c.aim_y?direction:0;
-        timeline_repeat_left=.35;
-      } else if(timeline_repeat_direction&&(timeline_repeat_left-=dt)<=0) {
-        direction=timeline_repeat_direction;
-        timeline_repeat_left=.1;
-      }
+      const int direction=repeated_navigation(c,dt);
       if(direction) {
         const int selected=v.route_room_selection<0?v.route.current:v.route_room_selection;
         v.route_room_selection=std::clamp(selected+direction,0,int(v.route.rooms.size())-1);

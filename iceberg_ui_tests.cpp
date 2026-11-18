@@ -644,6 +644,35 @@ int main(){try {
   game.tick(tab,1./120);approach(InteractionKind::Valve,1);game.tick(use,1./120);
   approach(InteractionKind::Valve,0);game.tick(use,1./120);
   ui_check((game.grid.switch_flags&3)==3,"observed gauge evidence allows bypass then pump without redundant E reading");
+  AdventureSession tour_repeat(options,"/tmp/tv-ui-tour-repeat-unused");
+  tour_repeat.begin_campaign(true);
+  tour_repeat.state.menu=tour_repeat.state.adventure.tour_picker=true;
+  auto &picker=tour_repeat.state.adventure;
+  const int last=int(iceberg::DebugTour.size())-1;
+  Controls down;down.navigate=down.aim_y=1;
+  tour_repeat.tick(down,0);
+  down.navigate=0;
+  for(int i=0;i<3;++i)tour_repeat.tick(down,.1);
+  ui_check(picker.picker_choice==1,"the Tour picker waits before repeating held Down");
+  tour_repeat.tick(down,.1);
+  tour_repeat.tick({},0);
+  for(int i=0;i<5;++i)tour_repeat.tick(down,.1);
+  ui_check(picker.picker_choice==2,"the Tour picker requires another press after release");
+  down.navigate=1;
+  tour_repeat.tick(down,0);
+  down.navigate=0;
+  for(int i=0;i<40;++i)tour_repeat.tick(down,.1);
+  ui_check(picker.picker_choice==last,"held Down reaches the end of the Tour picker and stops there");
+  down.navigate=1;
+  tour_repeat.tick(down,0);
+  ui_check(picker.picker_choice==0,"a new Down press still wraps to the first Tour sample");
+  Controls back;back.pause=true;
+  tour_repeat.tick(back,0);
+  down.navigate=0;
+  const int slot=picker.picker_choice;
+  for(int i=0;i<8;++i)tour_repeat.tick(down,.1);
+  ui_check(picker.save_picker&&picker.picker_choice==slot,"leaving the Tour picker cancels its held direction");
+
   game.profile.quests[6]=3;
   for(auto mode:{iceberg::Mode::Endless,iceberg::Mode::Trial}) {
     game.begin_run(mode,true);
