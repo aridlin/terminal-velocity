@@ -882,9 +882,13 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>!!(uiFlags&8));
   assert.equal(await inspectControl.getAttribute('aria-label'),'Close inspection');
   assert.deepEqual(await touchDirectionNames(),['Previous page','Next page']);
+  assert.deepEqual(await page.locator('#touch button:visible').evaluateAll(buttons=>
+   buttons.map(button=>button.dataset.key)),['2','3','7']);
   await inspectControl.tap();
   await page.waitForFunction(()=>!(uiFlags&8));
   assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
+  assert.equal(await page.locator('#touch-use').isVisible(),true,'Use returns after closing inspection');
+  assert.equal(await page.locator('#touch .jump').isVisible(),true,'Jump returns after closing inspection');
   const touchSession=await mobile.newCDPSession(page);
   const [left,up,right]=await Promise.all([0,2,1].map(async key=>{
    const box=await page.locator('#touch [data-key="'+key+'"]').boundingBox();

@@ -164,6 +164,8 @@ function translateUI(){
  const overlay=overlayFlags();
  const showingPause=(overlay&(2|8|64|128))===2;
  const reading=!!(overlay&4);
+ const inspecting=!!(overlay&8);
+ touchUse.hidden=inspecting;
  if(inSettings||showingPause){
   for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-buttons > [data-tap="9"]'))
    button.textContent=inSettings?tr('Wróć','Back'):tr('Wznów','Resume');
@@ -219,7 +221,7 @@ function translateUI(){
  }
  const touchInspect=document.querySelector('#touch-inspect');
  const touchControls=document.querySelector('#touch');
- if(inMenu||overlay&128||showingPause||reading){
+ if(inMenu||overlay&128||showingPause||reading||inspecting){
   const browseTour=!!(overlay&tourFlag)&&!(overlay&4);
   const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:reading||!!(overlay&roomMapFlag);
   touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
@@ -248,7 +250,7 @@ function translateUI(){
  }else if(questRecordOpen()){
   touchInspect.textContent=tr('Wróć','Back');
   inspectLabel=tr('Wróć do księgi zadań','Back to quest book');
- }else if(overlay&8){
+ }else if(inspecting){
   touchInspect.textContent=tr('Zamknij','Close');
   inspectLabel=tr('Zamknij podgląd','Close inspection');
  }else if(overlay&64){
