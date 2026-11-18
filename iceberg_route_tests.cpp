@@ -29,7 +29,21 @@ int main() {
     const auto choice=*at;
     enter_fork(s);
     require(s.state.adventure.branch_at_door,"the view offers both choices while overlapping the fork and the main exit");
-    Controls use;use.interact=true;s.tick(use,1./120);
+    Controls use;use.interact=true;
+    Controls retry;retry.restart=true;
+    s.tick(retry,0);
+    s.tick(use,1./120);
+    require(s.room==1&&!s.state.won&&s.state.deaths==1&&s.profile.route_decisions[0]==0,
+      "a buffered retry beats a later Passage B interaction at the same door");
+    enter_fork(s);
+    auto retry_at_fork=retry;retry_at_fork.interact=true;
+    s.tick(retry_at_fork,1./120);
+    require(s.room==1&&!s.state.won&&s.state.deaths==2&&s.profile.route_decisions[0]==0,
+      "Retry and Use together return to the checkpoint without taking the fork");
+    iceberg::Profile checkpoint;
+    require(iceberg::SaveStore::validate_file(path,checkpoint)&&checkpoint.room==1&&checkpoint.room_deaths==2&&
+      checkpoint.route_decisions[0]==0,"manual retries save the updated count before the next autosave");
+    enter_fork(s);s.tick(use,1./120);
     require(s.room==2&&s.grid.template_id==choice.id,"alternate doorway enters its named room");
     require(s.profile.itinerary==original,"branch choice never rewrites the reserved itinerary");
     require(s.profile.route_choices[0]==1&&s.profile.route_decisions[0]==1,"branch decision recorded once");

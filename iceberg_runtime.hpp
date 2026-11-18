@@ -915,14 +915,17 @@ public:
     const bool first_exit=mode==iceberg::Mode::Campaign&&district==0&&stage<=1&&
       profile.hidden_room<0&&profile.visit_district<0&&!profile.revisit.active;
     if(at_door)v.door_open=std::min(1.,v.door_open+dt*4.5);
-    if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
-    if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}
-    if(state.won&&!c.restart&&!c.new_run&&
-       (c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))) {
-      advance_room();
-      sync_view();return;
+    c.restart=c.restart||c.new_run;
+    const bool retrying=c.restart||stepper.pending.restart;
+    // A retry queued between physics steps still takes priority at a doorway.
+    if(!retrying) {
+      if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
+      if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}
+      if(state.won&&(c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))) {
+        advance_room();
+        sync_view();return;
+      }
     }
-    if(c.new_run)c.restart=true;
     Player before=state.player;
     int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
     double old_elapsed=state.elapsed;
@@ -962,7 +965,7 @@ public:
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::RouteChoice)v.prompt="[E] B: "+grid.interactions[size_t(at)].label.get(profile.language);
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
     autosave_left-=dt;
-    if(old_cp!=state.checkpoint||(state.won&&!at_door)||autosave_left<=0)persist();
+    if(old_cp!=state.checkpoint||(state.won&&!at_door)||(retrying&&deaths>0)||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,dt);
     sync_view();
   }
