@@ -560,9 +560,12 @@
           paint_text(y,2,(v.selected==i?"▸ ":"  ")+marker+iceberg::Districts[size_t(i)].name.get(l),v.selected==i?d.accent:i<=v.unlocked?d.light:0x7c8492);
         }
         int y=first+6*spacing+1;
-        for(const auto &line:wrap(iceberg::district_travel_status(v,std::clamp(v.selected,0,5)),cols_-4))if(y<rows_-4)paint_text(y++,2,line,0xeee7d6);
+        for(const auto &line:wrap(iceberg::district_travel_status(v,std::clamp(v.selected,0,5),grid_.room_role),cols_-4))if(y<rows_-4)paint_text(y++,2,line,0xeee7d6);
       }
-      paint_text(rows_-3,2,v.map_route?tr("↑↓ odcinek","↑↓ leg"):tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"),d.light);
+      const auto selection=v.map_route?tr("↑↓ odcinek","↑↓ leg"):
+        iceberg::district_travel_available(v,v.selected)?tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"):
+        tr("↑↓ wybór","↑↓ select");
+      paint_text(rows_-3,2,selection,d.light);
       paint_text(rows_-2,2,v.map_route?tr("B pokój · J/P wróć","B room · J/P return"):tr("B trasa · J/P wróć","B route · J/P return"),d.light);
       return;
     }

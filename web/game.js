@@ -109,7 +109,8 @@ const confirmSaveFlag=1<<5;
 const roomMapFlag=1<<17;
 const forkDoorFlag=1<<18;
 const replaceRunFlag=1<<19;
-const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&(overlayFlags()&(2048|roomMapFlag)));
+const districtTravelFlag=1<<25;
+const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function translateUI(){
  document.documentElement.lang=english?'en':'pl';
@@ -129,6 +130,9 @@ function translateUI(){
  }else if(readOnlyMapOpen()){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));
+ }else if(overlayFlags()&districtTravelFlag){
+  touchUse.textContent=tr('Podróżuj','Travel');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
  }else{
   touchUse.textContent=lastBlocked?'↵':tr('Użyj','Use');
   touchUse.setAttribute('aria-label',lastBlocked?tr('Zatwierdź','Confirm'):tr('Użyj','Use'));

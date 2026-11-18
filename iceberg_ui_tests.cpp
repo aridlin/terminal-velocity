@@ -37,6 +37,33 @@ int main(){try {
     game.tick(tab,1./120);
     ui_check(!game.state.adventure.map_room&&!game.state.adventure.map_route,"B returns to the campaign district map");
   }
+  AdventureSession guidance(options,"/tmp/tv-ui-district-guidance-unused");
+  guidance.begin_campaign(true);
+  guidance.profile.language=iceberg::Language::English;
+  guidance.profile.story=uint64_t(1)<<8;
+  guidance.profile.unlocked=1;
+  guidance.stage=2;guidance.load_room();
+  guidance.tick(map,0);
+  RenderGrid(guidance.grid,guidance.state,24,34,2).draw();
+  auto route_hint=normalize_ui(ui_body(frame));
+  ui_check(route_hint.find("Use this room's exit")!=std::string::npos&&
+    ui_text(frame).find("ENTER travel")==std::string::npos,
+    "the current campaign room points to its exit and offers no travel action");
+  guidance.tick(enter,0);guidance.tick(map,0);
+  ui_check(!guidance.state.adventure.map&&guidance.state.adventure.notice_left==0,
+    "confirming the current district leaves no travel notice over gameplay");
+  guidance.tick(map,0);
+  Controls pick_district;pick_district.navigate=-1;guidance.tick(pick_district,0);
+  RenderGrid(guidance.grid,guidance.state,24,34,2).draw();
+  ui_check(ui_text(frame).find("ENTER travel")!=std::string::npos,
+    "the map offers travel when an unlocked destination is selected");
+  guidance.tick(enter,0);
+  ui_check(guidance.profile.visit_district==1&&!guidance.state.adventure.map,
+    "confirmation still travels to the selected settlement");
+  guidance.tick(map,0);
+  RenderGrid(guidance.grid,guidance.state,24,34,2).draw();
+  ui_check(normalize_ui(ui_body(frame)).find("Use the board to return to your route")!=std::string::npos,
+    "the visited settlement names its board's return action");
   AdventureSession focus(options,"/tmp/tv-ui-overlay-focus-unused");
   auto lose_and_regain_focus=[&](){focus.tick({},.1,false);focus.tick({},.1);};
   lose_and_regain_focus();

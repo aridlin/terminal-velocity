@@ -30,13 +30,14 @@ void send_web_ui() {
   const auto &s=web_game->state;const auto &v=s.adventure;
   const bool district_control=s.menu&&!v.settings&&!v.confirm_new&&!v.save_picker&&!v.tour_picker&&(v.selected==2||v.selected==3);
   const bool fork_door=v.branch_at_door&&!s.menu&&!s.paused&&!s.journal&&!v.map&&!v.inspecting&&!v.dialogue.active();
+  const bool district_travel=v.map&&!v.map_route&&!v.map_room&&iceberg::district_travel_available(v,v.selected);
   int flags=int(s.menu)|(int(s.paused)<<1)|(int(v.dialogue.active())<<2)|(int(v.inspecting)<<3)|
     (int(v.settings)<<4)|(int(v.confirm_new)<<5)|(int(s.journal)<<6)|(int(v.map)<<7)|
     (int(v.can_continue)<<8)|(int(v.language==iceberg::Language::English)<<9)|(int(s.won)<<10)|
     (int(v.map_route)<<11)|(int(v.pause_on_focus_loss)<<12)|(int(v.mode!=iceberg::Mode::Campaign)<<13)|
     (int(district_control)<<14)|(int(s.audio_muted)<<15)|(int(v.save_error)<<16)|(int(v.map&&v.map_room)<<17)|
     (int(fork_door)<<18)|(int(s.menu&&v.confirm_new&&v.selected!=1)<<19)|
-    ((web_slot-1)<<20)|(int(v.tour_scene>=0)<<22)|(int(v.save_picker||v.tour_picker)<<23)|(int(v.smooth_camera)<<24);
+    ((web_slot-1)<<20)|(int(v.tour_scene>=0)<<22)|(int(v.save_picker||v.tour_picker)<<23)|(int(v.smooth_camera)<<24)|(int(district_travel)<<25);
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }

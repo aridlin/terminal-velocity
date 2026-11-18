@@ -669,7 +669,7 @@ const server=http.createServer((req,res)=>{
       await page.waitForFunction(()=>!(uiFlags&(2048|(1<<17))));
      }
      assert.equal(await route.innerText(),'Route');
-     assert.equal(await use.getAttribute('aria-label'),'Confirm');
+     assert.equal(await use.getAttribute('aria-label'),'Close map');
      await route.tap();
      await page.waitForFunction(()=>!!(uiFlags&2048));
      assert.equal(await route.innerText(),'Room');

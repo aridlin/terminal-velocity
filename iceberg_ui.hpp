@@ -68,13 +68,24 @@ inline std::string quest_next_step(const View &v,int q) {
   if(q==6)return t("Na bezpiecznym pomoście: zryw po ziemi, zaraz potem skok. Pokaż Kubie trzy takie skoki.","On a safe landing: dash along the ground, then jump immediately. Show Kuba three dash jumps.");
   return quest.objective.get(v.language)+" "+t("Szukaj na trasach: ","Look along the routes of: ")+Districts[size_t(quest.district)].name.get(v.language)+".";
 }
-inline std::string district_travel_status(const View &v,int target) {
+inline bool district_travel_available(const View &v,int target) {
+  return v.mode==Mode::Campaign&&v.can_travel&&v.hidden_room<0&&!v.revisit&&
+    target>=0&&target<DistrictCount&&target<=v.unlocked&&
+    (target!=v.district||(target==v.journey_district&&v.visit_district>=0));
+}
+inline std::string district_travel_status(const View &v,int target,RoomRole role) {
   auto t=[&](const char *pl,const char *en){return tr(v.language,pl,en);};
   if(v.mode!=Mode::Campaign)return t("Odwiedziny działają w podróży fabularnej. Wyprawę wybierzesz w menu.","Settlement travel is available during the story. Choose an expedition in the menu.");
-  if(v.hidden_room>=0||v.revisit)return t("Wróć drzwiami do osady, aby skorzystać z połączeń.","Return through the door to the settlement to use the connections.");
+  if(v.hidden_room>=0)return t("Użyj drzwi powrotnych, aby opuścić odnogę.","Use the return door to leave this detour.");
+  if(v.revisit)return t("Wróć drzwiami do osady, aby skorzystać z połączeń.","Return through the door to the settlement to use the connections.");
   if(target>v.unlocked)return target==1?t("Zamknięte. Ukończ trzy trasy Dolnej Przystani i uruchom pompę na końcu rurociągu.","Closed. Finish Lower Harbor's three routes and start the pump at the pipeline's end."):t("Zamknięte. Ukończ główną trasę dzielnicy: ","Closed. Complete the main route through: ")+Districts[size_t(target-1)].name.get(v.language)+".";
-  if(target==v.district)return t("Tu jesteś. Wróć do gry i podejdź do tablicy, aby ruszyć dalej.","You are here. Return to play and use the route board to continue.");
-  if(!v.can_travel)return t("Najpierw przywróć połączenie Dolnej Przystani z ciepłownią. Wyrusz od tablicy na nabrzeżu.","First restore the Harbor connection to the heating works. Start at the quay's route board.");
+  if(target==v.district&&!district_travel_available(v,target)) {
+    if(role!=RoomRole::Settlement)return t("Tu jesteś. Wyjdź z tego pokoju, aby ruszyć dalej.","You are here. Use this room's exit to continue.");
+    if(v.visit_district>=0)return t("Tu jesteś. Użyj tablicy, by wrócić na swoją trasę.","You are here. Use the board to return to your route.");
+    if(v.finished||v.at_content_boundary||(v.story&(uint64_t(1)<<42)))return t("Tu jesteś.","You are here.");
+    return t("Tu jesteś. Użyj tablicy wypraw, aby ruszyć dalej.","You are here. Use the route board to continue.");
+  }
+  if(!v.can_travel)return t("Ukończ trasę Dolnej Przystani, aby odblokować podróż między dzielnicami.","Complete the Lower Harbor route to unlock travel between districts.");
   return target==v.journey_district?t("ENTER: wróć do swojej trasy i ostatniej lampy.","ENTER: return to your route and last lamp."):t("ENTER: odwiedź osadę. Twój postęp na trasie zostanie zachowany.","ENTER: visit the settlement. Your route progress will be kept.");
 }
 } // namespace iceberg
