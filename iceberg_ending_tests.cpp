@@ -66,6 +66,7 @@ int main(){try{
  {
   auto beam=game.state;
   beam.crown.hits=1;beam.crown.target=27;
+  beam.adventure.door_left=0.;
   const auto lane=crown_attack_areas(beam.crown).front();
   CellFrame frame;cell_frame_sink=[&](const CellFrame &cells){frame=cells;};
   for(double aspect:{1.5,2.,2.5}) {
