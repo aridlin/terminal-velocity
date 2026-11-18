@@ -424,10 +424,15 @@ public:
         reply_dialogue(6,(profile.story&iceberg::reply_value(6))!=0,2);
       } else talk(iceberg::crown_cutscene(profile.story),2,6);
     } else if(resume&&mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&
-              stage==3&&profile.visit_district<0&&(profile.story&iceberg::HomecomingReplyPending)) {
-      if(profile.story&iceberg::reply_recorded(district))
-        reply_dialogue(district,(profile.story&iceberg::reply_value(district))!=0,FinishHomecomingReply);
-      else talk_homecoming(0);
+              profile.visit_district<0&&grid.template_id!=330) {
+      if(stage==3&&(profile.story&iceberg::HomecomingReplyPending)) {
+        if(profile.story&iceberg::reply_recorded(district))
+          reply_dialogue(district,(profile.story&iceberg::reply_value(district))!=0,FinishHomecomingReply);
+        else talk_homecoming(0);
+      } else if(int option=iceberg::pending_briefing_option(profile.story,district);
+                option>=0&&!(profile.story&(uint64_t(1)<<district))) {
+        reply_dialogue(iceberg::BriefingReplyBase+district,option,1);
+      }
     }
   }
   static constexpr int FinishHomecomingReply=4;
@@ -530,10 +535,15 @@ public:
     if(dialogue.choosing()) {
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
-      if(tour_scene<0&&scene<iceberg::BriefingReplyBase) {
-        profile.story|=iceberg::reply_recorded(scene);
-        if(option)profile.story|=iceberg::reply_value(scene);
-        else profile.story&=~iceberg::reply_value(scene);
+      if(tour_scene<0) {
+        if(scene<iceberg::BriefingReplyBase) {
+          profile.story|=iceberg::reply_recorded(scene);
+          if(option)profile.story|=iceberg::reply_value(scene);
+          else profile.story&=~iceberg::reply_value(scene);
+        } else {
+          profile.story=(profile.story&~iceberg::BriefingReplyMask)|
+            iceberg::briefing_reply_bits(scene-iceberg::BriefingReplyBase,option);
+        }
         persist();
       }
       reply_dialogue(scene,option,action);
@@ -547,6 +557,7 @@ public:
     int action=dialogue.action;
     dialogue={};
     if(action==1) {
+      profile.story&=~iceberg::BriefingReplyMask;
       profile.story|=uint64_t(1)<<district;
     } else if(action==2) {
       complete_district();
