@@ -1119,7 +1119,9 @@ const server=http.createServer((req,res)=>{
    await tools.locator('[data-tap="12"]').tap();
    await page.waitForFunction(()=>(uiFlags&(1|64))===(1|64));
    const menuConfirm=page.locator('#touch-use');
-   assert.equal(await menuConfirm.getAttribute('aria-label'),'Confirm');
+   assert.equal(await menuConfirm.getAttribute('aria-label'),'Select');
+   assert.equal(await inspectControl.isVisible(),false,'the main menu has one touch action');
+   assert.equal(await page.locator('#touch .jump').isVisible(),false);
    await menuConfirm.tap();
    await page.waitForFunction(()=>!(uiFlags&1));
    const bounds=await tools.locator('button:visible').evaluateAll(buttons=>buttons.every(button=>{
@@ -1133,6 +1135,7 @@ const server=http.createServer((req,res)=>{
    await page.keyboard.press('Digit5');
    await page.locator('#touch-use').tap();
    await page.waitForFunction(()=>!!(uiFlags&16));
+   assert.equal(await page.locator('#touch .directions').isVisible(),false,'Settings has no direction actions');
    const settings=tools.locator('#settings-keys');
    assert.equal(await settings.count(),1,'fullscreen contains the settings buttons');
    await page.evaluate(()=>{

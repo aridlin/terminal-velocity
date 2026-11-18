@@ -156,6 +156,7 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
  document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  const touchUse=document.querySelector('#touch-use');
+ const inMenu=!!(uiFlags&1);
  const replacingSave=!!(uiFlags&confirmSaveFlag);
  const replacingRun=!!(uiFlags&replaceRunFlag);
  const choosingProfile=!!(uiFlags&profilePickerFlag);
@@ -166,7 +167,7 @@ function translateUI(){
  }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  const menuSelection=document.querySelector('#menu-selection-actions');
- menuSelection.hidden=!(uiFlags&1)||inSettings||replacingSave;
+ menuSelection.hidden=!inMenu||inSettings||replacingSave;
  menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile;
  if(replacingSave){
   const replace=document.querySelector('#replace-save');
@@ -176,7 +177,7 @@ function translateUI(){
    :tr('Zastąp zapisaną podróż','Replace saved journey'));
   touchUse.textContent=tr('Zastąp','Replace');
   touchUse.setAttribute('aria-label',touchUse.textContent);
- }else if(choosingProfile){
+ }else if(inMenu&&!inSettings){
   touchUse.textContent=tr('Wybierz','Select');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(inSettings){
@@ -210,8 +211,10 @@ function translateUI(){
  const touchInspect=document.querySelector('#touch-inspect');
  const overlay=overlayFlags();
  const touchControls=document.querySelector('#touch');
- if(overlay&128)touchControls.dataset.mapView=overlay&roomMapFlag?'room':'route';
- else delete touchControls.dataset.mapView;
+ if(inMenu||overlay&128){
+  const actionsOnly=inMenu?(inSettings||replacingSave):!!(overlay&roomMapFlag);
+  touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
+ }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
  const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
  const showRoute=!!(overlay&roomMapFlag);
@@ -224,7 +227,7 @@ function translateUI(){
   button.textContent=mapViewLabel;
   button.setAttribute('aria-label',mapViewAction);
  }
- touchInspect.hidden=!!((overlay&128)&&(overlay&tourFlag));
+ touchInspect.hidden=(inMenu&&!choosingProfile&&!replacingSave)||!!((overlay&128)&&(overlay&tourFlag));
  let inspectLabel;
  if(replacingSave){
   touchInspect.textContent=tr('Anuluj','Cancel');
