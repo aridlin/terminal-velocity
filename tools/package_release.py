@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Package already built/verified binaries and the exact committed source tree.
-Usage: python tools/package_release.py DESTINATION [--windows]
+Usage: python tools/package_release.py DESTINATION [--windows | --windows-only]
 No builds, downloads, profile changes or installation are performed.
 """
 import argparse
@@ -21,7 +21,9 @@ def git(*args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('destination', type=Path)
-    parser.add_argument('--windows', action='store_true')
+    platforms = parser.add_mutually_exclusive_group()
+    platforms.add_argument('--windows', action='store_true', help='include Windows alongside Linux and source')
+    platforms.add_argument('--windows-only', action='store_true', help='produce the portable Windows archive without Linux or source')
     args = parser.parse_args()
     if git('status', '--porcelain', '--untracked-files=normal'):
         raise SystemExit('Commit the reviewed source before packaging; working tree is not clean.')
@@ -29,8 +31,10 @@ def main():
     version = revision[:12]
     dest = args.destination.resolve()
     dest.mkdir(parents=True, exist_ok=True)
-    variants = [('linux-x64', ['terminal_velocity', 'terminal_velocity_sdl', 'keyboard_launcher', 'play.sh', 'ghostty-play.sh'])]
-    if args.windows:
+    variants = []
+    if not args.windows_only:
+        variants.append(('linux-x64', ['terminal_velocity', 'terminal_velocity_sdl', 'keyboard_launcher', 'play.sh', 'ghostty-play.sh']))
+    if args.windows or args.windows_only:
         variants.append(('windows-x64-window', ['terminal_velocity.exe', 'terminal_velocity_sdl.exe', 'SDL2.dll', 'play.cmd', 'play-window.cmd']))
     for _, files in variants:
         for name in files:
@@ -40,7 +44,7 @@ def main():
     for platform, files in variants:
         package = f'terminal-velocity-{platform}-{version}'
         extension = '.zip' if platform.startswith('windows') else '.tar.gz'
-        archive = dest / (package + extension)
+        archive = dest / ('terminal-velocity-windows-x64.zip' if args.windows_only else package + extension)
         if archive.exists():
             raise SystemExit(f'Refusing to replace an existing artifact: {archive}')
         with tempfile.TemporaryDirectory(prefix='.tv-package-', dir=dest) as temporary:
@@ -66,12 +70,13 @@ def main():
                 with tarfile.open(archive, 'x:gz') as output:
                     output.add(folder, arcname=package)
         products.append(archive)
-    source = dest / f'terminal-velocity-source-{version}.tar.gz'
-    if source.exists():
-        raise SystemExit(f'Refusing to replace an existing artifact: {source}')
-    subprocess.run(['git', '-C', str(ROOT), 'archive', '--format=tar.gz',
-                    f'--prefix=terminal-velocity-source-{version}/', f'--output={source}', revision], check=True)
-    products.append(source)
+    if not args.windows_only:
+        source = dest / f'terminal-velocity-source-{version}.tar.gz'
+        if source.exists():
+            raise SystemExit(f'Refusing to replace an existing artifact: {source}')
+        subprocess.run(['git', '-C', str(ROOT), 'archive', '--format=tar.gz',
+                        f'--prefix=terminal-velocity-source-{version}/', f'--output={source}', revision], check=True)
+        products.append(source)
     checksum_file = dest / f'SHA256SUMS-{version}.txt'
     checksum_file.write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in products))
     for product in products + [checksum_file]:

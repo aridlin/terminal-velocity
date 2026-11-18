@@ -80,7 +80,7 @@ iceberg_campaign_tests: iceberg_campaign_tests.cpp main.cpp $(ICEBERG_HEADERS) a
 
 # Native MSYS2 SDL fallback. Linux cross builds can keep the standalone TUI
 # target; native Windows builds require UCRT64 SDL/FreeType packages.
-terminal_velocity_sdl.exe: sdl_frontend.cpp main.cpp $(ICEBERG_HEADERS) audio_windows.o windows_icon.o
+terminal_velocity_sdl.exe: sdl_frontend.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp $(ICEBERG_HEADERS) audio_windows.o windows_icon.o
 	$(MINGW_CXX) $(CXXFLAGS) -static-libgcc -static-libstdc++ -o $@ sdl_frontend.cpp audio_windows.o windows_icon.o $(SDL_FLAGS) -lws2_32
 
 iceberg_access_tests: iceberg_access_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o

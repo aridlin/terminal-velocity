@@ -43,11 +43,19 @@ jobs:
           ./campaign_tests.exe
           TV_TEST_CONSOLE=1 ./windows_input_tests.exe
           ./terminal_velocity.exe --smoke
-      - name: Package portable Windows game
-        shell: pwsh
-        run: Compress-Archive -Path terminal_velocity.exe,play.cmd,README.md,README.pl.md,assets -DestinationPath terminal-velocity-windows-x64.zip
+  windows-package:
+    needs: windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross-build dependencies
+        run: sudo apt-get update && sudo apt-get install -y make g++-mingw-w64-x86-64
+      - name: Build Windows terminal and window launchers
+        run: MAKEFLAGS=-j2 sh tools/build_windows_sdl.sh
+      - name: Package both Windows frontends
+        run: python3 tools/package_release.py "$RUNNER_TEMP/terminal-velocity-release" --windows-only
       - uses: actions/upload-artifact@v4
         with:
           name: terminal-velocity-windows-x64
-          path: terminal-velocity-windows-x64.zip
+          path: ${{ runner.temp }}/terminal-velocity-release/terminal-velocity-windows-x64.zip
           if-no-files-found: error
