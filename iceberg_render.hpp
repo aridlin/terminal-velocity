@@ -258,9 +258,19 @@
     for(const auto &area:crown_attack_areas(boss)) {
       if(area.w<=0.)continue;
       if(area.h>2.) {
-        world_text(area.x-.15,area.y-.8,warning?"   ▼":"└──┬──┘",hazard);
-        for(double y=area.y;y<area.bottom();y+=.8)
-          world_art(area.x,y,{strike?(int(state_.elapsed*26+y)&1?"║░▓░║":"║▓░▓║"):"  ┆  "},hazard);
+        const auto [left,top]=screen(area.left(),area.top());
+        const auto [right,bottom]=screen(std::nextafter(area.right(),area.left()),
+                                         std::nextafter(area.bottom(),area.top()));
+        const int center=(left+right)/2;
+        if(top>4&&top<rows_-2&&center>=0&&center<cols_)
+          paint_text(top-1,center,warning?"▼":"┬",hazard);
+        const int pulse=int(state_.elapsed*26);
+        for(int y=std::max(4,top);y<=std::min(rows_-4,bottom);++y)
+          for(int x=std::max(0,left);x<=std::min(cols_-1,right);++x) {
+            const bool edge=x==left||x==right;
+            if(strike)paint_text(y,x,edge?"║":((pulse+x+y)&1?"▓":"░"),hazard);
+            else if(edge||x==center)paint_text(y,x,"┆",hazard);
+          }
       } else {
         auto [start,y]=screen(area.x,area.y+.8);
         auto [end,unused]=screen(area.right(),area.y+.8);
