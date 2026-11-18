@@ -55,6 +55,7 @@ const shiftKeys=new Set();
 let dashShift='';
 let frameWasStalled=false;
 let storageFlushQueued=false;
+let storageStatusTimers=null;
 let browserStorageWritable=false;
 let cellPixels=10;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
@@ -332,24 +333,38 @@ for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
  tap(+b.dataset.tap);
 };
 function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
+function updateBrowserSaveStatus(status){
+ browserSaveStatus=status;
+ renderSaveStatus();
+}
 function flushBrowserStorage(){
  // A failed restore or a second tab cannot safely replace the IndexedDB contents.
  if(!browserStorageWritable)return;
  if(syncing){storageFlushQueued=true;return;}
+ if(!storageStatusTimers){
+  // Avoid announcing fast autosaves. Keep the status across queued writes
+  // until the latest progress has reached IndexedDB.
+  storageStatusTimers=[
+   setTimeout(()=>updateBrowserSaveStatus(['Zapisywanie…','Saving…']),250),
+   setTimeout(()=>updateBrowserSaveStatus(['Zapis trwa długo — pobierz kopię','Save delayed — download a copy']),6000),
+  ];
+ }
  syncing=true;
  Module.FS.syncfs(false,error=>{
   syncing=false;
-  if(bootFailed){storageFlushQueued=false;return;}
-  if(storageFlushQueued){
+  if(!bootFailed&&storageFlushQueued){
    storageFlushQueued=false;
    flushBrowserStorage();
    return;
   }
+  storageFlushQueued=false;
+  storageStatusTimers.forEach(timer=>clearTimeout(timer));
+  storageStatusTimers=null;
+  if(bootFailed)return;
   if(!error)try{localStorage.removeItem(pendingLanguageKey);}catch{}
-  browserSaveStatus=error
+  updateBrowserSaveStatus(error
    ?['Błąd zapisu — pobierz kopię','Save failed — download a copy']
-   :['Zapis w tej przeglądarce ✓','Saved in this browser ✓'];
-  renderSaveStatus();
+   :['Zapis w tej przeglądarce ✓','Saved in this browser ✓']);
  });
 }
 window.tvSaveReady=()=>{

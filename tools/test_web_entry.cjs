@@ -111,7 +111,7 @@ const server=http.createServer((req,res)=>{
   await interrupted.waitForFunction(()=>document.fullscreenElement===playfield);
   const fullscreen=interrupted.locator('#fullscreen-tools');
   const fullscreenStart=fullscreen.locator('#start');
-  assert.equal(await fullscreenStart.count(),1,'entering fullscreen before boot keeps Start reachable');
+  await fullscreenStart.waitFor({state:'visible',timeout:3000});
   await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled,{},{timeout:9000});
   await fullscreenStart.press('Enter');
   await interrupted.waitForFunction(()=>started&&!syncing);
@@ -167,6 +167,45 @@ const server=http.createServer((req,res)=>{
   assert.equal(await secondTab.evaluate(()=>Module._web_saved_language()),0,'stale tab preserved the writer’s profile');
   await storageContext.close();
   console.log('PASS a second browser tab preserves the current writer’s save');
+  const pendingSave=await browser.newPage({locale:'en-US'});
+  await pendingSave.goto(url);
+  await pendingSave.waitForFunction(()=>!document.querySelector('#start').disabled);
+  await pendingSave.locator('[data-language="en"]').click();
+  await pendingSave.locator('#start').click();
+  await pendingSave.waitForFunction(()=>started&&!syncing);
+  const pendingStatus=pendingSave.locator('#save-status');
+  await pendingStatus.getByText('Saved in this browser ✓',{exact:true}).waitFor();
+  // Keep the actual IndexedDB writes pending until each is explicitly released.
+  await pendingSave.evaluate(()=>{
+   const fs=Module.FS,original=fs.syncfs,release=[];
+   window.pendingWrites=release;
+   fs.syncfs=function(populate,done){
+    if(populate||release.length>=2)return original.call(fs,populate,done);
+    release.push(()=>original.call(fs,false,done));
+   };
+   syncSave();
+  });
+  await pendingStatus.getByText('Saving…',{exact:true}).waitFor({timeout:2000});
+  await pendingStatus.getByText('Save delayed — download a copy',{exact:true}).waitFor({timeout:9000});
+  assert.equal(await pendingSave.evaluate(()=>pendingWrites.length),1);
+  await pendingSave.locator('[data-language="pl"]').click();
+  assert.equal(await pendingStatus.textContent(),'Zapis trwa długo — pobierz kopię');
+  const [pendingBackup]=await Promise.all([
+   pendingSave.waitForEvent('download'),pendingSave.locator('#export-save').click(),
+  ]);
+  assert.match(fs.readFileSync(await pendingBackup.path(),'utf8'),/^TVICE6 /);
+  assert.equal(await pendingStatus.textContent(),'Zapis trwa długo — pobierz kopię');
+  await pendingSave.evaluate(()=>pendingWrites[0]());
+  await pendingSave.waitForFunction(()=>pendingWrites.length===2);
+  assert.equal(await pendingStatus.textContent(),'Zapis trwa długo — pobierz kopię');
+  await pendingSave.evaluate(()=>pendingWrites[1]());
+  await pendingStatus.getByText('Zapis w tej przeglądarce ✓',{exact:true}).waitFor();
+  await pendingSave.reload();
+  await pendingSave.waitForFunction(()=>!document.querySelector('#start').disabled);
+  assert.equal(await pendingSave.evaluate(()=>Module._web_saved_language()),0);
+  await pendingSave.close();
+  console.log('PASS a delayed save reports progress, keeps backup available and confirms only the last write');
+
   const located=await browser.newPage({locale:'en-US'});
   await located.route('**/language.php',route=>route.fulfill({json:{language:'pl'}}));
   await located.goto(url);
