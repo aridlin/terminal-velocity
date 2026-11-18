@@ -1,8 +1,10 @@
 #pragma once
 // A shared graduation course: momentum jump, wall-bounce shaft and lift launch.
+inline constexpr Text MasteryCourseName{"Egzamin Kuby","Kuba's examination"};
+
 inline EngineGrid build_mastery_course(int district) {
   EngineGrid g(144,64);g.adventure_level=true;g.event_level=false;g.template_id=320;g.district=district;g.room_role=RoomRole::Finale;
-  g.room_name={"Egzamin Kuby","Kuba's examination"};
+  g.room_name=MasteryCourseName;
   g.add_solid_rect(3,55,18,2);g.add_solid_rect(40,55,15,2);
   g.add_solid_rect(63,31,2,26);g.add_solid_rect(53,43,10,1);g.add_solid_rect(43,33,13,1);
   g.platforms.push_back({{72,30,18,.5},0,3,3.,.5});g.add_solid_rect(95,20,15,2);g.add_solid_rect(120,16,18,2);

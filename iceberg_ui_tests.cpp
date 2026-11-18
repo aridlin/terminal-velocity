@@ -444,6 +444,21 @@ int main(){try {
     RenderGrid(game.grid,game.state,24,34,2).draw();
     ui_check(ui_text(frame).find("Room 8:")!=std::string::npos&&ui_text(frame).find("╰╯")!=std::string::npos,
       "compact expedition timeline names and marks the browsed room");
+    if(mode==iceberg::Mode::Trial) {
+      for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+        game.profile.language=language;game.sync_view();
+        RenderGrid(game.grid,game.state,24,34,2).draw();
+        const bool en=language==iceberg::Language::English;
+        std::string detail;
+        for(const auto &row:frame) {
+          for(const auto &cell:row)detail+=cell.rgb==0xc7d9df?cell.glyph:" ";
+          detail+=' ';
+        }
+        ui_check(normalize_ui(detail).find(en?"Room 8: Kuba's examination":"Pokój 8: Egzamin Kuby")!=std::string::npos,
+          "the trial timeline names the final course in both languages");
+      }
+      game.profile.language=iceberg::Language::English;game.sync_view();
+    }
     for(int i=0;i<8;++i)game.tick(previous_room,0);
     ui_check(v.route_room_selection==0&&v.route.current==room+1,
       "browsing stops at the first room without changing expedition progress");
@@ -451,6 +466,15 @@ int main(){try {
     ui_check(v.route_room_selection==-1&&v.route.current==room+1,
       "reopening the expedition timeline returns the selection to the current room");
 
+    if(mode==iceberg::Mode::Trial) {
+      const auto final_name=v.route.rooms.back();
+      game.tick(map,0);
+      for(int i=game.room;i<iceberg::RoomsPerLeg-1;++i)game.advance_room();
+      ui_check(game.grid.template_id==320&&
+        game.grid.room_name.get(iceberg::Language::Polish)==final_name.get(iceberg::Language::Polish)&&
+        game.grid.room_name.get(iceberg::Language::English)==final_name.get(iceberg::Language::English),
+        "the planned final trial room title matches the course on arrival");
+    }
   }
   game.begin_campaign(false);game.tick(map,1./120);
   ui_check(game.state.adventure.map&&!game.state.adventure.map_route,"returning to the campaign opens district travel");
