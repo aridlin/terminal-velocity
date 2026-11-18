@@ -293,6 +293,42 @@ public:
       state.camera_y-=(wanted_feet-feet)*last_aspect*.4;
     }
   }
+  void reflow_dialogue(int columns,int rows) {
+    auto &dialogue=state.adventure.dialogue;
+    if(!dialogue.active())return;
+    auto text=dialogue.lines[dialogue.page].text.get(profile.language);
+    auto previous=iceberg::dialogue_layout(text,last_columns,last_rows);
+    auto next=iceberg::dialogue_layout(text,columns,rows);
+    if(previous.text_rows==next.text_rows&&previous.body==next.body)return;
+
+    // Count non-space characters so a new line break does not move the reading position.
+    size_t previous_start=0;
+    for(int i=0;i<dialogue.segment*previous.text_rows;++i)
+      previous_start+=iceberg::dialogue_character_count(previous.body[size_t(i)]);
+    if(!dialogue.reflow_anchor)dialogue.reflow_anchor=previous_start;
+
+    size_t start=0;
+    std::string segment;
+    for(int i=0;i<next.pages;++i) {
+      segment=iceberg::dialogue_segment(next,i);
+      auto end=start+iceberg::dialogue_character_count(segment);
+      if(*dialogue.reflow_anchor<end||i+1==next.pages){dialogue.segment=i;break;}
+      start=end;
+    }
+    if(dialogue.instant){dialogue.reveal_all();return;}
+
+    // A narrower segment can temporarily hide characters that were already visible.
+    dialogue.reflow_revealed=std::max(dialogue.reflow_revealed,previous_start+dialogue.visible_characters);
+    size_t shown=dialogue.reflow_revealed-start;
+    dialogue.visible_characters=dialogue.byte_cursor=0;
+    while(dialogue.byte_cursor<segment.size()&&dialogue.visible_characters<shown) {
+      unsigned char ch=segment[dialogue.byte_cursor++];
+      if(ch!=' '&&(ch&0xc0)!=0x80)++dialogue.visible_characters;
+    }
+    while(dialogue.byte_cursor<segment.size()&&
+          (static_cast<unsigned char>(segment[dialogue.byte_cursor])&0xc0)==0x80)++dialogue.byte_cursor;
+    dialogue.revealing=dialogue.byte_cursor<segment.size();
+  }
   void tick_dialogue(double dt) {
     auto &dialogue=state.adventure.dialogue;
     if(!dialogue.active()||!dialogue.revealing)return;
@@ -733,9 +769,10 @@ public:
   void tick(Controls c,double dt,bool focused=true,int columns=110,int rows=34,double aspect=2) {
     dt=clamp(dt,0.,.1);
     if(columns!=last_columns||rows!=last_rows||aspect!=last_aspect) {
+      if(columns!=last_columns||rows!=last_rows)reflow_dialogue(columns,rows);
       update_camera(state,grid,columns,std::max(1,rows-7),aspect,10);
       last_columns=columns;last_rows=rows;last_aspect=aspect;
-      if(state.adventure.dialogue.active()){state.adventure.dialogue.segment=0;state.adventure.dialogue.reset_reveal();if(state.adventure.dialogue.instant)state.adventure.dialogue.reveal_all();frame_dialogue();}
+      frame_dialogue();
     }
     struct SendFrame {
       AdventureSession &session;double dt;bool focused;int columns,rows;

@@ -28,12 +28,17 @@ inline DialogueLayout dialogue_layout(const std::string &text,int columns,int ro
   out.text_y=out.top+2;
   return out;
 }
-inline std::string dialogue_segment(const DialogueLine &line,Language language,int columns,int rows,int segment) {
-  auto layout=dialogue_layout(line.text.get(language),columns,rows,1000,segment);
+inline std::string dialogue_segment(const DialogueLayout &layout,int segment) {
   std::string text;
   int first=std::clamp(segment,0,layout.pages-1)*layout.text_rows;
   for(int row=first;row<std::min(first+layout.text_rows,int(layout.body.size()));++row){if(!text.empty())text+=' ';text+=layout.body[size_t(row)];}
   return text;
+}
+inline std::string dialogue_segment(const DialogueLine &line,Language language,int columns,int rows,int segment) {
+  return dialogue_segment(dialogue_layout(line.text.get(language),columns,rows),segment);
+}
+inline size_t dialogue_character_count(const std::string &wrapped) {
+  return size_t(cell_length(wrapped)-std::count(wrapped.begin(),wrapped.end(),' '));
 }
 inline std::vector<int> journal_entries(const View &v) {
   std::vector<int> entries;

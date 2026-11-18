@@ -41,5 +41,38 @@ int main(){try {
    game.tick(confirm,1./120);dialogue_check(!dialogue.active()&&game.profile.quests[0]==1,"conversation action commits only after its last acknowledged page");
   }
  }
+ const std::string document=
+   "Zażółć gęślą jaźń. Po pierwszej odprawie sprawdź mapę. "
+   "Na drugim pomoście podnieś lampę. Zapisz stan sieci pod zegarem. "
+   "Na trzecim pomoście odczytaj licznik. Klucz zostaw przy skrzynce. "
+   "Po ostatniej odprawie zamknij szafę. Raport przekaż dyżurnemu.";
+ game.profile.language=iceberg::Language::Polish;
+ game.tick({},0,true,34,20);
+ game.talk({{-1,{document.c_str(),document.c_str()}}});
+ auto &dialogue=game.state.adventure.dialogue;
+ Controls confirm;confirm.confirm=true;
+ game.tick(confirm,0,true,34,20);
+ game.tick(confirm,0,true,34,20);
+ const auto current=iceberg::dialogue_segment(dialogue.lines[0],game.profile.language,34,20,1);
+ dialogue_check(dialogue.segment==1&&!dialogue.revealing,"document reaches its second segment before resizing");
+ game.tick({},0,true,34,20,1.5);
+ dialogue_check(dialogue.segment==1&&!dialogue.revealing,"aspect changes preserve an open document segment");
+ game.tick({},0,true,80,25,1.5);
+ dialogue_check(dialogue.segment==0&&!dialogue.revealing,"a wider document shows the merged segment immediately");
+ game.tick({},0,true,34,20,1.5);
+ dialogue_check(dialogue.segment==1&&!dialogue.revealing,"returning to the original dimensions restores the original segment");
+ dialogue_check(iceberg::dialogue_segment(dialogue.lines[0],game.profile.language,34,20,dialogue.segment)==current,"document reflow retains the same passage");
+ game.talk({{-1,{document.c_str(),document.c_str()}}});
+ for(int i=0;i<5;++i)game.tick({},.1,true,34,20,1.5);
+ const auto visible=dialogue.visible_characters;
+ dialogue_check(dialogue.revealing&&visible>0,"Unicode document is partially revealed");
+ game.tick({},0,true,80,25,1.5);
+ dialogue_check(dialogue.revealing&&dialogue.visible_characters==visible,"rewrapping retains the revealed Unicode characters");
+ game.tick({},0,true,34,20,1.5);
+ dialogue_check(dialogue.revealing&&dialogue.visible_characters==visible,"reversing the resize keeps the reveal position");
+ game.tick({},0,true,18,18,1.5);
+ dialogue_check(!dialogue.revealing&&dialogue.visible_characters<visible,"a smaller segment shows only the revealed characters that fit");
+ game.tick({},0,true,34,20,1.5);
+ dialogue_check(dialogue.revealing&&dialogue.visible_characters==visible,"widening restores previously revealed characters");
  cell_frame_sink={};return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}
