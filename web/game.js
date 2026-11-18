@@ -294,6 +294,7 @@ function flushBrowserStorage(){
   renderSaveStatus();
  });
 }
+window.tvSaveReady=flushBrowserStorage;
 function syncSave(){
  if(!started)return;
  Module._web_save();

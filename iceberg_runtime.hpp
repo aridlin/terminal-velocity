@@ -22,6 +22,7 @@ public:
   int district = 0, stage = 0, room = 0, depth = 0, run_district = 0;
   uint32_t run_seed = 1;
   double autosave_left = 15, run_seconds = 0;
+  uint32_t save_revision = 0;
   int run_deaths = 0, run_treasures = 0;
   bool previous_focus = true;
   bool run_active = false;
@@ -156,6 +157,7 @@ public:
     }
     if(options.no_save){autosave_left=15;return;}
     state.adventure.save_error=!saves.save(profile);
+    if(!state.adventure.save_error)++save_revision;
     autosave_left=15;
   }
   void clear_room_record() {

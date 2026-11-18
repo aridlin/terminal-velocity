@@ -15,7 +15,7 @@ const fs=require('node:fs'),path=require('node:path');
   }
   await page.locator('[data-language="en"]').click();
   await page.locator('#start').click();
-  await page.waitForFunction(()=>started && (uiFlags&256) && !(uiFlags&1));
+  await page.waitForFunction(()=>started&&!syncing&&(uiFlags&256)&&!(uiFlags&1));
   const lesson=legacy?"School without a bell":"Lessons on the quay";
   await page.keyboard.down('d');
   const heldAtDoor=await page.evaluate(()=>{
@@ -55,7 +55,25 @@ const fs=require('node:fs'),path=require('node:path');
   },lesson);
   console.log(result);
   assert.ok(result.briefing&&result.arrived&&result.moved);
-  await page.evaluate(()=>new Promise((resolve,reject)=>{Module._web_save();Module.FS.syncfs(false,e=>e?reject(e):resolve());}));
+  await page.waitForFunction(()=>!syncing);
+  const saves=await page.evaluate(()=>new Promise((resolve,reject)=>{
+   const path='/persist/progress.dat.iceberg';
+   const open=indexedDB.open('/persist');
+   open.onerror=()=>reject(open.error);
+   open.onsuccess=()=>{
+    const db=open.result;
+    const stored=db.transaction('FILE_DATA').objectStore('FILE_DATA').get(path);
+    stored.onerror=()=>{db.close();reject(stored.error);};
+    stored.onsuccess=()=>{
+     const stage=text=>Number(text.split('\n')[1].trim().split(/\s+/)[6]);
+     const memory=Module.FS.readFile(path,{encoding:'utf8'});
+     const disk=new TextDecoder().decode(stored.result.contents);
+     db.close();resolve({memory:stage(memory),disk:stage(disk)});
+    };
+   };
+  }));
+  assert.ok(saves.memory>0,JSON.stringify(saves));
+  assert.equal(saves.disk,saves.memory,'the room transition reaches IndexedDB before a manual flush');
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#start').disabled);
   await page.locator('#start').click();
   await page.waitForFunction(()=>started && (uiFlags&256) && !(uiFlags&1));

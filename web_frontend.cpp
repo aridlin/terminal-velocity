@@ -12,6 +12,9 @@ EM_JS(void, browser_frame, (const uint32_t *cells,int cols,int rows), {
 EM_JS(void, browser_ui, (int flags,int audio_ready,int clips,const char *error), {
   if(window.tvUI)window.tvUI({flags,audioReady:audio_ready,clips,error:UTF8ToString(error)});
 });
+EM_JS(void, browser_save_ready, (), {
+  if(window.tvSaveReady)window.tvSaveReady();
+});
 uint32_t first_codepoint(const std::string &s) {
   if(s.empty())return 32;
   auto byte=[&](size_t i){return uint32_t(static_cast<unsigned char>(s[i]));};
@@ -74,12 +77,14 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   c.menu_request=p(12);c.restart=p(13);c.new_run=p(14);c.language=p(15);c.mute_audio=p(16);
   c.navigate=int(p(3))-int(p(2));
   for(int i=0;i<6;++i)if(p(20+i))c.select_level=i+1;
+  const auto last_save=web_game->save_revision;
   web_game->tick(c,std::isfinite(dt)?dt:0,focused!=0,std::clamp(cols,34,160),std::clamp(rows,cols>=56?20:24,60),2);
   if(web_game->legacy_requested) {
     web_game->legacy_requested=false;web_game->running=true;web_game->state.menu=true;
     web_game->notice(web_game->t("Trasy klasyczne są dostępne w wydaniu na komputer.","Classic courses are available in the desktop edition."),6);
   }
   RenderGrid(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2).draw();send_web_ui();
+  if(web_game->save_revision!=last_save)browser_save_ready();
 }
 EMSCRIPTEN_KEEPALIVE int web_save() {
   if(!web_game)return 0;
