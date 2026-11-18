@@ -161,9 +161,11 @@ function translateUI(){
  const replacingRun=!!(uiFlags&replaceRunFlag);
  const choosingProfile=!!(uiFlags&profilePickerFlag);
  const inSettings=!!(uiFlags&settingsFlag);
- if(inSettings){
+ const overlay=overlayFlags();
+ const showingPause=(overlay&(2|8|64|128))===2;
+ if(inSettings||showingPause){
   for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-buttons > [data-tap="9"]'))
-   button.textContent=tr('Wróć','Back');
+   button.textContent=inSettings?tr('Wróć','Back'):tr('Wznów','Resume');
  }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  const menuSelection=document.querySelector('#menu-selection-actions');
@@ -182,6 +184,9 @@ function translateUI(){
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(inSettings){
   touchUse.textContent=tr('Wróć','Back');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(showingPause){
+  touchUse.textContent=tr('Wznów','Resume');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(uiFlags&forkDoorFlag){
   touchUse.textContent=tr('Przejście B','Passage B');
@@ -209,10 +214,10 @@ function translateUI(){
   button.setAttribute('aria-label',districtControl?tr('Zmień dzielnicę','Change district'):button.textContent);
  }
  const touchInspect=document.querySelector('#touch-inspect');
- const overlay=overlayFlags();
  const touchControls=document.querySelector('#touch');
- if(inMenu||overlay&128){
-  const actionsOnly=inMenu?(inSettings||replacingSave):!!(overlay&roomMapFlag);
+ if(inMenu||overlay&128||showingPause){
+  const browseTour=!!(overlay&tourFlag)&&!(overlay&4);
+  const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:!!(overlay&roomMapFlag);
   touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
  }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
@@ -227,7 +232,7 @@ function translateUI(){
   button.textContent=mapViewLabel;
   button.setAttribute('aria-label',mapViewAction);
  }
- touchInspect.hidden=(inMenu&&!choosingProfile&&!replacingSave)||!!((overlay&128)&&(overlay&tourFlag));
+ touchInspect.hidden=showingPause||(inMenu&&!choosingProfile&&!replacingSave)||!!((overlay&128)&&(overlay&tourFlag));
  let inspectLabel;
  if(replacingSave){
   touchInspect.textContent=tr('Anuluj','Cancel');

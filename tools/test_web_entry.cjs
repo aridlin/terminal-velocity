@@ -1124,6 +1124,19 @@ const server=http.createServer((req,res)=>{
     assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
     assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
    }
+   const pauseButton=tools.locator('[data-tap="9"]');
+   const resume=page.locator('#touch-use');
+   await pauseButton.tap();
+   await page.waitForFunction(()=>!!(uiFlags&2));
+   assert.equal(await pauseButton.textContent(),'Resume');
+   assert.equal(await resume.getAttribute('aria-label'),'Resume');
+   assert.equal(await page.locator('#touch .directions').isVisible(),false);
+   assert.equal(await page.locator('#touch .jump').isVisible(),false);
+   assert.equal(await inspectControl.isVisible(),false);
+   await resume.tap();
+   await page.waitForFunction(()=>!(uiFlags&2));
+   assert.equal(await pauseButton.textContent(),'Pause');
+   assert.equal(await page.locator('#touch .jump').isVisible(),true);
    await tools.locator('[data-tap="10"]').tap();
    await page.waitForFunction(()=>!!(uiFlags&64));
    await tools.locator('[data-tap="12"]').tap();
@@ -1335,7 +1348,18 @@ const server=http.createServer((req,res)=>{
   });
   await action.tap();
   await page.waitForFunction(()=>window.tourUseReceived===true);
-  console.log('PASS Expedition maps and Debug Tour restore the normal touch Use action');
+  await page.locator('#toolbar [data-tap="9"]').tap();
+  await page.waitForFunction(()=>!!(uiFlags&2)&&window.expeditionFrame?.includes('Ferry crossing'));
+  assert.equal(await action.getAttribute('aria-label'),'Resume');
+  assert.equal(await inspectControl.isVisible(),false);
+  assert.equal(await page.locator('#touch .jump').isVisible(),false);
+  assert.deepEqual(await touchDirectionNames(),['Previous room','Next room']);
+  await page.locator('#touch').getByRole('button',{name:'Next room'}).tap();
+  await page.waitForFunction(()=>!!(uiFlags&2)&&window.expeditionFrame?.includes('Chimney without a sweep'));
+  await action.tap();
+  await page.waitForFunction(()=>!(uiFlags&2));
+  assert.equal(await action.getAttribute('aria-label'),'Use');
+  console.log('PASS Expedition maps, Pause and the Debug Tour keep the relevant touch actions');
   await mobile.close();
   assert.deepEqual(errors,[],'browser errors');console.log(visualOnly?'PASS current Chromium/WASM visual smoke':'PASS real Chromium/WASM entry, save-language restoration and responsive rendering');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
