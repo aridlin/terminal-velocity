@@ -383,10 +383,16 @@ const saveFile=document.querySelector('#save-file');
 const previousImportPath='/persist/before-manual-import.iceberg';
 let importPending=false;
 
-function downloadSave(path,name) {
+function readCurrentSave(){
+ if(Module._web_save())return Module.FS.readFile('/persist/progress.dat.iceberg');
+ if(!Module._web_export_recovery())throw Error('save_write_failed');
+ const recovery='/tmp/terminal-velocity-export.iceberg';
+ try{return Module.FS.readFile(recovery);}
+ finally{Module.FS.unlink(recovery);}
+}
+function downloadSave(name,read){
  try {
-  const bytes=Module.FS.readFile(path);
-  const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
+  const url=URL.createObjectURL(new Blob([read()],{type:'application/octet-stream'}));
   const link=document.createElement('a');
   link.href=url;link.download=name;link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -395,21 +401,8 @@ function downloadSave(path,name) {
   setSaveActionError(['Brak zapisu do pobrania','No save to download']);
  }
 }
-exportSave.onclick=()=>{
- const name='terminal-velocity.iceberg';
- if(Module._web_save()){
-  downloadSave('/persist/progress.dat.iceberg',name);
-  return;
- }
- if(!Module._web_export_recovery()){
-  setSaveActionError(['Brak zapisu do pobrania','No save to download']);
-  return;
- }
- const recovery='/tmp/terminal-velocity-export.iceberg';
- try{downloadSave(recovery,name);}
- finally{Module.FS.unlink(recovery);}
-};
-exportPreviousSave.onclick=()=>downloadSave(previousImportPath,'terminal-velocity-previous.iceberg');
+exportSave.onclick=()=>downloadSave('terminal-velocity.iceberg',readCurrentSave);
+exportPreviousSave.onclick=()=>downloadSave('terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath));
 function finishImport(){
  importPending=false;
  importSave.disabled=false;
@@ -576,7 +569,8 @@ var Module={
 };
 const accounts=typeof window.TVAccounts==='function'?new window.TVAccounts({
  english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame,
- needsRedraw:()=>previous.length===0,flush:flushBrowserStorage
+ needsRedraw:()=>previous.length===0,flush:flushBrowserStorage,
+ currentSave:()=>new TextDecoder().decode(readCurrentSave())
 }):null;
 for(const button of document.querySelectorAll('#account,#account-fullscreen')){
  button.hidden=!accounts;

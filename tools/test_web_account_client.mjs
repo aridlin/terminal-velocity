@@ -13,7 +13,7 @@ function browser(initial){
   const body=options.body||'',u=new URL(url);const env={...process.env,REDIRECT_STATUS:'200',SCRIPT_FILENAME:path.join(root,'web/server/api.php'),SCRIPT_NAME:'/terminal-velocity/api.php',REQUEST_METHOD:options.method,QUERY_STRING:u.search.slice(1),DOCUMENT_ROOT:path.join(root,'web/server'),HTTP_HOST:'game.test',SERVER_NAME:'game.test',SERVER_PORT:'443',HTTPS:'on',REMOTE_ADDR:'127.0.0.1',HTTP_COOKIE:cookie,HTTP_X_TV_CSRF:options.headers['X-TV-CSRF']||'',HTTP_ORIGIN:'https://game.test',CONTENT_TYPE:'application/json',CONTENT_LENGTH:String(Buffer.byteLength(body)),TV_ACCOUNT_DATA:privateDir};
   const result=spawnSync(php,['-n','-d','extension_dir='+extensions,'-d','extension=pdo_sqlite'],{input:body,env,encoding:'utf8'});assert.equal(result.status,0);const split=result.stdout.indexOf('\r\n\r\n'),headers=result.stdout.slice(0,split),payload=result.stdout.slice(split+4);const status=Number(headers.match(/^Status: (\d+)/m)?.[1]||200);const next=headers.match(/^Set-Cookie: ([^;\r\n]+)/m);if(next)cookie=next[1];return {ok:status<400,json:async()=>JSON.parse(payload)};
  };
- vm.createContext(context);vm.runInContext(source,context);const controller=new context.window.TVAccounts({english:()=>true,ready:()=>true,needsRedraw:()=>false,clear(){},frame(){frames++;},flush(){}});
+ vm.createContext(context);vm.runInContext(source,context);const controller=new context.window.TVAccounts({english:()=>true,ready:()=>true,currentSave:()=>files.get('/persist/progress.dat.iceberg'),needsRedraw:()=>false,clear(){},frame(){frames++;},flush(){}});
  return {controller,files,context,frames:()=>frames};
 }
 function pass(label){console.log('PASS',label);}
@@ -31,6 +31,15 @@ try{
  await b.controller.choose(false);assert.equal(b.controller.synced,variant(3));pass('explicitly choosing local progress updates the matching remote revision');
  await b.controller.logout();assert.equal(b.controller.user,null);assert.equal(b.files.get('/persist/progress.dat.iceberg'),variant(1));assert.equal(b.controller.entries.sync_courier.local,variant(3));pass('logout restores guest play and retains the account backup');
  b.controller.open();b.controller.name.value='sync_courier';b.controller.pass.value='fixture-password-3';await b.controller.authenticate();assert.equal(b.controller.user,'sync_courier');assert.equal(b.files.get('/persist/progress.dat.iceberg'),variant(3));pass('returning to the account resumes its profile, not the guest profile');
+ const readCurrent=b.controller.host.currentSave;
+ const beforeFailure=await b.controller.request('save');
+ b.controller.host.currentSave=()=>{throw Error('save_write_failed');};
+ await b.controller.sync();
+ assert.equal(b.controller.busy,false);
+ assert.equal(b.controller.message,'Could not write the save in this browser.');
+ assert.deepEqual(await b.controller.request('save'),beforeFailure);
+ b.controller.host.currentSave=readCurrent;
+ pass('a failed local snapshot leaves the account save and revision intact');
  b.context.fetch=async()=>{throw Error('network');};b.files.set('/persist/progress.dat.iceberg',variant(4));await b.controller.sync();assert.equal(b.controller.entries.sync_courier.local,variant(4));assert.equal(b.controller.busy,false);pass('offline sync preserves progress and releases the interface');
  assert.ok(a.frames()>0&&b.frames()>0);pass('account screens render through the shared cell-frame output');
 }finally{fs.rmSync(privateDir,{recursive:true,force:true});}
