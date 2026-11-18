@@ -19,7 +19,7 @@ struct GameAudio::Impl {
     bool loaded = false;
     float strength = 1.f;
   };
-  std::array<Clip, 3> music;
+  std::array<Clip, 4> music;
   std::array<Clip, 6> ambience;
   std::array<Clip, 2> climax;
   bool climax_active=false;
@@ -29,7 +29,7 @@ struct GameAudio::Impl {
   std::array<float, size_t(AudioCue::Count)> effect_levels{};
   std::array<std::array<Clip, 2>, size_t(AudioCue::Count)> effects;
   std::array<unsigned, size_t(AudioCue::Count)> next{};
-  std::array<double, 3> quiet_time{};
+  std::array<double, 4> quiet_time{};
   int current_track = -1;
   AudioScene current_scene = AudioScene::Menu;
   bool was_muted = false, was_focused = true;
@@ -117,7 +117,7 @@ bool GameAudio::ensure_ready() {
   impl_->initialized = true;
   ma_engine_set_volume(&impl_->engine, .60f);
   auto flags = MA_SOUND_FLAG_NO_SPATIALIZATION | MA_SOUND_FLAG_WAIT_INIT;
-  const char *tracks[] = {"dreams.mp3", "ascent.mp3", "snow.mp3"};
+  const char *tracks[] = {"dreams.mp3", "ascent.mp3", "snow.mp3", "crown-sentinel.mp3"};
   for (size_t i = 0; i < impl_->music.size(); ++i) {
     if (impl_->load(
             impl_->music[i], directory_ / tracks[i],

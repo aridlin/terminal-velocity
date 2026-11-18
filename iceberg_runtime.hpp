@@ -77,6 +77,7 @@ public:
     return mode==iceberg::Mode::Campaign?profile.layout_version:profile.expeditions[mode==iceberg::Mode::Endless?0:1].layout_version;
   }
   int music_track() const {
+    if(grid.template_id==iceberg::CrownSentinel)return 3;
     // The short snow theme belongs to inhabited resting places. Long route
     // pieces keep an expedition from repeating a 25-second musical phrase.
     if(grid.room_role==iceberg::RoomRole::Settlement)return 2;
@@ -270,7 +271,7 @@ public:
     tour_scene=index;
     const auto &stop=iceberg::DebugTour[size_t(index)];
     mode=iceberg::Mode::Endless;district=stop.district;stage=2;room=depth=0;run_seed=73;run_active=false;
-    grid=verified_room(stop.room,run_seed,district);
+    grid=stop.room==iceberg::CrownSentinel?iceworld::build_crown_sentinel():verified_room(stop.room,run_seed,district);
     apply_expedition_mechanics(grid);grid.protect_exit();
     const Rect entry{stop.entry_x,stop.entry_floor-kPlayerHeight,kPlayerWidth,kPlayerHeight};
     const auto solids=grid.solid_rects_near(entry), hazards=grid.hazard_rects_near(entry);
@@ -324,6 +325,8 @@ public:
       grid=profile.layout_version>=4?iceworld::build_harbor_mission_v4(stage==2?0:stage==4?1:2):iceworld::build_harbor_mission(stage==2?0:stage==4?1:2);
     } else if(mode==iceberg::Mode::Campaign && (stage==0 || stage==3 || stage==5)) {
       grid=campaign_settlement(district);
+    } else if(mode==iceberg::Mode::Campaign&&district==5&&stage==7&&(profile.story&iceberg::CrownArenaReached)) {
+      grid=iceworld::build_crown_sentinel();
     } else if(mode==iceberg::Mode::Campaign && (stage==1 || stage==7)) {
       grid=campaign_authored(district,stage==7);
     } else {
@@ -406,6 +409,10 @@ public:
     }
     stepper={};sync_view();
     update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
+    if(grid.template_id==iceberg::CrownSentinel&&(profile.story&iceberg::CrownSentinelDefeated)) {
+      state.crown.hits=3;
+      talk(iceberg::crown_cutscene(),2);
+    }
   }
   void talk(std::vector<iceberg::DialogueLine> lines,int action=0) {
     state.adventure.dialogue={std::move(lines),0,action};stepper={};
@@ -710,7 +717,13 @@ public:
       }
       stage=stage==0?1:stage==3?4:6;room=0;
     } else if(stage==1) {stage=2;room=0;}
-    else if(stage==7) {talk(iceberg::conclusion(district),2);return;}
+    else if(stage==7) {
+      if(district==5&&grid.template_id!=iceberg::CrownSentinel) {
+        profile.story|=iceberg::CrownArenaReached;
+        clear_room_record();load_room();persist();
+      } else if(district!=5)talk(iceberg::conclusion(district),2);
+      return;
+    }
     else if(++room>=iceberg::RoomsPerLeg) {
       int leg=stage==2?0:stage==4?1:2;
       if(district==0&&!(profile.story&(uint64_t(1)<<(16+leg)))) {
@@ -1185,6 +1198,8 @@ public:
     }
     Player before=state.player;
     int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
+    int old_crown_hits=state.crown.hits;
+    double old_crown_time=state.crown.time;
     double old_elapsed=state.elapsed;
     stepper.advance(state,grid,c,dt);
     update_water_splash(before,old_deaths,dt);
@@ -1232,10 +1247,31 @@ public:
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
     if(at<0&&state.player.support>=0&&grid.platforms[size_t(state.player.support)].clothesline)
       v.prompt=t("↓ / S — zeskocz z liny","↓ / S — drop through the line");
+    if(grid.template_id==iceberg::CrownSentinel&&state.crown.hits<3) {
+      const double phase=state.crown.time;
+      const std::string shield=std::to_string(3-state.crown.hits)+"/3 · ";
+      v.prompt=shield+(phase>=crown_open_time?t("Zryw w odsłonięty rdzeń","Dash through the core"):
+        phase>=crown_warning_time?t("Unikaj stref uderzenia","Dodge the marked zones"):
+        t("Rdzeń osłonięty","Core shielded"));
+      if(old_crown_time<crown_warning_time&&phase>=crown_warning_time)audio.play(AudioCue::Motor,.45f);
+      if(old_crown_time<crown_strike_time&&phase>=crown_strike_time)audio.play(AudioCue::Spark);
+      if(old_crown_time<crown_open_time&&phase>=crown_open_time)audio.play(AudioCue::Valve,.6f);
+    }
     autosave_left-=dt;
     if(old_cp!=state.checkpoint||(state.won&&!at_door)||(retrying&&deaths>0)||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,
       profile.smooth_camera&&deaths>0?10.:dt,profile.smooth_camera);
+    if(state.crown.hits>old_crown_hits) {
+      audio.play(AudioCue::Metal1);
+      if(state.crown.hits==3) {
+        audio.play(AudioCue::Win);
+        if(tour_scene<0) {
+          profile.story|=iceberg::CrownSentinelDefeated;
+          persist();
+        }
+        talk(iceberg::crown_cutscene(),tour_scene>=0?0:2);
+      }
+    }
     sync_view();
   }
 };

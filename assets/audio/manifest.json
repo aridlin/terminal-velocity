@@ -310,6 +310,16 @@
     "sha256": "980c9aa74593ce6321d3c36d10ef85711100f17689f078a5d43f0b663e74388b"
   },
   {
+    "file": "crown-sentinel.mp3",
+    "source": "snow.mp3",
+    "source_url": "https://opengameart.org/content/snow-theme",
+    "author": "Cleyton Kauffman",
+    "license": "CC0-1.0",
+    "source_sha256": "980c9aa74593ce6321d3c36d10ef85711100f17689f078a5d43f0b663e74388b",
+    "changes": "Mixed the original with quieter stereo copies delayed 115 and 230 ms, biased toward opposite channels. Applied +3.8 dB makeup gain, limited and encoded as 112 kbps MP3 at the original loop length.",
+    "sha256": "d776ef8e2cd8003ca2bdd40556d58795ecbfdd7460b46c25543fc90ce3709727"
+  },
+  {
     "file": "door.wav",
     "source": "door_open.ogg",
     "source_url": "https://opengameart.org/content/100-cc0-sfx",

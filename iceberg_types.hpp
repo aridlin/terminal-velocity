@@ -163,6 +163,9 @@ struct TourStop {
   double entry_x, entry_floor;
   Text change;
 };
+inline constexpr int CrownSentinel = 701;
+inline constexpr uint64_t CrownArenaReached = uint64_t(1) << 46;
+inline constexpr uint64_t CrownSentinelDefeated = uint64_t(1) << 47;
 inline constexpr std::array DebugTour{
   TourStop{0,504,25,52,{"Promy, zanurzone kadłuby i ślady na wodzie","Ferries, submerged hulls and wakes"}},
   TourStop{1,18,54,48,{"Rytm pary i boczna półka","Steam timing and the side shelf"}},
@@ -182,6 +185,7 @@ inline constexpr std::array DebugTour{
   TourStop{2,26,25,49,{"Przejdź po linach i zeskocz na balkon","Cross the clotheslines and drop to a balcony"}},
   TourStop{5,69,64,51,{"Winda serwisowa prowadzi do górnych półek","A service lift reaches the upper shelves"}},
   TourStop{4,52,77,41,{"Podlej pnącza i przejdź nad kanałem","Water the vines and cross above the channel"}},
+  TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 struct View {
   RouteView route;

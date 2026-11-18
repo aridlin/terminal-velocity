@@ -4,6 +4,42 @@
 #include <queue>
 #include <unordered_map>
 namespace {
+// The fight is won with ordinary input: jump the sweep, leave the locked-on
+// beam, then get to the safe half before attacking the exposed core.
+void play_crown_sentinel(AdventureSession &game) {
+  bool jumped=false;
+  const int deaths=game.state.deaths;
+  for(int i=0;i<2000&&!game.state.adventure.dialogue.active();++i) {
+    const auto &boss=game.state.crown;
+    const auto &p=game.state.player;
+    Controls input;
+    if(boss.hits==0) {
+      if(p.x<22.9)input.move=1;
+      if(!jumped&&boss.time>=1.47){input.jump_pressed=true;jumped=true;}
+      input.jump_held=jumped&&boss.time<2.32;
+      if(boss.time>=crown_open_time&&p.grounded&&p.can_dash()){input.move=1;input.dash_pressed=true;}
+    } else if(boss.hits==1) {
+      if(boss.time>=.97&&p.x>23.3)input.move=-1;
+      if(boss.time>=crown_open_time&&p.grounded&&p.can_dash()&&p.x<25.) {
+        input.move=1;input.dash_pressed=true;
+      }
+    } else {
+      if(boss.time>=.97) {
+        const double safe=boss.target>=33?boss.target-3.8:boss.target+3.8;
+        if(p.x<safe-.25)input.move=1;
+        if(p.x>safe+.25)input.move=-1;
+      }
+      if(boss.time>=crown_open_time&&p.grounded&&p.can_dash()) {
+        input.move=-1;input.dash_pressed=true;
+      }
+    }
+    game.tick(input,1./120);
+    if(game.state.deaths!=deaths)throw std::runtime_error("Crown attack dodge failed");
+  }
+  if(game.state.crown.hits!=3||!game.state.adventure.dialogue.active())
+    throw std::runtime_error("Crown Sentinel could not be cleared with ordinary input");
+}
+
 struct SearchNode {GameState state;int parent=-1;Controls action;int depth=0;};
 struct SearchEntry {double priority;int node;bool operator<(const SearchEntry &other)const{return priority>other.priority;}};
 uint64_t motion_key(const GameState &s) {
