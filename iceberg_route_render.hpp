@@ -1,4 +1,59 @@
-// Included inside RenderGrid. Cells represent rooms and real saved graph edges.
+// Included inside RenderGrid. Expedition maps share the terrain and route state.
+  void draw_expedition_room_map(int top,int height) {
+    const int width=std::min(cols_-8,72), map_rows=std::min(height-5,18);
+    const int left=(cols_-width)/2, first=top+3;
+    int title_row=top;
+    for(const auto &line:wrap(grid_.room_name.get(state_.adventure.language),cols_-6)) {
+      if(title_row>=top+2)break;
+      center(title_row++,line,Color::Gold);
+    }
+    frame(first-1,left-1,width+2,map_rows+2,0x637f8e);
+    int terrain_top=0;
+    for(;terrain_top<grid_.height();++terrain_top) {
+      int x=0;
+      while(x<grid_.width()&&!grid_.solid_at(x,terrain_top)&&!grid_.hazard_at(x,terrain_top))++x;
+      if(x<grid_.width())break;
+    }
+    double upper=std::min(double(terrain_top),grid_.goal.y);
+    for(const auto &platform:grid_.platforms)upper=std::min(upper,platform.base.y-std::abs(platform.dy));
+    const int world_top=std::max(0,int(upper)-6);
+    auto column=[&](double x){return std::clamp(int(x/grid_.width()*width),0,width-1);};
+    auto row=[&](double y){return std::clamp(int((y-world_top)/(grid_.height()-world_top)*map_rows),0,map_rows-1);};
+
+    // A thin platform still occupies a map cell even at the smallest size.
+    std::vector<std::string> map(size_t(map_rows),std::string(size_t(width),' '));
+    for(int y=world_top;y<grid_.height();++y) {
+      auto &line=map[size_t(row(y))];
+      for(int x=0;x<grid_.width();++x) {
+        auto &tile=line[size_t(column(x))];
+        if(grid_.solid_at(x,y))tile='#';
+        else if(tile==' '&&grid_.hazard_at(x,y))tile='!';
+      }
+    }
+    for(const auto &platform:grid_.platforms) {
+      const auto deck=platform.at(state_.elapsed);
+      auto &line=map[size_t(row(deck.y))];
+      for(int x=column(deck.x);x<=column(deck.right());++x)line[size_t(x)]='=';
+    }
+    for(int y=0;y<map_rows;++y)for(int x=0;x<width;++x) {
+      switch(map[size_t(y)][size_t(x)]) {
+      case '#':paint_text(first+y,left+x,"▪",0x8ba2ae);break;
+      case '!':paint_text(first+y,left+x,"░",0xa26666);break;
+      case '=':paint_text(first+y,left+x,"─",0x9dd4dd);break;
+      }
+    }
+    auto mark=[&](double x,double y,const char *symbol,uint32_t color){
+      paint_text(first+row(y),left+column(x),symbol,color,true);
+    };
+    for(size_t i=0;i<grid_.checkpoint_points.size();++i) {
+      const auto [x,y]=grid_.checkpoint_points[i];
+      mark(x+kPlayerWidth*.5,y,i==size_t(state_.checkpoint)?"◆":"◇",0x9dd4dd);
+    }
+    mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",0xd7e8cd);
+    mark(state_.player.x+kPlayerWidth*.5,state_.player.y+kPlayerHeight*.5,"@",0xffd68a);
+    paint_text(top+height-1,2,tr("@ Ty · ◆ Lampa · ▣ Wyjście","@ You · ◆ Lamp · ▣ Exit"),0xc7d9df);
+  }
+
   void draw_iceberg_route_map(int top,int height) {
     const auto &v=state_.adventure;const auto &r=v.route;
     const int bottom=top+height-1;

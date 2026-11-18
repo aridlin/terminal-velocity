@@ -133,22 +133,34 @@ int main(){try {
     for(int i=0;i<(mode==iceberg::Mode::Endless?9:2);++i)game.advance_room();
     auto x=game.state.player.x;
     game.tick(map,1./120);
-    ui_check(game.state.adventure.map&&game.state.adventure.map_route,"J opens the active expedition route");
+    ui_check(game.state.adventure.map&&game.state.adventure.map_route&&!game.state.adventure.map_room,
+      "J opens the active expedition route");
     Controls up;up.navigate=-1;
     game.tick(tab,1./120);game.tick(up,1./120);game.tick(enter,1./120);
     const auto &v=game.state.adventure;
-    ui_check(v.map&&v.map_route&&v.route_page==-1&&game.state.player.x==x,"expedition map stays on the current route during district inputs");
+    ui_check(v.map&&v.map_route&&v.map_room&&v.route_page==-1&&game.state.player.x==x,
+      "B opens the room map while district navigation and confirmation leave the expedition paused in place");
     const int room=mode==iceberg::Mode::Endless?1:2;
     ui_check(v.route.available&&v.route.current==room&&v.route.visited==(1u<<(room+1))-1,"expedition route marks only the rooms reached in this leg");
     for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
       game.profile.language=language;game.sync_view();
-      auto &route=game.state.adventure.route;
-      // Representative long, localized names that exceed a compact map line.
-      route.place=iceworld::pattern(40).name;
-      route.rooms[size_t(route.current+1)]=iceworld::pattern(45).name;
       for(auto size:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
         RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
         const bool en=language==iceberg::Language::English;
+        const auto room_map=ui_text(frame);
+        bool courier=false,exit=false;
+        for(const auto &row:frame)for(const auto &cell:row) {
+          courier|=cell.glyph=="@"&&cell.rgb==0xffd68a;
+          exit|=cell.glyph=="▣"&&cell.rgb==0xd7e8cd;
+        }
+        ui_check(room_map.find(en?"ROOM MAP":"PLAN POKOJU")!=std::string::npos&&courier&&exit&&
+          room_map.find("▪")!=std::string::npos,"the room map marks terrain, player and exit at all supported sizes");
+        game.tick(tab,1./120);
+        auto &route=game.state.adventure.route;
+        // Representative long, localized names that exceed a compact map line.
+        route.place=iceworld::pattern(40).name;
+        route.rooms[size_t(route.current+1)]=iceworld::pattern(45).name;
+        RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
         const auto text=ui_text(frame);
         const char *title=mode==iceberg::Mode::Endless?(en?"ENDLESS EXPEDITION":"WYPRAWA BEZ KOŃCA"):(en?"MASTERY TRIAL":"PRÓBA MISTRZOWSKA");
         const char *progress=mode==iceberg::Mode::Endless?(en?"Leg 2 · Depth 9":"Odcinek 2 · Głębokość 9"):(en?"Room 3 / 8":"Pokój 3 / 8");
@@ -163,6 +175,7 @@ int main(){try {
         ui_check(text.find(title)!=std::string::npos&&text.find(progress)!=std::string::npos&&
           normalized.find(current+" "+next)!=std::string::npos,
           "expedition map shows progress and both complete room names at all supported sizes");
+        game.tick(tab,1./120);
       }
     }
     game.tick(map,1./120);ui_check(!v.map,"J closes the expedition map");

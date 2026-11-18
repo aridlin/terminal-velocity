@@ -261,7 +261,7 @@ public:
     auto old_view=state.adventure;
     state=new_state(grid);state.adventure=std::move(old_view);
     if(state.adventure.mode!=mode)state.adventure.map_route=false;
-    state.adventure.dialogue={};state.adventure.map=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
+    state.adventure.dialogue={};state.adventure.map=false;state.adventure.map_room=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
     state.adventure.door_left=.42;state.adventure.door_open=0;state.adventure.machinery_left=0;
     state.adventure.lamp_left=0;state.adventure.npc_reaction_left=0;
     state.ssh=options.remote;
@@ -860,6 +860,7 @@ public:
     if(c.journal){state.journal=!state.journal;v.map=false;v.selected=0;auto entries=iceberg::journal_entries(v);for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);stepper={};}
     if(c.map) {
       v.map=!v.map;state.journal=false;v.selected=grid.district;v.route_page=-1;stepper={};
+      v.map_room=false;
       if(mode!=iceberg::Mode::Campaign)v.map_route=true;
     }
     if(c.pause){if(state.journal||v.map){state.journal=false;v.map=false;}else state.paused=!state.paused;stepper={};}
@@ -893,6 +894,7 @@ public:
         } else notice(iceberg::district_travel_status(v,v.selected),8);
       }
     }
+    if(v.map&&mode!=iceberg::Mode::Campaign&&c.inspect)v.map_room=!v.map_room;
     bool blocked=state.paused||state.journal||v.map||columns<34||rows<(columns>=56?20:24);
     audio.update(blocked?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
     if(blocked){sync_view();return;}

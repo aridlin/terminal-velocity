@@ -466,11 +466,14 @@
     const auto &v=state_.adventure;auto l=v.language;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     frame(0,0,cols_,rows_,0x637f8e);
-    paint_text(1,2,v.map?tr("MAPA PODRÓŻY","JOURNEY MAP"):tr("KSIĘGA ZADAŃ","QUEST BOOK"),d.accent,true);
+    paint_text(1,2,v.map?(v.map_room?tr("PLAN POKOJU","ROOM MAP"):tr("MAPA PODRÓŻY","JOURNEY MAP")):
+      tr("KSIĘGA ZADAŃ","QUEST BOOK"),d.accent,true);
     if(v.map) {
       if(v.mode!=iceberg::Mode::Campaign) {
-        draw_iceberg_route_map(3,rows_-7);
-        paint_text(rows_-2,2,tr("J/P wróć","J/P return"),d.light);
+        if(v.map_room)draw_expedition_room_map(3,rows_-7);
+        else draw_iceberg_route_map(3,rows_-7);
+        paint_text(rows_-2,2,v.map_room?tr("B trasa · J/P wróć","B route · J/P return"):
+          tr("B pokój · J/P wróć","B room · J/P return"),d.light);
         return;
       }
       paint_text(3,2,v.map_route?tr("  Dzielnice  ·  [Trasa]","  Districts  ·  [Route]"):tr("[Dzielnice]  ·   Trasa","[Districts]  ·   Route"),d.light);

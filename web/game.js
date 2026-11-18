@@ -97,6 +97,7 @@ function clearPresses(){
  for(const pointer of pointers.values())pointer.pending=0;
 }
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
+const roomMapFlag=1<<17;
 const routeMapOpen=()=>(overlayFlags()&(128|2048))===(128|2048);
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function translateUI(){
@@ -121,7 +122,6 @@ function translateUI(){
  }
  const touchInspect=document.querySelector('#touch-inspect');
  const overlay=overlayFlags();
- touchInspect.hidden=!!((overlay&128)&&(overlay&8192));
  let inspectLabel;
  if(questRecordOpen()){
   touchInspect.textContent=tr('Wróć','Back');
@@ -133,7 +133,10 @@ function translateUI(){
   touchInspect.textContent=tr('Zakładka','Tab');
   inspectLabel=tr('Następna zakładka','Next quest tab');
  }else if(overlay&128){
-  touchInspect.textContent=overlay&2048?tr('Dzielnice','Districts'):tr('Trasa','Route');
+  if(overlay&8192){
+   touchInspect.textContent=overlay&roomMapFlag?tr('Trasa','Route'):tr('Pokój','Room');
+   inspectLabel=overlay&roomMapFlag?tr('Pokaż trasę','Show route map'):tr('Pokaż plan pokoju','Show room map');
+  }else touchInspect.textContent=overlay&2048?tr('Dzielnice','Districts'):tr('Trasa','Route');
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
@@ -155,7 +158,7 @@ window.tvUI=u=>{
  const nextEnglish=!!(u.flags&512);
  // The game sends UI state every frame. Only a transition changes the controls.
  if(u.flags===uiFlags&&english===nextEnglish)return;
- const modalFlags=1|2|4|8|64|128;
+ const modalFlags=1|2|4|8|64|128|roomMapFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&modalFlags)!==(uiFlags&modalFlags))clearInput();
  lastBlocked=!!(u.flags&(modalFlags|1024));

@@ -166,7 +166,7 @@ struct View {
   int hidden_room = -1, visit_district = -1;
   int run_district = 0, endless_best = 0;
   bool revisit = false;
-  bool can_travel = false, map_route = false;
+  bool can_travel = false, map_route = false, map_room = false;
   int journal_tab = 0, quest_focus = -1, journey_district = 0, route_page = -1;
   uint64_t story = 0;
   std::string current_objective;
