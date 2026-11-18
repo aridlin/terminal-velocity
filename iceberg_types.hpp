@@ -179,6 +179,8 @@ inline constexpr std::array DebugTour{
   TourStop{4,55,73,45,{"Kruche kry na zamarzniętym przelewie","Brittle ice over the reservoir spillway"}},
   TourStop{3,47,54,50,{"Regały na wspólnej linie podnoszą się na zmianę","Cable-linked racks rise in turn"}},
   TourStop{5,70,72,41,{"Nawis osłania dolną trasę przed wiatrem","The overhang shelters the lower route"}},
+  TourStop{2,26,25,49,{"Przejdź po linach i zeskocz na balkon","Cross the clotheslines and drop to a balcony"}},
+  TourStop{5,69,64,51,{"Winda serwisowa prowadzi do górnych półek","A service lift reaches the upper shelves"}},
 };
 struct View {
   RouteView route;
