@@ -17,6 +17,9 @@ EM_JS(void, browser_ui, (int flags,int audio_ready,int clips,const char *error),
 EM_JS(void, browser_save_ready, (), {
   if(window.tvSaveReady)window.tvSaveReady();
 });
+EM_JS(void, browser_reply_rows, (int first_row), {
+  if(window.tvReplyRows)window.tvReplyRows(first_row);
+});
 uint32_t first_codepoint(const std::string &s) {
   if(s.empty())return 32;
   auto byte=[&](size_t i){return uint32_t(static_cast<unsigned char>(s[i]));};
@@ -92,6 +95,12 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   c.interact=p(6);c.inspect=p(7);c.confirm=p(8);c.pause=p(9);c.journal=p(10);c.map=p(11);
   c.menu_request=p(12);c.restart=p(13);c.new_run=p(14);c.language=p(15);c.mute_audio=p(16);
   c.navigate=int(p(3))-int(p(2));
+  const auto &dialogue=web_game->state.adventure.dialogue;
+  if(dialogue.choosing()&&!web_game->state.paused&&!web_game->state.menu&&(p(17)||p(18))) {
+    const int choice=p(18)?1:0;
+    c.navigate=int(dialogue.reply_option!=choice);
+    c.confirm=true;
+  }
   for(int i=0;i<7;++i)if(p(20+i))c.select_level=i+1;
   const auto last_save=web_game->save_revision;
   const int previous_slot=web_slot;
@@ -101,7 +110,10 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
     web_game->notice(web_game->t("Trasy klasyczne są dostępne w wydaniu na komputer.","Classic courses are available in the desktop edition."),6);
   }
   web_slot=web_game->save_slot;
-  RenderGrid(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2).draw();send_web_ui();
+  RenderGrid renderer(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2);
+  renderer.draw();
+  browser_reply_rows(renderer.reply_first_row());
+  send_web_ui();
   if(web_game->save_revision!=last_save||web_slot!=previous_slot)browser_save_ready();
 }
 EMSCRIPTEN_KEEPALIVE int web_save() {

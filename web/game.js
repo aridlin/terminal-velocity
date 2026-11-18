@@ -108,6 +108,8 @@ window.tvFrame=(data,w,h)=>{
 };
 let completedPresses=0;
 let canvasPress=null;
+let replyFirstRow=-1;
+window.tvReplyRows=firstRow=>{replyFirstRow=firstRow;};
 const tap=(...keys)=>{for(const k of keys){completedPresses|=1<<k;pressed|=1<<k;}};
 function pointerPress(pointer){
  dashShift='';
@@ -854,13 +856,24 @@ start.onclick=()=>{
 };
 function canvasConfirmContext(){
  const overlay=overlayFlags();
+ if((overlay&(replyChoiceFlag|2))===replyChoiceFlag)return replyChoiceFlag;
  if(overlay&4)return 4;
  if(overlay&(8|64|128))return 0;
  return (overlay&2)||(overlay&doorReadyFlag);
 }
+function canvasReplyChoice(x,y){
+ if(replyFirstRow<0||!canvasFit)return -1;
+ const box=canvas.getBoundingClientRect();
+ const column=Math.floor((x-box.left)*canvasFit.w/box.width);
+ const row=Math.floor((y-box.top)*canvasFit.h/box.height)-replyFirstRow;
+ if(column<2||column>=canvasFit.w-2||row<0||row>=4)return -1;
+ return Math.floor(row/2);
+}
 canvas.addEventListener('pointerdown',event=>{
  if(!event.isPrimary||event.button!==0||accounts?.active||importPending)return;
- canvasPress={id:event.pointerId,context:canvasConfirmContext(),x:event.clientX,y:event.clientY};
+ const context=canvasConfirmContext();
+ const choice=context===replyChoiceFlag?canvasReplyChoice(event.clientX,event.clientY):-1;
+ canvasPress={id:event.pointerId,context,choice,x:event.clientX,y:event.clientY};
 });
 addEventListener('pointermove',event=>{
  const press=canvasPress;
@@ -878,6 +891,11 @@ canvas.onclick=event=>{
  if(event.detail!==0&&(!press||press.context!==context||
     (event.pointerId!==undefined&&press.id!==event.pointerId)))return;
  if(!started){start.click();return;}
+ if(context===replyChoiceFlag){
+  const choice=canvasReplyChoice(event.clientX,event.clientY);
+  if(choice>=0&&press?.choice===choice)tap(17+choice);
+  return;
+ }
  if(context)tap(8);
 };
 addEventListener('keydown',e=>{

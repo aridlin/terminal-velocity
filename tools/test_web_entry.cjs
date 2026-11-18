@@ -533,8 +533,22 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('Enter');await page.waitForTimeout(80);assert.match(await page.evaluate(()=>entryFrame),/Start at the board/,'next essential objective shown in one press after reveal');
     await page.keyboard.press('Enter');await page.waitForFunction(()=>!!(entryFlags&(1<<26)));
     assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Select');
-    await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('COURIER'));
-    await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('Who called about the heat upstairs'));
+    const clickReplyText=async text=>{
+     const point=await page.evaluate(text=>{
+      const lines=entryFrame.split('\n');
+      const row=lines.findIndex(line=>line.includes(text));
+      if(row<0)throw new Error('Missing reply text: '+text);
+      const box=canvas.getBoundingClientRect(),column=lines[row].indexOf(text);
+      return {x:box.left+(column+.5)*box.width/lines[row].length,y:box.top+(row+.5)*box.height/lines.length};
+     },text);
+     await page.mouse.click(point.x,point.y);
+    };
+    await clickReplyText('YOUR REPLY');
+    await page.evaluate(async()=>{for(let frame=0;frame<2;++frame)await new Promise(requestAnimationFrame);});
+    assert.ok(await page.evaluate(()=>!!(entryFlags&(1<<26))),'clicking the heading leaves the choice open');
+    await clickReplyText("What if I'm late?");
+    await page.waitForFunction(()=>entryFrame.includes('COURIER'));
+    await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('before you close the counter'));
     await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('HELENA'));
     for(let i=0;i<6&&await page.evaluate(()=>!!(entryFlags&4));++i){
      await page.keyboard.press('Enter');
