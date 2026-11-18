@@ -1222,7 +1222,13 @@ const server=http.createServer((req,res)=>{
    await page.keyboard.press('Tab');
    assert.equal(await page.evaluate(()=>document.activeElement.dataset.tap),'25');
    await page.keyboard.press('Tab');
-   const smoothCamera=settings.locator('#smooth-camera');
+   const smoothCamera=page.locator('#smooth-camera');
+   assert.equal(await smoothCamera.evaluate(button=>button===document.activeElement),true);
+   await page.keyboard.press('Alt+Enter');
+   await page.waitForFunction(()=>!expanded()&&settingsKeys.parentElement.tagName==='FOOTER');
+   assert.equal(await smoothCamera.evaluate(button=>button===document.activeElement),true);
+   await page.keyboard.press('Alt+Enter');
+   await page.waitForFunction(()=>expanded()&&settingsKeys.parentElement.id==='fullscreen-tools');
    assert.equal(await smoothCamera.evaluate(button=>button===document.activeElement),true);
    await page.screenshot({path:path.join(out,fallback?"web-settings-fallback.png":"web-settings-fullscreen.png")});
    await holdSettingsAction(false);

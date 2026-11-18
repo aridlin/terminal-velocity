@@ -545,6 +545,7 @@ const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('e
 function fullscreenLayout(){
  const active=expanded();
  const fallback=playfield.classList.contains('expanded');
+ const settingsFocus=settingsKeys.contains(document.activeElement)?document.activeElement:null;
  for(const controls of pageControls)controls.inert=fallback;
  if(active){
   fullscreenButtons.prepend(start);
@@ -561,7 +562,8 @@ function fullscreenLayout(){
  clearInput();
  resize();
  const field=document.activeElement;
- if(!accounts?.active||(field!==accounts.name&&field!==accounts.pass))canvas.focus();
+ if(settingsFocus&&!settingsKeys.hidden)settingsFocus.focus({preventScroll:true});
+ else if(!accounts?.active||(field!==accounts.name&&field!==accounts.pass))canvas.focus();
  fullscreenButton.setAttribute('aria-pressed',String(active));
 }
 let fullscreenTransition=false;
