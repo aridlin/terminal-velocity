@@ -625,6 +625,30 @@ int main(){try {
     ui_check(v.route_room_selection==-1&&v.route.current==room+1,
       "reopening the expedition timeline returns the selection to the current room");
 
+    Controls held_next;held_next.navigate=held_next.aim_y=1;
+    game.tick(held_next,0);
+    const int first_selection=v.route_room_selection;
+    held_next.navigate=0;
+    for(int i=0;i<3;++i)game.tick(held_next,.1);
+    ui_check(first_selection==room+2&&v.route_room_selection==first_selection,
+      "a held down arrow moves once before the repeat delay");
+    game.tick(held_next,.1);
+    ui_check(v.route_room_selection==first_selection+1,
+      "a held down arrow repeats in the expedition timeline");
+    const int last_selection=v.route_room_selection;
+    game.tick({},0);
+    for(int i=0;i<5;++i)game.tick(held_next,.1);
+    ui_check(v.route_room_selection==last_selection,
+      "a released arrow needs a fresh navigation press before it repeats");
+    held_next.navigate=1;
+    game.tick(held_next,0);
+    const int selection_before_tab=v.route_room_selection;
+    held_next.navigate=0;
+    game.tick(tab,0);game.tick(tab,0);
+    for(int i=0;i<5;++i)game.tick(held_next,.1);
+    ui_check(v.route_room_selection==selection_before_tab,
+      "changing map tabs stops holding the old arrow");
+
     if(mode==iceberg::Mode::Trial) {
       const auto final_name=v.route.rooms.back();
       game.tick(map,0);

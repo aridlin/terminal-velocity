@@ -29,6 +29,8 @@ public:
   double autosave_left = 15, run_seconds = 0;
   uint32_t save_revision = 0;
   int run_deaths = 0, run_treasures = 0;
+  int timeline_repeat_direction = 0;
+  double timeline_repeat_left = 0;
   bool previous_focus = true;
   bool run_active = false;
 
@@ -996,6 +998,8 @@ public:
       stepper={};
     }
     previous_focus=focused;
+    if(!focused||state.menu||!v.map||v.map_room||c.map||c.journal||c.pause||c.menu_request||
+       c.inspect||c.aim_y!=timeline_repeat_direction)timeline_repeat_direction=0;
     if(!focused)c={};
     v.notice_left=std::max(0.,v.notice_left-dt);
     if(!state.paused&&!state.menu&&!v.inspecting&&!state.journal&&!v.map) {
@@ -1090,9 +1094,20 @@ public:
         v.map_room=next_room;
       } else v.map_room=!v.map_room;
     }
-    if(v.map&&!v.map_room&&!c.inspect&&c.navigate&&mode!=iceberg::Mode::Campaign&&!v.route.rooms.empty()) {
-      const int selected=v.route_room_selection<0?v.route.current:v.route_room_selection;
-      v.route_room_selection=std::clamp(selected+c.navigate,0,int(v.route.rooms.size())-1);
+    if(v.map&&!v.map_room&&!c.inspect&&mode!=iceberg::Mode::Campaign&&!v.route.rooms.empty()) {
+      int direction=c.navigate;
+      if(direction) {
+        // Only input modes with real held-key state can start our own repeat.
+        timeline_repeat_direction=direction==c.aim_y?direction:0;
+        timeline_repeat_left=.35;
+      } else if(timeline_repeat_direction&&(timeline_repeat_left-=dt)<=0) {
+        direction=timeline_repeat_direction;
+        timeline_repeat_left=.1;
+      }
+      if(direction) {
+        const int selected=v.route_room_selection<0?v.route.current:v.route_room_selection;
+        v.route_room_selection=std::clamp(selected+direction,0,int(v.route.rooms.size())-1);
+      }
     }
     if(v.map&&mode==iceberg::Mode::Campaign&&!v.map_room&&!c.inspect) {
       if(c.navigate&&!v.map_route)v.selected=(v.selected-c.navigate+iceberg::DistrictCount)%iceberg::DistrictCount;

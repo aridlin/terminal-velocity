@@ -112,23 +112,6 @@ const replaceRunFlag=1<<19;
 const districtTravelFlag=1<<25;
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
-const expeditionTimelineFlags=128|2048|8192,timelineDirections=(1<<2)|(1<<3);
-let timelineDirection=0,timelineRepeatAt=0;
-function repeatTimelineNavigation(now){
- const direction=held&timelineDirections;
- const timelineOpen=(overlayFlags()&(expeditionTimelineFlags|roomMapFlag))===expeditionTimelineFlags;
- if(!focused||!timelineOpen||(direction!==4&&direction!==8)){
-  timelineDirection=0;
-  return;
- }
- if(direction!==timelineDirection){
-  timelineDirection=direction;
-  timelineRepeatAt=now+350;
- }else if(now>=timelineRepeatAt){
-  tap(direction===4?2:3);
-  timelineRepeatAt=now+100;
- }
-}
 function translateUI(){
  document.documentElement.lang=english?'en':'pl';
  document.title='Terminal Velocity — '+tr('Pod powierzchnią','Below the surface');
@@ -234,7 +217,6 @@ function recompute(){
  held=0;
  for(const code of keyboard)held|=1<<keyMap[code];
  for(const {key} of pointers.values())if(key!==null)held|=1<<key;
- if((held&timelineDirections)!==timelineDirection)timelineDirection=0;
 }
 addEventListener('keydown',e=>{
  const shiftKey=e.code==='ShiftLeft'||e.code==='ShiftRight';
@@ -347,7 +329,7 @@ for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
  canvas.focus({preventScroll:true});
  tap(+b.dataset.tap);
 };
-function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';timelineDirection=0;held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
+function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function flushBrowserStorage(){
  // A failed restore or a second tab cannot safely replace the IndexedDB contents.
  if(!browserStorageWritable)return;
@@ -599,7 +581,6 @@ function frame(now){
  frameWasStalled=stalled;
  if(started&&accounts?.active)accounts.draw();
  else if(started&&!importPending){
-  repeatTimelineNavigation(now);
   Module._web_profile_action_busy(accountBooting||accounts?.busy?1:0);
   Module._web_tick(dt,held,pressed,cols,rows,focused?1:0);
   clearPresses();
