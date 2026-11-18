@@ -185,6 +185,16 @@ inline void add_expedition_root_pod(EngineGrid &room) {
   else room.springs.pop_back();
 }
 
+inline void add_expedition_fragile_pots(EngineGrid &room) {
+  if(room.district!=4||room.template_id!=51)return;
+  const size_t original=room.platforms.size();
+  room.platforms.push_back({.base={57,39,5,.5},.fragile=true});
+  room.platforms.push_back({.base={67,34,5,.5},.fragile=true});
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.platforms.resize(original);
+}
+
 inline void add_expedition_drawers(EngineGrid &room) {
   if(room.district!=3||room.template_id!=39)return;
   room.interactions.push_back({{57,41,3,3},InteractionKind::Valve,0,

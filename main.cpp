@@ -278,6 +278,7 @@ struct GameState {
   std::vector<bool> collected;
   std::vector<bool> defeated;
   std::vector<double> refill_cooldown;
+  std::vector<double> platform_armed_at;
   std::vector<ghosts::Ghost> ghosts;
   bool multiplayer = false;
   std::array<ChapterRecord, 3> records{};
@@ -321,6 +322,17 @@ struct MovingPlatform {
   Rect base;
   double dx = 0, dy = 0, period = 4, phase = 0;
   bool tram = false;
+  bool fragile = false;
+  static constexpr double CrackTime = .55, RestoreTime = 2.9;
+  double crack_age(const GameState &state, size_t index, double time) const {
+    const double start = state.platform_armed_at[index];
+    return start > 0 ? time - start : RestoreTime;
+  }
+  bool available(const GameState &state, size_t index, double time) const {
+    if (!fragile) return true;
+    const double age = crack_age(state, index, time);
+    return age < CrackTime || age >= RestoreTime;
+  }
   double offset(double t) const {
     const double cycle=t/period+phase;
     if(!tram)return std::sin(cycle*6.283185307179586);
@@ -724,6 +736,9 @@ GameState new_state(const EngineGrid &grid) {
   state.collected.resize(grid.sweets.size());
   state.defeated.resize(grid.enemies.size());
   state.refill_cooldown.resize(grid.refills.size());
+  if (std::any_of(grid.platforms.begin(), grid.platforms.end(),
+                  [](const auto &platform) { return platform.fragile; }))
+    state.platform_armed_at.resize(grid.platforms.size());
   state.spawn_x = grid.spawn_x;
   state.spawn_y = grid.spawn_y;
   state.player.x = grid.spawn_x;
@@ -746,6 +761,7 @@ void reset_player(GameState &state) {
   state.player.wall_coyote_left = 0;
   state.player.last_wall = 0;
   std::fill(state.refill_cooldown.begin(), state.refill_cooldown.end(), 0);
+  std::fill(state.platform_armed_at.begin(), state.platform_armed_at.end(), 0);
   state.player.support = -1;
   state.player.drop_left = 0;
   state.player.momentum_left = state.player.dash_jump_left = state.player.wall_bounce_left = 0;
@@ -1014,9 +1030,12 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   int deaths = s.deaths;
   p.drop_left = std::max(0.0, p.drop_left - dt);
   if (p.support >= 0 && size_t(p.support) < g.platforms.size()) {
-    auto old = g.platforms[p.support].at(before_time),
-         now = g.platforms[p.support].at(before_time + dt);
-    if (c.fast_fall) {
+    const auto &platform = g.platforms[p.support];
+    auto old = platform.at(before_time), now = platform.at(before_time + dt);
+    if (!platform.available(s, size_t(p.support), before_time + dt)) {
+      p.grounded = false;
+      p.support = -1;
+    } else if (c.fast_fall) {
       p.drop_left = .22;
       p.grounded = false;
       p.support = -1;
@@ -1063,8 +1082,9 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
     }
   if (p.drop_left <= 0 && p.vy >= 0) {
     for (size_t i = 0; i < g.platforms.size(); ++i) {
-      auto r = g.platforms[i].at(s.elapsed),
-           prev = g.platforms[i].at(before_time);
+      const auto &platform = g.platforms[i];
+      if (!platform.available(s, i, s.elapsed)) continue;
+      auto r = platform.at(s.elapsed), prev = platform.at(before_time);
       if (old.bottom() <= prev.top() + .10 && p.rect().bottom() >= r.top() &&
           p.rect().right() > r.left() && p.x < r.right()) {
         p.y = r.y - kPlayerHeight;
@@ -1073,6 +1093,8 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
         p.dash_available = true;
         p.coyote_left = kCoyoteTime;
         p.support = int(i);
+        if (platform.fragile && platform.crack_age(s, i, s.elapsed) >= MovingPlatform::RestoreTime)
+          s.platform_armed_at[i] = s.elapsed;
       }
     }
   }

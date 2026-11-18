@@ -237,6 +237,7 @@ public:
           add_expedition_copy_belts(grid);
           add_expedition_ice(grid);
           add_expedition_root_pod(grid);
+          add_expedition_fragile_pots(grid);
           strengthen_expedition_wind(grid);
         }
       }
@@ -964,8 +965,16 @@ public:
     if(state.checkpoint!=old_cp)v.lamp_left=.8;
     // Spatially restrained machinery cues follow actual motion/timing.
     if(state.elapsed>old_elapsed&&state.deaths==old_deaths) {
-      if(state.player.support>=0&&before.support!=state.player.support)audio.play(AudioCue::Lift,.7f);
-      if(before.support>=0&&state.player.support<0&&state.player.vy<-10)audio.play(AudioCue::Lift,.45f);
+      if(state.player.support>=0&&before.support!=state.player.support&&
+         !grid.platforms[size_t(state.player.support)].fragile)audio.play(AudioCue::Lift,.7f);
+      if(before.support>=0&&state.player.support<0&&state.player.vy<-10&&
+         !grid.platforms[size_t(before.support)].fragile)audio.play(AudioCue::Lift,.45f);
+      for(size_t i=0;i<grid.platforms.size();++i) {
+        const auto &deck=grid.platforms[i];
+        if(deck.fragile&&deck.available(state,i,old_elapsed)&&!deck.available(state,i,state.elapsed)&&
+           std::hypot(deck.base.x-state.player.x,deck.base.y-state.player.y)<16)
+          audio.play(AudioCue::Stone2,.65f);
+      }
       for(const auto &vent:grid.pulses)if(vent.active(state.elapsed)&&!vent.active(old_elapsed)) {
         double distance=std::hypot(vent.area.x-state.player.x,vent.area.y-state.player.y);
         if(distance<22)audio.play(AudioCue::Steam,float(1-distance/22));

@@ -39,7 +39,9 @@
         else if(tile==' '&&grid_.hazard_at(x,y))tile='!';
       }
     }
-    for(const auto &platform:grid_.platforms) {
+    for(size_t i=0;i<grid_.platforms.size();++i) {
+      const auto &platform=grid_.platforms[i];
+      if(!platform.available(state_,i,state_.elapsed))continue;
       const auto deck=platform.at(state_.elapsed);
       auto &line=map[size_t(row(deck.y))];
       for(int x=column(deck.x);x<=column(deck.right());++x)line[size_t(x)]='=';

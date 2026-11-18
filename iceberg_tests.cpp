@@ -301,6 +301,36 @@ int main(int argc,char **argv) {
     }
     check(launched&&reached_shelf&&bounce.deaths==0,
       "running onto the seedpod reaches the optional shelf without a jump or dash press");
+    gardens.room=3;gardens.load_room();
+    const auto &pot_room=gardens.grid;
+    check(pot_room.template_id==51&&pot_room.platforms.size()==2&&verify_route(pot_room).complete,
+      "fragile pots add optional platforms without blocking the original Gardens route");
+    const auto &pot=pot_room.platforms.front();
+    auto waiting=new_state(pot_room);
+    waiting.player.x=pot.base.x+1;
+    waiting.player.y=pot.base.y-kPlayerHeight-.2;
+    for(int tick=0;tick<20;++tick)world_step(waiting,pot_room,{},1./120);
+    check(waiting.player.support==0&&waiting.platform_armed_at.front()>0.&&
+          waiting.platform_armed_at.back()==0.,"landing arms only the touched planter");
+    auto hopping=waiting;
+    Controls jump;jump.jump_pressed=jump.jump_held=true;
+    world_step(hopping,pot_room,jump,1./120);
+    check(hopping.player.support<0&&hopping.player.vy<0.,"jumping before the crack gives way works normally");
+    for(int tick=0;tick<90;++tick)world_step(waiting,pot_room,{},1./120);
+    check(waiting.player.support<0&&waiting.deaths==0&&waiting.player.rect().bottom()>pot.base.y&&
+          !pot.available(waiting,0,waiting.elapsed),"waiting breaks the pot and drops the courier to the landing below");
+    for(int tick=0;tick<360&&!pot.available(waiting,0,waiting.elapsed);++tick)
+      world_step(waiting,pot_room,{},1./120);
+    waiting.player.x=pot.base.x+1;waiting.player.y=pot.base.y-kPlayerHeight-.2;
+    for(int tick=0;tick<20;++tick)world_step(waiting,pot_room,{},1./120);
+    check(waiting.player.support==0&&pot.crack_age(waiting,0,waiting.elapsed)<.2,
+      "a replaced planter can support another attempt");
+    Controls retry_pots;retry_pots.restart=true;
+    world_step(waiting,pot_room,retry_pots,1./120);
+    check(waiting.platform_armed_at.front()==0.,"retry clears the planter's crack timer");
+    garden_run.layout_version=2;gardens.load_room();
+    check(gardens.grid.template_id==51&&gardens.grid.platforms.empty(),
+      "older Gardens itineraries keep the original footholds");
     AdventureSession crown(options,path);
     crown.begin_campaign(true);
     crown.profile.unlocked=5;crown.run_district=5;

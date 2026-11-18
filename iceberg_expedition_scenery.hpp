@@ -59,6 +59,40 @@
     }
   }
 
+  void draw_fragile_planter(const Rect &pot,double age) {
+    const double row=aspect_*scale_;
+    const int cells=std::max(5,int(pot.w/scale_));
+    const double right=pot.x+(cells-1)*scale_;
+    const double center=pot.x+(cells/2)*scale_;
+    constexpr uint32_t iron=0x638963,clay=0xc48257,crack=0xffcf88;
+    world_art(pot.x,pot.y-5*row,{"╤"+std::string(size_t(cells-2),'=')+"╤"},iron);
+    for(int i=1;i<5;++i) {
+      world_art(pot.x,pot.y-(5-i)*row,{"╎"},iron);
+      world_art(right,pot.y-(5-i)*row,{"╎"},iron);
+    }
+    if(age>=MovingPlatform::CrackTime&&age<MovingPlatform::RestoreTime) {
+      const double fall=age-MovingPlatform::CrackTime;
+      if(fall<.65) {
+        for(int i=0;i<4;++i) {
+          const double drift=(i-1.5)*fall;
+          world_art(pot.x+pot.w*(.16+i*.23)+drift,pot.y+fall*fall*13+i*.13,
+            {i%2?"▴":"·"},clay);
+        }
+      }
+      return;
+    }
+    const bool cracking=age<MovingPlatform::CrackTime;
+    std::string rim="╔",soil="╲",base=" ";
+    for(int i=1;i<cells-1;++i) {
+      rim+=cracking&&i==cells/2?"╳":"═";
+      soil+=cracking&&i==cells/2?"╲":i%3==0?"∙":"░";
+      if(i==1)base+="╰";else if(i==cells-2)base+="╯";else base+="─";
+    }
+    world_art(center-scale_,pot.y-2*row,{"❧"," ╵"},0x8eb979);
+    world_text(pot.x,pot.y,rim+"╗",cracking?crack:clay);
+    world_art(pot.x,pot.y+row,{soil+"╱",base},clay,true);
+  }
+
   void draw_expedition_steam_lift(const AirField &jet) {
     const auto &area=jet.area;
     const double row=aspect_*scale_,bottom=area.bottom(),center=area.x+area.w*.5;

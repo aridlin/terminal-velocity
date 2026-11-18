@@ -249,6 +249,7 @@
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       const auto r=platform.at(state_.elapsed);
+      if(platform.fragile){draw_fragile_planter(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.tram){draw_estate_tram(platform,r);continue;}
       if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}
       if(grid_.template_id==50){draw_leaf_ferry(platform,r);continue;}
