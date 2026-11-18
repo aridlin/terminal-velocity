@@ -1067,11 +1067,17 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       p.support = -1;
     } else {
       if (g.adventure_level) {
-        p.lift_x = (now.x - old.x) / dt;
+        const double before_x = p.x;
+        const double run_speed = p.vx;
+        p.vx = (now.x - old.x) / dt;
+        move_axis(g, p, dt, 'x');
+        p.vx = run_speed;
+        p.lift_x = (p.x - before_x) / dt;
         p.lift_y = (now.y - old.y) / dt;
         p.lift_left = .12;
+      } else {
+        p.x += now.x - old.x;
       }
-      p.x += now.x - old.x;
       p.y += now.y - old.y;
     }
   }

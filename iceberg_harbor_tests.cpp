@@ -55,6 +55,25 @@ int main() {
     riding.player.x=sling.x+3;riding.player.y=sling.y-kPlayerHeight;
     for(int tick=0;tick<360;++tick)world_step(riding,quay,{},1./120);
     check_harbor(riding.player.support==0&&sling.y-riding.player.rect().bottom()>12,"the quay sling lifts a rider to the high transfer");
+    const auto lesson=iceworld::build_harbor_lesson_v4();
+    const auto ferry=lesson.platforms.front().at(0);
+    auto ferry_rider=new_state(lesson);
+    ferry_rider.player.x=ferry.right()-kPlayerWidth-.2;
+    ferry_rider.player.y=ferry.top()-kPlayerHeight;
+    ferry_rider.player.grounded=true;
+    ferry_rider.player.support=0;
+    for(int tick=0;tick<360;++tick)world_step(ferry_rider,lesson,{},1./120);
+    check_harbor(ferry_rider.deaths==0&&ferry_rider.player.support==0&&
+      std::abs(ferry_rider.player.rect().right()-120.)<1e-6&&
+      std::abs(ferry_rider.player.rect().bottom()-ferry.top())<1e-6,
+      "the ferry stops carrying the rider into the berth wall and keeps them aboard");
+    Controls disembark;disembark.move=1;disembark.jump_pressed=disembark.jump_held=true;
+    for(int tick=0;tick<60;++tick) {
+      world_step(ferry_rider,lesson,disembark,1./120);
+      disembark.jump_pressed=false;
+    }
+    check_harbor(ferry_rider.player.x>120.&&ferry_rider.deaths==0,
+      "the rider can still jump onto the quay from the ferry");
     auto boiler=s.campaign_authored(1,false);auto plume=boiler.air_fields.front();
     auto rising=new_state(boiler);rising.elapsed=.6;rising.player.x=plume.area.x+1;
     rising.player.y=plume.area.bottom()-3;double y=rising.player.y;
