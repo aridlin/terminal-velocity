@@ -411,15 +411,33 @@ public:
     update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
     if(grid.template_id==iceberg::CrownSentinel&&(profile.story&iceberg::CrownSentinelDefeated)) {
       state.crown.hits=3;
-      talk(iceberg::crown_cutscene(),2);
+      if(profile.story&iceberg::reply_recorded(6)) {
+        state.crown.airlock_open=true;
+        reply_dialogue(6,(profile.story&iceberg::reply_value(6))!=0,2);
+      } else talk(iceberg::crown_cutscene(profile.story),2,6);
+    } else if(resume&&mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&
+              stage==3&&profile.visit_district<0&&(profile.story&iceberg::HomecomingReplyPending)) {
+      talk_homecoming(0);
     }
   }
-  void talk(std::vector<iceberg::DialogueLine> lines,int action=0) {
+  void talk(std::vector<iceberg::DialogueLine> lines,int action=0,int reply_scene=-1) {
+    if(reply_scene>=0)lines.push_back({iceberg::ReplyPrompt,{"Odpowiedz","Reply"}});
     state.adventure.dialogue={std::move(lines),0,action};stepper={};
+    state.adventure.dialogue.reply_scene=reply_scene;
     state.player.vx=0;frame_dialogue();
+  }
+  void talk_homecoming(int leg) {
+    if(leg==0)profile.story|=iceberg::HomecomingReplyPending;
+    talk(iceberg::homecoming(district,leg,profile.story),0,leg==0?district:-1);
+  }
+  void reply_dialogue(int scene,int option,int action) {
+    const auto &reply=iceberg::civic_reply(scene,option);
+    talk({{iceberg::CourierSpeaker,reply.said},reply.answer},action);
   }
   void frame_dialogue() {
     const auto &dialogue=state.adventure.dialogue;if(!dialogue.active())return;
+    if(dialogue.lines[dialogue.page].cue==iceberg::DialogueCue::CrownAirlock)
+      state.crown.airlock_open=true;
     int courier=4+int(std::floor((state.player.y-state.camera_y)/(last_aspect*.4)));
     auto box=iceberg::dialogue_layout(dialogue.lines[dialogue.page].text.get(profile.language),last_columns,last_rows,courier,dialogue.segment);
     int feet=5+int(std::floor((state.player.y+kPlayerHeight-.001-state.camera_y)/(last_aspect*.4)));
@@ -494,6 +512,19 @@ public:
   void dialogue_next() {
     auto &dialogue=state.adventure.dialogue;
     if(!dialogue.active())return;
+    if(dialogue.choosing()) {
+      const int scene=dialogue.reply_scene, option=dialogue.reply_option;
+      const int action=dialogue.action;
+      if(tour_scene<0) {
+        if(scene<iceberg::DistrictCount)profile.story&=~iceberg::HomecomingReplyPending;
+        profile.story|=iceberg::reply_recorded(scene);
+        if(option)profile.story|=iceberg::reply_value(scene);
+        else profile.story&=~iceberg::reply_value(scene);
+        persist();
+      }
+      reply_dialogue(scene,option,action);
+      return;
+    }
     if(dialogue.revealing){dialogue.reveal_all();dialogue.instant=true;return;}
     auto layout=iceberg::dialogue_layout(dialogue.lines[dialogue.page].text.get(profile.language),last_columns,last_rows,1000,dialogue.segment);
     if(dialogue.segment+1<layout.pages)++dialogue.segment;
@@ -693,7 +724,7 @@ public:
       int leg=stage==2?0:stage==4?1:2;
       profile.story|=uint64_t(1)<<(16+leg);profile.interlude=false;
       stage=stage==2?3:stage==4?5:7;room=0;clear_room_record();load_room();
-      if(stage==3||stage==5)talk(iceberg::homecoming(district,stage==3?0:1));
+      if(stage==3||stage==5)talk_homecoming(stage==3?0:1);
       persist();return;
     }
     if(grid.room_role==iceberg::RoomRole::Settlement) {
@@ -733,7 +764,7 @@ public:
       room=0;stage=stage==2?3:stage==4?5:7;
     }
     clear_room_record();load_room();
-    if(stage==3||stage==5)talk(iceberg::homecoming(district,stage==3?0:1));
+    if(stage==3||stage==5)talk_homecoming(stage==3?0:1);
     persist();
   }
   int near_interaction() const {
@@ -873,7 +904,14 @@ public:
       talk(iceberg::epilogue_action(node.id));audio.play(AudioCue::Cloth);persist();return;
     } else if(node.kind==InteractionKind::Npc) {
       state.adventure.reacting_npc=node.id;state.adventure.npc_reaction_left=1.2;
-      if(grid.template_id==330) {talk({iceberg::epilogue_resident(node.id)});return;}
+      if(grid.template_id==330) {
+        if(node.id==0&&(profile.story&iceberg::reply_recorded(6))) {
+          talk({{0,(profile.story&iceberg::reply_value(6))!=0?
+            iceberg::Text{"Przy decyzjach wiszą podpisy. Koperta z głosami została zamknięta. Pierwsza osoba już zapytała, czy może odsłuchać własną odpowiedź.","The signed orders are up. The envelope with the voices is still sealed. The first person has already asked if she can hear her own answer."}:
+            iceberg::Text{"Jedno zeznanie ma już podpis, dwa wciąż czekają. Najdłuższa kolejka nie jest do okienka, tylko do krzesła po tej stronie.","One testimony is signed, and two are still waiting. The longest queue isn't for the counter. It's for the chair on this side."}}});
+        } else talk({iceberg::epilogue_resident(node.id)});
+        return;
+      }
       if(mode==iceberg::Mode::Campaign && profile.visit_district<0 && stage==0 && !(profile.story&(uint64_t(1)<<district))) {
         talk(iceberg::introduction(district),1);return;
       }
@@ -1093,7 +1131,10 @@ public:
         else state.paused=!state.paused;
       }
       if(v.dialogue.active()&&(!state.paused||reading_journal)) {
-        if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
+        if(v.dialogue.choosing()) {
+          if(c.navigate)v.dialogue.reply_option=(v.dialogue.reply_option+1)%2;
+          if(c.confirm||c.interact)dialogue_next();
+        } else if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
         else if(focused||!profile.pause_on_focus_loss)tick_dialogue(dt);
       }
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
@@ -1269,7 +1310,7 @@ public:
           profile.story|=iceberg::CrownSentinelDefeated;
           persist();
         }
-        talk(iceberg::crown_cutscene(),tour_scene>=0?0:2);
+        talk(iceberg::crown_cutscene(profile.story),tour_scene>=0?0:2,6);
       }
     }
     sync_view();

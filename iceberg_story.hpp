@@ -145,7 +145,8 @@ inline std::vector<DialogueLine> hidden_testimony(int id) {
 }
 
 namespace iceberg {
-inline std::vector<DialogueLine> homecoming(int district,int leg) {
+#include "iceberg_civic_story.inc"
+inline std::vector<DialogueLine> homecoming_base(int district,int leg) {
   switch(district) {
   case 0:
     if(leg==0)return {
@@ -203,6 +204,15 @@ inline std::vector<DialogueLine> task_thanks(int quest) {
     {7,{"DZIĘKUJĘ. TO SŁOWO BYŁO W PAMIĘCI OD DAWNA. NIE MIAŁEM WŁAŚCIWEJ OKAZJI.","THANK YOU. THAT WORD HAS BEEN IN MEMORY FOR A LONG TIME. I HADN'T FOUND THE RIGHT OCCASION."}}};
   }
 }
+inline std::vector<DialogueLine> homecoming(int district,int leg,uint64_t story=0) {
+  auto lines=homecoming_base(district,leg);
+  auto witnesses=civic_homecoming(district,leg);
+  lines.insert(lines.begin()+1,witnesses.begin(),witnesses.end());
+  if(leg==1&&(story&reply_recorded(district)))
+    lines.insert(lines.end()-1,civic_followup(district,(story&reply_value(district))!=0));
+  return lines;
+}
+
 }
 
 namespace iceberg {

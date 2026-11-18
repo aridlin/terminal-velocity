@@ -224,7 +224,7 @@
     const bool stopped=boss.hits>=3, exposed=boss.time>=crown_open_time;
     const bool warning=boss.time>=crown_warning_time&&boss.time<crown_strike_time;
     const bool strike=boss.time>=crown_strike_time&&boss.time<crown_open_time;
-    const bool airlock=stopped&&state_.adventure.dialogue.page>=12;
+    const bool airlock=stopped&&boss.airlock_open;
     const double motion=stopped?.7:std::sin(state_.elapsed*5)*.28;
     const uint32_t shell=stopped?0x788996:0xc8cedf;
     const uint32_t signal=stopped?0x596675:exposed?0x88e6dc:warning||strike?0xf48672:0xe4b872;
@@ -677,19 +677,36 @@
     }
     return shown;
   }
+  void draw_dialogue_replies(const iceberg::Dialogue &dialogue) {
+    const int top=std::max(4,(rows_-9)/2);
+    frame(top,1,cols_-2,9,0xe4ad68);
+    paint_text(top+1,3,tr("TWOJA ODPOWIEDŹ","YOUR REPLY"),0xe4ad68,true);
+    for(int i=0;i<2;++i) {
+      int row=top+3+i*2;
+      const bool selected=i==dialogue.reply_option;
+      paint_text(row,3,selected?"▸":" ",0xe4ad68);
+      for(const auto &line:wrap(iceberg::civic_reply(dialogue.reply_scene,i).choice.get(state_.adventure.language),cols_-8))
+        paint_text(row++,5,line,selected?0xe4ad68:0xeee7d6,selected);
+    }
+    paint_text(top+7,3,tr("↑↓ wybór · ENTER","↑↓ select · ENTER"),0x9dd4dd);
+  }
   void draw_iceberg_dialogue() {
     const auto &dialogue=state_.adventure.dialogue;if(!dialogue.active())return;
+    if(dialogue.choosing()){draw_dialogue_replies(dialogue);return;}
     const auto &line=dialogue.lines[dialogue.page];
+    const bool courier_speaks=line.speaker==iceberg::CourierSpeaker;
     const auto &npc=iceberg::Npcs[size_t(std::clamp(line.speaker,0,7))];
     int courier=screen(state_.player.x,state_.player.y).second;
     auto layout=iceberg::dialogue_layout(line.text.get(state_.adventure.language),cols_,rows_,courier,dialogue.segment);
     frame(layout.top,layout.left,layout.width,layout.height,npc.color);
-    std::string name=line.speaker<0?tr("DOKUMENT","DOCUMENT"):npc.name;
+    std::string name=courier_speaks?tr("KURIER","COURIER"):line.speaker<0?tr("DOKUMENT","DOCUMENT"):npc.name;
     if(layout.pages>1)name+="  "+std::to_string(dialogue.segment+1)+"/"+std::to_string(layout.pages);
     paint_text(layout.top+1,3,name,npc.color,true);
     if(layout.portrait)for(int i=0;i<8;++i) {
       static const char *paper[]={"   ╭────────╮   ","   │ ≋≋≋≋≋  │   ","   │ ≋≋≋≋≋≋ │   ","   │ ≋≋≋≋   │   ","   │        │   ","   │ ≋≋≋≋≋  │   ","   │    ▣   │   ","   ╰────────╯   "};
-      std::string portrait=line.speaker<0?paper[i]:npc.portrait[size_t(i)];
+      static const char *courier[]={"     ▄████▄     ","   ▄██▀▀▀██▄    ","   ██ ▪▪ ▐██    ","   ▐█   ▵ ▐█    ",
+        "    ▀█▄▄▄█▀     ","    ═══╗██▄     ","  ▄█▣══╩████▄   ","  ██ ║ ████ █   "};
+      std::string portrait=courier_speaks?courier[i]:line.speaker<0?paper[i]:npc.portrait[size_t(i)];
       if(grid_.room_role==iceberg::RoomRole::Secret&&line.speaker==7&&dialogue.page>=2&&i==2)portrait="   │ │    │ │   ";
       paint_text(layout.top+2+i,3,portrait,npc.color);
     }

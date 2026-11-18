@@ -1,5 +1,5 @@
-inline std::vector<DialogueLine> crown_cutscene() {
-  return {
+inline std::vector<DialogueLine> crown_cutscene(uint64_t story=0) {
+  std::vector<DialogueLine> lines{
     {-1,{"Światło na pancerzu gaśnie. Pod klapą awaryjną nie ma kabiny. Jest rolka papieru, trzy pieczęcie i przewód prowadzący do głośnika.", "The light on the armor goes out. There is no cockpit under the service hatch. There is a roll of paper, three stamps, and a wire running to a speaker."}},
     {7,{"Strażnik Korony przerwał pracę. Przyczyna: niezgodność wyniku z protokołem. W kolejce pozostaje czterdzieści jeden odpowiedzi.", "Crown Sentinel has stopped. Cause: result differs from approved report. Forty-one replies remain in the queue."}},
     {4,{"To odpowiedzi z klatki jedenastej. Na ich podstawie powinni byli otworzyć śluzę. W kopii dla dyrekcji wpisano, że nikt się nie zgłosił.", "Those are the replies from stairwell eleven. They should have opened the airlock when the replies came in. The copy sent to the directors says nobody answered."}},
@@ -10,9 +10,21 @@ inline std::vector<DialogueLine> crown_cutscene() {
     {3,{"Rura nadal przenosiła głosy. W aktach najpierw nazwali je zakłóceniami. Później odgłosami eksploatacyjnymi. Od tej pory żaden alarm nie wymagał reakcji.", "The pipe still carried voices. The file called them interference at first, then operational noise. After that, nobody had to respond to the alarms."}},
     {6,{"Szukałem jednego człowieka, który to zarządził. W dzienniku jest sześć podpisów. Każdy zatwierdza tylko swoją rubrykę.", "I was looking for the person who ordered it. There are six signatures in the log. Each one approves only their own box."}},
     {4,{"To biurokracja zamknęła tę klatkę, ale biurokracja miała ręce. Ktoś zatwierdził spis, ktoś odłożył wezwanie, ktoś zablokował ręczne otwarcie. Zachowaj wszystkie podpisy.", "Bureaucracy sealed that stairwell, and it had hands. Someone approved the register, someone filed the distress call, and someone locked the manual release. Keep every signature."}},
+    {3,{"Gdybym wtedy zgłosiła błąd, zamknęliby przejazd dla leków. Do dziś nie wiem, czy podjęłabym inną decyzję w pierwszej minucie. Wiem, co mogłam zrobić w ósmej: wysiąść i wrócić po tę dziewczynę.","If I'd reported the mistake then, they would have stopped the medicine delivery. I still don't know what I'd do in the first minute. I know what I could have done in the eighth: get off and go back for that girl."}},
+    {1,{"Gdybyś wróciła, musiałbym stanąć przed tobą i wyjaśnić, dlaczego nie otwieram zaworu. Łatwiej było obojgu podpisywać się pod osobnymi kartkami.","If you'd come back, I'd have had to stand in front of you and explain why I wasn't opening the valve. It was easier for both of us to sign separate pieces of paper."}},
+    {4,{"Chciałam ocalić dowód, ale bałam się, że ktoś powiąże go ze mną. Dlatego przez lata tylko ja wiedziałam, gdzie go szukać. Kiedy będziemy składać zeznania, nie zaczynajcie od tej szuflady. Zacznijcie ode mnie przy maszynie.","I wanted to keep the evidence without putting my name on it. That's why for years I was the only person who knew where to look. When we give testimony, don't start with that drawer. Start with me at the typewriter."}},
+    {0,{"W okienku położę puste krzesło. Jeśli któraś z tych osób przyjdzie, usiądzie po mojej stronie lady. Nie będę jej prosić o wybaczenie, zanim zdąży powiedzieć, po co przyszła.","I'll put an empty chair by the counter. If one of those people comes, they can sit on my side. I won't ask them to forgive me before they've said why they came."}},
     {7,{"Otrzymano dyspozycję ręcznego otwarcia. Brak pieczęci. Czy potwierdzenie głosowe jest dopuszczalne?", "Manual release requested. Stamp missing. Is a spoken acknowledgement acceptable?"}},
     {0,{"Tu Helena, dolne nabrzeże. Potwierdzam. Słyszę was. Przekaż po linii wszystkie nazwiska, zanim uruchomimy pompę.", "Helena at the lower quay. I acknowledge. I can hear you. Send every name down the line before we start the pump."}},
-    {-1,{"Przekładasz dźwignię. Głośnik czyta pierwszy wiersz, a za szybą otwiera się górna śluza. Przez lód od nabrzeża do Korony widać jedną linię światła.", "You throw the lever. The speaker reads the first line, and the upper airlock opens behind the glass. One line of light runs through the ice from the quay to the Crown."}},
+    {-1,{"Przekładasz dźwignię. Głośnik czyta pierwszy wiersz, a za szybą otwiera się górna śluza. Przez lód od nabrzeża do Korony widać jedną linię światła.", "You throw the lever. The speaker reads the first line, and the upper airlock opens behind the glass. One line of light runs through the ice from the quay to the Crown."},DialogueCue::CrownAirlock},
     {5,{"Zróbmy kopie i wywieśmy je na każdym przystanku. A potem przynieś te nasiona. Na górze pada na nie prawdziwe słońce.", "Let's make copies and post them at every stop. Then bring me those seeds. There is real sunlight up there now."}},
   };
+  if(story&reply_recorded(3)) {
+    const bool copies=(story&reply_value(3))!=0;
+    DialogueLine witness{4,copies?
+      Text{"Kopie, które wysłaliśmy wcześniej, już wracają z dopiskami. Nie wszystkie się zgadzają. Ułożę je obok siebie, z nazwami przystanków.","The copies we sent ahead are already coming back with notes. They don't all agree. I'll put them side by side, with the names of the stops."}:
+      Text{"Oryginał spoczywa w czytelni. Została pod nim luźna kartka z pytaniem: kto siedział przy maszynie? Wrócę i podpiszę odpowiedź.","The original is in the reading room. Somebody left a loose sheet underneath asking who sat at the typewriter. I'll go back and sign my answer."}};
+    lines.insert(lines.end()-3,witness);
+  }
+  return lines;
 }
