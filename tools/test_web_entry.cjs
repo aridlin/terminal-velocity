@@ -212,6 +212,13 @@ const server=http.createServer((req,res)=>{
     };
     assert.deepEqual(await walkAccount('Tab'),['name','password',0,1,2,'name']);
     assert.deepEqual(await walkAccount('Shift+Tab'),['name',2,1,0,'password','name']);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Alt+Enter');
+    await page.waitForFunction(()=>expanded()&&settingsKeys.parentElement.id==='fullscreen-tools');
+    assert.equal(await accountFocus(),'password','fullscreen does not interrupt account input');
+    await page.keyboard.press('Alt+Enter');
+    await page.waitForFunction(()=>!expanded()&&settingsKeys.parentElement.tagName==='FOOTER');
+    assert.equal(await accountFocus(),'password','exiting fullscreen preserves the current field');
     await page.keyboard.press('F2');
     await page.waitForFunction(()=>!accounts.active&&(uiFlags&2)&&canvas===document.activeElement);
     console.log('PASS account keyboard traversal returns to both fields and F2 returns to the paused game');

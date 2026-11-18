@@ -352,7 +352,8 @@ function fullscreenLayout(){
  }
  clearInput();
  resize();
- canvas.focus();
+ const field=document.activeElement;
+ if(!accounts?.active||(field!==accounts.name&&field!==accounts.pass))canvas.focus();
  document.querySelector('#fullscreen').setAttribute('aria-pressed',String(active));
 }
 async function toggleFullscreen(){
