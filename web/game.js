@@ -140,6 +140,7 @@ function translateUI(){
  }
  const touchInspect=document.querySelector('#touch-inspect');
  const overlay=overlayFlags();
+ touchInspect.hidden=!!((overlay&128)&&(overlay&tourFlag));
  let inspectLabel;
  if(replacingSave){
   touchInspect.textContent=tr('Anuluj','Cancel');

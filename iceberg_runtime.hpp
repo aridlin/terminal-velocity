@@ -1036,7 +1036,10 @@ public:
     if(c.journal){state.journal=!state.journal;v.map=false;v.selected=0;auto entries=iceberg::journal_entries(v);for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);stepper={};}
     if(c.map) {
       v.map=!v.map;state.journal=false;v.selected=grid.district;stepper={};
-      if(mode!=iceberg::Mode::Campaign) {
+      if(tour_scene>=0) {
+        v.map_room=true;
+        v.map_route=false;
+      } else if(mode!=iceberg::Mode::Campaign) {
         v.map_route=true;
         v.route_room_selection=-1;
       }
@@ -1066,7 +1069,7 @@ public:
         }
       }
     }
-    if(v.map&&c.inspect) {
+    if(v.map&&c.inspect&&tour_scene<0) {
       if(mode==iceberg::Mode::Campaign) {
         const bool next_room=v.map_route;
         v.map_route=!v.map_route&&!v.map_room;

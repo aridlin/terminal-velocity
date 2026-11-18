@@ -317,6 +317,21 @@ int main(int argc,char **argv) {
       check(session.state.paused&&session.tour_scene==0,"paused debug tour can preview the next scene");
       press({.confirm=true});
       check(!session.state.paused&&session.tour_scene==0,"resuming plays the previewed scene");
+      press({.map=true});
+      check(session.state.adventure.map&&session.state.adventure.map_room&&!session.state.adventure.map_route,
+        "Debug Tour opens its room map directly");
+      press({.inspect=true});
+      check(session.state.adventure.map_room,"Inspect keeps the Debug Tour room map in place");
+      press({.pause=true});
+      check(!session.state.adventure.map&&!session.state.paused,"closing the tour map returns to the same play state");
+      press({.pause=true});
+      press({.map=true});
+      press({.navigate=1});
+      check(session.state.paused&&session.state.adventure.map_room&&session.tour_scene==0,
+        "navigation in the paused tour map does not select another sample");
+      press({.map=true});
+      check(session.state.paused&&!session.state.adventure.map,"closing the paused tour map preserves the manual pause");
+      press({.confirm=true});
       for(size_t i=0;i<iceberg::DebugTour.size();++i) {
         const auto &stop=iceberg::DebugTour[i];
         check(session.tour_scene==int(i)&&session.grid.template_id==stop.room&&session.grid.district==stop.district,

@@ -539,8 +539,9 @@
     if(v.map) {
       if(v.map_room) {
         draw_room_map(3,rows_-7);
-        paint_text(rows_-2,2,v.mode==iceberg::Mode::Campaign?
-          tr("B dzielnice · J/P wróć","B districts · J/P return"):tr("B trasa · J/P wróć","B route · J/P return"),d.light);
+        const auto back=v.tour_scene>=0?tr("J/P wróć","J/P return"):v.mode==iceberg::Mode::Campaign?
+          tr("B dzielnice · J/P wróć","B districts · J/P return"):tr("B trasa · J/P wróć","B route · J/P return");
+        paint_text(rows_-2,2,back,d.light);
         return;
       }
       if(v.mode!=iceberg::Mode::Campaign) {
