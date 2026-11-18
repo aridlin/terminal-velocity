@@ -145,7 +145,11 @@ EMSCRIPTEN_KEEPALIVE void web_guest_profile() {
   web_game->saves.save(fresh);web_game.reset();web_start(fresh.seed,-1,muted);
 }
 EMSCRIPTEN_KEEPALIVE void web_account_pause() {
-  if(web_game){web_account_was_paused=web_game->state.paused;web_game->state.paused=!web_game->state.menu;web_game->audio.update(AudioScene::Paused,web_game->music_track(),.05,true);}
+  if(!web_game)return;
+  web_game->discard_pending_movement();
+  web_account_was_paused=web_game->state.paused;
+  web_game->state.paused=!web_game->state.menu;
+  web_game->audio.update(AudioScene::Paused,web_game->music_track(),.05,true);
 }
 EMSCRIPTEN_KEEPALIVE void web_account_resume() {
   if(web_game)web_game->state.paused=web_account_was_paused;

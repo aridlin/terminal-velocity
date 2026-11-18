@@ -73,6 +73,10 @@ public:
   }
   ~AdventureSession() = default;
   std::string t(const char *pl,const char *en) const { return iceberg::tr(profile.language,pl,en); }
+  void discard_pending_movement() {
+    stepper={};
+    state.player.jump_buffer_left=state.player.dash_buffer_left=0.;
+  }
   unsigned route_version() const {
     return mode==iceberg::Mode::Campaign?profile.layout_version:profile.expeditions[mode==iceberg::Mode::Endless?0:1].layout_version;
   }
@@ -426,7 +430,7 @@ public:
   }
   void talk(std::vector<iceberg::DialogueLine> lines,int action=0,int reply_scene=-1) {
     if(reply_scene>=0)lines.push_back({iceberg::ReplyPrompt,{"Odpowiedz","Reply"}});
-    state.adventure.dialogue={std::move(lines),0,action};stepper={};
+    state.adventure.dialogue={std::move(lines),0,action};discard_pending_movement();
     state.adventure.dialogue.reply_scene=reply_scene;
     state.player.vx=0;frame_dialogue();
   }
@@ -610,7 +614,7 @@ public:
        (!trial||trial_unlocked())) {
       state.adventure.selected=trial?3:2;
       if(state.menu)state.adventure.confirm_new=true;
-      else {persist();state.menu=true;stepper={};}
+      else {persist();state.menu=true;discard_pending_movement();}
       return;
     }
     begin_run(next,fresh);
@@ -815,7 +819,7 @@ public:
     using Art=iceberg::InspectionArt;
     auto describe=[&](std::string title,std::string body,const char *icon,Art art) {
       v.inspect_title=std::move(title);v.inspect_body=std::move(body);v.inspect_icon=icon;v.inspect_art=art;
-      v.inspecting=true;stepper={};audio.play(AudioCue::Paper);
+      v.inspecting=true;discard_pending_movement();audio.play(AudioCue::Paper);
     };
     int at=near_interaction();
     if(at<0) {
@@ -894,7 +898,7 @@ public:
       v.inspect_art=Art::Board;v.inspect_body=grid.template_id==330?node.label.get(profile.language):iceberg::route_title(district,stage).get(profile.language);break;
     default:v.inspect_body=t("E — użyj. Możesz zamknąć ten widok bez wykonywania działania.","E — use. You can close this view without performing the action.");break;
     }
-    v.inspecting=true;stepper={};audio.play(AudioCue::Paper);
+    v.inspecting=true;discard_pending_movement();audio.play(AudioCue::Paper);
   }
 #include "iceberg_harbor_runtime.inc"
   void interact() {
@@ -1092,7 +1096,7 @@ public:
       // Maps, the quest book and inspections already stop the world.
       if(profile.pause_on_focus_loss&&!state.menu&&!state.journal&&!v.map&&!v.inspecting)
         state.paused=true;
-      stepper={};
+      discard_pending_movement();
     }
     previous_focus=focused;
     const bool tour_picker=state.menu&&v.tour_picker;
@@ -1111,7 +1115,7 @@ public:
     if(state.menu) {menu(c,dt);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request&&tour_scene>=0){end_tour();return;}
     if(c.menu_request){
-      persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};
+      persist();state.menu=true;v.inspecting=false;v.dialogue={};discard_pending_movement();
       select_resume_option();sync_view();return;
     }
     if(v.inspecting) {
@@ -1164,7 +1168,7 @@ public:
         for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);
       }
       // Inputs captured before the overlay changed belong to the old view.
-      stepper={};
+      discard_pending_movement();
       audio.update(state.paused||state.journal||v.map?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
       sync_view();
       return;

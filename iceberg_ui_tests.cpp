@@ -604,6 +604,34 @@ int main(){try {
   paused.profile.language=iceberg::Language::English;
   paused.profile.quests[2]=3;paused.sync_view();
   Controls pause;pause.pause=true;
+  for(Controls overlay:{pause,map,book}) {
+    paused.state.player.landing_dash_left=.08;
+    Controls dash;dash.dash_pressed=true;dash.aim_y=-1;
+    paused.tick(dash,1./120);
+    ui_check(paused.state.player.dash_buffer_left>0.,"a dash is queued while the charge recovers");
+    paused.state.player.jump_buffer_left=.10;
+    paused.tick(overlay,1./120);
+    ui_check(paused.state.player.dash_buffer_left==0.&&paused.state.player.jump_buffer_left==0.,
+             "opening an overlay drops unspent movement");
+    paused.tick(overlay,1./120);
+    for(int i=0;i<16;++i)paused.tick({},1./120);
+    ui_check(paused.state.player.dash_time_left==0.,"an old dash cannot fire on returning to play");
+  }
+  for(bool focus_pause:{false,true}) {
+    paused.profile.pause_on_focus_loss=focus_pause;
+    paused.state.player.landing_dash_left=.08;
+    Controls dash;dash.dash_pressed=true;dash.aim_y=-1;
+    paused.tick(dash,1./120);
+    paused.tick({},0.,false);
+    ui_check(paused.state.paused==focus_pause&&paused.state.player.dash_buffer_left==0.,
+             "focus loss drops queued movement while respecting the pause setting");
+    paused.tick(enter,1./120,true);
+  }
+  paused.state.player.dash_time_left=.1;
+  paused.tick(pause,1./120);
+  ui_check(paused.state.player.dash_time_left==.1,"pause keeps the remaining time of a dash already in motion");
+  paused.tick(pause,1./120);
+  paused.state.player.dash_time_left=0.;
   paused.tick(pause,1./120);paused.tick(map,1./120);
   const auto overlay_visible=[&](const char *title) {
     for(auto size:{std::pair{110,34},std::pair{38,28},std::pair{60,20}}) {
