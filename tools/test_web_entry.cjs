@@ -627,6 +627,37 @@ const server=http.createServer((req,res)=>{
    }
    console.log('PASS',locale,'fresh boot/game language and entry control');await context.close();
   }
+  const expedition=await browser.newPage({locale:'en-US',viewport:{width:1280,height:900}});
+  expedition.on('pageerror',e=>errors.push(String(e)));
+  await expedition.goto(url);
+  await expedition.locator('[data-language="en"]').click();
+  await expedition.locator('#start').click();
+  await expedition.waitForFunction(()=>started&&!accountBooting);
+  const desktopToolbar=expedition.locator('#toolbar');
+  const desktopMap=desktopToolbar.locator('[data-tap="11"]');
+  const desktopSwitch=desktopToolbar.locator('.map-view-switch');
+  await desktopMap.click();
+  await expedition.waitForFunction(()=>uiFlags&128);
+  assert.equal(await desktopSwitch.isVisible(),false,'the Campaign has its own map controls');
+  await desktopToolbar.locator('[data-tap="12"]').click();
+  await expedition.waitForFunction(()=>uiFlags&1);
+  await expedition.keyboard.press('Digit3');
+  await expedition.keyboard.press('Enter');
+  await expedition.waitForFunction(()=>(uiFlags&(8192|128|1))===8192);
+  await desktopMap.click();
+  await expedition.waitForFunction(()=>uiFlags&128);
+  assert.equal(await desktopSwitch.getAttribute('aria-label'),'Show room map');
+  await desktopSwitch.click();
+  await expedition.waitForFunction(()=>uiFlags&(1<<17));
+  assert.equal(await desktopSwitch.getAttribute('aria-label'),'Show route map');
+  await desktopSwitch.press('Enter');
+  await expedition.waitForFunction(()=>(uiFlags&(128|(1<<17)))===128);
+  await desktopMap.click();
+  await expedition.waitForFunction(()=>!(uiFlags&128));
+  assert.equal(await desktopSwitch.isVisible(),false);
+  await expedition.close();
+  console.log('PASS desktop Expedition view switches with a mouse or focused keyboard control');
+
   const mobile=await browser.newContext({locale:'pl-PL',viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
   const page=await mobile.newPage();page.on('pageerror',e=>errors.push(String(e)));await page.goto(url);await page.waitForFunction(()=>!document.querySelector('#start').disabled);
   await page.locator('[data-language="en"]').click();await page.locator('#start').click();await page.waitForTimeout(150);
@@ -940,6 +971,8 @@ const server=http.createServer((req,res)=>{
   for(const roomMap of [false,true]){
    await expeditionMap.tap();
    await page.waitForFunction(()=>!!(uiFlags&128));
+   assert.equal(await page.locator('#toolbar .map-view-switch').isVisible(),false,
+    'touch uses its existing room and route control');
    if(roomMap){
     await inspectControl.tap();
     await page.waitForFunction(()=>!!(uiFlags&(1<<17)));

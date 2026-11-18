@@ -109,6 +109,7 @@ function clearPresses(){
 }
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
 const confirmSaveFlag=1<<5;
+const expeditionFlag=1<<13;
 const roomMapFlag=1<<17;
 const forkDoorFlag=1<<18;
 const replaceRunFlag=1<<19;
@@ -147,6 +148,16 @@ function translateUI(){
  }
  const touchInspect=document.querySelector('#touch-inspect');
  const overlay=overlayFlags();
+ const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
+ const showRoute=!!(overlay&roomMapFlag);
+ const mapViewLabel=showRoute?tr('Trasa','Route'):tr('Pokój','Room');
+ const mapViewAction=showRoute?tr('Pokaż trasę','Show route map'):tr('Pokaż plan pokoju','Show room map');
+ for(const button of document.querySelectorAll('.map-view-switch')){
+  button.hidden=!expeditionMap;
+  if(!expeditionMap)continue;
+  button.textContent=mapViewLabel;
+  button.setAttribute('aria-label',mapViewAction);
+ }
  touchInspect.hidden=!!((overlay&128)&&(overlay&tourFlag));
  let inspectLabel;
  if(replacingSave){
@@ -163,14 +174,14 @@ function translateUI(){
   touchInspect.textContent=tr('Zakładka','Tab');
   inspectLabel=tr('Następna zakładka','Next quest tab');
  }else if(overlay&128){
-  if((overlay&roomMapFlag)&&!(overlay&8192))touchInspect.textContent=tr('Dzielnice','Districts');
-  else if((overlay&2048)&&!(overlay&roomMapFlag)){
+  if(expeditionMap){
+   touchInspect.textContent=mapViewLabel;
+   inspectLabel=mapViewAction;
+  }else if(overlay&roomMapFlag)touchInspect.textContent=tr('Dzielnice','Districts');
+  else if(overlay&2048){
    touchInspect.textContent=tr('Pokój','Room');
    inspectLabel=tr('Pokaż plan pokoju','Show room map');
-  }else {
-   touchInspect.textContent=tr('Trasa','Route');
-   if(overlay&roomMapFlag)inspectLabel=tr('Pokaż trasę','Show route map');
-  }
+  }else touchInspect.textContent=tr('Trasa','Route');
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
