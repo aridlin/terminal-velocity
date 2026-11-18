@@ -122,6 +122,7 @@ struct Player {
   double coyote_left = 0.0;
   double jump_buffer_left = 0.0;
   double dash_buffer_left = 0.0;
+  std::pair<int,int> dash_buffer_direction{};
   double dash_time_left = 0.0;
   double landing_dash_left = 0.0;
   std::optional<Ledge> ledge;
@@ -975,6 +976,8 @@ void update_step(GameState &state, const EngineGrid &grid,
   }
   if (controls.dash_pressed && !grid.dash_locked()) {
     player.dash_buffer_left = kDashBuffer;
+    const int horizontal=controls.move||controls.aim_y?controls.move:player.facing;
+    player.dash_buffer_direction={horizontal,controls.aim_y};
   }
 
   if (player.grounded) {
@@ -982,8 +985,9 @@ void update_step(GameState &state, const EngineGrid &grid,
   }
 
   if (player.dash_buffer_left > 0.0 && player.can_dash()) {
-    double dx = static_cast<double>(controls.move);
-    double dy = static_cast<double>(controls.aim_y);
+    const bool remember_direction=grid.adventure_level&&!state.reference_movement;
+    double dx=remember_direction?player.dash_buffer_direction.first:controls.move;
+    double dy=remember_direction?player.dash_buffer_direction.second:controls.aim_y;
     if (dx == 0.0 && dy == 0.0) {
       dx = static_cast<double>(player.facing);
     }

@@ -118,6 +118,27 @@ int main() {
       world_step(landed, adventure, {}, 1./120);
     check(landed.player.dash_time_left > 0 && landed.player.vx > 20,
           "the buffered dash fires when the landing cooldown expires");
+    auto vertical = land_and_dash(adventure);
+    Controls up;
+    up.aim_y = -1;
+    up.dash_pressed = true;
+    world_step(vertical, adventure, up, 1./120);
+    for (int i = 0; i < 11; ++i)
+      world_step(vertical, adventure, {}, 1./120);
+    check(vertical.player.dash_time_left > 0 && std::abs(vertical.player.vx) < 1e-6 &&
+          vertical.player.vy < -20,
+          "a briefly tapped upward dash keeps its aim after landing cooldown");
+    auto reaimed=land_and_dash(adventure);
+    world_step(reaimed, adventure, up, 1./120);
+    Controls diagonal;
+    diagonal.move=-1;
+    diagonal.aim_y=-1;
+    diagonal.dash_pressed=true;
+    world_step(reaimed, adventure, diagonal, 1./120);
+    for (int i=0;i<10;++i)
+      world_step(reaimed, adventure, {}, 1./120);
+    check(reaimed.player.dash_time_left>0&&reaimed.player.vx<-20&&reaimed.player.vy<-20,
+          "a second dash tap replaces the buffered direction with its diagonal aim");
     check(land_and_dash(g).player.can_dash(), "classic courses retain their landing timing");
     auto lift = adventure;
     lift.platforms.push_back({{4,36,8,.5},0,.01,3,0});
