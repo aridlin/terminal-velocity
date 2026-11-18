@@ -453,8 +453,13 @@ public:
     const int floor = int(std::lround(goal.bottom()));
     const int edge = int(std::ceil(goal.right()));
     const int wall = edge + 1;
-    if (floor < 5 || floor >= height_ || wall >= width_ || width_ - edge > 16 ||
+    if (floor < 5 || floor >= height_ || wall >= width_ ||
         !solid_at(int(std::floor(goal.x + goal.w * .5)), floor)) return;
+    // A route can end on an interior shelf well before the room boundary.
+    // On those shelves the right edge is safe to close only for a west approach.
+    if (width_ - edge > 16 &&
+        (room_role != iceberg::RoomRole::Traverse || route_points.size() < 2 ||
+         route_points.back().second != floor || route_points[route_points.size()-2].first >= goal.left())) return;
     bool drop = false;
     for (int x = edge; x < std::min(width_, edge + 8); ++x)
       drop = drop || !solid_at(x, floor);

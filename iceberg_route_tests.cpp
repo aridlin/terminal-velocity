@@ -70,6 +70,33 @@ int main() {
       require(std::none_of(legacy.begin(),legacy.end(),[](int v){return v>=500;}),"published generator versions exclude new rooms");
     }
     options.no_save=true;
+    AdventureSession chimney(options,{});
+    chimney.profile.unlocked=chimney.run_district=1;
+    auto &heat=chimney.profile.expeditions[0];
+    heat.active=true;heat.district=1;heat.seed=heat.origin_seed=73;
+    heat.itinerary=iceworld::make_itinerary(heat.seed,1,iceberg::RoomsPerLeg);
+    heat.itinerary.front()=18;
+    chimney.begin_run(iceberg::Mode::Endless);
+    const auto chimney_door=chimney.grid.goal;
+    require(chimney.grid.template_id==18&&chimney.grid.width()-chimney_door.right()>16,
+      "the chimney exit sits on an interior landing");
+    chimney.state.player.x=chimney_door.x-1;
+    chimney.state.player.y=chimney_door.bottom()-kPlayerHeight;
+    chimney.state.player.grounded=true;
+    Controls dash;dash.move=1;dash.dash_pressed=true;
+    chimney.tick(dash,.1);dash.dash_pressed=false;
+    for(int i=0;i<5;++i)chimney.tick(dash,.1);
+    require(chimney.state.won&&chimney.state.player.grounded&&
+      chimney.state.player.rect().right()<=chimney_door.right()+1.001&&chimney.state.deaths==0,
+      "an eastward dash stops at the chimney exit without falling off its landing");
+    chimney.tick(confirm,1./120);
+    require(chimney.room==1,"the chimney door still advances with a separate confirmation");
+    auto westbound=iceworld::build_room(25,73,2);
+    const int entry_edge=int(std::ceil(westbound.goal.right()))+1;
+    const int landing_y=int(westbound.goal.bottom());
+    westbound.protect_exit();
+    require(!westbound.solid_at(entry_edge,landing_y-1)&&verify_route(westbound).complete,
+      "the westbound stairwell keeps its right-hand approach open");
     AdventureSession archive(options,{});
     archive.begin_campaign(true);archive.profile.unlocked=3;archive.run_district=3;
     auto &copies=archive.profile.expeditions[0];
