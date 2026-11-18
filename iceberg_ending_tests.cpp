@@ -63,6 +63,37 @@ int main(){try{
   world_step(shield,game.grid,{},1./120);
   require_end(shield.deaths==1&&shield.crown.hits==0,"the marked sweep hits a courier who stays on the floor");
  }
+ play_crown_sentinel(game,1);
+ {
+  auto phase_file=folder/"crown-phase";
+  std::filesystem::copy_file(file,phase_file);
+  AdventureSession resume(options,phase_file);resume.begin_campaign(false);
+  require_end(resume.state.crown.hits==1&&resume.state.crown.time==0.,
+              "a shield break saves immediately and reload starts the new phase at its wind-up");
+  const int old_deaths=resume.state.deaths;
+  for(int i=0;i<245;++i)resume.tick({},1./120);
+  require_end(resume.state.deaths==old_deaths+1&&resume.state.crown.hits==1&&resume.state.crown.time<crown_warning_time,
+              "taking a beam hit keeps the shield broken and restarts the wind-up");
+  Controls retry;retry.restart=true;resume.tick(retry,1./120);
+  require_end(resume.state.deaths==old_deaths+2&&resume.state.crown.hits==1&&resume.state.crown.time==0.,
+              "manual Retry keeps the current phase and starts at a clean wind-up");
+  play_crown_sentinel(resume,2);
+  AdventureSession last_phase(options,phase_file);last_phase.begin_campaign(false);
+  require_end(last_phase.state.crown.hits==2&&last_phase.state.crown.time==0.,
+              "the last attack pattern resumes after both shield breaks have saved");
+  const int last_deaths=last_phase.state.deaths;
+  for(int i=0;i<500&&last_phase.state.crown.hits<3;++i) {
+    Controls input;
+    const auto &state=last_phase.state;
+    if(state.crown.time<1.55&&state.player.x<32.5)input.move=1;
+    if(state.crown.time>=crown_open_time&&state.player.can_dash()) {
+      input.move=-1;input.dash_pressed=true;
+    }
+    last_phase.tick(input,1./120);
+  }
+  require_end(last_phase.state.deaths==last_deaths&&last_phase.state.crown.hits==3&&last_phase.state.adventure.dialogue.active(),
+              "ordinary movement and a dash clear the resumed final phase from the entrance");
+ }
  play_crown_sentinel(game);
  require_end(game.state.adventure.dialogue.lines.size()>=15&&(game.profile.story&iceberg::CrownSentinelDefeated),
              "three dodges and dash hits open the full Crown cutscene");
