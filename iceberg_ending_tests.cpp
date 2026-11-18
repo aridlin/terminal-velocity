@@ -34,7 +34,18 @@ int main(){try{
               std::string_view(lines.front().text.en)==reply.said.en&&
               std::string_view(lines.back().text.pl)==reply.answer.text.pl,
               "the selected response is spoken by the courier and answered by Helena");
-  AdventureSession later(options,witness_file);later.begin_campaign(false);later.talk_homecoming(1);
+  AdventureSession unfinished(options,witness_file);unfinished.begin_campaign(false);
+  const auto &exchange=unfinished.state.adventure.dialogue;
+  require_end(exchange.active()&&!exchange.choosing()&&exchange.lines.size()==2&&
+              exchange.lines.front().speaker==iceberg::CourierSpeaker&&
+              std::string_view(exchange.lines.front().text.en)==reply.said.en&&
+              std::string_view(exchange.lines.back().text.en)==reply.answer.text.en,
+              "reloading before Helena answers restores the chosen exchange");
+  read_end(unfinished);
+  AdventureSession later(options,witness_file);later.begin_campaign(false);
+  require_end(!later.state.adventure.dialogue.active()&&!(later.profile.story&iceberg::HomecomingReplyPending),
+              "acknowledging the reply clears the conversation from the next reload");
+  later.talk_homecoming(1);
   const auto followup=iceberg::civic_followup(0,option!=0);
   const auto &continued=later.state.adventure.dialogue.lines;
   require_end((later.profile.story&iceberg::reply_recorded(0))&&
