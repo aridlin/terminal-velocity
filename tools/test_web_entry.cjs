@@ -886,6 +886,21 @@ const server=http.createServer((req,res)=>{
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.waitForFunction(()=>held===0&&!document.querySelector('#touch .held'));
   console.log('PASS a touch slide reverses direction and releases without triggering a jump');
+  const [down,jumpTouch]=await Promise.all([3,4].map(async(key,index)=>{
+   const box=await page.locator('#touch [data-key="'+key+'"]').boundingBox();
+   return {x:box.x+box.width/2,y:box.y+box.height/2,id:index+1};
+  }));
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[down]});
+  await page.waitForFunction(()=>held===8);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[down,jumpTouch]});
+  await page.waitForFunction(()=>held===24);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[right,jumpTouch]});
+  await page.waitForFunction(()=>held===18);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[up,jumpTouch]});
+  await page.waitForFunction(()=>held===16);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForFunction(()=>held===0);
+  console.log('PASS steering away from Down leaves a separate Jump touch held');
   // Put a whole slide between game frames while Chrome still dispatches touch events.
   await page.evaluate(()=>{
    const raf=window.requestAnimationFrame;

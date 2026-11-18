@@ -379,7 +379,7 @@ for(const button of document.querySelectorAll('[data-key]')){
   const key=action();
   button.setPointerCapture(e.pointerId);
   const touch=e.pointerType==='touch';
-  const canSlide=touch&&button.matches(horizontalTouchControls);
+  const canSlide=touch&&(button.matches(horizontalTouchControls)||(!lastBlocked&&button.closest('#touch .directions')));
   const pointer={key,button,touch,canSlide,pending:0};
   pointers.set(e.pointerId,pointer);
   button.classList.add('held');pointerPress(pointer);recompute();
@@ -394,8 +394,10 @@ for(const button of document.querySelectorAll('[data-key]')){
    return;
   }
   if(!pointer.canSlide)return;
-  // Passing over the jump button while sliding horizontally leaves movement neutral.
-  const next=document.elementFromPoint(e.clientX,e.clientY)?.closest(horizontalTouchControls)??null;
+  // Keep an initial Up or Down press until the thumb leaves its button.
+  // Sliding across a vertical button must never trigger a new jump or fall.
+  const hit=document.elementFromPoint(e.clientX,e.clientY);
+  const next=hit?.closest(horizontalTouchControls)??(pointer.button===button&&button.contains(hit)?button:null);
   if(pointer.button===next)return;
   const previous=pointer.button;
   pointer.button=next;
