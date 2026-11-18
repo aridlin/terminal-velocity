@@ -34,6 +34,35 @@
     world_art(x,pod.y-row,{"╭"+shell+"╮"},0xb9d77b);
   }
 
+  void draw_irrigation_bucket(const MovingPlatform &platform,const Rect &deck) {
+    const double row=aspect_*scale_, elapsed=state_.elapsed;
+    const double left=deck.x+2*scale_, right=deck.right()-3*scale_;
+    const double head=platform.base.y-std::abs(platform.dy)-2*row;
+    const double drain=platform.base.y+std::abs(platform.dy)+5*row;
+    constexpr uint32_t frame_color=0x547b73, rim_color=0xc7e3a5, water_color=0x70afb0;
+    draw_scenery_pipe({{left,drain},{left,head},{right,head},{right,drain}},frame_color);
+    const int span=std::max(2,int(std::round((right-left)/scale_))-1);
+    std::string trough="╰";
+    for(int cell=0;cell<span;++cell)trough+="─";
+    world_art(left,drain,{trough+"╯"},frame_color);
+    world_art(left,head,{"◉"},frame_color);
+    world_art(right,head,{"◉"},frame_color);
+
+    const double center=deck.x+deck.w*.5;
+    world_art(center-7*scale_,deck.y+row,{"╲            ╱"," ╰────┬─────╯","      ╨"},frame_color);
+    const double age=std::fmod(elapsed+platform.phase,.87);
+    const double lip=platform.at(std::max(0.,elapsed-age)).y+3*row;
+    const double drop=lip+4*age*age;
+    if(drop>deck.y+3.5*row&&drop<drain)
+      world_art(center-scale_,drop,{age<.45?"·":"╵"},water_color);
+    world_art(center-5*scale_,deck.y+row,{"≈≈≈≈≈≈≈≈≈"},water_color);
+    std::string rim="╞";
+    for(int cell=1;cell<int(deck.w/scale_)-1;++cell)rim+="━";
+    world_text(deck.x,deck.y,rim+"╡",rim_color);
+    const double rise=deck.y-platform.at(elapsed+.05).y;
+    world_art(right,deck.y+row,{rise>.025?"↑":rise<-.025?"↓":"◆"},rim_color);
+  }
+
   void draw_garden_landmarks() {
     const auto &d=iceberg::Districts[4];double clock=state_.adventure.presentation_time;
     auto greenhouse=[&](double x,double y){world_art(x,y,{
@@ -56,7 +85,7 @@
       world_art(96,39,{"╭────────────────────╮",tr("│  ZAMYKAĆ ZA SOBĄ   │","│ CLOSE BEHIND YOU   │"),"╰─────────┬──────────╯","          │"},d.light);
     } else {
       for(size_t i=0;i<grid_.route_points.size();++i){auto [x,y]=grid_.route_points[i];
-        if(grid_.template_id==50&&std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[&](const MovingPlatform &p){
+        if((grid_.template_id==50||grid_.template_id==57)&&std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[&](const MovingPlatform &p){
           return p.base.y==y&&p.base.x<=x&&x<p.base.right();
         }))continue;
         if(i%3==0)greenhouse(x-8,y-16);
@@ -78,7 +107,8 @@
       for(int i=0;i<width;i+=3)world_art(bridge.area.x+i,bridge.area.y+2,{"╲│╱"," │ "," ╰╮"},d.accent);
       if(alive&&bridge.amount<1)world_text(bridge.area.x+width,bridge.area.y,"╭╯",d.light);
     }
-    if(grid_.template_id!=50)for(const auto &platform:grid_.platforms){auto r=platform.at(state_.elapsed);world_art(r.x,r.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱"},d.stone);}
+    if(grid_.template_id!=50&&grid_.template_id!=57)
+      for(const auto &platform:grid_.platforms){auto r=platform.at(state_.elapsed);world_art(r.x,r.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱"},d.stone);}
     // Pollen stays muted and sparse; collision edges remain the brightest layer.
     for(int i=0;i<8;++i)world_text(std::fmod(i*23.1+std::sin(clock*.3+i)*2+grid_.width(),double(grid_.width())),std::fmod(i*8.7+clock*.4,58.),i%2?"⠁":"·",d.shadow);
   }

@@ -249,6 +249,7 @@
       if(platform.tram){draw_estate_tram(platform,r);continue;}
       if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}
       if(grid_.template_id==50){draw_leaf_ferry(platform,r);continue;}
+      if(grid_.template_id==57){draw_irrigation_bucket(platform,r);continue;}
       std::string line;
       int n=std::max(2,int(r.w/scale_));
       for(int i=0;i<n;++i)line+=(i==0?"╞":i==n-1?"╡":"═");
