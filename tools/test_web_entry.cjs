@@ -861,6 +861,7 @@ const server=http.createServer((req,res)=>{
   assert.equal(await desktopBrowse.isVisible(),false);
   const pickerActions=expedition.locator('#menu-selection-actions');
   assert.equal(await pickerActions.isVisible(),false);
+  const [staleImport]=await Promise.all([expedition.waitForEvent('filechooser'),importControl.click()]);
   await desktopToolbar.locator('[data-tap="12"]').click();
   await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 3  RESUME ENDLESS EXPEDITION'));
   assert.equal(await pickerActions.getByRole('button',{name:'Back'}).isVisible(),false);
@@ -879,6 +880,14 @@ const server=http.createServer((req,res)=>{
   await expedition.waitForFunction(()=>selectedSlot===2&&!(uiFlags&(1<<23)));
   assert.equal(await pickerActions.isVisible(),true,'switching slots returns to the main menu');
   assert.equal(await pickerActions.getByRole('button',{name:'Back'}).isVisible(),false);
+  let replacementPrompt=false;
+  const declineStaleImport=async dialog=>{replacementPrompt=true;await dialog.dismiss();};
+  expedition.on('dialog',declineStaleImport);
+  try {
+   await staleImport.setFiles(path.join(root,'tests/fixtures/iceberg-v4.dat'));
+   await expedition.waitForFunction(()=>saveStatus.textContent==='Save slot changed — choose the file again');
+   assert.equal(replacementPrompt,false,'a stale picker cannot offer to replace the newly selected slot');
+  } finally {expedition.off('dialog',declineStaleImport);}
   await expedition.close();
   console.log('PASS desktop Expedition mouse navigation browses rooms and survives switching views');
   console.log('PASS desktop mouse controls reach Settings and select a save slot');

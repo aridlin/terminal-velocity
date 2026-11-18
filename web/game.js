@@ -608,7 +608,7 @@ const saveFile=document.querySelector('#save-file');
 const slotPath=base=>selectedSlot===1?base:base+'.slot'+selectedSlot;
 const currentSavePath=()=>slotPath(saveDirectory+'/progress.dat.iceberg');
 const previousImportPath=()=>slotPath(saveDirectory+'/before-manual-import.iceberg');
-let importPending=false,keyboardImport=false;
+let importPending=false,importPicker=null;
 
 function refreshUnreadableSaveControls(){
  unreadableSaveNames=[null,null];
@@ -705,25 +705,32 @@ function applyManualImport(fs,previous){
  }
 }
 importSave.onclick=event=>{
- keyboardImport=event.detail===0&&document.activeElement===importSave;
+ const keyboard=event.detail===0&&document.activeElement===importSave;
+ importPicker={slot:selectedSlot,keyboard};
  clearInput();
- if(!keyboardImport)canvas.focus({preventScroll:true});
+ if(!keyboard)canvas.focus({preventScroll:true});
  saveFile.click();
 };
 saveFile.oncancel=()=>{
  if(importPending)return;
- const returnToPicker=keyboardImport;
- keyboardImport=false;
+ const returnToPicker=importPicker?.keyboard;
+ importPicker=null;
  finishImport(returnToPicker);
 };
 saveFile.onchange=async()=>{
  const file=saveFile.files[0];
  saveFile.value='';
+ const picker=importPicker;
+ importPicker=null;
  // Only an actual selection starts an import. A picker dismissal may never
  // reach the page, so opening the picker cannot suspend the game loop.
  if(!file||importPending||inTour())return;
- const returnToPicker=keyboardImport;
- keyboardImport=false;
+ const returnToPicker=picker?.keyboard;
+ if(picker&&picker.slot!==selectedSlot){
+  setSaveActionError(['Zmieniono slot zapisu — wybierz plik ponownie','Save slot changed — choose the file again']);
+  finishImport(returnToPicker);
+  return;
+ }
  let loaded=false;
  importPending=true;
  importSave.disabled=true;
