@@ -1126,6 +1126,13 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>!!(uiFlags&16));
   await page.keyboard.press('Digit6');
   await page.waitForFunction(()=>!!(uiFlags&(1<<23)));
+  assert.equal(await action.getAttribute('aria-label'),'Select');
+  assert.equal(await inspectControl.getAttribute('aria-label'),'Back');
+  assert.deepEqual(await touchDirectionNames(),['Previous option','Next option']);
+  await inspectControl.tap();
+  await page.waitForFunction(()=>(uiFlags&(16|(1<<23)))===16);
+  await page.keyboard.press('Digit6');
+  await page.waitForFunction(()=>uiFlags&(1<<23));
   await page.evaluate(()=>{
    const render=window.tvFrame;
    window.tvFrame=(cells,w,h)=>{
@@ -1136,9 +1143,14 @@ const server=http.createServer((req,res)=>{
   await page.keyboard.press('Digit4');
   await action.tap();
   await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR'));
+  await inspectControl.tap();
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('SAVE SLOTS'));
+  await action.tap();
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR'));
   await action.tap();
   await page.waitForFunction(()=>(uiFlags&((1<<22)|1))===(1<<22));
   assert.equal(await action.getAttribute('aria-label'),'Use','Debug Tour play supports touch interactions');
+  assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
   await page.evaluate(()=>{
    const tick=Module._web_tick;
    Module._web_tick=(dt,held,pressed,...args)=>{

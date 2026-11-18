@@ -147,8 +147,9 @@ function translateUI(){
  const touchUse=document.querySelector('#touch-use');
  const replacingSave=!!(uiFlags&confirmSaveFlag);
  const replacingRun=!!(uiFlags&replaceRunFlag);
+ const choosingProfile=!!(uiFlags&profilePickerFlag);
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
- document.querySelector('#profile-picker-actions').hidden=!(uiFlags&profilePickerFlag);
+ document.querySelector('#profile-picker-actions').hidden=!choosingProfile;
  if(replacingSave){
   const replace=document.querySelector('#replace-save');
   replace.dataset.tap=replacingRun?'6':'8';
@@ -156,6 +157,9 @@ function translateUI(){
    ?tr('Zastąp zapisaną rozgrywkę','Replace saved run')
    :tr('Zastąp zapisaną podróż','Replace saved journey'));
   touchUse.textContent=tr('Zastąp','Replace');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(choosingProfile){
+  touchUse.textContent=tr('Wybierz','Select');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(uiFlags&forkDoorFlag){
   touchUse.textContent=tr('Przejście B','Passage B');
@@ -200,6 +204,8 @@ function translateUI(){
  let inspectLabel;
  if(replacingSave){
   touchInspect.textContent=tr('Anuluj','Cancel');
+ }else if(choosingProfile){
+  touchInspect.textContent=tr('Wróć','Back');
  }else if(overlay&forkDoorFlag){
   touchInspect.textContent=tr('Główne drzwi','Main door');
  }else if(questRecordOpen()){
@@ -330,7 +336,7 @@ for(const button of document.querySelectorAll('[data-key]')){
    if(button.id==='touch-use')return 6;
    if(button.id==='touch-inspect')return 8;
   }
-  if(button.id==='touch-inspect'&&((uiFlags&confirmSaveFlag)||questRecordOpen()))return 9;
+  if(button.id==='touch-inspect'&&((uiFlags&(confirmSaveFlag|profilePickerFlag))||questRecordOpen()))return 9;
   if(button.id!=='touch-use'||!lastBlocked)return +button.dataset.key;
   if(readOnlyMapOpen())return 11;
   return (overlayFlags()&64)||(uiFlags&replaceRunFlag)?6:8;
