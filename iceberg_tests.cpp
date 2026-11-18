@@ -321,6 +321,14 @@ int main(int argc,char **argv) {
         const auto &stop=iceberg::DebugTour[i];
         check(session.tour_scene==int(i)&&session.grid.template_id==stop.room&&session.grid.district==stop.district,
           "debug tour loads the indicated room and district");
+        check(session.state.player.x==stop.entry_x&&
+          std::abs(session.state.player.rect().bottom()-stop.entry_floor)<.01,
+          "debug tour starts beside the featured room mechanic");
+        session.state.player.x+=2;
+        press({.restart=true});
+        check(session.state.player.x==stop.entry_x&&
+          std::abs(session.state.player.rect().bottom()-stop.entry_floor)<.01,
+          "debug tour retry returns to the featured landing");
         session.profile.story=3;
         session.persist();
         session.state.won=true;

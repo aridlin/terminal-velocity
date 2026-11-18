@@ -160,24 +160,25 @@ struct RouteView {
 };
 struct TourStop {
   int district,room;
+  double entry_x, entry_floor;
   Text change;
 };
 inline constexpr std::array DebugTour{
-  TourStop{0,504,{"Promy, zanurzone kadłuby i ślady na wodzie","Ferries, submerged hulls and wakes"}},
-  TourStop{1,18,{"Rytm pary i boczna półka","Steam timing and the side shelf"}},
-  TourStop{2,24,{"Tramwaje zatrzymują się na obu końcach","Trams stop at both landings"}},
-  TourStop{2,25,{"Ściany między bocznymi balkonami","Wall-kick route between side balconies"}},
-  TourStop{3,38,{"Dwie wyrzutnie poczty pneumatycznej","Two pneumatic post launchers"}},
-  TourStop{3,39,{"Wysuwane szuflady kartoteki","Extending catalogue drawers"}},
-  TourStop{3,44,{"Taśmy odpisów zmieniają kierunek","Copy belts alternate direction"}},
-  TourStop{4,49,{"Strąk odbija do bocznej półki","A seedpod launches to the side shelf"}},
-  TourStop{4,51,{"Wiszące donice pękają pod stopami","Hanging planters crack underfoot"}},
-  TourStop{4,57,{"Ruchome wiadra koła nawadniającego","The irrigation wheel's bucket lifts"}},
-  TourStop{5,60,{"Podmuchy i rękawy wiatrowe","Gusts and windsocks"}},
-  TourStop{5,68,{"Wiatr zmienia kierunek nad górnymi półkami","Crosswinds reverse above the upper ledges"}},
-  TourStop{4,55,{"Kruche kry na zamarzniętym przelewie","Brittle ice over the reservoir spillway"}},
-  TourStop{3,47,{"Regały na wspólnej linie podnoszą się na zmianę","Cable-linked racks rise in turn"}},
-  TourStop{5,70,{"Nawis osłania dolną trasę przed wiatrem","The overhang shelters the lower route"}},
+  TourStop{0,504,25,52,{"Promy, zanurzone kadłuby i ślady na wodzie","Ferries, submerged hulls and wakes"}},
+  TourStop{1,18,54,48,{"Rytm pary i boczna półka","Steam timing and the side shelf"}},
+  TourStop{2,24,16,54,{"Tramwaje zatrzymują się na obu końcach","Trams stop at both landings"}},
+  TourStop{2,25,53,44,{"Ściany między bocznymi balkonami","Wall-kick route between side balconies"}},
+  TourStop{3,38,52,38,{"Dwie wyrzutnie poczty pneumatycznej","Two pneumatic post launchers"}},
+  TourStop{3,39,57,44,{"Wysuwane szuflady kartoteki","Extending catalogue drawers"}},
+  TourStop{3,44,28,50,{"Taśmy odpisów zmieniają kierunek","Copy belts alternate direction"}},
+  TourStop{4,49,67,48,{"Strąk odbija do bocznej półki","A seedpod launches to the side shelf"}},
+  TourStop{4,51,54,44,{"Wiszące donice pękają pod stopami","Hanging planters crack underfoot"}},
+  TourStop{4,57,20.5,57,{"Ruchome wiadra koła nawadniającego","The irrigation wheel's bucket lifts"}},
+  TourStop{5,60,69,48,{"Podmuchy i rękawy wiatrowe","Gusts and windsocks"}},
+  TourStop{5,68,74,37,{"Wiatr zmienia kierunek nad górnymi półkami","Crosswinds reverse above the upper ledges"}},
+  TourStop{4,55,73,45,{"Kruche kry na zamarzniętym przelewie","Brittle ice over the reservoir spillway"}},
+  TourStop{3,47,54,50,{"Regały na wspólnej linie podnoszą się na zmianę","Cable-linked racks rise in turn"}},
+  TourStop{5,70,72,41,{"Nawis osłania dolną trasę przed wiatrem","The overhang shelters the lower route"}},
 };
 struct View {
   RouteView route;

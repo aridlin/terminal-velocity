@@ -263,6 +263,16 @@ public:
     mode=iceberg::Mode::Endless;district=stop.district;stage=2;room=depth=0;run_seed=73;run_active=false;
     grid=verified_room(stop.room,run_seed,district);
     apply_expedition_mechanics(grid);grid.protect_exit();
+    const Rect entry{stop.entry_x,stop.entry_floor-kPlayerHeight,kPlayerWidth,kPlayerHeight};
+    const auto solids=grid.solid_rects_near(entry), hazards=grid.hazard_rects_near(entry);
+    const auto overlaps_entry=[&](const Rect &tile){return tile.intersects(entry);};
+    if(grid.template_id==stop.room&&grid.solid_at(int(entry.left()),int(stop.entry_floor))&&
+       grid.solid_at(int(std::nextafter(entry.right(),entry.left())),int(stop.entry_floor))&&
+       std::none_of(solids.begin(),solids.end(),overlaps_entry)&&
+       std::none_of(hazards.begin(),hazards.end(),overlaps_entry)) {
+      grid.spawn_x=entry.x;grid.spawn_y=entry.y;
+      if(!grid.checkpoint_points.empty())grid.checkpoint_points.front()={entry.x,entry.y};
+    }
     state=new_state(grid);state.ssh=options.remote;stepper={};
     update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10);
     notice(stop.change.get(profile.language),8);
