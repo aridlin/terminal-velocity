@@ -124,6 +124,7 @@ int main() {
     auto on_lift = new_state(lift);
     on_lift.player.y = 36 - kPlayerHeight - .02;
     on_lift.player.vy = 12;
+    on_lift.player.dash_available = false;
     world_step(on_lift, lift, {}, 1./120);
     check(on_lift.player.support == 0 && !on_lift.player.can_dash(),
           "landing on a moving platform also starts the cooldown");

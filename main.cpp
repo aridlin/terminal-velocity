@@ -1154,6 +1154,7 @@ void update_step(GameState &state, const EngineGrid &grid,
 void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   auto &p = s.player;
   const bool was_grounded = p.grounded;
+  const bool spent_dash = !p.dash_available || p.dash_time_left > 0.;
   double before_time = s.elapsed;
   int deaths = s.deaths;
   p.drop_left = std::max(0.0, p.drop_left - dt);
@@ -1277,7 +1278,8 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   for(const auto &pulse:g.pulses)if(pulse.active(s.elapsed)&&p.rect().intersects(pulse.area)) {
     ++s.deaths;reset_player(s);return;
   }
-  if (g.adventure_level && !s.reference_movement && !was_grounded && p.grounded)
+  if (g.adventure_level && !s.reference_movement && !was_grounded && p.grounded &&
+      (spent_dash || p.dash_time_left > 0.))
     p.landing_dash_left = kLandingDashCooldown;
   // A carried player must never remain embedded in static terrain.
   for (auto solid : g.solid_rects_near(p.rect()))
