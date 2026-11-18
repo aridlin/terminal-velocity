@@ -47,6 +47,8 @@
       }
     }
   }
+  static constexpr uint32_t vent_idle=0x987b6c,vent_warning=0xf1c66f,vent_active=0xeb6a74;
+
   void draw_pulse_vent(const PulseHazard &vent) {
     const auto &area=vent.area;
     const auto [left,top]=screen(area.x,area.y);
@@ -55,7 +57,6 @@
 
     const double time=state_.elapsed;
     const bool active=vent.active(time),warning=vent.warning(time);
-    const uint32_t amber=0xf1c66f,red=0xeb6a74;
     const int middle=(left+right)/2;
     const int steam_rows=bottom-top;
     const double pressure=(vent.cycle(time)-PulseHazard::warning_start)/(1-PulseHazard::warning_start);
@@ -66,16 +67,16 @@
         for(int x=std::max(0,left);x<=std::min(right,cols_-1);++x) {
           const bool core=x==middle;
           const char *steam=core?((y+ripple)%2?"∿":"│"):x==left?"▐":x==right?"▌":"░";
-          put(y,x,{steam,Color::Text,false,false,0,core?0xffb7a4:red});
+          put(y,x,{steam,Color::Text,false,false,0,core?0xffb7a4:vent_active});
         }
       } else if(y>=bottom-pressure_rows) {
-        put(y,middle,{"↑",Color::Text,false,false,0,amber});
+        put(y,middle,{"↑",Color::Text,false,false,0,vent_warning});
       }
     }
     if(bottom<rows_-3) {
       for(int x=std::max(0,left);x<=std::min(right,cols_-1);++x) {
         const char *grate=x==middle?"╧":x==left?"╞":x==right?"╡":"═";
-        put(bottom,x,{grate,Color::Text,false,false,0,active?red:warning?amber:0x987b6c});
+        put(bottom,x,{grate,Color::Text,false,false,0,active?vent_active:warning?vent_warning:vent_idle});
       }
     }
   }

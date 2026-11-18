@@ -48,8 +48,9 @@
     constexpr uint32_t belt_color=0xa0d6df;
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
+    const bool has_vents=!grid_.pulses.empty();
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
-      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills);
+      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -211,6 +212,11 @@
       mark(x,y,spent?"▯":"▥",spent?recharging_color:refill_color);
       recharging|=spent;
     }
+    for(const auto &vent:grid_.pulses) {
+      const bool active=vent.active(state_.elapsed),warning=vent.warning(state_.elapsed);
+      mark(vent.area.x+vent.area.w*.5,vent.area.bottom(),
+        active?"♨":warning?"↑":"╧",active?vent_active:warning?vent_warning:vent_idle);
+    }
     bool remaining_token=false;
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];
@@ -279,6 +285,17 @@
         const int separator=2+int(glyphs(name).size());
         paint_text(legend,separator," · ",0xc7d9df);
         paint_text(legend,separator+3,tr("▯ Ładuje się","▯ Recharging"),recharging_color);
+      }
+      ++legend;
+    }
+    if(has_vents) {
+      int x=2;
+      for(const auto &[label,color]:{std::pair{tr("╧ Dysza","╧ Vent"),vent_idle},
+          std::pair{tr("↑ Uwaga","↑ Warning"),vent_warning},
+          std::pair{tr("♨ Aktywna","♨ Active"),vent_active}}) {
+        if(x>2){paint_text(legend,x," · ",0xc7d9df);x+=3;}
+        paint_text(legend,x,label,color);
+        x+=int(glyphs(label).size());
       }
       ++legend;
     }

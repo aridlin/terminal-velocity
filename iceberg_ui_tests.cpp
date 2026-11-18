@@ -321,6 +321,25 @@ int main(){try {
   examination.dash_lock=1;examination.switch_flags=1;
   RenderGrid(examination,refill_view,24,34,2).draw();
   ui_check(count_map("▥",0x8ee0dd)==0,"the map omits dash refills while dashing is locked");
+  const auto pressure_lifts=iceworld::build_heatworks_sequence(false);
+  const auto &vent=pressure_lifts.pulses.front();
+  auto vent_view=new_state(pressure_lifts);
+  vent_view.adventure.map=vent_view.adventure.map_room=true;
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    vent_view.adventure.language=language;
+    const bool en=language==iceberg::Language::English;
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      for(auto [phase,glyph,color]:{std::tuple{.40,"╧",0x987b6cu},
+          std::tuple{.90,"↑",0xf1c66fu},std::tuple{.10,"♨",0xeb6a74u}}) {
+        vent_view.elapsed=(1.+phase-vent.phase)*vent.period;
+        RenderGrid(pressure_lifts,vent_view,rows,cols,2).draw();
+        const auto text=ui_text(frame);
+        ui_check(count_map(glyph,color)==1&&
+          text.find(en?"╧ Vent · ↑ Warning · ♨ Active":"╧ Dysza · ↑ Uwaga · ♨ Aktywna")!=std::string::npos,
+          "the room map shows the current steam vent phase and fits its full legend");
+      }
+    }
+  }
   auto reservoir=verified_room(55,73,4);
   auto reservoir_view=new_state(reservoir);
   reservoir_view.adventure.map=reservoir_view.adventure.map_room=true;
