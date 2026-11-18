@@ -350,6 +350,10 @@ function finishPointer(id,completed){
  releaseHighlight(pointer.button);
  recompute();
 }
+matchMedia('(orientation:landscape)').addEventListener('change',()=>{
+ // The old contact still targets its original button after the pad moves.
+ for(const [id,pointer] of pointers)if(pointer.touch)finishPointer(id,false);
+});
 for(const button of document.querySelectorAll('[data-key]')){
  const action=()=>{
   if(uiFlags&forkDoorFlag){
@@ -373,8 +377,9 @@ for(const button of document.querySelectorAll('[data-key]')){
   canvas.focus({preventScroll:true});
   const key=action();
   button.setPointerCapture(e.pointerId);
-  const canSlide=e.pointerType==='touch'&&button.matches(horizontalTouchControls);
-  const pointer={key,button,canSlide,pending:0};
+  const touch=e.pointerType==='touch';
+  const canSlide=touch&&button.matches(horizontalTouchControls);
+  const pointer={key,button,touch,canSlide,pending:0};
   pointers.set(e.pointerId,pointer);
   button.classList.add('held');pointerPress(pointer);recompute();
  });

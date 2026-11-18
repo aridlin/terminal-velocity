@@ -917,8 +917,19 @@ const server=http.createServer((req,res)=>{
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.keyboard.press('Tab');
   await page.waitForFunction(()=>!(uiFlags&64)&&held===0);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[right]});
+  await page.waitForFunction(()=>held===2);
+  await page.keyboard.down('a');
+  await page.waitForFunction(()=>held===3);
+  await page.setViewportSize({width:844,height:390});
+  await page.waitForFunction(()=>held===1&&!document.querySelector('#touch .held'));
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.keyboard.up('a');
+  await page.waitForFunction(()=>held===0);
+  await page.setViewportSize({width:390,height:844});
   await touchSession.detach();
   console.log('PASS switching from the map to the quest book clears held touch controls');
+  console.log('PASS rotation clears held touch while leaving independent keyboard input active');
   await page.evaluate(()=>{
    window.touchControlEdges=[];
    const tick=Module._web_tick;
