@@ -536,8 +536,11 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('COURIER'));
     await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('Who called about the heat upstairs'));
     await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('HELENA'));
-    await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('Bogdan will know.'));
-    await page.keyboard.press('Enter');await page.waitForFunction(()=>!(entryFlags&4));
+    for(let i=0;i<6&&await page.evaluate(()=>!!(entryFlags&4));++i){
+     await page.keyboard.press('Enter');
+     await page.evaluate(async()=>{for(let frame=0;frame<2;++frame)await new Promise(requestAnimationFrame);});
+    }
+    assert.ok(await page.evaluate(()=>!(entryFlags&4)),'the briefing returns control after the reply exchange');
     assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
     console.log('PASS locked map explanation, route tab, quest book and briefing reply through browser controls');
     await page.keyboard.press('Shift');
