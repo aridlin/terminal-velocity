@@ -143,6 +143,31 @@ int main(){try{
    }
    require_reaction(foam>=2,"ferry leaves visible foam behind it in either direction");
  }
+ game.state=new_state(game.grid);game.state.menu=false;
+ const auto basin=game.grid.water_basins.front();
+ game.state.player.x=basin.x+4;
+ game.state.player.y=basin.y-kPlayerHeight-.16;
+ game.state.player.vy=14.;
+ game.state.camera_x=86;game.state.camera_y=40;
+ game.tick({},1./120);
+ require_reaction(game.state.adventure.water_splash_left==0,"the splash waits for actual water contact");
+ game.tick({},1./120);
+ const auto &splash=game.state.adventure;
+ require_reaction(splash.water_splash_left>0&&splash.water_splash_y==basin.y&&game.state.deaths==0,
+   "entering the ferry basin starts a cosmetic splash on its surface");
+ RenderGrid(game.grid,game.state,34,110,2).draw();
+ const auto surface=std::find_if(frame.begin(),frame.end(),[](const auto &line){
+   return std::any_of(line.begin(),line.end(),[](const Cell &c){return c.rgb==0xc6edf2&&c.background==0x214b62;});
+ });
+ require_reaction(surface!=frame.end(),"the splash paints foam over the basin waterline");
+ Controls pause;pause.pause=true;
+ const double splash_left=splash.water_splash_left;
+ game.tick(pause,.1);game.tick({},.1);
+ require_reaction(splash.water_splash_left==splash_left,"a pause freezes the splash");
+ game.tick(pause,0);
+ Controls retry;retry.restart=true;
+ game.tick(retry,1./120);
+ require_reaction(splash.water_splash_left==0,"retry clears the splash at the old location");
  const auto heatworks=iceworld::build_room(15,73,1);
  const auto &vent=heatworks.pulses.front();
  auto guard=new_state(heatworks);

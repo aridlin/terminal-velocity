@@ -221,6 +221,8 @@ struct View {
   int machinery_kind=0;
   uint64_t machinery_changed=0;
   double presentation_time=0, npc_reaction_left=0, lamp_left=0;
+  static constexpr double water_splash_duration=.42;
+  double water_splash_left=0, water_splash_x=0, water_splash_y=0;
   int reacting_npc=-1;
   Dialogue dialogue;
   std::string prompt, notice, room_name;

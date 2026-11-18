@@ -368,6 +368,7 @@ public:
     state.adventure.dialogue={};state.adventure.map=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
     state.adventure.door_left=.42;state.adventure.door_open=0;state.adventure.machinery_left=0;
     state.adventure.lamp_left=0;state.adventure.npc_reaction_left=0;
+    state.adventure.water_splash_left=0;
     state.ssh=options.remote;
     if(resume && mode==iceberg::Mode::Campaign && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       grid.switch_flags=profile.switches;
@@ -729,6 +730,22 @@ public:
     auto &v=state.adventure;v.pickup_left=.65;v.pickup_x=node.area.x;
     v.pickup_y=node.area.bottom()-1.3;v.pickup_kind=kind;
     if(kind==0){audio.play(AudioCue::Paper);audio.play(AudioCue::Cloth);}
+  }
+  void update_water_splash(const Player &before,int old_deaths,double dt) {
+    auto &view=state.adventure;
+    if(state.deaths!=old_deaths){view.water_splash_left=0;return;}
+    view.water_splash_left=std::max(0.,view.water_splash_left-dt);
+    const double from=before.rect().bottom(),to=state.player.rect().bottom();
+    if(to<=from)return;
+    for(const auto &basin:grid.water_basins) {
+      if(from>basin.y||to<=basin.y)continue;
+      const double contact=(basin.y-from)/(to-from);
+      const double x=std::lerp(before.x,state.player.x,contact)+kPlayerWidth*.5;
+      if(x<basin.x||x>=basin.right())continue;
+      view.water_splash_x=x;view.water_splash_y=basin.y;
+      view.water_splash_left=iceberg::View::water_splash_duration;
+      break;
+    }
   }
   void activate_machinery(const Interaction &node,bool tram=false) {
     auto &v=state.adventure;v.machinery_duration=tram?2.8:grid.district==5?2.4:grid.district==4?1.6:1.05;
@@ -1162,6 +1179,7 @@ public:
     int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
     double old_elapsed=state.elapsed;
     stepper.advance(state,grid,c,dt);
+    update_water_splash(before,old_deaths,dt);
     if(!state.won)v.door_open=std::max(0.,v.door_open-dt*4.5);
     feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,dt,audio);
     harbor_step(before,old_deaths);

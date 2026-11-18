@@ -324,6 +324,7 @@
       else if(node.kind==InteractionKind::Secret&&node.id==2)world_art(x,y-3,{"┌──┐","│ 7│","└──┘"},d.stone);
     }
     draw_machinery_reaction();
+    draw_water_splash();
     // A small readable courier silhouette, with a scarf that follows motion.
     const auto &p=state_.player;
     static const uint32_t coats[]={0xe4ad68,0xdab0d5,0x88d3d9,0xc9bb85,0xabbcf4,0xb8dfb7,0xe99462,0xdce9ef};

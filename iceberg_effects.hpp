@@ -1,4 +1,24 @@
 // RenderGrid members. Reactions are cosmetic, bounded and deterministic.
+  void draw_water_splash() {
+    const auto &v=state_.adventure;
+    if(v.water_splash_left<=0)return;
+    constexpr uint32_t foam=0xc6edf2;
+    const double age=1-v.water_splash_left/iceberg::View::water_splash_duration;
+    const double row=aspect_*scale_;
+    const auto [center,surface]=screen(v.water_splash_x,v.water_splash_y+.5*row);
+    const int spread=2+int(5*age);
+    if(surface>=4&&surface<rows_-3) {
+      for(int col:{center-spread,center+spread}) {
+        if(col<0||col>=cols_)continue;
+        const auto &cell=buffer_[surface][col];
+        if(cell.background==water_surface_background&&cell.rgb==0x8ed9e5)
+          put(surface,col,{age<.65?"≈":"·",Color::Decor,false,false,0,foam});
+      }
+    }
+    if(age<.8)for(int side:{-1,1})
+      world_art(v.water_splash_x+side*(.8+age*1.65),
+        v.water_splash_y-row*(1.2+5*age*(1-age)),{age<.55?"╵":"·"},foam);
+  }
   void draw_dock_tram(double x,double y) {
     world_art(x,y,{"    ╭────────────────────────╮","    │ ▯▯  ▯▯  ▯▯  ▯▯  ▯▯     │","    ├────────────────────────┤","    │   T R A M W A J   02   │","    ╰───◉───────────────◉────╯"},iceberg::Districts[0].accent);
   }
