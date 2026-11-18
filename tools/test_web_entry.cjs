@@ -371,8 +371,25 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>held===2);
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.waitForFunction(()=>held===0&&!document.querySelector('#touch .held'));
-  await touchSession.detach();
   console.log('PASS a touch slide reverses direction and releases without triggering a jump');
+  await page.keyboard.press('j');
+  await page.waitForFunction(()=>(uiFlags&(64|128))===128);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[right]});
+  await page.waitForFunction(()=>held===2);
+  await page.keyboard.press('Tab');
+  await page.waitForFunction(()=>(uiFlags&(64|128))===64);
+  const directionState=()=>page.evaluate(()=>({held,highlight:!!document.querySelector('#touch .held')}));
+  assert.deepEqual(await directionState(),{held:0,highlight:false},'opening the quest book clears the map contact');
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[left]});
+  assert.deepEqual(await directionState(),{held:0,highlight:false},'the old contact cannot activate another direction');
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[left]});
+  await page.waitForFunction(()=>held===1);
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.keyboard.press('Tab');
+  await page.waitForFunction(()=>!(uiFlags&64)&&held===0);
+  await touchSession.detach();
+  console.log('PASS switching from the map to the quest book clears held touch controls');
   await page.evaluate(()=>{
    window.touchControlEdges=[];
    const tick=Module._web_tick;

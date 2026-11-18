@@ -143,7 +143,7 @@ window.tvUI=u=>{
  if(u.flags===uiFlags&&english===nextEnglish)return;
  const modalFlags=1|2|4|8|64|128;
  // A doorway still reads held movement while its shutter opens.
- if(!!(u.flags&modalFlags)!==!!(uiFlags&modalFlags))clearInput();
+ if((u.flags&modalFlags)!==(uiFlags&modalFlags))clearInput();
  lastBlocked=!!(u.flags&(modalFlags|1024));
  const before=uiFlags;uiFlags=u.flags;
  if((before&255)!==(uiFlags&255))resize();
