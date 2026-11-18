@@ -44,33 +44,33 @@ inline std::vector<DialogueLine> introduction(int district) {
   switch (district) {
   case 0: return {
     {0,{"Jesteś. Sucha kurtka jest pod ladą. Góra nie ma ciepła — sprawdź połączenie z Łazarzem.","You're here. Dry coat under the counter. The upper homes have no heat — check the Lazarus connection."}},
-    {0,{"Zacznij przy tablicy na końcu nabrzeża. Lampy zapisują powrót; R zabierze cię do ostatniej. Nie musisz być szybki. Musisz wrócić.","Start at the board at the far end of the quay. Lamps save your return point; R takes you back. You don't need to be fast. You need to come back."}}
+    {0,{"Zacznij przy tablicy na końcu nabrzeża. Lampy zapisują powrót; R zabierze cię do ostatniej. Masz pytanie, zanim ruszysz?","Start at the board at the far end of the quay. Lamps mark your return point. R takes you back to the last one. Anything you want to know before you go?"}}
   };
   case 1: return {
     {1,{"O, poczta. Rachunek? Jeśli tak, wrzuć do pieca. Przynajmniej da trochę ciepła.","Oh, mail. A bill? Put it in the furnace. At least it will give us some heat."}},
     {1,{"Ktoś zamknął powrót z góry. Mogę zwiększyć ciśnienie, ale wtedy stopimy ścianę, na której stoi pół osiedla.","Someone shut the return line from above. I can raise the pressure, but we'd melt the wall holding half the estate."}},
-    {1,{"Uruchom trzy odnogi awaryjne. Tablica stoi za kotłem. Windy parowe podnoszą cię z rozpędu. Skocz, kiedy platforma rusza w górę.","Start the three emergency branches. The board is beyond the boiler. Steam lifts carry momentum. Jump while the platform is rising."}}
+    {1,{"Uruchom trzy odnogi awaryjne. Tablica stoi za kotłem. Na windzie parowej skacz, kiedy rusza w górę. Czemu tak patrzysz?","Start the three emergency branches. The board is beyond the boiler. On a steam lift, jump while it's rising. What are you looking at?"}}
   };
   case 2: return {
     {2,{"Tramwaj nie jeździ. Nie oznacza to, że nie obowiązuje rozkład.","The tram isn't running. That doesn't mean the timetable no longer applies."}},
     {3,{"Pani z czwartego piętra zostawiła leki u mnie. Bez tramwaju nie zejdzie po nie do wieczora. Rozkład możemy ustalić później.","The lady on the fourth floor left her medicine with me. Without the tram she can't collect it before tonight. We can sort out the timetable later."}},
-    {2,{"Przywróć rozjazdy i otwórz drogę do archiwum. Na starym planie jest przewód, którego Witek nigdy nie widział.","Restore the junctions and open the archive route. The old plan shows a pipe Witek has never seen."}}
+    {2,{"Przywróć rozjazdy i otwórz drogę do archiwum. Stary plan pokazuje przewód, którego Witek nigdy nie widział. Coś jeszcze?","Restore the junctions and open the archive route. The old plan shows a pipe Witek has never seen. Something else on your mind?"}}
   };
   case 3: return {
     {4,{"Rozkład od Bogdana? Połóż go na bibule. Tusz już puszcza. Dobrze, że Grażyna zrobiła kopię.","Bogdan's timetable? Put it on the blotting paper. The ink is running. Good thing Grażyna made a copy."}},
     {4,{"Mam plan sprzed przebudowy. Leży w głównej szafie, za zamarzniętymi regałami. Trzeba uruchomić ich napęd i otworzyć katalog.","I have a plan from before the reconstruction. It's in the main cabinet, beyond the frozen stacks. Restart their drive and open the catalogue."}},
-    {4,{"Nie wszystko zniszczyła wilgoć. Ktoś wyciął tę samą ulicę z każdego nowszego wydania. Oryginał pokaże, dokąd prowadził jej przewód.","Damp didn't destroy everything. Someone cut the same street from every newer edition. The original will show where its pipe went."}}
+    {4,{"Ktoś wyciął tę samą ulicę z każdego nowszego wydania. Oryginał pokaże, dokąd prowadził jej przewód. Chcesz o coś zapytać?","Someone cut the same street out of every newer edition. The original will show where its pipe went. What do you want to ask me?"}}
   };
   case 4: return {
     {5,{"Zamknij za sobą. Trzymamy ciepło przy sadzonkach. Koper ma dziś pierwszeństwo przed pocztą.","Close the door behind you. We're keeping the seedlings warm. Today the dill takes priority over the post."}},
     {5,{"To plan Ireny? Ten kanał jest pod nami. Przez lata podlewałam z niego grządki. Ktoś zakręcił go od góry, ale korzenie przebiły zator.","Is that Irena's plan? That channel is below us. I watered the beds from it for years. Someone closed it from above, but the roots broke through."}},
     {5,{"Podaj wodę do starych podpór. Rozwiną się w pomosty. Najpierw dolny zbiornik, potem koło nad szklarniami. Zobaczymy, czy powrót jeszcze trzyma.","Feed water to the old supports. They'll unfold into bridges. First the lower reservoir, then the wheel above the greenhouses. We'll see whether the return line still holds."}},
-    {6,{"Byłem pod Koroną. Wyjście zasypał lód, ale słychać za nim wiatr. Jeśli ruszy obieg, odmarznie. Poczekam przy górnej śluzie.","I've been beneath the Crown. Ice blocks the exit, but you can hear wind behind it. If the circuit starts, it will thaw. I'll wait by the upper airlock."}}
+    {6,{"Lód blokuje wyjście pod Koroną. Odmarznie, gdy ruszy obieg. Poczekam przy górnej śluzie. Dobrze?","Ice blocks the exit beneath the Crown. It'll thaw when the circuit starts. I'll wait by the upper airlock. All right?"}}
   };
   default: return {
     {6,{"Myślałem, że na górze będzie cieplej. To chyba najdroższa pomyłka w mojej karierze.","I thought it would be warmer up here. Probably the most expensive mistake of my career."}},
     {4,{"Masz pełny plan. Otwórz trzy przesłony latarni. Ciśnienie rozłoży się na wszystkie obiegi.","You have the complete plan. Open the beacon's three shutters. The pressure will spread across every circuit."}},
-    {0,{"Słyszymy cię, kurierze. Cała przystań słucha. Tym razem nikogo nie wykreślimy z listy.","We can hear you, courier. The whole harbor is listening. This time nobody gets crossed off the list."}}
+    {0,{"Słyszymy cię, kurierze. Cała przystań słucha. Co mam im powiedzieć?","We can hear you, courier. The whole harbor is listening. What should I tell them?"}}
   };
 }
 }
