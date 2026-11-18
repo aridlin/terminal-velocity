@@ -4,7 +4,7 @@ import pyte, signal
 import argparse, codecs, fcntl, hashlib, json, os, pathlib, pty, re, select, struct, subprocess, termios, time
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--host',default='127.0.0.1');p.add_argument('--port',type=int,default=2223)
-p.add_argument('--known-hosts',required=True);p.add_argument('--record',action='store_true');a=p.parse_args()
+p.add_argument('--known-hosts',required=True);p.add_argument('--record',action='store_true');p.add_argument('--accounts',action='store_true');a=p.parse_args()
 base=['ssh','-F','/dev/null','-p',str(a.port),'-o','BatchMode=yes','-o','PreferredAuthentications=none','-o','PubkeyAuthentication=no','-o','PasswordAuthentication=no','-o','KbdInteractiveAuthentication=no','-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile='+a.known_hosts,'-o','ConnectTimeout=5']
 target='gra@'+a.host
 ansi=re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
@@ -32,16 +32,30 @@ class Visit:
   if self.proc.poll() is None:
    self.send('q');end=time.monotonic()+4
    while self.proc.poll() is None and time.monotonic()<end:self.read(.05)
+  if self.proc.poll() is None and a.accounts:
+   self.expect('Sign in')
+   self.send('q\n')
+  if self.proc.poll() is None:
+   end=time.monotonic()+2
+   while self.proc.poll() is None and time.monotonic()<end:self.read(.05)
   if self.proc.poll() is None:self.proc.terminate()
   self.proc.wait(timeout=3);os.close(self.fd);os.close(self.slave)
 visits=[]
 try:
- first=Visit();visits.append(first);first.expect('ROZPOCZNIJ PODRÓŻ')
+ first=Visit();visits.append(first)
+ if a.accounts:
+  first.expect('Sign in')
+  first.send('1\n')
+ first.expect('ROZPOCZNIJ PODRÓŻ')
  first.send('l');first.expect('BEGIN JOURNEY');first.send('\r');first.expect('LOWER HARBOR')
  first.send('d');first.expect('[E] Talk');first.read(.12)
  first.send('s');first.read(.05);first.send('b');first.expect('INSPECT');first.expect('HELENA')
  # A second connection is a new visitor, not the first visitor's saved journey.
- second=Visit();visits.append(second);second.expect('ROZPOCZNIJ PODRÓŻ')
+ second=Visit();visits.append(second)
+ if a.accounts:
+  second.expect('Sign in')
+  second.send('1\n')
+ second.expect('ROZPOCZNIJ PODRÓŻ')
  if 'TV_ESCAPE_CHECK' in first.text+second.text:raise RuntimeError('Client command escaped into a shell')
  first.screen.resize(24,76);fcntl.ioctl(first.slave,termios.TIOCSWINSZ,struct.pack('HHHH',24,76,760,480));os.kill(first.proc.pid,signal.SIGWINCH);first.expect('HELENA')
  first.send('b');first.read(.1)

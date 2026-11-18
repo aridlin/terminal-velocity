@@ -35,7 +35,7 @@ On Windows 10/11 x64, extract the whole package and run **play.cmd** in Windows 
 
 The default Linux input backend reads real evdev key presses and releases. If access is unavailable, `play.sh` uses the existing keyboard helper: it asks for sudo locally, opens the keyboard, permanently drops privileges, and runs the game as you. It changes no groups or device permissions. `--ssh` and the window edition avoid that helper.
 
-Guest SSH: `ssh -t gra@prol.aridlin.pl`. Each anonymous visit has independent temporary progress, for up to two hours; reconnecting starts a new visit.
+SSH: `ssh -t gra@prol.aridlin.pl`. Play as a guest or sign in with your website account to continue its synced save. Press Q in the game to return to the account menu. Each guest visit has independent temporary progress and lasts up to two hours.
 
 ## Controls
 
