@@ -493,6 +493,12 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(()=>expanded());
    assert.equal(await page.evaluate(()=>!!document.fullscreenElement),!fallback);
    const tools=page.locator('#fullscreen-tools');
+   if(fallback){
+    await page.waitForFunction(()=>document.activeElement===canvas);
+    await page.keyboard.press('Shift+Tab');
+    assert.equal(await page.evaluate(()=>!!document.activeElement.closest('header,footer')),false,
+     'reverse Tab skips the covered page controls in fallback fullscreen');
+   }
    const language=tools.locator('[data-language-toggle]');
    await language.tap();
    await page.waitForFunction(()=>document.documentElement.lang==='pl');

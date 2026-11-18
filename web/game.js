@@ -324,9 +324,12 @@ function drawBoot(){
 }
 const playfield=document.querySelector('#playfield');
 const settingsKeys=document.querySelector('#settings-keys');
+const pageControls=document.querySelectorAll('body > header, body > footer');
 const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('expanded');
 function fullscreenLayout(){
  const active=expanded();
+ const fallback=playfield.classList.contains('expanded');
+ for(const controls of pageControls)controls.inert=fallback;
  if(active){
   document.querySelector('#leave-fullscreen').before(languageToggle);
   document.querySelector('#fullscreen-tools').append(settingsKeys);
