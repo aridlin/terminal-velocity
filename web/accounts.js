@@ -111,8 +111,8 @@ window.TVAccounts=class {
    this.openChoice();
   }catch{}
  }
- open(){if(!this.host.ready())return;if(!this.active)Module._web_account_pause();this.active=true;document.body.classList.add('account-open');this.host.clear();if(this.mode!=='choose'){this.mode=this.user?'account':'login';this.message='';}this.draw();if(this.mode==='login'||this.mode==='register')this.name.focus();else document.querySelector('#game').focus();}
- close(){if(this.busy)return;this.active=false;this.lastDraw=null;document.body.classList.remove('account-open');Module._web_account_resume();this.name.hidden=this.pass.hidden=true;this.pass.value='';this.host.clear();document.querySelector('#game').focus();}
+ open(){if(!this.host.ready())return;if(!this.active)Module._web_account_pause();this.active=true;document.body.classList.add('account-open');this.host.refreshLayout();if(this.mode!=='choose'){this.mode=this.user?'account':'login';this.message='';}this.draw();if(this.mode==='login'||this.mode==='register')this.name.focus();else document.querySelector('#game').focus();}
+ close(){if(this.busy)return;this.active=false;this.lastDraw=null;document.body.classList.remove('account-open');Module._web_account_resume();this.name.hidden=this.pass.hidden=true;this.pass.value='';this.host.refreshLayout();document.querySelector('#game').focus();}
  async authenticate(){
   if(this.busy||!['login','register'].includes(this.mode))return;
   this.busy=true;this.message=this.tr('Łączenie…','Connecting…');this.draw();
@@ -125,7 +125,7 @@ window.TVAccounts=class {
    else this.openChoice();
   }catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
  }
- openChoice(){if(!this.active)Module._web_account_pause();this.active=true;document.body.classList.add('account-open');this.host.clear();this.mode='choose';this.message=this.tr('Masz dwa zapisy. Który kontynuujesz?','You have two saves. Which will you continue?');this.draw();}
+ openChoice(){if(!this.active)Module._web_account_pause();this.active=true;document.body.classList.add('account-open');this.host.refreshLayout();this.mode='choose';this.message=this.tr('Masz dwa zapisy. Który kontynuujesz?','You have two saves. Which will you continue?');this.draw();}
  apply(save){
   const path='/persist/import.iceberg';
   Module.FS.writeFile(path,save);

@@ -58,6 +58,7 @@ let storageFlushQueued=false;
 let storageStatusTimers=null;
 let browserStorageWritable=false;
 let cellPixels=10;
+let stageWidth=0,stageHeight=0,canvasFit=null;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
 function tile(code,fg,bg,bold){
  const key=[code,fg,bg,bold].join(':');if(tiles.has(key))return tiles.get(key);
@@ -75,11 +76,15 @@ function tile(code,fg,bg,bold){
  const cacheLimit=Math.max(512,Math.floor(24*1024*1024/(cellPixels*cellPixels*8)));
  if(tiles.size>cacheLimit)tiles.clear();tiles.set(key,c);return c;
 }
-window.tvFrame=(data,w,h)=>{
- const scale=Math.min(stage.clientWidth/(w*10),stage.clientHeight/(h*20));canvas.style.width=w*10*scale+'px';canvas.style.height=h*20*scale+'px';
+function fitCanvas(w,h){
+ const density=window.devicePixelRatio||1;
+ if(canvasFit?.w===w&&canvasFit.h===h&&canvasFit.density===density)return;
+ canvasFit={w,h,density};
+ const scale=Math.min(stageWidth/(w*10),stageHeight/(h*20));
+ canvas.style.width=w*10*scale+'px';
+ canvas.style.height=h*20*scale+'px';
  // Rasterize glyphs for the actual display density instead of enlarging a
  // fixed 10x20 bitmap. Whole-pixel cells keep adjacent block art seamless.
- const density=window.devicePixelRatio||1;
  // Two samples per display pixel soften diagonal glyph edges. Bound the
  // extra canvas memory on large screens, while never going below native DPI.
  const displayArea=Math.max(1,w*10*scale*h*20*scale);
@@ -87,6 +92,10 @@ window.tvFrame=(data,w,h)=>{
  const pixels=Math.max(1,Math.ceil(10*scale*samples));
  if(cellPixels!==pixels){cellPixels=pixels;tiles.clear();}
  if(canvas.width!==w*pixels||canvas.height!==h*pixels*2){canvas.width=w*pixels;canvas.height=h*pixels*2;previous=new Uint32Array(0);}
+}
+window.tvFrame=(data,w,h)=>{
+ fitCanvas(w,h);
+ const pixels=cellPixels;
  const sameGrid=previous.length===data.length;
  for(let i=0;i<w*h;i++){
   const n=i*4;
@@ -472,9 +481,12 @@ addEventListener('blur',()=>updateFocus(false));
 addEventListener('focus',()=>updateFocus(true));
 document.addEventListener('visibilitychange',()=>updateFocus(document.hasFocus()));
 function resize(){
+ const width=stage.clientWidth,height=stage.clientHeight;
+ if(width!==stageWidth||height!==stageHeight)canvasFit=null;
+ stageWidth=width;stageHeight=height;
  const compact=mobile()&&!!(uiFlags&255),landscape=matchMedia('(orientation:landscape) and (max-height:500px)').matches;
- cols=compact?(landscape?60:38):Math.max(76,Math.min(160,Math.floor(stage.clientWidth/10)));
- rows=compact?(landscape?20:28):Math.max(24,Math.min(48,Math.floor(stage.clientHeight/(stage.clientWidth/cols*2))));
+ cols=compact?(landscape?60:38):Math.max(76,Math.min(160,Math.floor(stageWidth/10)));
+ rows=compact?(landscape?20:28):Math.max(24,Math.min(48,Math.floor(stageHeight/(stageWidth/cols*2))));
  previous=new Uint32Array(0);if(!started)drawBoot();
 }addEventListener('resize',resize);
 function drawBoot(){
@@ -864,7 +876,8 @@ var Module={
  onAbort:failStartup
 };
 const accounts=typeof window.TVAccounts==='function'?new window.TVAccounts({
- english:()=>english,ready:()=>accountSlot()&&!accountBooting&&!importPending,clear:clearInput,frame:window.tvFrame,
+ english:()=>english,ready:()=>accountSlot()&&!accountBooting&&!importPending,frame:window.tvFrame,
+ refreshLayout:()=>{clearInput();resize();},
  needsRedraw:()=>previous.length===0,flush:flushBrowserStorage,
  currentSave:()=>new TextDecoder().decode(readCurrentSave(true)),
  recoveryCopy:()=>unreadableSaveNames[0]

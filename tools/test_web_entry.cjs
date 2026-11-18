@@ -327,16 +327,24 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);
     const frameWork=await page.evaluate(async()=>{
      const buffer=previous.buffer;
-     let mutations=0;
+     let mutations=0,layoutReads=0;
      const observer=new MutationObserver(records=>{mutations+=records.length;});
      observer.observe(document.querySelector('#touch-use'),{childList:true,attributes:true});
+     for(const key of ['clientWidth','clientHeight']){
+      const getter=Object.getOwnPropertyDescriptor(Element.prototype,key).get;
+      Object.defineProperty(stage,key,{configurable:true,get(){layoutReads++;return getter.call(this);}});
+     }
      try{
       for(let i=0;i<8;i++)await new Promise(requestAnimationFrame);
-      return {mutations:mutations+observer.takeRecords().length,reusesBuffer:buffer===previous.buffer};
-     }finally{observer.disconnect();}
+      return {mutations:mutations+observer.takeRecords().length,reusesBuffer:buffer===previous.buffer,layoutReads};
+     }finally{
+      delete stage.clientWidth;delete stage.clientHeight;
+      observer.disconnect();
+     }
     });
-    assert.deepEqual(frameWork,{mutations:0,reusesBuffer:true},'steady gameplay reuses frame storage and leaves unchanged controls alone');
-    console.log('PASS steady browser animation reuses its framebuffer and keeps stable controls untouched');
+    assert.deepEqual(frameWork,{mutations:0,reusesBuffer:true,layoutReads:0},
+     'steady gameplay reuses frame storage and canvas dimensions and leaves controls alone');
+    console.log('PASS steady browser animation reuses its framebuffer and canvas fit');
     await page.keyboard.down('d');await page.keyboard.down('ArrowRight');
     await page.keyboard.up('d');
     assert.ok(await page.evaluate(()=>held&(1<<1)),'right remains held through the other physical key');
