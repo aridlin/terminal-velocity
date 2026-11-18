@@ -109,6 +109,7 @@ function clearPresses(){
  for(const pointer of pointers.values())pointer.pending=0;
 }
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
+const settingsFlag=1<<4;
 const confirmSaveFlag=1<<5;
 const expeditionFlag=1<<13;
 const roomMapFlag=1<<17;
@@ -119,7 +120,7 @@ const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTrav
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function nameTouchDirections(overlay){
  let directions;
- if((uiFlags&1)&&!(uiFlags&(16|confirmSaveFlag))){
+ if((uiFlags&1)&&!(uiFlags&(settingsFlag|confirmSaveFlag))){
   directions=tr(['Poprzednia opcja','Następna opcja'],['Previous option','Next option']);
  }else if(overlay&128){
   if(overlay&roomMapFlag)directions=tr(['W górę','W dół'],['Up','Down']);
@@ -148,9 +149,14 @@ function translateUI(){
  const replacingSave=!!(uiFlags&confirmSaveFlag);
  const replacingRun=!!(uiFlags&replaceRunFlag);
  const choosingProfile=!!(uiFlags&profilePickerFlag);
+ const inSettings=!!(uiFlags&settingsFlag);
+ if(inSettings){
+  for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-tools > [data-tap="9"]'))
+   button.textContent=tr('Wróć','Back');
+ }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  const menuSelection=document.querySelector('#menu-selection-actions');
- menuSelection.hidden=!(uiFlags&1)||!!(uiFlags&16)||replacingSave;
+ menuSelection.hidden=!(uiFlags&1)||inSettings||replacingSave;
  menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile;
  if(replacingSave){
   const replace=document.querySelector('#replace-save');
@@ -162,6 +168,9 @@ function translateUI(){
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(choosingProfile){
   touchUse.textContent=tr('Wybierz','Select');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(inSettings){
+  touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(uiFlags&forkDoorFlag){
   touchUse.textContent=tr('Przejście B','Passage B');
@@ -261,7 +270,7 @@ window.tvUI=u=>{
  if((before&255)!==(uiFlags&255))resize();
  if((before^uiFlags)&soundMutedFlag)try{localStorage.setItem(mutePreferenceKey,uiFlags&soundMutedFlag?'1':'0');}catch{}
  if(english!==nextEnglish){english=nextEnglish;try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}}
- settingsKeys.hidden=!(u.flags&16);
+ settingsKeys.hidden=!(u.flags&settingsFlag);
  if(previousSlot!==selectedSlot){
   // A temporary session or another tab's read-only session chooses only
   // where it plays now. The writer owns the slot used at the next launch.

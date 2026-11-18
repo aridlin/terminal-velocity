@@ -768,6 +768,10 @@ const server=http.createServer((req,res)=>{
   await pickerActions.getByRole('button',{name:'Previous option'}).click();
   await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 5  SETTINGS'));
   await pickerActions.getByRole('button',{name:'Select'}).click();
+  await desktopToolbar.getByRole('button',{name:'Back',exact:true}).click();
+  await expedition.waitForFunction(()=>(uiFlags&(1|16))===1);
+  assert.equal(await desktopToolbar.getByRole('button',{name:'Pause',exact:true}).isVisible(),true);
+  await pickerActions.getByRole('button',{name:'Select'}).click();
   await expedition.locator('#settings-keys [data-tap="25"]').click();
   await pickerActions.getByRole('button',{name:'Next option'}).click();
   await pickerActions.getByRole('button',{name:'Select'}).click();
@@ -1031,7 +1035,7 @@ const server=http.createServer((req,res)=>{
    if(initialFocusPause==='true')await focusPause.tap();
    await page.waitForFunction(()=>!(uiFlags&4096));
    await page.screenshot({path:path.join(out,fallback?"web-settings-fallback.png":"web-settings-fullscreen.png")});
-   await page.locator('#touch-use').tap();
+   await page.locator('#touch').getByRole('button',{name:'Back',exact:true}).tap();
    await page.waitForFunction(()=>!(uiFlags&16));
    await page.keyboard.press('Digit1');
    await page.locator('#touch-use').tap();
