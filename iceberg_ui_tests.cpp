@@ -43,7 +43,10 @@ int main(){try {
   guidance.profile.story=uint64_t(1)<<8;
   guidance.profile.unlocked=1;
   guidance.stage=2;guidance.load_room();
-  guidance.tick(map,0);
+  Controls map_and_travel=map;map_and_travel.navigate=-1;map_and_travel.confirm=true;
+  guidance.tick(map_and_travel,0);
+  ui_check(guidance.state.adventure.map&&guidance.state.adventure.selected==0&&guidance.profile.visit_district<0,
+    "opening the district map cannot navigate or travel in the opening frame");
   RenderGrid(guidance.grid,guidance.state,24,34,2).draw();
   auto route_hint=normalize_ui(ui_body(frame));
   ui_check(route_hint.find("Use this room's exit")!=std::string::npos&&
@@ -101,8 +104,10 @@ int main(){try {
   ui_check(!overlay_exit.state.adventure.map&&overlay_exit.state.elapsed==elapsed_before_map_close,
     "closing the map consumes the UI frame before a simultaneous jump can reach gameplay");
   overlay_exit.state.won=true;
-  overlay_exit.tick(pause_overlay,0);
-  ui_check(overlay_exit.state.paused,"the doorway can be paused before confirmation");
+  Controls pause_and_confirm=pause_overlay;pause_and_confirm.confirm=true;
+  overlay_exit.tick(pause_and_confirm,0);
+  ui_check(overlay_exit.state.paused&&overlay_exit.state.won&&overlay_exit.room==0,
+    "opening pause at the door wins over confirmation in the same frame");
   overlay_exit.tick(enter,1./60);
   ui_check(!overlay_exit.state.paused&&overlay_exit.state.won&&overlay_exit.room==0,
     "confirming the pause resumes at the doorway without using it");

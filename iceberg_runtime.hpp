@@ -1015,7 +1015,8 @@ public:
       else if(c.navigate)v.inspect_page=std::clamp(v.inspect_page+c.navigate,0,layout.pages-1);
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
-    if(c.inspect&&!v.dialogue.active()&&!state.paused&&!state.journal&&!v.map) {
+    const bool toggle_overlay=c.pause||c.map||c.journal;
+    if(c.inspect&&!toggle_overlay&&!v.dialogue.active()&&!state.paused&&!state.journal&&!v.map) {
       inspect_nearby();sync_view();if(v.inspecting)return;
     }
     if(v.dialogue.active()) {
@@ -1034,21 +1035,33 @@ public:
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
     const bool was_in_overlay=state.paused||state.journal||v.map;
-    if(c.journal){state.journal=!state.journal;v.map=false;v.selected=0;auto entries=iceberg::journal_entries(v);for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);stepper={};}
-    if(c.map) {
-      v.map=!v.map;state.journal=false;v.selected=grid.district;stepper={};
-      if(tour_scene>=0) {
-        v.map_room=true;
-        v.map_route=false;
-      } else if(mode!=iceberg::Mode::Campaign) {
-        v.map_route=true;
-        v.route_room_selection=-1;
+    if(toggle_overlay) {
+      if(c.pause) {
+        if(state.journal||v.map){state.journal=false;v.map=false;}
+        else state.paused=!state.paused;
+      } else if(c.map) {
+        v.map=!v.map;state.journal=false;v.selected=grid.district;
+        if(tour_scene>=0) {
+          v.map_room=true;
+          v.map_route=false;
+        } else if(mode!=iceberg::Mode::Campaign) {
+          v.map_route=true;
+          v.route_room_selection=-1;
+        }
+      } else {
+        state.journal=!state.journal;v.map=false;v.selected=0;
+        const auto entries=iceberg::journal_entries(v);
+        for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);
       }
+      // Inputs captured before the overlay changed belong to the old view.
+      stepper={};
+      audio.update(state.paused||state.journal||v.map?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
+      sync_view();
+      return;
     }
-    if(c.pause){if(state.journal||v.map){state.journal=false;v.map=false;}else state.paused=!state.paused;stepper={};}
     if(state.paused&&!state.journal&&!v.map) {
       if(c.confirm)state.paused=false;
-      else if(tour_scene>=0&&c.navigate&&!c.pause) {
+      else if(tour_scene>=0&&c.navigate) {
         const int count=int(iceberg::DebugTour.size());
         load_tour_scene((tour_scene+c.navigate+count)%count);
         state.paused=true;sync_view();
