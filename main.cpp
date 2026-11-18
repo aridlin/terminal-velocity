@@ -825,7 +825,7 @@ void reset_player(GameState &state) {
   state.result_recorded = false;
   state.earned_stars = 0;
   state.new_best = false;
-  state.crown = {};
+  state.crown.time = 0.;
 }
 
 #include "iceberg_crown_boss.hpp"

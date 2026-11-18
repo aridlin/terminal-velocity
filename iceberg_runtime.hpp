@@ -179,7 +179,9 @@ public:
     if(tour_scene>=0){autosave_left=15;return;}
     if (mode == iceberg::Mode::Campaign && profile.started && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       profile.district=district;profile.stage=stage;profile.room=room;
-      profile.checkpoint=state.checkpoint;profile.switches=grid.switch_flags;
+      // The Crown arena stores its shield count in place of room switches.
+      profile.checkpoint=state.checkpoint;
+      profile.switches=grid.template_id==iceberg::CrownSentinel?uint64_t(state.crown.hits):grid.switch_flags;
       profile.collected=0;
       for(size_t i=0;i<state.collected.size() && i<64;++i)
         if(state.collected[i])profile.collected|=uint64_t(1)<<i;
@@ -379,7 +381,9 @@ public:
     state.adventure.water_splash_left=0;
     state.ssh=options.remote;
     if(resume && mode==iceberg::Mode::Campaign && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
-      grid.switch_flags=profile.switches;
+      if(grid.template_id==iceberg::CrownSentinel) {
+        if(profile.switches<3)state.crown.hits=state.crown.cycle=int(profile.switches);
+      } else grid.switch_flags=profile.switches;
       for(size_t i=0;i<state.collected.size() && i<64;++i)state.collected[i]=(profile.collected>>i)&1;
       if(size_t(profile.checkpoint)<grid.checkpoint_points.size()) {
         state.checkpoint=profile.checkpoint;
@@ -1305,12 +1309,10 @@ public:
       profile.smooth_camera&&deaths>0?10.:dt,profile.smooth_camera);
     if(state.crown.hits>old_crown_hits) {
       audio.play(AudioCue::Metal1);
+      if(state.crown.hits==3&&tour_scene<0)profile.story|=iceberg::CrownSentinelDefeated;
+      persist();
       if(state.crown.hits==3) {
         audio.play(AudioCue::Win);
-        if(tour_scene<0) {
-          profile.story|=iceberg::CrownSentinelDefeated;
-          persist();
-        }
         talk(iceberg::crown_cutscene(profile.story),tour_scene>=0?0:2,6);
       }
     }
