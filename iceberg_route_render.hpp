@@ -14,6 +14,8 @@
       [](const auto &platform){return platform.archive_rack;});
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.tram;});
+    const auto powered=[](const SortingBelt &belt){return belt.speed!=0;};
+    const bool has_belts=std::any_of(grid_.sorting_belts.begin(),grid_.sorting_belts.end(),powered);
     const bool has_features=has_water||has_boost||has_wind||has_ice||has_racks||!grid_.sweets.empty();
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
       return node.kind==InteractionKind::RouteChoice;
@@ -29,7 +31,8 @@
     const bool has_valves=std::any_of(grid_.interactions.begin(),grid_.interactions.end(),required_valve);
     constexpr uint32_t valve_color=0xf0a277;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
-    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams);
+    constexpr uint32_t belt_color=0xa0d6df;
+    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -76,6 +79,11 @@
       for(int x=column(basin.left());x<=column(basin.right());++x)
         if(line[size_t(x)]==' ')line[size_t(x)]='~';
     }
+    for(const auto &belt:grid_.sorting_belts)if(powered(belt)) {
+      auto &line=map[size_t(row(belt.y))];
+      const int last=column(std::nextafter(belt.x+belt.width,belt.x));
+      for(int x=column(belt.x);x<=last;++x)line[size_t(x)]='b';
+    }
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       if(platform.archive_rack) {
@@ -102,6 +110,7 @@
       case '=':paint_text(first+y,left+x,"─",0x9dd4dd);break;
       case ':':paint_text(first+y,left+x,"┆",0x718c9d);break;
       case '-':paint_text(first+y,left+x,"┄",0x887b96);break;
+      case 'b':paint_text(first+y,left+x,"═",belt_color);break;
       case 'i':paint_text(first+y,left+x,"━",0xa6e9ea);break;
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
@@ -154,6 +163,8 @@
       // The car sits above the track so a docked car leaves both stops visible.
       mark_cell({column(car.x+car.w*.5),std::max(0,row(car.y)-1),1,"▰",tram_color});
     }
+    for(const auto &belt:grid_.sorting_belts)if(powered(belt))
+      mark(belt.x+belt.width*.5,belt.y,belt.speed>0?"▶":"◀",belt_color,belt.speed>0?1:-1);
     bool remaining_token=false;
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];
@@ -200,6 +211,7 @@
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
+    if(has_belts)paint_text(legend++,2,tr("◀▶ Taśmy","◀▶ Belts"),belt_color);
     int feature_col=2;
     auto label=[&](const std::string &entry,uint32_t color) {
       if(feature_col>2){paint_text(legend,feature_col," · ",0xc7d9df);feature_col+=3;}

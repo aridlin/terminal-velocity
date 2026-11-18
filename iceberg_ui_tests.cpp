@@ -245,6 +245,25 @@ int main(){try {
   ui_check(tram_markers("▰",0xefcd74)!=first_cars&&tram_markers("○",0xc2accf)==stops&&
     ui_text(frame).find("○ Stop")!=std::string::npos,
     "tram markers follow the actual cars across their routes");
+  auto belt_room=verified_room(44,74,3);
+  auto belt_view=new_state(belt_room);
+  belt_view.adventure.map=belt_view.adventure.map_room=true;
+  RenderGrid(belt_room,belt_view,24,34,2).draw();
+  ui_check(count_map("▶",0xa0d6df)==0&&count_map("◀",0xa0d6df)==0,
+    "the legacy Archive room map has no powered belt markers");
+  add_expedition_copy_belts(belt_room);
+  belt_view=new_state(belt_room);
+  belt_view.adventure.map=belt_view.adventure.map_room=true;
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    belt_view.adventure.language=language;
+    const auto legend=language==iceberg::Language::English?"◀▶ Belts":"◀▶ Taśmy";
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(belt_room,belt_view,rows,cols,2).draw();
+      ui_check(count_map("▶",0xa0d6df)==2&&count_map("◀",0xa0d6df)==1&&
+        ui_text(frame).find(legend)!=std::string::npos,
+        "the Archive map marks the two right-moving belts and the left-moving belt");
+    }
+  }
   auto rack_room=verified_room(47,73,3);
   auto rack_view=new_state(rack_room);
   rack_view.adventure.map=rack_view.adventure.map_room=true;
