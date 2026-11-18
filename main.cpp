@@ -914,7 +914,7 @@ bool step_ledge(Player &player, const EngineGrid &grid, const Controls &controls
       (player.ledge_climb_left <= 0. && (controls.move != ledge.side || controls.fast_fall))) {
     player.ledge.reset();
     player.ledge_climb_left = 0.;
-    player.ledge_lock_left = .12;
+    player.ledge_lock_left = .24;
     return false;
   }
   if (player.jump_buffer_left > 0. && player.ledge_climb_left <= 0.) {
