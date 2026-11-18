@@ -75,7 +75,7 @@
       paint_text(rows_-2,2,tr("R nowa wyprawa · L język","R new expedition · L language"),d.light);return;
     }
     if(state_.journal||v.map)draw_iceberg_journal();
-    else if(state_.paused) {
+    else if(state_.paused&&!v.dialogue.active()) {
       panel(tr("CHWILA ODDECHU","A MOMENT TO BREATHE"));
       y=6;
       if(v.save_error)compact_paragraph(y,save_failure_hint(),rows_-3,warning_color);

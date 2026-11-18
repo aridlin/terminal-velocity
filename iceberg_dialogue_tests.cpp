@@ -74,5 +74,26 @@ int main(){try {
  dialogue_check(!dialogue.revealing&&dialogue.visible_characters<visible,"a smaller segment shows only the revealed characters that fit");
  game.tick({},0,true,34,20,1.5);
  dialogue_check(dialogue.revealing&&dialogue.visible_characters==visible,"widening restores previously revealed characters");
+ for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+  game.profile.language=language;game.sync_view();
+  for(auto dimensions:{std::pair{38,28},std::pair{110,34}}) {
+   game.talk({},0,0);
+   Controls navigate;navigate.navigate=1;
+   Controls pause;pause.pause=true;
+   game.tick(navigate,0,true,dimensions.first,dimensions.second);
+   game.tick(pause,0,true,dimensions.first,dimensions.second);
+   game.tick(navigate,0,true,dimensions.first,dimensions.second);
+   RenderGrid(game.grid,game.state,dimensions.second,dimensions.first,2).draw();
+   std::string screen;
+   for(const auto &row:frame){for(const auto &cell:row)screen+=cell.glyph;screen+='\n';}
+   const auto resume=iceberg::tr(language,"E/ENTER wznów","E/ENTER resume");
+   const auto pause_panel=iceberg::tr(language,"CHWILA ODDECHU","A MOMENT TO BREATHE");
+   dialogue_check(screen.find(resume)!=std::string::npos&&screen.find(pause_panel)==std::string::npos,
+                  "a paused reply shows resume instructions without a competing pause panel");
+   game.tick(confirm,0,true,dimensions.first,dimensions.second);
+   dialogue_check(!game.state.paused&&dialogue.choosing()&&dialogue.reply_option==1,
+                  "confirming once resumes without changing or committing the selected reply");
+  }
+ }
  cell_frame_sink={};return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

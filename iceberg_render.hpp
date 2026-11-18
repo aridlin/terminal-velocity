@@ -688,7 +688,8 @@
       for(const auto &line:wrap(iceberg::civic_reply(dialogue.reply_scene,i).choice.get(state_.adventure.language),cols_-8))
         paint_text(row++,5,line,selected?0xe4ad68:0xeee7d6,selected);
     }
-    paint_text(top+7,3,tr("↑↓ wybór · ENTER","↑↓ select · ENTER"),0x9dd4dd);
+    paint_text(top+7,3,state_.paused?tr("E/ENTER wznów","E/ENTER resume"):
+      tr("↑↓ wybór · ENTER","↑↓ select · ENTER"),0x9dd4dd);
   }
   void draw_iceberg_dialogue() {
     const auto &dialogue=state_.adventure.dialogue;if(!dialogue.active())return;
@@ -745,7 +746,7 @@
     if(state_.debug)text(5,2,"vx "+fixed(state_.player.vx)+" vy "+fixed(state_.player.vy)+" 120 Hz",Color::Gold);
     if(state_.menu){draw_iceberg_menu();return;}
     if(state_.journal||v.map)draw_iceberg_journal();
-    else if(state_.paused) {
+    else if(state_.paused&&!v.dialogue.active()) {
       frame(8,5,cols_-10,9,d.stone);
       center(10,tr("CHWILA ODDECHU","A MOMENT TO BREATHE"),Color::Gold);
       center(12,tr("ENTER / P wznów   M menu","ENTER / P resume   M menu"));
