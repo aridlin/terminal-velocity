@@ -69,6 +69,13 @@
       else world_art(deck.x,deck.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱","      ╱╲"},d.stone);
     }
     draw_crown_wind();
+    if(grid_.windbreak_roof) {
+      const auto &roof=*grid_.windbreak_roof;
+      for(double x=roof.left();x+scale_<roof.right();x+=scale_)
+        world_text(x,roof.top(),"━",0xa5bdcf);
+      for(double x=roof.left()+2.;x+6*scale_<roof.right();x+=7.)
+        world_art(x,roof.bottom(),{"┬────┬"," ╲──╱ "},0x7890a3);
+    }
     for(int i=0;i<9;++i) {
       double x=std::fmod(i*29.7+clock*(7+i%3),double(grid_.width()));
       double y=8+i*7+std::sin(clock+i)*.8;
@@ -109,8 +116,9 @@
           if(distance>=best||!grid_.solid_at(int(std::floor(x)),int(std::floor(floor))))continue;
           best=distance;landing={x,floor};
         }
-        if(best>=20.)continue;
-        const auto [x,floor]=landing;
+        if(!grid_.windbreak_roof&&best>=20.)continue;
+        const auto [x,floor]=grid_.windbreak_roof?
+          std::pair{edge,grid_.windbreak_roof->top()}:landing;
         const double y=floor-4*row;
         world_art(x,y,{"╥","║","║","║"},0x8395a9);
         world_text(x,floor,"╨",0x8395a9);

@@ -226,6 +226,7 @@ public:
     add_expedition_root_pod(room);
     add_expedition_fragile_pots(room);
     strengthen_expedition_wind(room);
+    add_overhang_windbreak(room);
     add_ridge_crosswind(room);
   }
   void refresh_slots() {

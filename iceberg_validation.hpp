@@ -176,6 +176,21 @@ inline void strengthen_expedition_wind(EngineGrid &room) {
   else field.ax=original;
 }
 
+inline void add_overhang_windbreak(EngineGrid &room) {
+  if(room.district!=5||room.template_id!=70||room.air_fields.size()!=1)return;
+  auto sheltered=room;
+  constexpr Rect roof{65,34,50,2};
+  sheltered.add_solid_rect(int(roof.x),int(roof.y),int(roof.w),int(roof.h));
+  sheltered.windbreak_roof=roof;
+  auto &wind=sheltered.air_fields.front();
+  wind.area.h=roof.top()-wind.area.top();
+  const auto route=verify_route(sheltered);
+  if(route.complete&&route.deaths==0) {
+    sheltered.verification_policy=route.policy;
+    room=std::move(sheltered);
+  }
+}
+
 inline void add_expedition_ice(EngineGrid &room) {
   if(room.district!=4)return;
   if(room.template_id==48)room.ice_strips={{8,56,12,1},{48,50,9,1},{68,47,12,1},{108,47,9,1}};

@@ -559,6 +559,24 @@ int main(int argc,char **argv) {
     const auto calm=verified_room(68,ridge.seed,5);
     check(collect_upper_token(ridge,1.8)&&!collect_upper_token(ridge,5.4)&&!collect_upper_token(calm,1.8),
       "a dash jump from the same ledge collects the upper token with the east gust only");
+    auto exposed=verified_room(70,iceberg::mix(73),5);
+    strengthen_expedition_wind(exposed);
+    auto sheltered=exposed;
+    add_overhang_windbreak(sheltered);
+    check(sheltered.windbreak_roof&&sheltered.solid_at(74,34)&&!exposed.solid_at(74,34)&&
+      sheltered.air_fields.size()==1&&sheltered.air_fields.front().area.bottom()==34.,
+      "the windbreak is solid and the Crown gusts stop at its upper edge");
+    const auto drift=[](const EngineGrid &grid,double y) {
+      auto player=new_state(grid);
+      player.elapsed=1.3;player.player.x=77.;player.player.y=y;
+      FixedStepper motion;
+      for(int n=0;n<24;++n)motion.advance(player,grid,{},1./120);
+      return player.player.x;
+    };
+    check(drift(sheltered,37.)>drift(exposed,37.)+.3&&
+      std::abs(drift(sheltered,17.)-drift(exposed,17.))<.01&&drift(sheltered,17.)<76.7,
+      "wind still pushes on the upper route while the lower route is sheltered");
+
     AdventureSession prior_leg(options,path);
     prior_leg.begin_campaign(true);
     prior_leg.profile.unlocked=2;prior_leg.run_district=2;

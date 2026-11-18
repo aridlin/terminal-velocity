@@ -3,10 +3,11 @@
     const bool has_water=!grid_.water_basins.empty();
     const bool has_boost=!grid_.springs.empty()||
       std::any_of(grid_.air_fields.begin(),grid_.air_fields.end(),[](const auto &field){return field.ay<0;});
-    const auto crosswind=std::find_if(grid_.air_fields.begin(),grid_.air_fields.end(),[&](const auto &field){
-      return field.reverses&&field.active(grid_.switch_flags);
+    const auto wind=std::find_if(grid_.air_fields.begin(),grid_.air_fields.end(),[&](const auto &field){
+      return (field.reverses||(grid_.windbreak_roof&&field.ax!=0))&&field.active(grid_.switch_flags);
     });
-    const bool has_wind=crosswind!=grid_.air_fields.end();
+    const bool has_wind=wind!=grid_.air_fields.end();
+    const char *wind_symbol=has_wind?(wind->reverses?"↔":wind->ax<0?"←":"→"):"";
     const bool has_ice=!grid_.ice_strips.empty()||
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy;});
     const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
@@ -142,7 +143,7 @@
     for(const auto &field:grid_.air_fields)if(field.ay<0&&field.active(grid_.switch_flags))
       boost(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑");
     if(has_wind)
-      mark(crosswind->area.x+crosswind->area.w*.5,crosswind->area.y+3,"↔",0xb4d7e4);
+      mark(wind->area.x+wind->area.w*.5,wind->area.y+3,wind_symbol,0xb4d7e4);
     for(const auto &platform:grid_.platforms)if(platform.archive_rack) {
       const auto rack=platform.at(state_.elapsed);
       mark(rack.x+rack.w*.5,rack.y,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);
@@ -174,7 +175,7 @@
     if(!boost_symbols.empty())label(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
     if(has_water)label(tr("≈ Woda","≈ Water"),0x66bfd7);
     if(has_ice)label(tr("━ Lód","━ Ice"),0xa6e9ea);
-    if(has_wind)label(tr("↔ Wiatr","↔ Wind"),0xb4d7e4);
+    if(has_wind)label(wind_symbol+tr(" Wiatr"," Wind"),0xb4d7e4);
     if(has_racks)label(tr("▲▼ Regały","▲▼ Racks"),ArchiveRackMarker);
   }
 
