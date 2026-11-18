@@ -439,7 +439,8 @@ public:
     if(dialogue.lines[dialogue.page].cue==iceberg::DialogueCue::CrownAirlock)
       state.crown.airlock_open=true;
     int courier=4+int(std::floor((state.player.y-state.camera_y)/(last_aspect*.4)));
-    auto box=iceberg::dialogue_layout(dialogue.lines[dialogue.page].text.get(profile.language),last_columns,last_rows,courier,dialogue.segment);
+    auto box=dialogue.choosing()?iceberg::reply_layout(last_rows,courier):
+      iceberg::dialogue_layout(dialogue.lines[dialogue.page].text.get(profile.language),last_columns,last_rows,courier,dialogue.segment);
     int feet=5+int(std::floor((state.player.y+kPlayerHeight-.001-state.camera_y)/(last_aspect*.4)));
     // Reserve the courier and a nearby four-row resident at the same floor.
     if(feet-1>=box.top&&feet-4<box.top+box.height) {
