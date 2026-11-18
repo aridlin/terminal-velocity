@@ -95,6 +95,75 @@ int main() {
     c.dash_pressed = false;
     ticks(s, g, c, 26);
     check(!s.player.dash_available, "air dash cannot recharge in midair");
+    auto adventure = flat();
+    adventure.adventure_level = true;
+    auto land_and_dash = [](const EngineGrid &floor) {
+      auto state = new_state(floor);
+      state.player.y = 40 - kPlayerHeight - .03;
+      state.player.vy = 10;
+      state.player.dash_available = false;
+      world_step(state, floor, {}, 1./120);
+      return state;
+    };
+    auto landed = land_and_dash(adventure);
+    check(landed.player.grounded && !landed.player.can_dash(),
+          "landing begins a short dash cooldown");
+    Controls dash;
+    dash.move = 1;
+    dash.dash_pressed = true;
+    world_step(landed, adventure, dash, 1./120);
+    check(landed.player.dash_time_left == 0 && landed.player.dash_buffer_left > 0,
+          "a dash pressed on landing is buffered");
+    for (int i = 0; i < 11; ++i)
+      world_step(landed, adventure, {}, 1./120);
+    check(landed.player.dash_time_left > 0 && landed.player.vx > 20,
+          "the buffered dash fires when the landing cooldown expires");
+    check(land_and_dash(g).player.can_dash(), "classic courses retain their landing timing");
+    auto lift = adventure;
+    lift.platforms.push_back({{4,36,8,.5},0,.01,3,0});
+    auto on_lift = new_state(lift);
+    on_lift.player.y = 36 - kPlayerHeight - .02;
+    on_lift.player.vy = 12;
+    world_step(on_lift, lift, {}, 1./120);
+    check(on_lift.player.support == 0 && !on_lift.player.can_dash(),
+          "landing on a moving platform also starts the cooldown");
+    adventure.add_solid_rect(10, 24, 4, 8);
+    for(int side:{1,-1}) {
+      auto approach = new_state(adventure);
+      approach.player.x = side>0?10-kPlayerWidth-.03:14+.03;
+      approach.player.y = 23.45;
+      approach.player.vy = 4;
+      Controls toward;
+      toward.move = side;
+      world_step(approach, adventure, toward, 1./120);
+      check(approach.player.ledge && approach.player.ledge->side == side,
+            "falling toward a clear ledge catches it from either side");
+      const auto hanging = approach;
+      world_step(approach, adventure, {}, 1./120);
+      check(!approach.player.ledge && approach.player.y > hanging.player.y,
+            "releasing the direction drops from a ledge");
+      approach = hanging;
+      toward.jump_pressed = toward.jump_held = true;
+      world_step(approach, adventure, toward, 1./120);
+      check(approach.player.ledge && approach.player.ledge_climb_left > 0 &&
+            approach.player.y < hanging.player.y && approach.player.x == hanging.player.x,
+            "jump starts a climb by lifting the courier before crossing");
+      for(int i=0;i<21;++i) world_step(approach,adventure,{},1./120);
+      check(approach.player.ledge && (approach.player.x - hanging.player.x)*side > .05,
+            "the climb travels sideways across the ledge over several ticks");
+      for(int i=0;i<7;++i) world_step(approach,adventure,{},1./120);
+      check(!approach.player.ledge && approach.player.grounded && approach.deaths == 0 &&
+            std::abs(approach.player.rect().bottom() - 24.) < 1e-6,
+            "the courier stands safely on top after climbing");
+    }
+    auto blocked_ledge = adventure;
+    blocked_ledge.add_solid_rect(10,22,4,1);
+    auto blocked = new_state(blocked_ledge);
+    blocked.player.x=10-kPlayerWidth-.03;blocked.player.y=23.45;blocked.player.vy=4;
+    Controls towards_block;
+    towards_block.move=1;
+    world_step(blocked,blocked_ledge,towards_block,1./120);
+    check(!blocked.player.ledge,"a ledge without headroom keeps normal wall physics");
     auto wall = flat();
     wall.add_solid_rect(10, 20, 1, 20);
     s = new_state(wall);
