@@ -29,9 +29,10 @@
     if(state_.menu) {
       panel("TERMINAL VELOCITY");
       if(v.confirm_new) {
-        y=5;compact_paragraph(y,tr("ZACZĄĆ OD NOWA?","START OVER?"),rows_-3,d.accent);++y;
-        compact_paragraph(y,tr("Zastąpi to zapis obecnej podróży. Rekordy i stroje zostaną.","This replaces the current journey. Records and outfits are kept."),rows_-3);
-        paint_text(rows_-2,2,tr("ENTER tak · P anuluj","ENTER yes · P cancel"),d.light);return;
+        y=5;compact_paragraph(y,restart_title(),rows_-3,d.accent);++y;
+        compact_paragraph(y,v.selected==1?tr("Zastąpi to zapis obecnej podróży. Rekordy i stroje zostaną.","This replaces the current journey. Records and outfits are kept."):restart_warning(),rows_-3);
+        paint_text(rows_-2,2,v.selected==1?tr("ENTER tak · P anuluj","ENTER yes · P cancel"):
+          tr("E zastąp · P anuluj","E replace · P cancel"),d.light);return;
       }
       if(v.settings) {
         paint_text(4,2,tr("USTAWIENIA","SETTINGS"),d.accent);

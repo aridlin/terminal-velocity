@@ -33,7 +33,7 @@ void send_web_ui() {
     (int(v.can_continue)<<8)|(int(v.language==iceberg::Language::English)<<9)|(int(s.won)<<10)|
     (int(v.map_route)<<11)|(int(v.pause_on_focus_loss)<<12)|(int(v.mode!=iceberg::Mode::Campaign)<<13)|
     (int(district_control)<<14)|(int(s.audio_muted)<<15)|(int(v.save_error)<<16)|(int(v.map&&v.map_room)<<17)|
-    (int(fork_door)<<18);
+    (int(fork_door)<<18)|(int(s.menu&&v.confirm_new&&v.selected!=1)<<19);
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }

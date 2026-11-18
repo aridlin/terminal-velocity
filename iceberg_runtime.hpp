@@ -454,13 +454,28 @@ public:
     }
     load_room(true);state.menu=false;persist();
   }
+  bool trial_unlocked() const {
+    return profile.quests[6]==3||(profile.cosmetics&(1u<<7))||profile.finished||profile.at_content_boundary;
+  }
+  void request_run(iceberg::Mode next,bool fresh=false) {
+    const bool trial=next==iceberg::Mode::Trial;
+    const int area=std::min(run_district,expedition_unlocked());
+    if(profile.expeditions[trial?1:0].active&&(fresh||!can_resume_run(next,area))&&
+       (!trial||trial_unlocked())) {
+      state.adventure.selected=trial?3:2;
+      if(state.menu)state.adventure.confirm_new=true;
+      else {persist();state.menu=true;stepper={};}
+      return;
+    }
+    begin_run(next,fresh);
+  }
   void begin_run(iceberg::Mode next,bool fresh=false) {
     const bool trial=next==iceberg::Mode::Trial;
     const int area=std::min(run_district,expedition_unlocked());
     auto &e=profile.expeditions[trial?1:0];
     const bool resume=!fresh&&can_resume_run(next,area);
     const bool replay=trial&&!fresh&&can_retry_trial(area);
-    if(trial&&!resume&&!replay&&profile.quests[6]!=3&&!(profile.cosmetics&(1u<<7))&&!profile.finished&&!profile.at_content_boundary) {
+    if(trial&&!resume&&!replay&&!trial_unlocked()) {
       notice(t("Porozmawiaj z Kubą i pokaż trzy skoki ze zrywu.","Talk to Kuba and demonstrate three dash jumps."),6);return;
     }
     persist();mode=next;run_district=area;
@@ -571,7 +586,11 @@ public:
           {0,{"Możesz wrócić do mieszkańców, dokończyć ich sprawy albo wybrać wyprawę i próbę mistrzowską w menu. Poczta poczeka. Tym razem naprawdę.","You can return to the residents, finish their tasks, or choose an expedition or mastery trial in the menu. The mail can wait. This time, really."}}});return;
       }
       if(grid.template_id==330) {
-        if(profile.finished){begin_run(iceberg::Mode::Endless);return;}
+        if(profile.finished) {
+          choose_saved_run_district(2);
+          request_run(iceberg::Mode::Endless);
+          return;
+        }
         if((grid.switch_flags&3)!=3) {
           notice(t("Zostaw nasiona przy przystanku i doręcz odpis spisu do okienka.","Leave the seeds by the stop and deliver the register copy to the counter."),6);return;
         }
@@ -808,8 +827,13 @@ public:
       return;
     }
     if(v.confirm_new) {
-      if(c.confirm){v.confirm_new=false;begin_campaign(true);}
       if(c.pause||c.menu_request)v.confirm_new=false;
+      else if(v.selected==1?c.confirm:c.interact) {
+        // A held Enter can repeat in a basic terminal. Use a separate key to replace a run.
+        v.confirm_new=false;
+        if(v.selected==1)begin_campaign(true);
+        else begin_run(v.selected==2?iceberg::Mode::Endless:iceberg::Mode::Trial,true);
+      }
       return;
     }
     int old_selected=v.selected;
@@ -818,13 +842,12 @@ public:
     if(c.select_level>=1&&c.select_level<=6)v.selected=c.select_level-1;
     if(v.selected!=old_selected){choose_saved_run_district(v.selected);audio.play(AudioCue::Menu);}
     if(c.language){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
-    if((c.restart||c.new_run) && (v.selected==2||v.selected==3)){begin_run(v.selected==2?iceberg::Mode::Endless:iceberg::Mode::Trial,true);return;}
+    if((c.restart||c.new_run) && (v.selected==2||v.selected==3)){request_run(v.selected==2?iceberg::Mode::Endless:iceberg::Mode::Trial,true);return;}
     if(!c.confirm)return;
     int selected=v.selected;
     if(selected==0)begin_campaign(false);
     if(selected==1){if(profile.started)v.confirm_new=true;else begin_campaign(true);}
-    if(selected==2)begin_run(iceberg::Mode::Endless);
-    if(selected==3)begin_run(iceberg::Mode::Trial);
+    if(selected==2||selected==3)request_run(selected==2?iceberg::Mode::Endless:iceberg::Mode::Trial);
     if(selected==4){v.settings=!v.settings;}
     if(selected==5){persist();legacy_requested=true;running=false;}
   }
@@ -949,7 +972,7 @@ public:
       if(c.interact) {
         const int previous_secret=profile.hidden_room;
         interact();
-        if(v.dialogue.active()||profile.hidden_room!=previous_secret){sync_view();return;}
+        if(v.dialogue.active()||state.menu||profile.hidden_room!=previous_secret){sync_view();return;}
       }
       if(state.won&&(c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))) {
         advance_room();

@@ -383,6 +383,15 @@
     if(layout.pages>1)paint_text(1,cols_-9,std::to_string(page+1)+" / "+std::to_string(layout.pages),0x9dd4dd);
     paint_text(rows_-2,2,page+1<layout.pages?tr("E dalej · B zamknij","E next · B close"):tr("B / E / ENTER — zamknij","B / E / ENTER — close"),0xe4ad68);
   }
+  std::string restart_title() const {
+    return state_.adventure.selected==1?tr("ZACZĄĆ OD NOWA?","START OVER?"):
+      tr("ZASTĄPIĆ ZAPIS?","REPLACE SAVED RUN?");
+  }
+  std::string restart_warning() const {
+    return state_.adventure.selected==3?
+      tr("Zastąpi to zapisaną próbę.","This replaces your saved trial."):
+      tr("Zastąpi to zapisaną wyprawę.","This replaces your saved expedition.");
+  }
   void draw_iceberg_menu() {
     auto &v=state_.adventure;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
@@ -441,9 +450,10 @@
     if(v.notice_left>0)center(rows_-4,v.notice,Color::Gold);
     if(v.confirm_new) {
       frame(9,5,cols_-10,8,d.accent);
-      center(11,tr("ZACZĄĆ OD NOWA?","START OVER?"),Color::Gold);
-      center(13,tr("Zastąpi to zapis obecnej podróży.","This replaces the current journey save."));
-      center(15,tr("ENTER potwierdź   P anuluj","ENTER confirm   P cancel"));
+      center(11,restart_title(),Color::Gold);
+      center(13,v.selected==1?tr("Zastąpi to zapis obecnej podróży.","This replaces the current journey save."):restart_warning());
+      center(15,v.selected==1?tr("ENTER potwierdź   P anuluj","ENTER confirm   P cancel"):
+        tr("E zastąp   P anuluj","E replace   P cancel"));
     }
     if(v.settings) {
       frame(8,5,cols_-10,12,d.accent);

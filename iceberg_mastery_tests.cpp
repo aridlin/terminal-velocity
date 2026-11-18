@@ -85,6 +85,50 @@ int main() {
        imported.run_seconds!=0||saved.itinerary!=itinerary)
       throw std::runtime_error("confirm must retry the same completed challenge from room one");
     std::cout<<"PASS imported trial retains seed, layout, route and separate records through resume, finish and retry\n";
+    AdventureSession replacement(options,std::filesystem::path{});
+    replacement.profile.unlocked=2;replacement.profile.quests[6]=3;
+    auto &endless_save=replacement.profile.expeditions[0];
+    auto &trial_save=replacement.profile.expeditions[1];
+    endless_save.active=trial_save.active=true;
+    endless_save.seed=endless_save.origin_seed=91;endless_save.room=endless_save.depth=4;
+    trial_save.seed=trial_save.origin_seed=55;trial_save.room=trial_save.depth=6;
+    endless_save.itinerary=iceworld::make_itinerary(91,0,iceberg::RoomsPerLeg);
+    trial_save.itinerary=iceworld::make_itinerary(55,0,iceberg::RoomsPerLeg,iceberg::ContentVersion,iceberg::Mode::Trial);
+    auto saved_route=endless_save.itinerary;
+    const auto revision=replacement.save_revision;
+    Controls retry_run;retry_run.select_level=3;retry_run.restart=true;
+    replacement.tick(retry_run,1./120);
+    replacement.tick(retry,1./120);
+    if(!replacement.state.menu||!replacement.state.adventure.confirm_new||endless_save.depth!=4||
+       endless_save.itinerary!=saved_route||replacement.save_revision!=revision)
+      throw std::runtime_error("Retry and a repeated Enter must each preserve the saved expedition");
+    Controls cancel;cancel.pause=cancel.interact=true;
+    replacement.tick(cancel,1./120);
+    if(replacement.state.adventure.confirm_new||!replacement.state.menu||endless_save.depth!=4)
+      throw std::runtime_error("Cancel wins over a simultaneous Replace");
+    replacement.tick(retry,1./120);
+    if(replacement.state.menu||replacement.depth!=4||replacement.run_seed!=91)
+      throw std::runtime_error("the saved expedition must resume after cancellation");
+    Controls menu_request;menu_request.menu_request=true;
+    replacement.tick(menu_request,1./120);
+    Controls district_change;district_change.map=true;
+    replacement.tick(district_change,1./120);
+    replacement.tick(retry,1./120);
+    if(!replacement.state.adventure.confirm_new||endless_save.district!=0||endless_save.depth!=4)
+      throw std::runtime_error("choosing a new district must also protect the saved expedition slot");
+    Controls replace_run;replace_run.interact=true;
+    replacement.tick(replace_run,1./120);
+    if(replacement.state.menu||endless_save.district!=1||endless_save.depth!=0||trial_save.depth!=6)
+      throw std::runtime_error("accepting replacement must start only the selected expedition slot");
+    replacement.tick(menu_request,1./120);
+    retry_run={};retry_run.select_level=4;retry_run.new_run=true;
+    replacement.tick(retry_run,1./120);
+    if(!replacement.state.adventure.confirm_new||trial_save.depth!=6)
+      throw std::runtime_error("New run must protect a saved Mastery Trial");
+    replacement.tick(replace_run,1./120);
+    if(replacement.state.menu||replacement.mode!=iceberg::Mode::Trial||trial_save.depth!=0||endless_save.district!=1)
+      throw std::runtime_error("accepting replacement must start only the selected trial slot");
+    std::cout<<"PASS saved run replacement needs a separate action and preserves the other slot\n";
     return 0;
   }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
 }

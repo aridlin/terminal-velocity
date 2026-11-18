@@ -24,6 +24,12 @@ int main(){try{
  require_end(game.profile.cosmetics&(1u<<7),"completed journey unlocks the courier reward");
  {AdventureSession resume(options,file);resume.begin_campaign(false);require_end(resume.profile.finished&&resume.grid.template_id==330&&resume.grid.switch_flags==3,"completed epilogue and its world changes survive restart");
   resume.profile.visit_district=2;resume.load_room();require_end(resume.grid.template_id==102,"completed journey can visit restored settlements");
-  resume.advance_room();require_end(resume.grid.template_id==330&&resume.grid.switch_flags==3,"settlement return preserves the completed morning round");}
+  resume.advance_room();require_end(resume.grid.template_id==330&&resume.grid.switch_flags==3,"settlement return preserves the completed morning round");
+  auto &saved=resume.profile.expeditions[0];
+  saved.active=true;saved.seed=saved.origin_seed=73;saved.district=3;saved.room=saved.depth=4;
+  saved.itinerary=iceworld::make_itinerary(73,3,iceberg::RoomsPerLeg);
+  resume.run_district=5;resume.advance_room();
+  require_end(resume.mode==iceberg::Mode::Endless&&resume.district==3&&resume.depth==4,
+    "the completed journey board resumes the saved expedition in its own district");}
  std::filesystem::remove_all(folder);return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

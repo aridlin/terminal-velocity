@@ -97,8 +97,10 @@ function clearPresses(){
  for(const pointer of pointers.values())pointer.pending=0;
 }
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
+const confirmSaveFlag=1<<5;
 const roomMapFlag=1<<17;
 const forkDoorFlag=1<<18;
+const replaceRunFlag=1<<19;
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&(overlayFlags()&(2048|roomMapFlag)));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function translateUI(){
@@ -109,7 +111,11 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
  document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  const touchUse=document.querySelector('#touch-use');
- if(uiFlags&forkDoorFlag){
+ const replacingSave=!!(uiFlags&confirmSaveFlag);
+ if(replacingSave){
+  touchUse.textContent=tr('Zastąp','Replace');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(uiFlags&forkDoorFlag){
   touchUse.textContent=tr('Przejście B','Passage B');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(readOnlyMapOpen()){
@@ -127,7 +133,9 @@ function translateUI(){
  const touchInspect=document.querySelector('#touch-inspect');
  const overlay=overlayFlags();
  let inspectLabel;
- if(overlay&forkDoorFlag){
+ if(replacingSave){
+  touchInspect.textContent=tr('Anuluj','Cancel');
+ }else if(overlay&forkDoorFlag){
   touchInspect.textContent=tr('Główne drzwi','Main door');
  }else if(questRecordOpen()){
   touchInspect.textContent=tr('Wróć','Back');
@@ -168,7 +176,7 @@ window.tvUI=u=>{
  const nextEnglish=!!(u.flags&512);
  // The game sends UI state every frame. Only a transition changes the controls.
  if(u.flags===uiFlags&&english===nextEnglish)return;
- const modalFlags=1|2|4|8|64|128|2048|roomMapFlag;
+ const modalFlags=1|2|4|8|64|128|2048|confirmSaveFlag|roomMapFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&modalFlags)!==(uiFlags&modalFlags))clearInput();
  lastBlocked=!!(u.flags&(modalFlags|1024));
@@ -243,10 +251,10 @@ for(const button of document.querySelectorAll('[data-key]')){
    if(button.id==='touch-use')return 6;
    if(button.id==='touch-inspect')return 8;
   }
-  if(button.id==='touch-inspect'&&questRecordOpen())return 9;
+  if(button.id==='touch-inspect'&&((uiFlags&confirmSaveFlag)||questRecordOpen()))return 9;
   if(button.id!=='touch-use'||!lastBlocked)return +button.dataset.key;
   if(readOnlyMapOpen())return 11;
-  return overlayFlags()&64?6:8;
+  return (overlayFlags()&64)||(uiFlags&replaceRunFlag)?6:8;
  };
  button.addEventListener('click',e=>{
   // Pointer clicks already sent their input on pointerdown.
