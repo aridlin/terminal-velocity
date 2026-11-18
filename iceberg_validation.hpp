@@ -46,6 +46,12 @@ struct RoutePilot {
     double dx=tx-(p.x+kPlayerWidth*.5);
     c.move=dx>.4?1:dx<-.4?-1:0;
     c.jump_held=true;
+    if(p.ledge) {
+      if(c.move==p.ledge->side&&ty<=p.ledge->row+1.)
+        c.jump_pressed=p.ledge_climb_left<=0.;
+      else c.move=0;
+      return c;
+    }
     int foot=int(std::floor(p.y+kPlayerHeight+.1));
     double ahead=p.x+(c.move>0?kPlayerWidth+.25:-.25);
     bool gap=!g.solid_at(int(std::floor(ahead)),foot);
@@ -122,6 +128,8 @@ struct RoutePilot {
 struct RouteResult {bool complete=false;int deaths=0,ticks=0,policy=0;size_t target=0;double x=0,y=0;};
 RouteResult verify_route_once(const EngineGrid &g,int max_ticks,bool predictive) {
   auto state=new_state(g);FixedStepper stepper;RoutePilot pilot;pilot.predictive=predictive;
+  // Room selection must stay stable for saved seeds as movement features evolve.
+  state.reference_movement=true;
   int ticks=0;
   for(;ticks<max_ticks&&!state.won&&state.deaths<5;++ticks)
     stepper.advance(state,g,pilot.controls(g,state),1./120);

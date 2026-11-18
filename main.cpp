@@ -126,6 +126,7 @@ struct Player {
   double landing_dash_left = 0.0;
   std::optional<Ledge> ledge;
   double ledge_climb_left = 0.0;
+  double ledge_lock_left = 0.0;
   double wall_lock_left = 0.0;
   double wall_coyote_left = 0;
   int last_wall = 0;
@@ -283,6 +284,7 @@ inline const std::array<std::pair<double, double>, 15> kSweets = {{{15, 33},
 struct GameState {
   iceberg::View adventure;
   Player player;
+  bool reference_movement = false;
   double spawn_x = 0.0;
   double spawn_y = 0.0;
   double camera_x = 0.0;
@@ -800,6 +802,7 @@ void reset_player(GameState &state) {
   state.player.landing_dash_left = 0.0;
   state.player.ledge.reset();
   state.player.ledge_climb_left = 0.0;
+  state.player.ledge_lock_left = 0.0;
   state.player.wall_lock_left = 0.0;
   state.player.wall_coyote_left = 0;
   state.player.last_wall = 0;
@@ -891,7 +894,7 @@ bool climbable_ledge(const EngineGrid &grid, const Ledge &ledge) {
 
 void catch_ledge(Player &player, const EngineGrid &grid, const Controls &controls) {
   if (player.grounded || player.vy <= 0. || controls.move == 0 ||
-      controls.fast_fall || player.wall_lock_left > 0.) return;
+      controls.fast_fall || player.wall_lock_left > 0. || player.ledge_lock_left > 0.) return;
   const int side = controls.move;
   const double hand_x = side > 0 ? player.rect().right() : player.x;
   const Ledge ledge{int(std::floor(hand_x + side*.08)),int(std::floor(player.y+.95)),side};
@@ -911,6 +914,7 @@ bool step_ledge(Player &player, const EngineGrid &grid, const Controls &controls
       (player.ledge_climb_left <= 0. && (controls.move != ledge.side || controls.fast_fall))) {
     player.ledge.reset();
     player.ledge_climb_left = 0.;
+    player.ledge_lock_left = .12;
     return false;
   }
   if (player.jump_buffer_left > 0. && player.ledge_climb_left <= 0.) {
@@ -948,6 +952,7 @@ void update_step(GameState &state, const EngineGrid &grid,
   player.jump_buffer_left = std::max(0.0, player.jump_buffer_left - dt);
   player.dash_buffer_left = std::max(0.0, player.dash_buffer_left - dt);
   player.landing_dash_left = std::max(0.0, player.landing_dash_left - dt);
+  player.ledge_lock_left = std::max(0.0, player.ledge_lock_left - dt);
   player.coyote_left = std::max(0.0, player.coyote_left - dt);
   player.momentum_left = std::max(0., player.momentum_left - dt);
   player.dash_jump_left = std::max(0., player.dash_jump_left - dt);
@@ -1119,7 +1124,7 @@ void update_step(GameState &state, const EngineGrid &grid,
   if (player.grounded) {
     player.dash_available = true;
   }
-  if (grid.adventure_level) catch_ledge(player,grid,controls);
+  if (grid.adventure_level && !state.reference_movement) catch_ledge(player,grid,controls);
   player.x =
       clamp(player.x, 0.0,
             std::max(0.0, static_cast<double>(grid.width()) - kPlayerWidth));
@@ -1272,7 +1277,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   for(const auto &pulse:g.pulses)if(pulse.active(s.elapsed)&&p.rect().intersects(pulse.area)) {
     ++s.deaths;reset_player(s);return;
   }
-  if (g.adventure_level && !was_grounded && p.grounded)
+  if (g.adventure_level && !s.reference_movement && !was_grounded && p.grounded)
     p.landing_dash_left = kLandingDashCooldown;
   // A carried player must never remain embedded in static terrain.
   for (auto solid : g.solid_rects_near(p.rect()))
