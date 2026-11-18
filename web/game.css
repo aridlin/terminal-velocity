@@ -47,5 +47,5 @@
 @media(pointer:coarse),(max-width:760px){#downloads{gap:4px 12px;font-size:11px}#downloads a{padding:7px 0}}
 @media(orientation:landscape) and (max-height:500px){#downloads{margin-top:2px;font-size:10px}#downloads a{padding:2px 0}}
 
-#language{display:flex;gap:2px;flex-shrink:0}#language button{font-size:12px;padding:5px 8px}#language button[aria-pressed="true"]{border-color:#e4ad68;color:#e4ad68;background:#263540}
+#language{display:flex;gap:2px;flex-shrink:0}#language button{font-size:12px;padding:5px 8px}#language button[aria-pressed="true"],#sound[aria-pressed="true"]{border-color:#e4ad68;color:#e4ad68;background:#263540}
 @media(orientation:landscape) and (max-height:500px){header{display:flex;padding:3px 8px;gap:8px}header a{font-size:10px}header span{font-size:10px}header button,#language button{font-size:10px;padding:2px 6px}}

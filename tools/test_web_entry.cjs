@@ -494,6 +494,11 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.evaluate(()=>!!document.fullscreenElement),!fallback);
    const tools=page.locator('#fullscreen-tools');
    await tools.locator('[data-tap="13"]').waitFor({state:'visible'});
+   const sound=tools.locator('#sound');
+   await page.keyboard.press('u');
+   await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='false');
+   await sound.tap();
+   await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='true');
    if(fallback){
     await page.waitForFunction(()=>document.activeElement===canvas);
     await page.keyboard.press('Shift+Tab');

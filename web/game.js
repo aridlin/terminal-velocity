@@ -134,6 +134,7 @@ function translateUI(){
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
+ soundButton.setAttribute('aria-pressed',String(started&&!(uiFlags&32768)));
  if(!started)start.textContent=ready||bootFailed?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');
  renderSaveStatus();
 }
@@ -325,7 +326,8 @@ function drawBoot(){
 const playfield=document.querySelector('#playfield');
 const settingsKeys=document.querySelector('#settings-keys');
 const retryButton=document.querySelector('#toolbar [data-tap="13"]');
-const retryAnchor=retryButton.nextElementSibling;
+const soundButton=document.querySelector('#sound');
+const soundAnchor=soundButton.nextElementSibling;
 const pageControls=document.querySelectorAll('body > header, body > footer');
 const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('expanded');
 function fullscreenLayout(){
@@ -333,11 +335,11 @@ function fullscreenLayout(){
  const fallback=playfield.classList.contains('expanded');
  for(const controls of pageControls)controls.inert=fallback;
  if(active){
-  document.querySelector('#account-fullscreen').before(retryButton);
+  document.querySelector('#account-fullscreen').before(retryButton,soundButton);
   document.querySelector('#leave-fullscreen').before(languageToggle);
   document.querySelector('#fullscreen-tools').append(settingsKeys);
  }else{
-  retryAnchor.before(retryButton);
+  soundAnchor.before(retryButton,soundButton);
   document.querySelector('#toolbar').append(languageToggle);
   document.querySelector('#hint').before(settingsKeys);
  }
