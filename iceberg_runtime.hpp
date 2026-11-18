@@ -429,8 +429,8 @@ public:
         if(profile.story&iceberg::reply_recorded(district))
           reply_dialogue(district,(profile.story&iceberg::reply_value(district))!=0,FinishHomecomingReply);
         else talk_homecoming(0);
-      } else if(int option=iceberg::pending_briefing_option(profile.story);
-                option>=0&&option<2&&!(profile.story&(uint64_t(1)<<district))) {
+      } else if(int option=iceberg::pending_briefing_option(profile.story,district);
+                option>=0&&!(profile.story&(uint64_t(1)<<district))) {
         reply_dialogue(iceberg::BriefingReplyBase+district,option,1);
       }
     }
@@ -542,7 +542,7 @@ public:
           else profile.story&=~iceberg::reply_value(scene);
         } else {
           profile.story=(profile.story&~iceberg::BriefingReplyMask)|
-            (uint64_t(option+1)<<iceberg::BriefingReplyShift);
+            iceberg::briefing_reply_bits(scene-iceberg::BriefingReplyBase,option);
         }
         persist();
       }

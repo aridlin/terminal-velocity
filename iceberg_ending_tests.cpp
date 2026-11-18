@@ -27,10 +27,17 @@ int main(){try{
               std::string_view(exchange.lines.front().text.en)==reply.said.en&&
               std::string_view(exchange.lines.back().text.pl)==reply.answer.text.pl,
               "a reload after choosing resumes the briefing reply without advancing the district");
+  auto elsewhere_file=folder/("briefing-elsewhere-"+std::to_string(option));
+  auto elsewhere_profile=resumed.profile;
+  elsewhere_profile.district=elsewhere_profile.unlocked=1;
+  require_end(iceberg::SaveStore(elsewhere_file).save(elsewhere_profile),"fixture saves a district reached by an older build");
+  AdventureSession elsewhere(options,elsewhere_file);elsewhere.begin_campaign(false);
+  require_end(elsewhere.district==1&&!elsewhere.state.adventure.dialogue.active(),
+              "an earlier district's unfinished reply does not reopen in a later district");
   read_end(resumed);
   AdventureSession completed(options,briefing_file);completed.begin_campaign(false);
   require_end(completed.stage==0&&(completed.profile.story&1)&&
-              iceberg::pending_briefing_option(completed.profile.story)<0&&!completed.state.adventure.dialogue.active(),
+              !(completed.profile.story&iceberg::BriefingReplyMask)&&!completed.state.adventure.dialogue.active(),
               "finishing the reply records the briefing and clears the pending exchange");
   completed.advance_room();
   require_end(completed.stage==1,"the resumed briefing opens the regular district route");
