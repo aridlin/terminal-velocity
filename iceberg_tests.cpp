@@ -32,6 +32,16 @@ int main(int argc,char **argv) {
         throw std::runtime_error("another mode or layout inherited the Endless room reserve");
     }
     check(true,"new Endless legs include a local mechanic by room four without changing legacy routes or Trials");
+    std::set<int> estate_openings,archive_openings;
+    for(uint32_t seed=0;seed<128;++seed) {
+      const auto estate=iceworld::make_itinerary(seed,2,iceberg::RoomsPerLeg,iceberg::ContentVersion,iceberg::Mode::Endless);
+      const auto archive=iceworld::make_itinerary(seed,3,iceberg::RoomsPerLeg,iceberg::ContentVersion,iceberg::Mode::Endless);
+      estate_openings.insert(estate.begin(),estate.begin()+4);
+      archive_openings.insert(archive.begin(),archive.begin()+4);
+    }
+    check(estate_openings.count(24)&&estate_openings.count(25)&&
+      archive_openings.count(38)&&archive_openings.count(39)&&archive_openings.count(44)&&archive_openings.count(47),
+      "district openings can showcase different local mechanics, including newer rooms");
     for(int d=0;d<2;++d) {
       auto old_route=iceworld::make_itinerary(73,d,24,2);
       check(std::all_of(old_route.begin(),old_route.end(),[](int id){return id<24;}),"legacy route version retains the released room library");
@@ -552,7 +562,9 @@ int main(int argc,char **argv) {
     prior_leg.begin_run(iceberg::Mode::Endless);
     check(estate_run.itinerary==saved_order&&prior_leg.room==7,"an existing Endless leg resumes with its saved room order");
     prior_leg.advance_room();
-    check(prior_leg.depth==8&&prior_leg.room==0&&std::find(estate_run.itinerary.begin(),estate_run.itinerary.begin()+4,24)!=estate_run.itinerary.begin()+4,
+    const auto early_end=estate_run.itinerary.begin()+4;
+    check(prior_leg.depth==8&&prior_leg.room==0&&
+      std::any_of(estate_run.itinerary.begin(),early_end,[](int id){return iceworld::has_expedition_mechanic(2,id);}),
       "an existing expedition gets the district mechanic when generating its next leg");
     std::filesystem::remove(path);std::filesystem::remove(backup);
     return 0;

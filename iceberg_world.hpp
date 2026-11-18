@@ -97,12 +97,14 @@ inline bool connects(const Pattern &from,const Pattern &to) {
     (a.exit.dash_available||!(b.required&Dash));
 }
 inline bool has_expedition_mechanic(int district,int id) {
+  // Rooms with district-specific traversal, including mechanics added after
+  // the original Endless reserve. A naturally selected room satisfies it.
   switch(district) {
-  case 1:return id==18||id==22;
-  case 2:return id==24;
-  case 3:return id==39;
-  case 4:return id==48||id==58;
-  case 5:return id==60||id==63||id==66||id==70;
+  case 1:return id==18||id==22;                                             // Steam jets
+  case 2:return id==24||id==25;                                             // Trams, stairwells
+  case 3:return id==38||id==39||id==44||id==47;                             // Post, drawers, belts, racks
+  case 4:return id==48||id==49||id==50||id==51||id==55||id==57||id==58;       // Ice, pods, ferries, lifts
+  case 5:return id==60||id==62||id==63||id==66||id==68||id==69||id==70||id==71; // Wind and cradles
   default:return false;
   }
 }
@@ -116,23 +118,28 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
   if (pool.empty()) for (const auto &p : patterns()) if (district_of(p) == 0) pool.push_back(p.id);
   std::vector<int> result;
   int previous = -1;
-  bool needs_mechanic=mode==Mode::Endless&&layout_version>=4&&district>=1&&district<AuthoredDistrictCount;
+  const bool reserve_mechanic=mode==Mode::Endless&&layout_version>=4&&district>=1&&district<AuthoredDistrictCount;
+  int early_mechanic=-1;
   const auto has_mechanic=[&](int id){return has_expedition_mechanic(district,id);};
   while (int(result.size()) < count) {
     auto bag = pool;
     for (size_t i = bag.size(); i > 1; --i) std::swap(bag[i - 1], bag[size_t(random.below(int(i)))]);
+    if(reserve_mechanic&&result.empty()) {
+      const auto local=std::find_if(bag.begin(),bag.end(),has_mechanic);
+      if(local!=bag.end())early_mechanic=*local;
+    }
     // Within every leg alternate flow/precision/vertical/timing with relief.
     while (!bag.empty() && int(result.size()) < count) {
       const bool harbor_graph=district==0&&layout_version>=4;
-      // Leave the opening rhythm alone when a local mechanic comes up naturally.
-      // Otherwise reserve the fourth room so it cannot be skipped for a whole leg.
-      const bool mechanic_due=needs_mechanic&&result.size()==3&&std::any_of(bag.begin(),bag.end(),has_mechanic);
+      // The seeded shuffle chooses the featured mechanic. The room's rhythm
+      // can place it naturally; otherwise it gets the fourth slot.
+      const bool mechanic_due=early_mechanic>=0&&result.size()==3;
       size_t choice=0;int best=harbor_graph?INT_MAX:10000;
       static const Rhythm phrase[]={Rhythm::Flow,Rhythm::Explore,Rhythm::Precision,Rhythm::Vertical,
         Rhythm::Timing,Rhythm::Flow,Rhythm::Vertical,Rhythm::Recovery};
       auto desired=phrase[result.size()%8];
       for(size_t i=0;i<bag.size();++i) {
-        if(mechanic_due&&!has_mechanic(bag[i]))continue;
+        if(mechanic_due&&bag[i]!=early_mechanic)continue;
         const auto &candidate=pattern(bag[i]);
         int score=(candidate.rhythm==desired?0:3)+(bag[i]==previous?100:0);
         // Reserve collection-task rooms before the final settlement visit.
@@ -164,7 +171,7 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
         if(score<best){best=score;choice=i;}
       }
       previous = bag[choice];
-      if(needs_mechanic&&has_mechanic(previous))needs_mechanic=false;
+      if(previous==early_mechanic)early_mechanic=-1;
       result.push_back(previous);
       bag.erase(bag.begin() + long(choice));
     }
