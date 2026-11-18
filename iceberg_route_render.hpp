@@ -14,6 +14,8 @@
       [](const auto &platform){return platform.archive_rack;});
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.tram;});
+    const bool has_service_lift=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.service_lift;});
     const auto powered=[](const SortingBelt &belt){return belt.speed!=0;};
     const bool has_belts=std::any_of(grid_.sorting_belts.begin(),grid_.sorting_belts.end(),powered);
     const bool has_features=has_water||has_boost||has_wind||has_ice||has_racks||!grid_.sweets.empty();
@@ -49,8 +51,9 @@
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const bool has_vents=!grid_.pulses.empty();
+    constexpr uint32_t service_lift_color=0xe4ad68;
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
-      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents);
+      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -121,7 +124,7 @@
     }
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
-      if(platform.archive_rack) {
+      if(platform.archive_rack||platform.service_lift) {
         const int x=column(platform.base.x+platform.base.w*.5);
         const double range=std::abs(platform.dy);
         for(int y=row(platform.base.y-range);y<=row(platform.base.y+range);++y)
@@ -205,6 +208,10 @@
     }
     for(const auto &belt:grid_.sorting_belts)if(powered(belt))
       mark(belt.x+belt.width*.5,belt.y,belt.speed>0?"▶":"◀",belt_color,belt.speed>0?1:-1);
+    for(const auto &platform:grid_.platforms)if(platform.service_lift) {
+      const auto deck=platform.at(state_.elapsed);
+      mark(deck.x+deck.w*.5,deck.y,"↕",service_lift_color);
+    }
     bool recharging=false;
     if(has_refills)for(size_t i=0;i<grid_.refills.size();++i) {
       const auto [x,y]=grid_.refills[i];
@@ -277,6 +284,7 @@
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
+    if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);
     if(has_refills) {
       const auto name=tr("▥ Zapas zrywu","▥ Dash refill");

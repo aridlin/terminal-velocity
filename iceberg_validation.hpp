@@ -195,7 +195,7 @@ inline void add_shutter_service_lift(EngineGrid &room) {
   if(room.district!=5||room.template_id!=69)return;
   // The narrow lift travels between the lower approach and the upper
   // service shelves. Its shaft sits in the gap between the solid ledges.
-  room.platforms.push_back({.base={68.5,40.5,3.5,.5},.dy=9.,.period=7.2,.phase=.25});
+  room.platforms.push_back({.base={68.5,40.5,3.5,.5},.dy=9.,.period=7.2,.phase=.25,.service_lift=true});
   const auto route=verify_route(room);
   if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
   else room.platforms.pop_back();

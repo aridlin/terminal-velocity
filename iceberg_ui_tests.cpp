@@ -245,19 +245,44 @@ int main(){try {
       ui_text(frame).find("○ Przystanek")!=std::string::npos,
       "the compact Estate room map shows three tram cars and both stops on each track");
   }
-  auto tram_markers=[&](const char *glyph,uint32_t color){
+  auto map_markers=[&](const char *glyph,uint32_t color){
     std::vector<std::pair<size_t,size_t>> cells;
     for(size_t y=6;y+7<frame.size();++y)for(size_t x=0;x<frame[y].size();++x)
       if(frame[y][x].glyph==glyph&&frame[y][x].rgb==color)cells.emplace_back(y,x);
     return cells;
   };
-  const auto first_cars=tram_markers("▰",0xefcd74),stops=tram_markers("○",0xc2accf);
+  const auto first_cars=map_markers("▰",0xefcd74),stops=map_markers("○",0xc2accf);
   tram_view.elapsed=3;
   tram_view.adventure.language=iceberg::Language::English;
   RenderGrid(tram_room,tram_view,34,110,2).draw();
-  ui_check(tram_markers("▰",0xefcd74)!=first_cars&&tram_markers("○",0xc2accf)==stops&&
+  ui_check(map_markers("▰",0xefcd74)!=first_cars&&map_markers("○",0xc2accf)==stops&&
     ui_text(frame).find("○ Stop")!=std::string::npos,
     "tram markers follow the actual cars across their routes");
+  auto shutter_room=verified_room(69,73,5);
+  auto shutter_view=new_state(shutter_room);
+  shutter_view.adventure.map=shutter_view.adventure.map_room=true;
+  RenderGrid(shutter_room,shutter_view,24,34,2).draw();
+  ui_check(map_markers("↕",0xe4ad68).empty()&&ui_text(frame).find("Winda serwisowa")==std::string::npos,
+    "the original counterweights room has no service lift marker");
+  add_shutter_service_lift(shutter_room);
+  shutter_view=new_state(shutter_room);
+  shutter_view.adventure.map=shutter_view.adventure.map_room=true;
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    shutter_view.adventure.language=language;
+    const auto legend=language==iceberg::Language::English?"↕ Service lift":"↕ Winda serwisowa";
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      shutter_view.elapsed=0.;
+      RenderGrid(shutter_room,shutter_view,rows,cols,2).draw();
+      const auto bottom=map_markers("↕",0xe4ad68);
+      ui_check(bottom.size()==1&&count_map("┆",0x718c9d)>1&&ui_text(frame).find(legend)!=std::string::npos,
+        "the room map marks the Crown service lift and its shaft");
+      shutter_view.elapsed=3.6;
+      RenderGrid(shutter_room,shutter_view,rows,cols,2).draw();
+      const auto top=map_markers("↕",0xe4ad68);
+      ui_check(top.size()==1&&bottom[0].second==top[0].second&&bottom[0].first>top[0].first,
+        "the service lift marker follows the deck vertically");
+    }
+  }
   auto belt_room=verified_room(44,74,3);
   auto belt_view=new_state(belt_room);
   belt_view.adventure.map=belt_view.adventure.map_room=true;
