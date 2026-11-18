@@ -264,6 +264,28 @@ int main(){try {
         "the Archive map marks the two right-moving belts and the left-moving belt");
     }
   }
+  auto drawer_room=verified_room(39,73,3);
+  add_expedition_drawers(drawer_room);
+  auto drawer_view=new_state(drawer_room);
+  drawer_view.adventure.map=drawer_view.adventure.map_room=true;
+  drawer_view.adventure.language=iceberg::Language::English;
+  RenderGrid(drawer_room,drawer_view,24,34,2).draw();
+  ui_check(count_map("⊗",0xabc9e4)==1&&count_map("═",0xabc9e4)==0&&
+    ui_text(frame).find("⊗ Extend path")!=std::string::npos,
+    "the compact room map marks the handle while the optional drawers are retracted");
+  drawer_room.switch_flags=1;
+  for(auto &drawer:drawer_room.growth)drawer.amount=0;
+  RenderGrid(drawer_room,drawer_view,34,110,2).draw();
+  ui_check(count_map("⊗",0xabc9e4)==0&&count_map("═",0xabc9e4)==0,
+    "an activated handle disappears before its drawers have extended");
+  for(auto &drawer:drawer_room.growth)drawer.amount=.5;
+  RenderGrid(drawer_room,drawer_view,34,110,2).draw();
+  const int partial_drawer_cells=count_map("═",0xabc9e4);
+  for(auto &drawer:drawer_room.growth)drawer.amount=1;
+  RenderGrid(drawer_room,drawer_view,34,110,2).draw();
+  ui_check(partial_drawer_cells>0&&count_map("═",0xabc9e4)>partial_drawer_cells&&
+    ui_text(frame).find("═ Bridge")!=std::string::npos,
+    "the room map draws only the available length of an extending bridge");
   auto rack_room=verified_room(47,73,3);
   auto rack_view=new_state(rack_room);
   rack_view.adventure.map=rack_view.adventure.map_room=true;

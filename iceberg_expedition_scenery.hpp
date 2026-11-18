@@ -25,8 +25,7 @@
     const double row=aspect_*scale_;
     for(const auto &drawer:grid_.growth) {
       const auto &area=drawer.area;
-      const bool open=(grid_.switch_flags&drawer.flag)==drawer.flag;
-      const double width=open?std::floor(area.w*drawer.amount):0.;
+      const double width=drawer.extended_width(grid_.switch_flags);
       world_art(area.x-2.8,area.y-3*row,
         {"╔══════╤═╗","║ ▥▥▥  │ ║","╟──┬───┤ ║","║ ▱▱▱  ▐ ║","╚══════╧═╝"},0x859bab);
       if(width<=0)continue;

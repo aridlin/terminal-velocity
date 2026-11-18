@@ -29,10 +29,20 @@
       return node.kind==InteractionKind::Valve&&(missing&(uint64_t(1)<<node.id));
     };
     const bool has_valves=std::any_of(grid_.interactions.begin(),grid_.interactions.end(),required_valve);
-    constexpr uint32_t valve_color=0xf0a277;
+    uint64_t bridge_flags=0;
+    for(const auto &bridge:grid_.growth)bridge_flags|=bridge.flag;
+    const auto path_controls=bridge_flags&~grid_.switch_flags&~missing;
+    const auto path_valve=[path_controls](const auto &node) {
+      return node.kind==InteractionKind::Valve&&(path_controls&(uint64_t(1)<<node.id));
+    };
+    const bool has_path_control=std::any_of(grid_.interactions.begin(),grid_.interactions.end(),path_valve);
+    const bool has_bridges=std::any_of(grid_.growth.begin(),grid_.growth.end(),
+      [&](const auto &bridge){return bridge.extended_width(grid_.switch_flags)>0;});
+    const bool bridge_legend=has_path_control||has_bridges;
+    constexpr uint32_t valve_color=0xf0a277,bridge_color=0xabc9e4;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
     constexpr uint32_t belt_color=0xa0d6df;
-    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts);
+    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)+int(bridge_legend);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -79,6 +89,13 @@
       for(int x=column(basin.left());x<=column(basin.right());++x)
         if(line[size_t(x)]==' ')line[size_t(x)]='~';
     }
+    for(const auto &bridge:grid_.growth) {
+      const double length=bridge.extended_width(grid_.switch_flags);
+      if(length<=0)continue;
+      auto &line=map[size_t(row(bridge.area.y))];
+      const int last=column(std::nextafter(bridge.area.x+length,bridge.area.x));
+      for(int x=column(bridge.area.x);x<=last;++x)line[size_t(x)]='g';
+    }
     for(const auto &belt:grid_.sorting_belts)if(powered(belt)) {
       auto &line=map[size_t(row(belt.y))];
       const int last=column(std::nextafter(belt.x+belt.width,belt.x));
@@ -111,6 +128,7 @@
       case ':':paint_text(first+y,left+x,"┆",0x718c9d);break;
       case '-':paint_text(first+y,left+x,"┄",0x887b96);break;
       case 'b':paint_text(first+y,left+x,"═",belt_color);break;
+      case 'g':paint_text(first+y,left+x,"═",bridge_color);break;
       case 'i':paint_text(first+y,left+x,"━",0xa6e9ea);break;
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
@@ -135,8 +153,11 @@
     if(show_goal) {
       mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",missing?0x7c8492:0xd7e8cd);
     }
-    for(const auto &node:grid_.interactions)if(required_valve(node))
-      mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,"⊗",valve_color);
+    for(const auto &node:grid_.interactions) {
+      if(required_valve(node)||path_valve(node))
+        mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,"⊗",
+          required_valve(node)?valve_color:bridge_color);
+    }
     if(fork) {
       const auto &door=branch->area;
       mark(door.x+door.w*.5,door.y+door.h*.5,"▧",0xe8a758,-1);
@@ -204,6 +225,15 @@
         tr("@ Ty · ◆ Lampa · ▣ Wyjście","@ You · ◆ Lamp · ▣ Exit"),0xc7d9df);
     }
     if(has_valves)paint_text(legend++,2,tr("⊗ Wymagany zawór","⊗ Required valve"),valve_color);
+    if(bridge_legend) {
+      std::string label;
+      if(has_path_control)label=tr("⊗ Wysuń pomost","⊗ Extend path");
+      if(has_bridges) {
+        if(!label.empty())label+=" · ";
+        label+=tr("═ Pomost","═ Bridge");
+      }
+      paint_text(legend++,2,label,bridge_color);
+    }
     if(has_trams) {
       const auto name=tr("▰ Tramwaj","▰ Tram");
       paint_text(legend,2,name,tram_color);

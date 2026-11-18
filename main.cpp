@@ -383,7 +383,14 @@ struct AirField {
   }
 };
 struct Gate { Rect area; uint64_t flag = 0; };
-struct GrowingBridge { Rect area; uint64_t flag = 0; double amount = 1.; };
+struct GrowingBridge {
+  Rect area;
+  uint64_t flag = 0;
+  double amount = 1.;
+  double extended_width(uint64_t switches) const {
+    return (switches&flag)==flag?std::floor(area.w*amount):0.;
+  }
+};
 struct PulseHazard {
   Rect area;
   double period=4,phase=0;
@@ -432,9 +439,9 @@ public:
       if ((switch_flags & gate.flag) != gate.flag && gate.area.intersects({double(col),double(row),1,1}))
         return true;
     for (const auto &bridge : growth) {
-      const double width=std::floor(bridge.area.w*bridge.amount);
-      if(width>0 && (switch_flags&bridge.flag)==bridge.flag &&
-         Rect{bridge.area.x,bridge.area.y,width,bridge.area.h}.intersects({double(col),double(row),1,1}))return true;
+      const double width=bridge.extended_width(switch_flags);
+      if(width>0&&Rect{bridge.area.x,bridge.area.y,width,bridge.area.h}.intersects({double(col),double(row),1,1}))
+        return true;
     }
     return solid_[index(col, row)];
   }
