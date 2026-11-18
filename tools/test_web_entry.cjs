@@ -42,7 +42,18 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('html').getAttribute('lang'),expected,locale+' fresh boot');
    assert.equal(await page.locator('[data-language="'+expected+'"]').getAttribute('aria-pressed'),'true');
    await page.screenshot({path:path.join(out,'web-boot-'+locale+'.png')});
-   await page.locator('#start').click();await page.waitForFunction(()=>document.querySelector('#start').hidden);
+   if(locale==='en-US'&&!visualOnly){
+    const pause=page.locator('footer [data-tap="9"]');
+    assert.equal(await pause.isDisabled(),true);
+    const box=await pause.boundingBox();
+    await page.locator('#game').focus();
+    await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>started&&(uiFlags&256));
+    assert.equal(await page.evaluate(()=>uiFlags&(1|2)),0,'Start cannot replay an earlier toolbar click');
+    assert.equal(await pause.isEnabled(),true);
+   }else await page.locator('#start').click();
+   await page.waitForFunction(()=>document.querySelector('#start').hidden);
    await page.waitForTimeout(100);assert.equal(await page.locator('html').getAttribute('lang'),expected,locale+' fresh game');
    if(locale==='en-US'){
     await page.evaluate(()=>{const frame=window.tvFrame,ui=window.tvUI;window.tvFrame=(cells,w,h)=>{window.entryFrame=Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>String.fromCodePoint(cells[(y*w+x)*4])).join('')).join('\n');frame(cells,w,h);};window.tvUI=u=>{window.entryFlags=u.flags;ui(u);};});

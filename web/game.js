@@ -1,6 +1,11 @@
 'use strict';
 const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d',{alpha:false});
 const stage=document.querySelector('#stage'),start=document.querySelector('#start'),saveStatus=document.querySelector('#save-status');
+const gameButtons=document.querySelectorAll('[data-tap],[data-key],#account,#account-fullscreen,#export-save,#import-save');
+function setGameButtons(enabled){
+ for(const button of gameButtons)button.disabled=!enabled;
+}
+setGameButtons(false);
 const mobile=()=>matchMedia('(pointer:coarse)').matches||innerWidth<760||(innerHeight<500&&innerWidth<1100);
 const languageKey='terminal-velocity.language',pendingLanguageKey='terminal-velocity.pending-language';
 let pendingBootLanguage=null;
@@ -244,7 +249,11 @@ for(const button of document.querySelectorAll('[data-key]')){
  for(const type of ['pointerup','pointercancel','lostpointercapture'])
   button.addEventListener(type,e=>finishPointer(e.pointerId,type==='pointerup'));
 }
-for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{tap(+b.dataset.tap);canvas.focus();};
+for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
+ if(!started||accounts.active||importPending)return;
+ canvas.focus({preventScroll:true});
+ tap(+b.dataset.tap);
+};
 function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function flushBrowserStorage(){
  if(syncing){storageFlushQueued=true;return;}
@@ -426,13 +435,18 @@ function frame(now){
 start.onclick=()=>{
  if(!ready||started)return;
  try {
+  clearInput();
   Module._web_start(Date.now()>>>0,english?1:0);
   Module._web_enter_campaign();
-  started=true;start.hidden=true;exportSave.disabled=importSave.disabled=false;
+  started=true;
+  syncSave();accounts.start();resize();
+  start.hidden=true;
+  setGameButtons(true);
   exportPreviousSave.hidden=!Module.FS.analyzePath(previousImportPath).exists;
-  syncSave();accounts.start();resize();last=performance.now();canvas.focus();requestAnimationFrame(frame);
+  last=performance.now();canvas.focus();requestAnimationFrame(frame);
  } catch(error) {
-  console.error(error);started=false;ready=false;start.disabled=true;
+  console.error(error);started=false;ready=false;start.hidden=false;start.disabled=true;
+  setGameButtons(false);exportPreviousSave.hidden=true;
   bootStatus=tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
   saveStatus.textContent=bootStatus;drawBoot();
  }
