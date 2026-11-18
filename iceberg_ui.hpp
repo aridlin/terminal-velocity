@@ -8,6 +8,17 @@ struct DialogueLayout {
   bool portrait=false;
   std::vector<std::string> body;
 };
+inline int dialogue_panel_top(int rows,int height,int player_row) {
+  // Prefer the half opposite the courier.
+  return player_row<rows/2?std::max(4,rows-3-height):4;
+}
+inline constexpr int ReplyPanelHeight=9;
+inline DialogueLayout reply_layout(int rows,int player_row) {
+  DialogueLayout out;
+  out.height=ReplyPanelHeight;
+  out.top=dialogue_panel_top(rows,out.height,player_row);
+  return out;
+}
 inline DialogueLayout dialogue_layout(const std::string &text,int columns,int rows,int player_row=1000,int segment=0) {
   DialogueLayout out;out.width=std::max(10,columns-2);
   out.portrait=columns>=100&&rows>=30;
@@ -21,10 +32,7 @@ inline DialogueLayout dialogue_layout(const std::string &text,int columns,int ro
   int part=std::clamp(segment,0,out.pages-1);
   int lines=std::min(out.text_rows,std::max(1,int(out.body.size())-part*out.text_rows));
   out.height=std::max(out.portrait?11:0,lines+4);
-  // Prefer the half opposite the courier. The session reframes only if a long
-  // passage still intersects the courier, without changing world geometry.
-  int bottom=std::max(4,rows-3-out.height);
-  out.top=(player_row<rows/2)?bottom:4;
+  out.top=dialogue_panel_top(rows,out.height,player_row);
   out.text_y=out.top+2;
   return out;
 }

@@ -678,8 +678,10 @@
     return shown;
   }
   void draw_dialogue_replies(const iceberg::Dialogue &dialogue) {
-    const int top=std::max(4,(rows_-9)/2);
-    frame(top,1,cols_-2,9,0xe4ad68);
+    const int courier=screen(state_.player.x,state_.player.y).second;
+    const auto layout=iceberg::reply_layout(rows_,courier);
+    const int top=layout.top;
+    frame(top,1,cols_-2,layout.height,0xe4ad68);
     paint_text(top+1,3,tr("TWOJA ODPOWIEDŹ","YOUR REPLY"),0xe4ad68,true);
     for(int i=0;i<2;++i) {
       int row=top+3+i*2;

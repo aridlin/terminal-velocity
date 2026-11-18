@@ -95,5 +95,22 @@ int main(){try {
                   "confirming once resumes without changing or committing the selected reply");
   }
  }
+ const auto position=std::pair{game.state.player.x,game.state.player.y};
+ for(auto dimensions:{std::pair{38,28},std::pair{60,20},std::pair{110,34}}) {
+  const auto [cols,rows]=dimensions;
+  game.tick({},0,true,cols,rows,2);
+  for(int courier_row:{rows/2-2,rows/2}) {
+   game.state.camera_x=position.first-(cols/2)*.4;
+   game.state.camera_y=position.second-(courier_row-4)*.8;
+   game.talk({},0,0);
+   RenderGrid(game.grid,game.state,rows,cols,2).draw();
+   int head_pixels=0;
+   for(const auto &row:frame)for(int x=cols/2-1;x<=cols/2+4;++x)
+    if(row[size_t(x)].rgb==0xe4ad68&&(row[size_t(x)].background==0xe0b394||row[size_t(x)].background==0x51474b))
+     ++head_pixels;
+   dialogue_check(head_pixels==2,"the reply panel leaves the courier's full head visible");
+   dialogue_check(std::pair{game.state.player.x,game.state.player.y}==position,"reply framing does not move the courier in the world");
+  }
+ }
  cell_frame_sink={};return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}
