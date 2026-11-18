@@ -2117,7 +2117,7 @@ public:
   }
 
 private:
-  static constexpr uint32_t water_surface_background=0x214b62;
+  static constexpr uint32_t water_surface_background=0x214b62,water_depth_background=0x14394e;
 #include "iceberg_render.hpp"
   const EngineGrid &grid_;
   const GameState &state_;
@@ -2233,8 +2233,8 @@ private:
         if(depth<aspect_*scale_)
           return {ripple%8<3?"∿":"─",Color::Decor,false,false,0,0x8ed9e5,water_surface_background};
         if(ripple%13==int(depth*2)%13)
-          return {"·",Color::Decor,false,false,0,0x5196ab,0x14394e};
-        return {" ",Color::Decor,false,false,0,0,0x14394e};
+          return {"·",Color::Decor,false,false,0,0x5196ab,water_depth_background};
+        return {" ",Color::Decor,false,false,0,0,water_depth_background};
       }
       return iceberg_background(wx,wy,x,y);
     }

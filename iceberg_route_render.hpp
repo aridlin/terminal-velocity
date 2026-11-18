@@ -84,10 +84,20 @@
       const int last=column(std::nextafter(strip.right(),strip.left()));
       for(int x=column(strip.left());x<=last;++x)line[size_t(x)]='i';
     }
+    // Water is a background layer so ice, hazards and markers stay visible above it.
     for(const auto &basin:grid_.water_basins) {
-      auto &line=map[size_t(row(basin.top()))];
-      for(int x=column(basin.left());x<=column(basin.right());++x)
-        if(line[size_t(x)]==' ')line[size_t(x)]='~';
+      const int surface=row(basin.top()),bottom=row(std::nextafter(basin.bottom(),basin.top()));
+      const int start=column(basin.left()),end=column(std::nextafter(basin.right(),basin.left()));
+      for(int y=surface;y<=bottom;++y)for(int x=start;x<=end;++x) {
+        auto &background=buffer_[first+y][left+x].background;
+        if(y==surface) {
+          background=water_surface_background;
+          auto &tile=map[size_t(y)][size_t(x)];
+          if(tile==' ')tile='~';
+        } else if(background!=water_surface_background) {
+          background=water_depth_background;
+        }
+      }
     }
     for(const auto &bridge:grid_.growth) {
       const double length=bridge.extended_width(grid_.switch_flags);

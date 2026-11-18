@@ -286,6 +286,34 @@ int main(){try {
   ui_check(partial_drawer_cells>0&&count_map("═",0xabc9e4)>partial_drawer_cells&&
     ui_text(frame).find("═ Bridge")!=std::string::npos,
     "the room map draws only the available length of an extending bridge");
+  auto reservoir=verified_room(55,73,4);
+  auto reservoir_view=new_state(reservoir);
+  reservoir_view.adventure.map=reservoir_view.adventure.map_room=true;
+  auto count_background=[&](uint32_t color,const char *glyph=nullptr){
+    int cells=0;
+    for(size_t y=6;y+7<frame.size();++y)for(const auto &cell:frame[y])
+      cells+=cell.background==color&&(!glyph||cell.glyph==glyph);
+    return cells;
+  };
+  RenderGrid(reservoir,reservoir_view,24,34,2).draw();
+  ui_check(count_background(0x14394e)==0&&count_background(0x214b62)==0,
+    "the dry reservoir has no water tint on the room map");
+  add_reservoir_ice(reservoir);
+  reservoir_view=new_state(reservoir);
+  reservoir_view.adventure.map=reservoir_view.adventure.map_room=true;
+  for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+    RenderGrid(reservoir,reservoir_view,rows,cols,2).draw();
+    const int water=count_background(0x14394e);
+    ui_check(water>0&&count_background(0x214b62,"━")>0,
+      "the reservoir map shows the blue basin below intact white ice");
+    auto gap=reservoir_view;
+    gap.elapsed=1.8;
+    for(size_t i=0;i<reservoir.platforms.size();++i)
+      if(reservoir.platforms[i].icy)gap.platform_armed_at[i]=1.0;
+    RenderGrid(reservoir,gap,rows,cols,2).draw();
+    ui_check(count_background(0x14394e)==water&&count_background(0x214b62,"≈")>0,
+      "broken floes reveal the water surface without changing the basin");
+  }
   auto rack_room=verified_room(47,73,3);
   auto rack_view=new_state(rack_room);
   rack_view.adventure.map=rack_view.adventure.map_room=true;
