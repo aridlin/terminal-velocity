@@ -1033,6 +1033,18 @@ const server=http.createServer((req,res)=>{
     assert.equal(controls.overflow,false,'touch labels fit their buttons');
    }
   }
+  await page.setViewportSize({width:361,height:240});
+  const forkControlsFit=await page.evaluate(()=>{
+   const before=uiFlags;
+   try{
+    window.tvUI({flags:(before&~512)|forkDoorFlag|1024});
+    const pad=document.querySelector('#touch');
+    return document.documentElement.scrollWidth===361&&
+     [...pad.querySelectorAll('button')].every(button=>
+      button.getBoundingClientRect().right<=361&&button.scrollWidth<=button.clientWidth);
+   }finally{window.tvUI({flags:before});}
+  });
+  assert.equal(forkControlsFit,true,'Polish door buttons fit a narrow landscape viewport');
   for(const fallback of [false,true]){
    if(fallback)await page.evaluate(()=>{
     window.fullscreenRequests=[];

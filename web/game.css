@@ -56,6 +56,8 @@
  #touch{gap:6px;padding-inline:8px}
  #touch .directions,#touch .actions{gap:3px}
  #touch button{min-width:34px;padding-inline:4px}
+ #touch .actions{min-width:0}
+ #touch .actions button{overflow-wrap:anywhere}
 }
 #playfield.expanded{position:fixed;inset:0;z-index:10}
 #playfield:fullscreen #fullscreen-tools,#playfield.expanded #fullscreen-tools{display:flex}
