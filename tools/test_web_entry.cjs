@@ -124,6 +124,16 @@ const server=http.createServer((req,res)=>{
     await page.keyboard.press('F2');
     await page.waitForFunction(()=>!accounts.active&&(uiFlags&2)&&canvas===document.activeElement);
     console.log('PASS account keyboard traversal returns to both fields and F2 returns to the paused game');
+    await page.keyboard.press('F2');
+    const returnPoint=await page.evaluate(()=>{
+     const button=accounts.buttons.at(-1),rect=canvas.getBoundingClientRect();
+     return {x:rect.left+(button.x+3)*rect.width/accounts.width,y:rect.top+(button.y+.5)*rect.height/accounts.height};
+    });
+    await page.mouse.move(returnPoint.x,returnPoint.y);
+    await page.mouse.down();
+    assert.equal(await page.evaluate(()=>accounts.active),true,'a held press does not activate the account action');
+    await page.mouse.up();
+    await page.waitForFunction(()=>!accounts.active&&(uiFlags&2)&&canvas===document.activeElement);
     await page.keyboard.press('j');
     await page.waitForFunction(()=>!!(uiFlags&128)&&entryFrame.includes('JOURNEY MAP'));
     assert.equal(await page.evaluate(()=>entryFrame.includes('A MOMENT TO BREATHE')),false);

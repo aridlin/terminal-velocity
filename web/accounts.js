@@ -57,7 +57,29 @@ window.TVAccounts=class {
     this.buttons[this.selected]?.fn();
    }
   });
-  game.addEventListener('pointerdown',e=>{if(e.button!==0||!this.active)return;const r=e.target.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*this.width,y=(e.clientY-r.top)/r.height*this.height;for(const b of this.buttons)if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+2){e.preventDefault();b.fn();break;}});
+  const buttonAt=event=>{
+   const rect=game.getBoundingClientRect();
+   const x=(event.clientX-rect.left)/rect.width*this.width;
+   const y=(event.clientY-rect.top)/rect.height*this.height;
+   return this.buttons.findIndex(button=>x>=button.x&&x<button.x+button.w&&y>=button.y&&y<button.y+2);
+  };
+  let press=null;
+  game.addEventListener('pointerdown',event=>{
+   if(!this.active||event.button!==0||!event.isPrimary)return;
+   const index=buttonAt(event);
+   press=index<0?null:{index,mode:this.mode};
+   if(press)event.preventDefault();
+  });
+  game.addEventListener('pointercancel',()=>{press=null;});
+  game.addEventListener('click',event=>{
+   const startedOn=press;
+   press=null;
+   if(!this.active)return;
+   // Consume the account click before the game can use it to confirm or resume.
+   event.stopImmediatePropagation();
+   if(event.button===0&&startedOn?.mode===this.mode&&buttonAt(event)===startedOn.index)
+    this.buttons[startedOn.index].fn();
+  },{capture:true});
  }
  tr(pl,en){return this.host.english()?en:pl;}
  read(path){try{return Module.FS.readFile(path,{encoding:'utf8'});}catch{return '';}}
