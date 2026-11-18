@@ -38,10 +38,8 @@
  #touch .directions,#touch .actions{gap:3px}
  #touch button{min-width:34px;padding-inline:4px}
 }
-@media(pointer:coarse),(max-width:760px),(max-height:500px){#playfield:fullscreen #fullscreen-tools,#playfield.expanded #fullscreen-tools{display:flex}}
-
 #playfield.expanded{position:fixed;inset:0;z-index:10}
-#playfield.expanded #fullscreen-tools{display:flex}
+#playfield:fullscreen #fullscreen-tools,#playfield.expanded #fullscreen-tools{display:flex}
 
 #downloads{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 12px;margin-top:5px;font-size:12px}
 #downloads span{color:#9baeb7}#downloads a{color:#e4ad68;text-underline-offset:3px;padding:3px 0}

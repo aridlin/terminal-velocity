@@ -231,6 +231,19 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>window.dashEdges===2);
     await page.keyboard.up('x');
     console.log('PASS Shift+Tab exits without dashing, tap Shift dashes, and X still dashes on keydown');
+    const fullscreenTools=page.locator('#fullscreen-tools');
+    const fullscreenMap=fullscreenTools.locator('[data-tap="11"]');
+    assert.equal(await fullscreenTools.isVisible(),false);
+    await page.locator('#fullscreen').click();
+    await page.waitForFunction(()=>document.fullscreenElement===playfield);
+    await fullscreenMap.click();
+    await page.waitForFunction(()=>!!(uiFlags&128));
+    await fullscreenTools.locator('#leave-fullscreen').click();
+    await page.waitForFunction(()=>!expanded()&&(uiFlags&128));
+    assert.equal(await fullscreenTools.isVisible(),false);
+    await page.locator('footer [data-tap="11"]').click();
+    await page.waitForFunction(()=>!(uiFlags&128));
+    console.log('PASS wide desktop native fullscreen exposes the map and a mouse exit without closing the map');
     const currentRoundtrip=await page.evaluate(()=>{
       Module._web_save();const exported=Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'});
       Module._web_set_language(0);Module._web_save();const changed=Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'});
