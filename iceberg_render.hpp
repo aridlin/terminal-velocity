@@ -392,8 +392,54 @@
       tr("Zastąpi to zapisaną próbę.","This replaces your saved trial."):
       tr("Zastąpi to zapisaną wyprawę.","This replaces your saved expedition.");
   }
+  void draw_profile_picker() {
+    const auto &v=state_.adventure;
+    const auto &d=iceberg::Districts[size_t(grid_.district)];
+    const int edge=cols_<76?0:std::max(5,(cols_-70)/2);
+    const int width=cols_-2*edge;
+    auto line=[&](int y,const std::string &label,uint32_t color,bool bold=false) {
+      int x=edge+2;
+      for(const auto &glyph:glyphs(label)) {
+        if(x>=edge+width-2)break;
+        paint_text(y,x++,glyph,color,bold);
+      }
+    };
+    frame(0,edge,width,rows_,d.stone);
+    if(v.save_picker) {
+      line(2,tr("ZAPISY GRY","SAVE SLOTS"),d.accent,true);
+      for(int i=0;i<int(v.slot_status.size());++i) {
+        const int status=v.slot_status[size_t(i)];
+        const auto label=(v.picker_choice==i?"▸ ":"  ")+std::to_string(i+1)+
+          (i+1==v.save_slot?" * ":"   ")+(status==1?tr("Zapisany","Saved"):status==2?tr("Nieczytelny","Unreadable"):tr("Pusty","Empty"));
+        line(5+i*2,label,v.picker_choice==i?d.accent:d.light);
+      }
+      line(12,(v.picker_choice==3?"▸ ":"  ")+tr("4 Przegląd zmian","4 Debug tour"),v.picker_choice==3?d.accent:d.light);
+    } else {
+      const int count=int(iceberg::DebugTour.size());
+      const auto &stop=iceberg::DebugTour[size_t(v.picker_choice)];
+      line(2,tr("PRZEGLĄD ZMIAN ","DEBUG TOUR ")+std::to_string(v.picker_choice+1)+"/"+std::to_string(count),d.accent,true);
+      const int visible=std::min(rows_-11,count);
+      const int first=std::clamp(v.picker_choice-visible/2,0,count-visible);
+      for(int i=first;i<first+visible;++i) {
+        const auto &sample=iceberg::DebugTour[size_t(i)];
+        const bool chosen=i==v.picker_choice;
+        line(4+i-first,(chosen?"▸ ":"  ")+std::to_string(i+1)+" "+sample.change.get(v.language),chosen?d.accent:d.light);
+      }
+      line(rows_-7,iceberg::Districts[size_t(stop.district)].name.get(v.language),d.accent);
+      int y=rows_-6;
+      for(const auto &part:wrap(stop.change.get(v.language),width-4))if(y<rows_-3)line(y++,part,d.light);
+    }
+    if(v.save_error||v.notice_left>0) {
+      int y=rows_-4;
+      for(const auto &part:wrap(v.save_error?save_failure_hint():v.notice,width-4))if(y<rows_-1)line(y++,part,d.accent);
+    } else {
+      if(v.tour_picker)line(rows_-3,tr("Postęp nie jest zapisywany.","Progress is not saved."),d.light);
+      line(rows_-2,tr("↑↓ · ENTER wybierz · P wróć","↑↓ · ENTER select · P back"),d.accent);
+    }
+  }
   void draw_iceberg_menu() {
     auto &v=state_.adventure;
+    if(v.save_picker||v.tour_picker){draw_profile_picker();return;}
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     frame(4,2,cols_-4,rows_-7,d.stone);
     center(6,"T E R M I N A L   V E L O C I T Y",Color::Gold);
@@ -456,7 +502,7 @@
         tr("E zastąp   P anuluj","E replace   P cancel"));
     }
     if(v.settings) {
-      frame(8,5,cols_-10,12,d.accent);
+      frame(8,5,cols_-10,14,d.accent);
       center(10,tr("USTAWIENIA","SETTINGS"),Color::Gold);
       center(12,tr("1  Muzyka: ","1  Music: ")+std::to_string(int(v.music_volume*100))+"%");
       center(13,tr("2  Efekty: ","2  Effects: ")+std::to_string(int(v.effects_volume*100))+"%");
@@ -464,8 +510,9 @@
       center(15,tr("4  Strój: ","4  Outfit: ")+std::to_string(v.outfit+1));
       center(16,tr("5  Pauza po utracie fokusu ","5  Pause on focus loss ")+
         (v.pause_on_focus_loss?tr("wł.","on"):tr("wył.","off")));
-      center(17,tr("L  Język: POLSKI","L  Language: ENGLISH"));
-      center(18,tr("1/2/3 zmień głośność  ENTER wróć","1/2/3 cycle volume  ENTER return"));
+      center(17,tr("6  Zapisy i przegląd zmian","6  Saves and debug tour"));
+      center(18,tr("L  Język: POLSKI","L  Language: ENGLISH"));
+      center(20,tr("ENTER wróć","ENTER return"));
     }
   }
   std::vector<std::string> trial_record_lines(const iceberg::Record &record,int width) const {
@@ -593,10 +640,10 @@
     paint_text(0,2,d.name.get(v.language),d.accent,true);
     paint_text(1,2,v.room_name,d.light);
     if(cols_>90)paint_text(0,cols_-27,tr("TRASA ","SEED ")+std::to_string(v.seed),d.stone);
-    std::string mode=v.revisit?tr("POWRÓT NA TRASĘ","REVISIT"):v.mode==iceberg::Mode::Campaign?tr("PODRÓŻ","JOURNEY"):v.mode==iceberg::Mode::Endless?tr("BEZ KOŃCA","ENDLESS"):tr("PRÓBA","TRIAL");
+    std::string mode=v.tour_scene>=0?tr("PRZEGLĄD ZMIAN ","DEBUG TOUR ")+std::to_string(v.tour_scene+1)+"/"+std::to_string(iceberg::DebugTour.size()):v.revisit?tr("POWRÓT NA TRASĘ","REVISIT"):v.mode==iceberg::Mode::Campaign?tr("PODRÓŻ","JOURNEY"):v.mode==iceberg::Mode::Endless?tr("BEZ KOŃCA","ENDLESS"):tr("PRÓBA","TRIAL");
     paint_text(2,2,mode+(grid_.sweets.empty()?"":tr("   Żetony ","   Tokens ")+std::to_string(state_.sweets_count())+"/"+std::to_string(grid_.sweets.size()))+
       tr("   Powroty ","   Retries ")+std::to_string(state_.deaths)+
-      (v.mode==iceberg::Mode::Endless?tr("   Głębokość ","   Depth ")+std::to_string(v.depth):
+      (v.tour_scene>=0?"":v.mode==iceberg::Mode::Endless?tr("   Głębokość ","   Depth ")+std::to_string(v.depth):
        grid_.room_role==iceberg::RoomRole::Traverse?"   "+std::to_string(v.room+1)+"/"+std::to_string(iceberg::RoomsPerLeg):"")+
       (state_.multiplayer?"   ◌ "+std::to_string(state_.ghosts.size()):""),0xb3c3c8);
     for(int x=0;x<cols_;++x)paint_text(3,x,"─",d.stone);
@@ -614,7 +661,7 @@
       frame(8,5,cols_-10,9,d.stone);
       center(10,tr("CHWILA ODDECHU","A MOMENT TO BREATHE"),Color::Gold);
       center(12,tr("ENTER / P wznów   M menu","ENTER / P resume   M menu"));
-      center(14,tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."));
+      center(14,v.tour_scene>=0?tr("Postęp nie jest zapisywany.","Progress is not saved."):tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."));
     }
     if(state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active()) {
       fill(rows_-3,0,cols_,2,Color::Default);

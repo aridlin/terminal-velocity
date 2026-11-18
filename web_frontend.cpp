@@ -6,6 +6,8 @@ namespace {
 std::unique_ptr<AdventureSession> web_game;
 std::vector<uint32_t> web_cells;
 bool web_account_was_paused=false;
+constexpr auto web_save_base="/persist/progress.dat.iceberg";
+int web_slot=1;
 EM_JS(void, browser_frame, (const uint32_t *cells,int cols,int rows), {
   if(window.tvFrame)window.tvFrame(HEAPU32.subarray(cells>>>2,(cells>>>2)+cols*rows*4),cols,rows);
 });
@@ -26,27 +28,34 @@ uint32_t first_codepoint(const std::string &s) {
 }
 void send_web_ui() {
   const auto &s=web_game->state;const auto &v=s.adventure;
-  const bool district_control=s.menu&&!v.settings&&!v.confirm_new&&(v.selected==2||v.selected==3);
+  const bool district_control=s.menu&&!v.settings&&!v.confirm_new&&!v.save_picker&&!v.tour_picker&&(v.selected==2||v.selected==3);
   const bool fork_door=v.branch_at_door&&!s.menu&&!s.paused&&!s.journal&&!v.map&&!v.inspecting&&!v.dialogue.active();
   int flags=int(s.menu)|(int(s.paused)<<1)|(int(v.dialogue.active())<<2)|(int(v.inspecting)<<3)|
     (int(v.settings)<<4)|(int(v.confirm_new)<<5)|(int(s.journal)<<6)|(int(v.map)<<7)|
     (int(v.can_continue)<<8)|(int(v.language==iceberg::Language::English)<<9)|(int(s.won)<<10)|
     (int(v.map_route)<<11)|(int(v.pause_on_focus_loss)<<12)|(int(v.mode!=iceberg::Mode::Campaign)<<13)|
     (int(district_control)<<14)|(int(s.audio_muted)<<15)|(int(v.save_error)<<16)|(int(v.map&&v.map_room)<<17)|
-    (int(fork_door)<<18)|(int(s.menu&&v.confirm_new&&v.selected!=1)<<19);
+    (int(fork_door)<<18)|(int(s.menu&&v.confirm_new&&v.selected!=1)<<19)|
+    ((web_slot-1)<<20)|(int(v.tour_scene>=0)<<22)|(int(v.save_picker||v.tour_picker)<<23);
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }
 extern "C" {
+EMSCRIPTEN_KEEPALIVE void web_set_start_slot(int slot) {
+  if(!web_game&&slot>=1&&slot<=iceberg::SaveStore::SlotCount)web_slot=slot;
+}
+EMSCRIPTEN_KEEPALIVE void web_profile_action_busy(int busy) {
+  if(web_game)web_game->profile_action_busy=busy!=0;
+}
 EMSCRIPTEN_KEEPALIVE int web_saved_language() {
   iceberg::Profile saved;
-  iceberg::SaveStore store("/persist/progress.dat.iceberg");
+  iceberg::SaveStore store(iceberg::SaveStore::slot_file(web_save_base,web_slot));
   return store.load(saved)?int(saved.language):-1;
 }
 EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language,int muted) {
-  iceberg::SessionOptions options;options.seed=seed;options.mute=muted!=0;
+  iceberg::SessionOptions options;options.seed=seed;options.mute=muted!=0;options.save_slot=web_slot;
   if(language==0||language==1){options.language=iceberg::Language(language);options.language_override=true;}
-  web_game=std::make_unique<AdventureSession>(options,"/persist/progress.dat.iceberg");
+  web_game=std::make_unique<AdventureSession>(options,web_save_base);
   cell_frame_sink=[](const CellFrame &frame) {
     int rows=int(frame.size()),cols=rows?int(frame[0].size()):0;
     web_cells.clear();web_cells.reserve(size_t(rows*cols*4));
@@ -80,23 +89,25 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   c.navigate=int(p(3))-int(p(2));
   for(int i=0;i<6;++i)if(p(20+i))c.select_level=i+1;
   const auto last_save=web_game->save_revision;
+  const int previous_slot=web_slot;
   web_game->tick(c,std::isfinite(dt)?dt:0,focused!=0,std::clamp(cols,34,160),std::clamp(rows,cols>=56?20:24,60),2);
   if(web_game->legacy_requested) {
     web_game->legacy_requested=false;web_game->running=true;web_game->state.menu=true;
     web_game->notice(web_game->t("Trasy klasyczne są dostępne w wydaniu na komputer.","Classic courses are available in the desktop edition."),6);
   }
+  web_slot=web_game->save_slot;
   RenderGrid(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2).draw();send_web_ui();
-  if(web_game->save_revision!=last_save)browser_save_ready();
+  if(web_game->save_revision!=last_save||web_slot!=previous_slot)browser_save_ready();
 }
 EMSCRIPTEN_KEEPALIVE int web_save() {
-  if(!web_game)return 0;
+  if(!web_game||web_game->tour_scene>=0)return 0;
   web_game->persist();
   send_web_ui();
   return !web_game->state.adventure.save_error;
 }
 EMSCRIPTEN_KEEPALIVE int web_export_recovery() {
   // The preceding save attempt has already snapped the live session into profile.
-  return web_game&&iceberg::SaveStore("/tmp/terminal-velocity-export.iceberg").save(web_game->profile);
+  return web_game&&web_game->tour_scene<0&&iceberg::SaveStore("/tmp/terminal-velocity-export.iceberg").save(web_game->profile);
 }
 EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
   if(!web_game||(language!=0&&language!=1))return;
@@ -108,12 +119,12 @@ EMSCRIPTEN_KEEPALIVE int web_import_save() {
   iceberg::Profile imported;
   if(!iceberg::SaveStore::validate_file("/persist/import.iceberg",imported))return 0;
   // A valid input with a failed replacement is different from an invalid file.
-  if(!web_game||!web_game->saves.save(imported))return -1;
+  if(!web_game||web_game->tour_scene>=0||!web_game->saves.save(imported))return -1;
   const bool muted=web_game->audio.muted;
   web_game.reset();web_start(imported.seed,-1,muted);return 1;
 }
 EMSCRIPTEN_KEEPALIVE void web_guest_profile() {
-  if(!web_game)return;
+  if(!web_game||web_slot!=1||web_game->tour_scene>=0)return;
   iceberg::Profile fresh;fresh.language=web_game->profile.language;fresh.seed=unsigned(std::chrono::system_clock::now().time_since_epoch().count());
   const bool muted=web_game->audio.muted;
   web_game->saves.save(fresh);web_game.reset();web_start(fresh.seed,-1,muted);

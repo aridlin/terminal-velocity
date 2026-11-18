@@ -81,6 +81,10 @@ Dzielnice odblokowuje historia. Próby odblokowuje zadanie Kuby albo koniec dost
 
 Stary `progress.dat` pozostaje nienaruszony. Kopiuj oba pliki przy robieniu kopii zapasowej. Gra nie nadpisuje zapisu z nowszej wersji. Zapis na końcu otwarcia będzie mógł kontynuować podróż po dodaniu dalszych dzielnic.
 
+Wybierz **Ustawienia → 6 Zapisy i przegląd zmian**, aby przełączać się między trzema zapisami. Dotychczasowy zapis jest w pierwszym miejscu. Tylko ono synchronizuje się z kontem w przeglądarce. W wersji komputerowej możesz uruchomić grę z `--save-slot 2` lub `--save-slot 3`.
+
+**Przegląd zmian** pozwala wypróbować przykładowe pokoje i zobaczyć, co się w nich zmieniło. Wyjście prowadzi do kolejnego przykładu, a klawisz **M** wraca do listy. Postęp w przeglądzie nie jest zapisywany.
+
 ## Dźwięk i SSH
 
 Nagrania muzyczne, woda przystani, maszyny ciepłowni, kroki po różnych materiałach i sygnały postaci używają wspólnego silnika audio. W ustawieniach **1/2/3** zmienia poziom muzyki/efektów/otoczenia, **4** wybiera odblokowany strój. Źródła, licencje, modyfikacje i sumy kontrolne są w [credits](assets/audio/CREDITS.txt) i [manifeście](assets/audio/manifest.json).

@@ -2713,7 +2713,7 @@ struct Args {
   iceberg::Mode adventure_mode = iceberg::Mode::Campaign;
   iceberg::Language language = iceberg::Language::Polish;
   bool language_override = false;
-  int district = 0;
+  int district = 0, save_slot = 1;
   bool event_level = false, summit = false;
   int chapter = 1;
   bool mute = false, remote_audio = false;
@@ -2753,6 +2753,10 @@ struct Args {
       std::string value=argv[++i];
       if(value.size()!=1||value[0]<'1'||value[0]>'6'){std::cerr<<"District: 1..6\n";std::exit(2);}
       args.district=value[0]-'1';args.district_override=true;
+    } else if(arg=="--save-slot") {
+      const std::string slot=i+1<argc?argv[++i]:"";
+      if(slot.size()!=1||slot[0]<'1'||slot[0]>'3'){std::cerr<<"Save slot: 1..3\n";std::exit(2);}
+      args.save_slot=slot[0]-'0';
     } else if (arg == "--event") {
       args.adventure=false;
       args.event_level = true;
@@ -2890,7 +2894,7 @@ iceberg::SessionOptions adventure_options(const Args &args) {
   o.seed=args.seed;o.seed_override=args.seed_override;o.language=args.language;o.language_override=args.language_override;
   o.mode=args.adventure_mode;o.district=args.district;o.district_override=args.district_override;o.mute=args.mute;
   o.ghost_host=args.ghost_host;o.ghost_port=args.ghost_port;o.ghost_room=args.room;
-  o.remote_audio=args.remote_audio;
+  o.remote_audio=args.remote_audio;o.save_slot=args.save_slot;
   o.remote=args.input_mode==InputMode::Ssh||args.input_mode==InputMode::SshBasic;
   return o;
 }

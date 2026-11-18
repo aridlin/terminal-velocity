@@ -148,6 +148,11 @@ public:
   static bool validate_file(const std::filesystem::path &file,Profile &profile) {return read(file,profile);}
   bool recovered = false, protected_future = false;
   explicit SaveStore(std::filesystem::path path = default_file()) : path_(std::move(path)) {}
+  static constexpr int SlotCount=3;
+  static std::filesystem::path slot_file(std::filesystem::path base,int slot) {
+    if(!base.empty()&&slot>1)base+=(".slot"+std::to_string(slot));
+    return base;
+  }
   static std::filesystem::path default_file() {
     if (const char *v = std::getenv("TV_ICEBERG_FILE")) return v;
     // Keep legacy progress.dat untouched, including its TV_PROGRESS_FILE override.

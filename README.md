@@ -81,6 +81,10 @@ Death and continue preserve the assembled route. Retry returns to the latest lam
 
 Old `progress.dat` records remain intact. Keep both files when backing up. Future save versions are protected from overwrite. Saves at the end of the opening can continue when more districts are authored.
 
+Open **Settings → 6 Saves and debug tour** to switch between three save slots. Slot 1 uses your existing save and is the slot synced with a browser account. The other browser slots are local. On desktop, use `--save-slot 2` or `--save-slot 3` to start in another slot.
+
+**Debug tour** in the same menu lets you play selected room templates and read what changed. Go through the exit to continue to the next sample, or press **M** to return to the list. The tour does not write to any save slot.
+
 ## Sound and SSH
 
 Recorded music, harbor water, heating machinery, material footsteps and character cues share the same engine in both frontends. Settings have separate music/effects/ambience levels and outfit selection. **1/2/3** cycles the volume groups; **4** cycles unlocked outfits.

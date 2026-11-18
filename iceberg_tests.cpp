@@ -211,6 +211,63 @@ int main(int argc,char **argv) {
       session.options.seed_override=false;session.begin_campaign(true);
       check(session.profile.seed!=9999,"a fresh unseeded journey assembles a new campaign itinerary");
     }
+    {
+      auto secondary=iceberg::SaveStore::slot_file(path,2);
+      auto tertiary=iceberg::SaveStore::slot_file(path,3);
+      AdventureSession session(options,path);
+      const unsigned original_seed=session.profile.seed;
+      auto press=[&](Controls c){session.tick(c,1./120);};
+      auto open_slots=[&](){
+        press({.menu_request=true});
+        press({.confirm=true,.select_level=5});
+        press({.select_level=6});
+      };
+      open_slots();
+      check(session.state.adventure.save_picker&&session.state.adventure.slot_status==std::array{1,0,0},
+        "save picker recognizes the existing journey as Slot 1 and fresh slots as empty");
+      press({.confirm=true,.select_level=2});
+      check(session.save_slot==2&&!session.profile.started,"selecting Slot 2 starts with an independent profile");
+      session.begin_campaign(true);
+      session.profile.language=iceberg::Language::English;session.persist();
+      open_slots();
+      press({.confirm=true,.select_level=3});
+      check(session.save_slot==3&&!session.profile.started,"Slot 3 is independent of the journey in Slot 2");
+      session.persist();
+      open_slots();
+      press({.confirm=true,.select_level=4});
+      check(session.state.adventure.tour_picker,"save picker opens the debug tour");
+      const auto bytes=[](const auto &file){
+        std::ifstream in(file,std::ios::binary);return std::string(std::istreambuf_iterator<char>(in),{});
+      };
+      const auto first_save=bytes(path),second_save=bytes(secondary),third_save=bytes(tertiary);
+      const auto write_count=session.save_revision;
+      session.profile_action_busy=true;
+      press({.confirm=true});
+      check(session.tour_scene<0,"debug tour waits for an in-flight account action");
+      session.profile_action_busy=false;
+      press({.confirm=true});
+      for(size_t i=0;i<iceberg::DebugTour.size();++i) {
+        const auto &stop=iceberg::DebugTour[i];
+        check(session.tour_scene==int(i)&&session.grid.template_id==stop.room&&session.grid.district==stop.district,
+          "debug tour loads the indicated room and district");
+        session.profile.story=3;
+        session.persist();
+        session.state.won=true;
+        press({.confirm=true});
+      }
+      check(session.tour_scene<0&&session.state.adventure.tour_picker&&session.profile.story==0&&
+          session.save_revision==write_count&&bytes(path)==first_save&&bytes(secondary)==second_save&&bytes(tertiary)==third_save,
+        "finishing the tour restores the profile and leaves all three save files identical");
+      press({.pause=true});press({.confirm=true,.select_level=1});
+      check(session.save_slot==1&&session.profile.seed==original_seed&&session.profile.started,
+        "switching back to Slot 1 restores its existing journey");
+      options.save_slot=2;
+      AdventureSession reopened(options,path);
+      check(reopened.save_slot==2&&reopened.profile.started&&reopened.profile.language==iceberg::Language::English,
+        "explicit Slot 2 startup reloads its own journey and settings");
+      options.save_slot=1;
+      for(auto file:{secondary,tertiary}){std::filesystem::remove(file);file+=".bak";std::filesystem::remove(file);}
+    }
     options.no_save=true;
     AdventureSession estate(options,path);
     estate.begin_campaign(true);

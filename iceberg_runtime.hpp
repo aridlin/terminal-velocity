@@ -6,6 +6,11 @@ public:
   iceberg::Profile profile;
   iceberg::SaveStore saves;
   iceberg::SessionOptions options;
+  std::filesystem::path save_base;
+  int save_slot=1;
+  bool profile_action_busy=false;
+  std::optional<iceberg::Profile> before_tour;
+  int tour_scene=-1;
   EngineGrid grid;
   GameState state;
   FixedStepper stepper;
@@ -29,31 +34,38 @@ public:
 
   explicit AdventureSession(const iceberg::SessionOptions &o,
       const std::filesystem::path &save_file = iceberg::SaveStore::default_file())
-    : saves(save_file), options(o), grid(iceworld::build_settlement(0)), dock_chatter{o.seed^0xa75d834bu}, mode(o.mode), run_seed(o.seed) {
+    : saves(iceberg::SaveStore::slot_file(save_file,o.save_slot)), options(o), save_base(save_file),
+      save_slot(o.save_slot), grid(iceworld::build_settlement(0)), dock_chatter{o.seed^0xa75d834bu},
+      mode(o.mode), run_seed(o.seed) {
     saves.load(profile);
+    if(o.language_override)profile.language=o.language;
+    audio.init(audio_directory(), o.mute || (o.remote && !o.remote_audio));
+    reset_profile_menu();
+    if(!o.ghost_host.empty()) {
+      try {network.connect_to(o.ghost_host,o.ghost_port);}
+      catch(const std::exception &e){notice(e.what(),10);}
+    }
+  }
+  void reset_profile_menu() {
+    mode=options.mode;run_active=false;run_seconds=0;run_deaths=run_treasures=depth=0;
+    state={};
     if(profile.content_version!=iceberg::ContentVersion) {
       for(int d=0;d<iceberg::DistrictCount;++d)if(profile.trials[size_t(d)].complete) {
         if(profile.challenges.size()<128)profile.challenges.push_back({default_trial_seed(d),d,profile.content_version,profile.trials[size_t(d)]});
         profile.trials[size_t(d)]={};
       }
     }
-    profile.content_version=iceberg::ContentVersion;run_district=std::min(o.district,expedition_unlocked());
-    if (!profile.started) profile.seed = o.seed;
-    if (o.language_override) profile.language = o.language;
+    profile.content_version=iceberg::ContentVersion;run_district=std::min(options.district,expedition_unlocked());
+    if (!profile.started) profile.seed = options.seed;
     district = profile.district; stage = profile.stage; room = profile.room;
     run_seed = profile.seed;
     if (mode != iceberg::Mode::Campaign) {
-      district = run_district; stage = 2; room = 0; run_seed = o.seed;
+      district = run_district; stage = 2; room = 0; run_seed = options.seed;
     }
-    audio.init(audio_directory(), o.mute || (o.remote && !o.remote_audio));
     load_room(true);
     state.menu = true;
     state.adventure.selected=mode==iceberg::Mode::Endless?2:mode==iceberg::Mode::Trial?3:0;
     choose_saved_run_district(state.adventure.selected);
-    if(!o.ghost_host.empty()) {
-      try {network.connect_to(o.ghost_host,o.ghost_port);}
-      catch(const std::exception &e){notice(e.what(),10);}
-    }
     if(saves.recovered)notice(t("Przywrócono ostatni zdrowy zapis.","Recovered the last healthy save."),8);
     if(saves.protected_future)notice(t("Ten zapis wymaga nowszej wersji gry. Nie zostanie nadpisany.","This save needs a newer game version. It will not be overwritten."),12);
     sync_view();
@@ -103,6 +115,7 @@ public:
 #include "iceberg_route_runtime.inc"
   void sync_view() {
     auto &v=state.adventure;
+    v.save_slot=save_slot;v.tour_scene=tour_scene;
     v.language=profile.language;v.mode=mode;v.district=grid.district;v.stage=stage;v.room=room;v.depth=depth;
     v.story=profile.story;v.journey_district=district;v.can_travel=(profile.story&(uint64_t(1)<<8))||profile.quests[2]==3||profile.finished||profile.at_content_boundary;
     v.unlocked=profile.unlocked;v.finished=profile.finished;v.at_content_boundary=profile.at_content_boundary;v.can_continue=profile.started;
@@ -138,7 +151,7 @@ public:
     sync_route_view();
   }
   void network_frame(double dt,bool focused,int columns,int rows) {
-    if(!network.enabled())return;
+    if(tour_scene>=0||!network.enabled())return;
     ghosts::Snapshot snapshot;
     snapshot.room=options.ghost_room;
     snapshot.level=ghosts::adventure_level(route_version(),grid.district,int(mode),grid.template_id);
@@ -155,6 +168,7 @@ public:
     if(grid.room_role==iceberg::RoomRole::Secret)state.ghosts.clear();
   }
   void persist() {
+    if(tour_scene>=0){autosave_left=15;return;}
     if (mode == iceberg::Mode::Campaign && profile.started && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       profile.district=district;profile.stage=stage;profile.room=room;
       profile.checkpoint=state.checkpoint;profile.switches=grid.switch_flags;
@@ -198,6 +212,77 @@ public:
     }
     return course;
   }
+  static void apply_expedition_mechanics(EngineGrid &room) {
+    add_expedition_steam(room);
+    add_expedition_trams(room);
+    add_expedition_stairwells(room);
+    add_expedition_drawers(room);
+    add_expedition_post_launchers(room);
+    add_expedition_copy_belts(room);
+    add_expedition_ice(room);
+    add_expedition_root_pod(room);
+    add_expedition_fragile_pots(room);
+    strengthen_expedition_wind(room);
+  }
+  void refresh_slots() {
+    auto &v=state.adventure;
+    for(int i=1;i<=iceberg::SaveStore::SlotCount;++i) {
+      const auto file=iceberg::SaveStore::slot_file(save_base,i);
+      iceberg::Profile candidate;
+      iceberg::SaveStore slot(file);
+      std::error_code error;
+      if(slot.load(candidate))v.slot_status[size_t(i-1)]=candidate.started||candidate.expeditions[0].active||candidate.expeditions[1].active?1:0;
+      else v.slot_status[size_t(i-1)]=std::filesystem::exists(file,error)||std::filesystem::exists(file.string()+".bak",error)?2:0;
+    }
+  }
+  void switch_slot(int slot) {
+    if(slot==save_slot){state.adventure.save_picker=false;return;}
+    if(profile_action_busy) {
+      notice(t("Zakończ obsługę konta, by zmienić zapis.","Finish the account action before switching slots."),7);
+      return;
+    }
+    if(!saves.protected_future&&state.adventure.slot_status[size_t(save_slot-1)]!=2) {
+      persist();
+      if(state.adventure.save_error)return;
+    }
+    const auto previous_language=profile.language;
+    save_slot=slot;
+    saves=iceberg::SaveStore(iceberg::SaveStore::slot_file(save_base,slot));
+    profile={};
+    if(!saves.load(profile))profile.language=previous_language;
+    reset_profile_menu();
+  }
+  void load_tour_scene(int index) {
+    tour_scene=index;
+    const auto &stop=iceberg::DebugTour[size_t(index)];
+    mode=iceberg::Mode::Endless;district=stop.district;stage=2;room=depth=0;run_seed=73;run_active=false;
+    grid=verified_room(stop.room,run_seed,district);
+    apply_expedition_mechanics(grid);grid.protect_exit();
+    state=new_state(grid);state.ssh=options.remote;stepper={};
+    update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10);
+    notice(stop.change.get(profile.language),8);
+    sync_view();
+  }
+  void start_tour(int index) {
+    if(profile_action_busy) {
+      notice(t("Zakończ obsługę konta przed przeglądem.","Finish the account action before starting the tour."),7);
+      return;
+    }
+    before_tour=profile;
+
+    const auto language=profile.language;
+    const auto music=profile.music_volume,effects=profile.effects_volume,ambience=profile.ambience_volume;
+    const bool focus_pause=profile.pause_on_focus_loss;
+    profile={};profile.language=language;profile.music_volume=music;
+    profile.effects_volume=effects;profile.ambience_volume=ambience;profile.pause_on_focus_loss=focus_pause;
+    load_tour_scene(index);
+  }
+  void end_tour() {
+    const int last_scene=tour_scene;
+    profile=std::move(*before_tour);before_tour.reset();tour_scene=-1;
+    reset_profile_menu();
+    state.adventure.tour_picker=true;state.adventure.picker_choice=last_scene;
+  }
   void load_room(bool resume=false) {
     if(mode==iceberg::Mode::Campaign && profile.hidden_room>=0) {
       grid=iceworld::build_hidden(profile.hidden_room);
@@ -231,16 +316,7 @@ public:
         grid=verified_room(e.itinerary[size_t(room % iceberg::RoomsPerLeg)],
           iceberg::mix(run_seed+unsigned(depth)),district,mode==iceberg::Mode::Trial);
         if(mode==iceberg::Mode::Endless&&e.layout_version>=4) {
-          add_expedition_steam(grid);
-          add_expedition_trams(grid);
-          add_expedition_stairwells(grid);
-          add_expedition_drawers(grid);
-          add_expedition_post_launchers(grid);
-          add_expedition_copy_belts(grid);
-          add_expedition_ice(grid);
-          add_expedition_root_pod(grid);
-          add_expedition_fragile_pots(grid);
-          strengthen_expedition_wind(grid);
+          apply_expedition_mechanics(grid);
         }
       }
     }
@@ -500,6 +576,12 @@ public:
       t("PRÓBA MISTRZOWSKA — osiem sal, jeden rekord","MASTERY TRIAL — eight rooms, one record"));
   }
   void advance_room() {
+    if(tour_scene>=0) {
+      const int next=tour_scene+1;
+      if(next<int(iceberg::DebugTour.size()))load_tour_scene(next);
+      else end_tour();
+      return;
+    }
     if(on_campaign_route()&&route_forks_enabled()&&room==1)
       profile.route_decisions[size_t(district)]|=1u<<route_leg();
     audio.play(AudioCue::Door);
@@ -814,7 +896,24 @@ public:
   }
   void menu(Controls c) {
     auto &v=state.adventure;
+    if(v.save_picker||v.tour_picker) {
+      const int count=v.save_picker?iceberg::SaveStore::SlotCount+1:int(iceberg::DebugTour.size());
+      if(c.pause||c.menu_request) {
+        if(v.tour_picker){v.tour_picker=false;v.save_picker=true;v.picker_choice=iceberg::SaveStore::SlotCount;refresh_slots();}
+        else {v.save_picker=false;v.settings=true;}
+        return;
+      }
+      if(c.navigate)v.picker_choice=(v.picker_choice+c.navigate+count)%count;
+      if(c.select_level>=1&&c.select_level<=count)v.picker_choice=c.select_level-1;
+      if(c.confirm) {
+        if(v.tour_picker)start_tour(v.picker_choice);
+        else if(v.picker_choice<iceberg::SaveStore::SlotCount)switch_slot(v.picker_choice+1);
+        else {v.save_picker=false;v.tour_picker=true;v.picker_choice=0;}
+      }
+      return;
+    }
     if(v.settings) {
+      if(c.select_level==6){v.settings=false;v.save_picker=true;v.picker_choice=save_slot-1;refresh_slots();return;}
       float *volume=c.select_level==1?&profile.music_volume:
         c.select_level==2?&profile.effects_volume:c.select_level==3?&profile.ambience_volume:nullptr;
       if(volume){*volume=std::round((*volume+.1f)*10)/10;if(*volume>1)*volume=0;persist();}
@@ -887,6 +986,7 @@ public:
       if(v.dialogue.active())v.pickup_left=std::max(0.,v.pickup_left-dt);
     }
     if(state.menu) {menu(c);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
+    if(c.menu_request&&tour_scene>=0){end_tour();return;}
     if(c.menu_request){persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};sync_view();return;}
     if(v.inspecting) {
       auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,columns,rows);

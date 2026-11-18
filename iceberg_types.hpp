@@ -157,8 +157,28 @@ struct RouteView {
   bool branching=false, available=false;
   Text place;
 };
+struct TourStop {
+  int district,room;
+  Text change;
+};
+inline constexpr std::array DebugTour{
+  TourStop{0,504,{"Promy, zanurzone kadłuby i ślady na wodzie","Ferries, submerged hulls and wakes"}},
+  TourStop{1,18,{"Rytm pary i boczna półka","Steam timing and the side shelf"}},
+  TourStop{2,24,{"Tramwaje zatrzymują się na obu końcach","Trams stop at both landings"}},
+  TourStop{2,25,{"Ściany między bocznymi balkonami","Wall-kick route between side balconies"}},
+  TourStop{3,38,{"Dwie wyrzutnie poczty pneumatycznej","Two pneumatic post launchers"}},
+  TourStop{3,39,{"Wysuwane szuflady kartoteki","Extending catalogue drawers"}},
+  TourStop{3,44,{"Taśmy odpisów zmieniają kierunek","Copy belts alternate direction"}},
+  TourStop{4,49,{"Strąk odbija do bocznej półki","A seedpod launches to the side shelf"}},
+  TourStop{4,51,{"Wiszące donice pękają pod stopami","Hanging planters crack underfoot"}},
+  TourStop{4,57,{"Ruchome wiadra koła nawadniającego","The irrigation wheel's bucket lifts"}},
+  TourStop{5,60,{"Podmuchy i rękawy wiatrowe","Gusts and windsocks"}},
+};
 struct View {
   RouteView route;
+  int save_slot=1,picker_choice=0,tour_scene=-1;
+  bool save_picker=false,tour_picker=false;
+  std::array<int,3> slot_status{};
   Language language = Language::Polish;
   Mode mode = Mode::Campaign;
   int district = 0, stage = 0, room = 0, depth = 0, selected = 0;
@@ -207,7 +227,7 @@ struct SessionOptions {
   bool remote = false, no_save = false, seed_override = false;
   Mode mode = Mode::Campaign;
   std::string ghost_host,ghost_port="27888",ghost_room="default";
-  int district = 0;
+  int district = 0, save_slot = 1;
 };
 inline std::string tr(Language l, const char *pl, const char *en) {
   return l == Language::English ? en : pl;

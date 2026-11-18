@@ -6,7 +6,7 @@
     const auto &v=state_.adventure;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     fill(0,0,cols_,4,Color::Default);
-    paint_text(0,1,d.name.get(v.language),d.accent,true);
+    paint_text(0,1,v.tour_scene>=0?tr("PRZEGLĄD ZMIAN ","DEBUG TOUR ")+std::to_string(v.tour_scene+1)+"/"+std::to_string(iceberg::DebugTour.size()):d.name.get(v.language),d.accent,true);
     int y=1;compact_paragraph(y,v.room_name,3,d.light);
     for(int x=0;x<cols_;++x)paint_text(3,x,"─",d.stone);
     fill(rows_-3,0,cols_,3,Color::Default);
@@ -27,6 +27,7 @@
     }
     auto panel=[&](const std::string &title){frame(0,0,cols_,rows_,d.stone);paint_text(1,2,title,d.accent,true);};
     if(state_.menu) {
+      if(v.save_picker||v.tour_picker){draw_profile_picker();return;}
       panel("TERMINAL VELOCITY");
       if(v.confirm_new) {
         y=5;compact_paragraph(y,restart_title(),rows_-3,d.accent);++y;
@@ -42,7 +43,8 @@
         paint_text(13,2,tr("4 Strój: ","4 Outfit: ")+std::to_string(v.outfit+1),d.light);
         paint_text(15,2,tr("5 Pauza po utracie fokusu ","5 Pause on focus loss ")+
           (v.pause_on_focus_loss?tr("wł.","on"):tr("wył.","off")),d.light);
-        paint_text(16,2,tr("L Język: POLSKI","L Language: ENGLISH"),d.light);
+        paint_text(16,2,tr("6 Zapisy i przegląd zmian","6 Saves and debug tour"),d.light);
+        paint_text(17,2,tr("L Język: POLSKI","L Language: ENGLISH"),d.light);
         paint_text(rows_-2,2,tr("ENTER wróć","ENTER return"),d.accent);return;
       }
       paint_text(3,2,tr("POD POWIERZCHNIĄ","BENEATH THE SURFACE"),d.light);

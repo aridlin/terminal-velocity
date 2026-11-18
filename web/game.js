@@ -15,7 +15,15 @@ try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en')
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootFailed=false,explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
 const soundMutedFlag=1<<15,mutePreferenceKey='terminal-velocity.muted';
-const localSaveFailedFlag=1<<16;
+const localSaveFailedFlag=1<<16,tourFlag=1<<22,profilePickerFlag=1<<23;
+const selectedSlotKey='terminal-velocity.save-slot';
+let selectedSlot=1,accountStarted=false,accountBooting=false;
+try {
+ const value=localStorage.getItem(selectedSlotKey);
+ if(value==='1'||value==='2'||value==='3')selectedSlot=Number(value);
+}catch{}
+const inTour=()=>!!(uiFlags&tourFlag);
+const accountSlot=()=>started&&selectedSlot===1&&!inTour();
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
 let browserSaveStatus=['Gotowe','Ready'],saveActionError=null;
 function renderSaveStatus(){
@@ -176,7 +184,9 @@ window.tvUI=u=>{
  const nextEnglish=!!(u.flags&512);
  // The game sends UI state every frame. Only a transition changes the controls.
  if(u.flags===uiFlags&&english===nextEnglish)return;
- const modalFlags=1|2|4|8|64|128|2048|confirmSaveFlag|roomMapFlag;
+ const previousSlot=selectedSlot;
+ if(started)selectedSlot=1+((u.flags>>>20)&3);
+ const modalFlags=1|2|4|8|64|128|2048|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&modalFlags)!==(uiFlags&modalFlags))clearInput();
  lastBlocked=!!(u.flags&(modalFlags|1024));
@@ -185,6 +195,14 @@ window.tvUI=u=>{
  if((before^uiFlags)&soundMutedFlag)try{localStorage.setItem(mutePreferenceKey,uiFlags&soundMutedFlag?'1':'0');}catch{}
  if(english!==nextEnglish){english=nextEnglish;try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}}
  settingsKeys.hidden=!(u.flags&16);
+ if(previousSlot!==selectedSlot){
+  try{localStorage.setItem(selectedSlotKey,String(selectedSlot));}catch{}
+  setSaveActionError(null);
+ }
+ if(previousSlot!==selectedSlot||((before^uiFlags)&tourFlag)){
+  refreshSaveControls();
+  maybeStartAccount();
+ }
  translateUI();
 };
 const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25};
@@ -327,7 +345,7 @@ function flushBrowserStorage(){
 }
 window.tvSaveReady=flushBrowserStorage;
 function syncSave(){
- if(!started)return;
+ if(!started||inTour())return;
  Module._web_save();
  flushBrowserStorage();
 }
@@ -412,11 +430,26 @@ const exportSave=document.querySelector('#export-save');
 const importSave=document.querySelector('#import-save');
 const exportPreviousSave=document.querySelector('#export-previous-save');
 const saveFile=document.querySelector('#save-file');
-const previousImportPath='/persist/before-manual-import.iceberg';
+const slotPath=base=>selectedSlot===1?base:base+'.slot'+selectedSlot;
+const currentSavePath=()=>slotPath('/persist/progress.dat.iceberg');
+const previousImportPath=()=>slotPath('/persist/before-manual-import.iceberg');
 let importPending=false;
 
+function refreshSaveControls(){
+ for(const button of document.querySelectorAll('#account,#account-fullscreen'))
+  button.hidden=!accounts||!accountSlot();
+ exportSave.disabled=!started||inTour();
+ importSave.disabled=!started||inTour()||importPending;
+ exportPreviousSave.hidden=!started||inTour()||!Module.FS.analyzePath(previousImportPath()).exists;
+}
+function maybeStartAccount(){
+ if(!accounts||!accountSlot()||!browserStorageWritable||accountStarted)return;
+ accountStarted=accountBooting=true;
+ accounts.start().finally(()=>{accountBooting=false;});
+}
+
 function readCurrentSave(){
- if(Module._web_save())return Module.FS.readFile('/persist/progress.dat.iceberg');
+ if(Module._web_save())return Module.FS.readFile(currentSavePath());
  if(!Module._web_export_recovery())throw Error('save_write_failed');
  const recovery='/tmp/terminal-velocity-export.iceberg';
  try{return Module.FS.readFile(recovery);}
@@ -434,10 +467,10 @@ function downloadSave(name,read){
  }
 }
 exportSave.onclick=()=>downloadSave('terminal-velocity.iceberg',readCurrentSave);
-exportPreviousSave.onclick=()=>downloadSave('terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath));
+exportPreviousSave.onclick=()=>downloadSave('terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath()));
 function finishImport(){
  importPending=false;
- importSave.disabled=false;
+ refreshSaveControls();
  clearInput();
  last=performance.now();
  if(!accounts?.active)canvas.focus({preventScroll:true});
@@ -453,7 +486,7 @@ saveFile.onchange=async()=>{
  saveFile.value='';
  // Only an actual selection starts an import. A picker dismissal may never
  // reach the page, so opening the picker cannot suspend the game loop.
- if(!file||importPending)return;
+ if(!file||importPending||inTour())return;
  importPending=true;
  importSave.disabled=true;
  setSaveActionError(null);
@@ -464,11 +497,11 @@ saveFile.onchange=async()=>{
    return;
   }
   const bytes=new Uint8Array(await file.arrayBuffer());
-  if(accounts?.active||accounts?.busy||accounts?.mode==='choose'){
+  if(accountSlot()&&(accountBooting||accounts?.active||accounts?.busy||accounts?.mode==='choose')){
    setSaveActionError(['Zakończ obsługę konta przed wczytaniem zapisu','Finish the account action before importing a save']);
    return;
   }
-  const question=accounts?.user
+  const question=accountSlot()&&accounts?.user
    ?tr('Zastąpić obecny zapis? Nowy zapis będzie synchronizowany z kontem.','Replace your current save? The imported save will sync to your account.')
    :tr('Zastąpić obecny zapis w tej przeglądarce?','Replace the current save in this browser?');
   if(!window.confirm(question))return;
@@ -477,7 +510,7 @@ saveFile.onchange=async()=>{
    setSaveActionError(['Błąd zapisu — pobierz kopię','Save failed — download a copy']);
    return;
   }
-  const previous=fs.readFile('/persist/progress.dat.iceberg');
+  const previous=fs.readFile(currentSavePath());
   const incoming='/persist/import.iceberg';
   fs.writeFile(incoming,bytes);
   try {
@@ -489,7 +522,7 @@ saveFile.onchange=async()=>{
     return;
    }
   } finally {fs.unlink(incoming);}
-  fs.writeFile(previousImportPath,previous);
+  fs.writeFile(previousImportPath(),previous);
   exportPreviousSave.hidden=false;
   Module._web_enter_campaign();
   flushBrowserStorage();
@@ -507,6 +540,7 @@ function frame(now){
  frameWasStalled=stalled;
  if(started&&accounts?.active)accounts.draw();
  else if(started&&!importPending){
+  Module._web_profile_action_busy(accountBooting||accounts?.busy?1:0);
   Module._web_tick(dt,held,pressed,cols,rows,focused?1:0);
   clearPresses();
  }
@@ -538,11 +572,11 @@ start.onclick=()=>{
   Module._web_enter_campaign();
   started=true;
   syncSave();
-  if(browserStorageWritable)accounts?.start();
+  maybeStartAccount();
   resize();
   start.hidden=true;
   setGameButtons(true);
-  exportPreviousSave.hidden=!Module.FS.analyzePath(previousImportPath).exists;
+  refreshSaveControls();
   last=performance.now();canvas.focus();requestAnimationFrame(frame);
  } catch(error) {
   failStartup(error);
@@ -560,6 +594,7 @@ addEventListener('keydown',e=>{
 async function finishBoot(storageError,canWrite=true){
  if(bootFailed)return;
  try {
+  Module._web_set_start_slot(selectedSlot);
   // The save's language takes precedence over approximate location, unless
   // the player already made an explicit choice while the game was loading.
   if(!explicitBootLanguage){
@@ -600,15 +635,15 @@ var Module={
  onAbort:failStartup
 };
 const accounts=typeof window.TVAccounts==='function'?new window.TVAccounts({
- english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame,
+ english:()=>english,ready:()=>accountSlot()&&!accountBooting&&!importPending,clear:clearInput,frame:window.tvFrame,
  needsRedraw:()=>previous.length===0,flush:flushBrowserStorage,
  currentSave:()=>new TextDecoder().decode(readCurrentSave())
 }):null;
 for(const button of document.querySelectorAll('#account,#account-fullscreen')){
- button.hidden=!accounts;
- button.onclick=()=>accounts?.open();
+ button.hidden=true;
+ button.onclick=()=>{if(!accountBooting)accounts?.open();};
 }
 setInterval(syncSave,5000);
-if(accounts)setInterval(()=>accounts.sync(),15000);
+if(accounts)setInterval(()=>{if(accountSlot()&&!accountBooting&&!importPending)accounts.sync();},15000);
 
 translateUI();resize();
