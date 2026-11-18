@@ -401,6 +401,14 @@ int main(int argc,char **argv) {
     for(int tick=0;tick<180&&estate.state.player.x<79.5;++tick)estate.tick(cross,1./120);
     check(estate.state.player.x>=79.5&&estate.state.player.support==1&&estate.state.deaths==0,
       "the full upper clothesline clears the balcony with the courier aboard");
+    auto waiting=new_state(estate.grid);
+    waiting.elapsed=laundry.period*.75;
+    waiting.player.x=laundry.base.right()-.65;
+    waiting.player.y=laundry.at(waiting.elapsed).top()-kPlayerHeight;
+    waiting.player.grounded=true;waiting.player.support=1;
+    for(int tick=0;tick<540;++tick)world_step(waiting,estate.grid,{},1./120);
+    check(waiting.player.support==1&&waiting.deaths==0,
+      "the upper clothesline carries an idle rider clear of the awning throughout its sway");
     // Stop before dropping onto the street landing under the line.
     estate.state.player.vx=0;
     Controls drop;drop.fast_fall=true;
