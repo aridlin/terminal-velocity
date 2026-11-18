@@ -19,7 +19,9 @@ int main(){try{
   witness.stage=3;witness.load_room();witness.persist();
   AdventureSession resumed(options,witness_file);resumed.begin_campaign(false);
   read_to_reply(resumed);
-  Controls next;next.navigate=option;resumed.tick(next,1./60);
+  Controls next;next.navigate=-option;next.jump_pressed=option!=0;resumed.tick(next,1./60);
+  require_end(resumed.state.adventure.dialogue.choosing()&&resumed.state.adventure.dialogue.reply_option==option,
+              "the up input moves the reply selection without confirming it");
   Controls accept;accept.confirm=true;resumed.tick(accept,1./60);
   const auto &lines=resumed.state.adventure.dialogue.lines;
   const auto &reply=iceberg::civic_reply(0,option);

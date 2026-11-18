@@ -688,8 +688,7 @@
       for(const auto &line:wrap(iceberg::civic_reply(dialogue.reply_scene,i).choice.get(state_.adventure.language),cols_-8))
         paint_text(row++,5,line,selected?0xe4ad68:0xeee7d6,selected);
     }
-    paint_text(top+7,3,state_.ssh_basic?tr("I/O wybór · ENTER","I/O select · ENTER"):
-      tr("↑↓ wybór · ENTER","↑↓ select · ENTER"),0x9dd4dd);
+    paint_text(top+7,3,tr("↑↓ wybór · ENTER","↑↓ select · ENTER"),0x9dd4dd);
   }
   void draw_iceberg_dialogue() {
     const auto &dialogue=state_.adventure.dialogue;if(!dialogue.active())return;

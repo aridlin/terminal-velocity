@@ -1129,10 +1129,11 @@ public:
         else state.paused=!state.paused;
       }
       if(v.dialogue.active()&&(!state.paused||reading_journal)) {
-        if(v.dialogue.choosing()&&c.navigate)
-          v.dialogue.reply_option=(v.dialogue.reply_option+1)%2;
-        if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
-        else if(!v.dialogue.choosing()&&(focused||!profile.pause_on_focus_loss))tick_dialogue(dt);
+        if(v.dialogue.choosing()) {
+          if(c.navigate)v.dialogue.reply_option=(v.dialogue.reply_option+1)%2;
+          if(c.confirm||c.interact)dialogue_next();
+        } else if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
+        else if(focused||!profile.pause_on_focus_loss)tick_dialogue(dt);
       }
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
