@@ -493,6 +493,7 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(()=>expanded());
    assert.equal(await page.evaluate(()=>!!document.fullscreenElement),!fallback);
    const tools=page.locator('#fullscreen-tools');
+   await tools.locator('[data-tap="13"]').waitFor({state:'visible'});
    if(fallback){
     await page.waitForFunction(()=>document.activeElement===canvas);
     await page.keyboard.press('Shift+Tab');
@@ -586,6 +587,7 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(()=>!expanded());
    await page.locator("footer #settings-keys").waitFor({state:"attached"});
    await page.locator('#toolbar [data-language-toggle]').waitFor({state:'visible'});
+   await page.locator('#toolbar [data-tap="13"]').waitFor({state:'visible'});
   }
   console.log('PASS mobile native and fallback fullscreen Map, Quests and settings controls');
   console.log('PASS mobile, landscape, resized and large canvas preserve proportions; language remains reachable');

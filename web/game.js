@@ -324,6 +324,8 @@ function drawBoot(){
 }
 const playfield=document.querySelector('#playfield');
 const settingsKeys=document.querySelector('#settings-keys');
+const retryButton=document.querySelector('#toolbar [data-tap="13"]');
+const retryAnchor=retryButton.nextElementSibling;
 const pageControls=document.querySelectorAll('body > header, body > footer');
 const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('expanded');
 function fullscreenLayout(){
@@ -331,9 +333,11 @@ function fullscreenLayout(){
  const fallback=playfield.classList.contains('expanded');
  for(const controls of pageControls)controls.inert=fallback;
  if(active){
+  document.querySelector('#account-fullscreen').before(retryButton);
   document.querySelector('#leave-fullscreen').before(languageToggle);
   document.querySelector('#fullscreen-tools').append(settingsKeys);
  }else{
+  retryAnchor.before(retryButton);
   document.querySelector('#toolbar').append(languageToggle);
   document.querySelector('#hint').before(settingsKeys);
  }
