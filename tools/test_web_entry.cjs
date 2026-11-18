@@ -34,12 +34,32 @@ const server=http.createServer((req,res)=>{
    await offline.goto(url,{waitUntil:'domcontentloaded'});
    const status=offline.locator('#save-status');
    await status.getByText('Startup failed — reload the page',{exact:true}).waitFor();
-   assert.equal(await offline.locator('#start').isDisabled(),true);
+   assert.equal(await offline.getByRole('button',{name:'Reload',exact:true}).isEnabled(),true);
    await offline.locator('[data-language="pl"]').click();
    assert.equal(await status.innerText(),'Błąd uruchamiania — odśwież stronę');
    await offline.close();
   }
   console.log('PASS missing startup assets report a localized reload message');
+  const stalledGame=await browser.newPage({locale:'en-US'});
+  await stalledGame.addInitScript(()=>{
+   const timer=window.setTimeout.bind(window);
+   window.setTimeout=(fn,delay,...args)=>timer(fn,delay===30000?450:delay,...args);
+  });
+  let heldGameData;
+  await stalledGame.route('**/terminal-velocity.data',route=>{heldGameData=route;});
+  await stalledGame.goto(url,{waitUntil:'domcontentloaded'});
+  await stalledGame.getByRole('button',{name:'Reload',exact:true}).waitFor();
+  assert.ok(heldGameData,'the engine requested the stalled data');
+  await stalledGame.evaluate(()=>{
+   const initialize=Module.onRuntimeInitialized;
+   Module.onRuntimeInitialized=()=>{initialize();window.lateEngineInitialized=true;};
+  });
+  await heldGameData.continue();
+  await stalledGame.waitForFunction(()=>window.lateEngineInitialized===true);
+  assert.equal(await stalledGame.evaluate(()=>ready||Module.FS.analyzePath('/persist').exists),false,
+   'an expired engine cannot initialize the save session');
+  await stalledGame.close();
+  console.log('PASS stalled startup offers Reload and rejects late initialization');
   const guest=await browser.newPage({locale:'en-US'});
   await guest.route('**/accounts.js',route=>route.abort('failed'));
   await guest.goto(url,{waitUntil:'domcontentloaded'});

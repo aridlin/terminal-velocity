@@ -13,6 +13,7 @@ let hasStoredLanguage=false;
 let preferredLanguage=(navigator.languages?.[0]||navigator.language||'en').toLowerCase().split('-')[0]==='pl'?'pl':'en';
 try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en'){preferredLanguage=saved;hasStoredLanguage=true;}const pending=localStorage.getItem(pendingLanguageKey);if(pending==='pl'||pending==='en')preferredLanguage=pendingBootLanguage=pending;}catch{}
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootFailed=false,explicitBootLanguage=pendingBootLanguage!==null;
+let engineLoadTimer=null;
 const tr=(pl,en)=>english?en:pl;
 const soundMutedFlag=1<<15,mutePreferenceKey='terminal-velocity.muted';
 const localSaveFailedFlag=1<<16,tourFlag=1<<22,profilePickerFlag=1<<23,smoothCameraFlag=1<<24;
@@ -251,7 +252,7 @@ function translateUI(){
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
  document.querySelector('#smooth-camera').setAttribute('aria-pressed',String(!!(uiFlags&smoothCameraFlag)));
  soundButton.setAttribute('aria-pressed',String(started&&!(uiFlags&soundMutedFlag)));
- if(!started)start.textContent=ready||bootFailed?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');
+ if(!started)start.textContent=bootFailed?tr('Odśwież','Reload'):ready?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');
  renderSaveStatus();
 }
 function selectLanguage(language){
@@ -744,12 +745,21 @@ function frame(now){
  last=now;
  requestAnimationFrame(frame);
 }
+function stopWatchingEngine(){
+ clearTimeout(engineLoadTimer);
+ engineLoadTimer=null;
+}
+function watchEngineLoad(){
+ stopWatchingEngine();
+ engineLoadTimer=setTimeout(()=>failStartup(new Error('Game asset loading stalled')),30000);
+}
 function failStartup(error){
  if(bootFailed)return;
+ stopWatchingEngine();
  if(error)console.error(error);
  bootFailed=true;started=false;ready=false;
  clearInput();
- start.hidden=false;start.disabled=true;
+ start.hidden=false;start.disabled=false;
  setGameButtons(false);exportPreviousSave.hidden=true;
  refreshUnreadableSaveControls();
  translateUI();drawBoot();
@@ -761,6 +771,7 @@ addEventListener('error',event=>{
 // The engine's data preloader can reject before it calls Module.onAbort.
 addEventListener('unhandledrejection',event=>{if(!ready)failStartup(event.reason);});
 start.onclick=()=>{
+ if(bootFailed){location.reload();return;}
  if(!ready||started)return;
  try {
   clearInput();
@@ -866,6 +877,8 @@ async function restoreBrowserStorage(){
 }
 var Module={
  onRuntimeInitialized(){
+  stopWatchingEngine();
+  if(bootFailed)return;
   try {
    const idbfs=Module.IDBFS,reconcile=idbfs.reconcile;
    // Reconciliation runs from a cursor event, outside the initial syncfs call.
@@ -877,7 +890,10 @@ var Module={
    restoreBrowserStorage().catch(failStartup);
   }catch(error){failStartup(error);}
  },
- setStatus(){if(!started)drawBoot();},
+ setStatus(){
+  if(engineLoadTimer!==null)watchEngineLoad();
+  if(!started)drawBoot();
+ },
  onAbort:failStartup
 };
 const accounts=typeof window.TVAccounts==='function'?new window.TVAccounts({
@@ -894,4 +910,4 @@ for(const button of document.querySelectorAll('#account,#account-fullscreen')){
 setInterval(syncSave,5000);
 if(accounts)setInterval(()=>{if(accountSlot()&&!accountBooting&&!importPending)accounts.sync();},15000);
 
-translateUI();resize();
+translateUI();resize();watchEngineLoad();
