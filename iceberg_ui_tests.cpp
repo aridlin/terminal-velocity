@@ -62,6 +62,26 @@ int main(){try {
       count+=cell.glyph==glyph&&cell.rgb==rgb;
     return count;
   };
+  const auto at_spawn=features.state.player;
+  const auto &goal=features.grid.goal;
+  for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+    features.state.player=at_spawn;
+    RenderGrid(features.grid,features.state,rows,cols,2).draw();
+    auto count_marker=[&](const char *glyph,uint32_t color) {
+      int count=0;
+      for(const auto &row:frame)for(const auto &cell:row)
+        count+=cell.glyph==glyph&&cell.rgb==color;
+      return count;
+    };
+    ui_check(count_marker("@",0xffd68a)==1&&count_marker("◆",0x9dd4dd)==1,
+      "courier and checkpoint remain visible when they share a projected map cell");
+    features.state.player.x=goal.x+(goal.w-kPlayerWidth)*.5;
+    features.state.player.y=goal.y+(goal.h-kPlayerHeight)*.5;
+    RenderGrid(features.grid,features.state,rows,cols,2).draw();
+    ui_check(count_marker("@",0xffd68a)==1&&count_marker("▣",0xd7e8cd)==1,
+      "courier and exit remain visible when they share a projected map cell");
+  }
+  features.state.player=at_spawn;
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
     features.profile.language=language;features.sync_view();
     const bool en=language==iceberg::Language::English;

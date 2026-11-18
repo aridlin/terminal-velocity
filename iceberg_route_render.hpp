@@ -74,50 +74,52 @@
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
     }
-    auto mark=[&](double x,double y,const char *symbol,uint32_t color,int spread=0){
-      int cx=column(x),cy=row(y);
-      auto &line=map[size_t(cy)];
-      // Nearby landmarks can project to the same cell on a narrow display.
-      if(spread&&line[size_t(cx)]=='@') {
-        const int preferred=cx+spread,other=cx-spread;
-        if(preferred>=0&&preferred<width&&line[size_t(preferred)]!='@')cx=preferred;
-        else if(other>=0&&other<width&&line[size_t(other)]!='@')cx=other;
-        else return;
-      }
-      line[size_t(cx)]='@';
-      paint_text(first+cy,left+cx,symbol,color,true);
+    struct Marker {int x,y,direction;const char *symbol;uint32_t color;};
+    std::vector<Marker> overlaps;
+    auto place=[&](const Marker &marker,int dx,int dy){
+      const int x=marker.x+dx,y=marker.y+dy;
+      if(x<0||x>=width||y<0||y>=map_rows||map[size_t(y)][size_t(x)]=='@')return false;
+      map[size_t(y)][size_t(x)]='@';
+      paint_text(first+y,left+x,marker.symbol,marker.color,true);
+      return true;
     };
-    for(size_t i=0;i<grid_.checkpoint_points.size();++i) {
-      const auto [x,y]=grid_.checkpoint_points[i];
-      mark(x+kPlayerWidth*.5,y,i==size_t(state_.checkpoint)?"◆":"◇",0x9dd4dd);
-    }
-    auto courier=[&](){
-      mark(state_.player.x+kPlayerWidth*.5,state_.player.y+kPlayerHeight*.5,"@",0xffd68a);
+    auto mark=[&](double x,double y,const char *symbol,uint32_t color,int direction=1){
+      const Marker marker{column(x),row(y),direction,symbol,color};
+      if(!place(marker,0,0))overlaps.push_back(marker);
     };
-    if(fork)courier();
+    // Give the courier and doorways first choice of their exact cells.
+    mark(state_.player.x+kPlayerWidth*.5,state_.player.y+kPlayerHeight*.5,"@",0xffd68a);
     if(show_goal) {
       const bool open=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
-      mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",open?0xd7e8cd:0x7c8492,fork?1:0);
+      mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",open?0xd7e8cd:0x7c8492);
     }
     if(fork) {
       const auto &door=branch->area;
       mark(door.x+door.w*.5,door.y+door.h*.5,"▧",0xe8a758,-1);
+    }
+    const size_t active=size_t(state_.checkpoint);
+    if(active<grid_.checkpoint_points.size()) {
+      const auto [x,y]=grid_.checkpoint_points[active];
+      mark(x+kPlayerWidth*.5,y,"◆",0x9dd4dd,-1);
     }
     for(const auto &node:grid_.interactions) {
       const bool board=settlement&&node.kind==InteractionKind::Board;
       if(board||node.kind==InteractionKind::Return)
         mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,board?"▤":"▣",0xd7e8cd);
     }
-    if(!fork)courier();
+    for(size_t i=0;i<grid_.checkpoint_points.size();++i)if(i!=active) {
+      const auto [x,y]=grid_.checkpoint_points[i];
+      mark(x+kPlayerWidth*.5,y,"◇",0x9dd4dd);
+    }
     bool remaining_token=false;
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];
-      mark(x,y,"●",0xedc278,1);
+      mark(x,y,"●",0xedc278);
       remaining_token=true;
     }
     std::string boost_symbols;
     auto boost=[&](double x,double y,const char *symbol) {
-      mark(x,y,symbol,0x9dd39c,1);
+      mark(x,y,symbol,0x9dd39c);
       if(boost_symbols.find(symbol)==std::string::npos)boost_symbols+=symbol;
     };
     for(const auto &spring:grid_.springs)
@@ -125,7 +127,14 @@
     for(const auto &field:grid_.air_fields)if(field.ay<0&&field.active(grid_.switch_flags))
       boost(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑");
     if(has_wind)
-      mark(crosswind->area.x+crosswind->area.w*.5,crosswind->area.y+3,"↔",0xb4d7e4,1);
+      mark(crosswind->area.x+crosswind->area.w*.5,crosswind->area.y+3,"↔",0xb4d7e4);
+    // Reserve uncontested positions before moving overlapping markers.
+    // Nearby slots keep the displaced icons close to their real positions.
+    static constexpr std::pair<int,int> nearby[]={
+      {1,0},{-1,0},{0,-1},{0,1},{2,0},{-2,0},{1,-1},{-1,-1},{1,1},{-1,1},{0,-2},{0,2}
+    };
+    for(const auto &marker:overlaps)for(const auto &[dx,dy]:nearby)
+      if(place(marker,dx*marker.direction,dy))break;
     int legend=top+height-legend_rows;
     if(fork) {
       paint_text(legend++,2,tr("@ Ty · ◆ Lampa","@ You · ◆ Lamp"),0xc7d9df);
