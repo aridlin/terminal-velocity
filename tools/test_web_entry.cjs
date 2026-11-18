@@ -103,6 +103,15 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'pl',
       'Tab moves from the site link to the first language control');
     await page.locator('#game').focus();
+    await page.keyboard.down('ShiftLeft');
+    await page.locator('#game').click();
+    await page.keyboard.up('ShiftLeft');
+    await page.keyboard.down('ShiftLeft');
+    await page.keyboard.down('ShiftRight');
+    await page.keyboard.up('ShiftLeft');
+    await page.keyboard.up('ShiftRight');
+    await page.evaluate(async()=>{for(let i=0;i<4;i++)await new Promise(requestAnimationFrame);});
+    assert.equal(await page.evaluate(()=>window.dashEdges),0,'modified clicks and overlapping Shift keys do not dash');
     await page.keyboard.press('p');
     await page.waitForFunction(()=>!!(uiFlags&2));
     await page.keyboard.press('Tab');

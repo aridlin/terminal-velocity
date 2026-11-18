@@ -22,6 +22,7 @@ async function suggestLanguage(){
 }
 const locationLanguage=suggestLanguage();
 const pointers=new Map(),keyboard=new Set(),tiles=new Map();
+const shiftKeys=new Set();
 let dashShift='';
 let frameWasStalled=false;
 let storageFlushQueued=false;
@@ -67,6 +68,7 @@ window.tvFrame=(data,w,h)=>{
 let completedPresses=0;
 const tap=(...keys)=>{for(const k of keys){completedPresses|=1<<k;pressed|=1<<k;}};
 function pointerPress(pointer){
+ dashShift='';
  pointer.pending|=1<<pointer.key;
  pressed|=1<<pointer.key;
 }
@@ -148,7 +150,10 @@ function recompute(){
 }
 addEventListener('keydown',e=>{
  const shiftKey=e.code==='ShiftLeft'||e.code==='ShiftRight';
- if(!shiftKey&&!e.repeat)dashShift='';
+ if(!e.repeat){
+  if(shiftKey)shiftKeys.add(e.code);
+  if(!shiftKey||shiftKeys.size>1)dashShift='';
+ }
  const pauseScreen=(uiFlags&(2|64|128))===2;
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
@@ -156,16 +161,27 @@ addEventListener('keydown',e=>{
  e.preventDefault();
  if(e.repeat)return;
  // Shift also starts browser shortcuts. Dash only if it was tapped alone.
- if(shiftKey){dashShift=e.code;return;}
+ if(shiftKey){
+  if(shiftKeys.size===1)dashShift=e.code;
+  return;
+ }
  tap(keyMap[e.code]);
  keyboard.add(e.code);
  recompute();
 });
 canvas.addEventListener('blur',clearInput);
 addEventListener('keyup',e=>{
- if(e.code===dashShift){dashShift='';tap(5);}
+ shiftKeys.delete(e.code);
+ if(e.code===dashShift){
+  dashShift='';
+  if(!e.shiftKey)tap(5);
+ }
  if(keyboard.delete(e.code))recompute();
 });
+// A modified click or scroll also uses Shift, even without another keydown.
+const cancelShiftDash=()=>{dashShift='';};
+addEventListener('pointerdown',cancelShiftDash,{capture:true});
+addEventListener('wheel',cancelShiftDash,{capture:true,passive:true});
 const horizontalTouchControls='#touch .directions :is(button[data-key="0"], button[data-key="1"])';
 function releaseHighlight(button){
  if(button&&![...pointers.values()].some(pointer=>pointer.button===button))button.classList.remove('held');
@@ -229,7 +245,7 @@ for(const button of document.querySelectorAll('[data-key]')){
   button.addEventListener(type,e=>finishPointer(e.pointerId,type==='pointerup'));
 }
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{tap(+b.dataset.tap);canvas.focus();};
-function clearInput(){keyboard.clear();pointers.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
+function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function flushBrowserStorage(){
  if(syncing){storageFlushQueued=true;return;}
  syncing=true;
