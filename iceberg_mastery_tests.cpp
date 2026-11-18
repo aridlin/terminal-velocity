@@ -55,6 +55,36 @@ int main() {
       std::cout<<"PASS district "<<district<<" full eight-room trial; finale dash_jumps="<<dashjumps
         <<" wall_bounces="<<bounces<<" lift_launches="<<lifts<<"; record and mastery badge saved\n";
     }
+    iceberg::SessionOptions options;options.no_save=options.mute=true;
+    AdventureSession imported(options,std::filesystem::path{});
+    auto &saved=imported.profile.expeditions[1];
+    saved.active=true;saved.seed=saved.origin_seed=73;saved.layout_version=2;
+    saved.room=saved.depth=7;saved.seconds=84.;saved.deaths=2;saved.treasures=5;
+    saved.itinerary=iceworld::make_itinerary(saved.seed,0,iceberg::RoomsPerLeg,2,iceberg::Mode::Trial);
+    const auto itinerary=saved.itinerary;
+    imported.profile.trials[0]={10.,0,40,true};
+    imported.profile.challenges.push_back({73,0,2,{120.,3,4,true}});
+    imported.sync_view();
+    if(!imported.state.adventure.trial_resume||imported.state.adventure.trials[0].best_seconds!=120.)
+      throw std::runtime_error("the imported trial must show its own records before resuming");
+    imported.options.seed_override=true;imported.options.seed=74;imported.sync_view();
+    if(imported.state.adventure.trial_resume||imported.state.adventure.trials[0].complete)
+      throw std::runtime_error("a conflicting explicit seed must not advertise a resume or another route's record");
+    imported.options.seed_override=false;
+    Controls select;select.select_level=4;select.confirm=true;
+    imported.tick(select,1./120);
+    if(imported.state.menu||imported.run_seed!=73||imported.room!=7||imported.run_seconds!=84.||
+       imported.route_version()!=2||saved.itinerary!=itinerary)
+      throw std::runtime_error("the menu must resume the imported trial even without its command-line seed or unlock quest");
+    imported.advance_room();imported.sync_view();
+    if(imported.profile.trials[0].best_seconds!=10.||imported.state.adventure.trials[0].best_seconds!=84.||
+       imported.profile.challenges.front().record.best_treasures!=5)
+      throw std::runtime_error("the imported trial must finish into the challenge record, visible in the completion menu");
+    Controls retry;retry.confirm=true;imported.tick(retry,1./120);
+    if(imported.state.menu||imported.room!=0||imported.run_seed!=73||imported.route_version()!=2||
+       imported.run_seconds!=0||saved.itinerary!=itinerary)
+      throw std::runtime_error("confirm must retry the same completed challenge from room one");
+    std::cout<<"PASS imported trial retains seed, layout, route and separate records through resume, finish and retry\n";
     return 0;
   }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
 }

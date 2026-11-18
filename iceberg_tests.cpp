@@ -203,6 +203,7 @@ int main(int argc,char **argv) {
       Controls choose_endless;choose_endless.select_level=3;choose_endless.confirm=true;session.tick(choose_endless,1./120);
       check(session.district==1&&session.depth==17&&session.room==3,"menu resume selects the saved expedition district rather than replacing the run");
       session.profile.trials[0]={20,0,5,true};session.options.seed=9999;session.sync_view();
+      check(!session.state.adventure.endless_resume,"a different explicit seed does not advertise resuming a saved expedition");
       check(!session.state.adventure.trials[0].complete,"new custom seed never displays another route's default record");
       session.begin_campaign(true);
       check(session.stage==0&&session.room==0&&session.profile.story==0,"new story resets progression without copying old room state");

@@ -33,7 +33,7 @@ public:
     saves.load(profile);
     if(profile.content_version!=iceberg::ContentVersion) {
       for(int d=0;d<iceberg::DistrictCount;++d)if(profile.trials[size_t(d)].complete) {
-        if(profile.challenges.size()<128)profile.challenges.push_back({iceberg::mix(0x54495241u+unsigned(d)*7919u),d,profile.content_version,profile.trials[size_t(d)]});
+        if(profile.challenges.size()<128)profile.challenges.push_back({default_trial_seed(d),d,profile.content_version,profile.trials[size_t(d)]});
         profile.trials[size_t(d)]={};
       }
     }
@@ -78,6 +78,23 @@ public:
     for(int d=0;d<iceberg::AuthoredDistrictCount;++d)if(profile.records[size_t(d)].complete)available=std::max(available,d+1);
     return std::min(iceberg::AuthoredDistrictCount-1,available);
   }
+  static uint32_t default_trial_seed(int area) {
+    return iceberg::mix(0x54495241u+unsigned(area)*7919u);
+  }
+  bool compatible_seed(iceberg::Mode target,const iceberg::Expedition &saved) const {
+    return !options.seed_override||(target==iceberg::Mode::Trial?saved.seed:saved.origin_seed)==options.seed;
+  }
+  bool can_resume_run(iceberg::Mode target,int area) const {
+    const auto &saved=profile.expeditions[target==iceberg::Mode::Endless?0:1];
+    return saved.active&&saved.district==area&&compatible_seed(target,saved);
+  }
+  bool can_retry_trial(int area) const {
+    return mode==iceberg::Mode::Trial&&!run_active&&depth==iceberg::RoomsPerLeg&&district==area&&
+      compatible_seed(iceberg::Mode::Trial,profile.expeditions[1]);
+  }
+  bool separate_trial_record(int area,uint32_t seed,unsigned version) const {
+    return options.seed_override||seed!=default_trial_seed(area)||version!=iceberg::ContentVersion;
+  }
   void choose_saved_run_district(int selected) {
     if(options.district_override||selected<2||selected>3)return;
     const auto &e=profile.expeditions[size_t(selected-2)];
@@ -89,18 +106,19 @@ public:
     v.language=profile.language;v.mode=mode;v.district=grid.district;v.stage=stage;v.room=room;v.depth=depth;
     v.story=profile.story;v.journey_district=district;v.can_travel=(profile.story&(uint64_t(1)<<8))||profile.quests[2]==3||profile.finished||profile.at_content_boundary;
     v.unlocked=profile.unlocked;v.finished=profile.finished;v.at_content_boundary=profile.at_content_boundary;v.can_continue=profile.started;
-    v.endless_resume=profile.expeditions[0].active&&profile.expeditions[0].district==run_district;
-    v.trial_resume=profile.expeditions[1].active&&profile.expeditions[1].district==run_district;v.revisit=profile.revisit.active;
+    v.endless_resume=can_resume_run(iceberg::Mode::Endless,run_district);
+    v.trial_resume=can_resume_run(iceberg::Mode::Trial,run_district);v.revisit=profile.revisit.active;
     v.hidden_room=profile.hidden_room;v.visit_district=profile.visit_district;v.cosmetics=profile.cosmetics;
     v.run_district=run_district;v.endless_best=profile.endless_best;v.seed=mode==iceberg::Mode::Campaign?profile.seed:run_seed;
     v.quest_focus=profile.quest_focus;
     v.outfit=profile.outfit;v.quests=profile.quests;v.quest_counts=profile.quest_counts;v.task_items=profile.task_items;
     v.records=profile.records;v.trials=profile.trials;
+    const auto &e=profile.expeditions[1];
     for(int d=0;d<iceberg::DistrictCount;++d) {
-      uint32_t wanted=options.seed_override?options.seed:iceberg::mix(0x54495241u+unsigned(d)*7919u);
-      const auto &e=profile.expeditions[1];
-      unsigned version=e.active&&e.district==d&&e.seed==wanted?e.layout_version:iceberg::ContentVersion;
-      if(options.seed_override||version!=iceberg::ContentVersion) {
+      const bool saved=can_resume_run(iceberg::Mode::Trial,d)||can_retry_trial(d);
+      const uint32_t wanted=saved?e.seed:options.seed_override?options.seed:default_trial_seed(d);
+      const unsigned version=saved?e.layout_version:iceberg::ContentVersion;
+      if(separate_trial_record(d,wanted,version)) {
         v.trials[size_t(d)]={};
         for(const auto &challenge:profile.challenges)if(challenge.district==d&&challenge.seed==wanted&&challenge.version==version)
           v.trials[size_t(d)]=challenge.record;
@@ -428,21 +446,28 @@ public:
     load_room(true);state.menu=false;persist();
   }
   void begin_run(iceberg::Mode next,bool fresh=false) {
-    if(next==iceberg::Mode::Trial&&profile.quests[6]!=3&&!(profile.cosmetics&(1u<<7))&&!profile.finished&&!profile.at_content_boundary) {
+    const bool trial=next==iceberg::Mode::Trial;
+    const int area=std::min(run_district,expedition_unlocked());
+    auto &e=profile.expeditions[trial?1:0];
+    const bool resume=!fresh&&can_resume_run(next,area);
+    const bool replay=trial&&!fresh&&can_retry_trial(area);
+    if(trial&&!resume&&!replay&&profile.quests[6]!=3&&!(profile.cosmetics&(1u<<7))&&!profile.finished&&!profile.at_content_boundary) {
       notice(t("Porozmawiaj z Kubą i pokaż trzy skoki ze zrywu.","Talk to Kuba and demonstrate three dash jumps."),6);return;
     }
-    persist();mode=next;run_district=std::min(run_district,expedition_unlocked());
-    auto &e=profile.expeditions[next==iceberg::Mode::Endless?0:1];
-    uint32_t requested_seed=options.seed_override?options.seed:iceberg::mix(0x54495241u+unsigned(run_district)*7919u);
-    bool resume=e.active&&!fresh&&e.district==run_district&&
-      (next==iceberg::Mode::Trial?e.seed==requested_seed:!options.seed_override||e.origin_seed==options.seed);
+    persist();mode=next;run_district=area;
     if(resume) {
       district=e.district;room=e.room;depth=e.depth;run_seed=e.seed;
       run_seconds=e.seconds;run_deaths=e.deaths;run_treasures=e.treasures;
     } else {
-      district=std::min(expedition_unlocked(),run_district);room=depth=0;
-      run_seed=next==iceberg::Mode::Trial?requested_seed:options.seed_override?options.seed:iceberg::mix(run_seed+1);
-      run_seconds=0;run_deaths=run_treasures=0;e={};e.origin_seed=run_seed;
+      district=area;room=depth=0;
+      run_seed=replay?e.seed:options.seed_override?options.seed:trial?default_trial_seed(area):iceberg::mix(run_seed+1);
+      iceberg::Expedition restarted;
+      restarted.origin_seed=run_seed;
+      if(replay) {
+        restarted.layout_version=e.layout_version;
+        restarted.itinerary=std::move(e.itinerary);
+      }
+      run_seconds=0;run_deaths=run_treasures=0;e=std::move(restarted);
     }
     stage=2;run_active=true;load_room(resume);state.menu=false;persist();
     notice(resume?t("WZNOWIONO WYPRAWĘ — ta sama droga","EXPEDITION RESUMED — the same route"):
@@ -456,7 +481,7 @@ public:
     if(mode!=iceberg::Mode::Campaign) {
       ++room;++depth;if(mode==iceberg::Mode::Endless)profile.endless_best=std::max(profile.endless_best,depth);
       if(mode==iceberg::Mode::Trial && room>=iceberg::RoomsPerLeg) {
-        if(options.seed_override||route_version()!=iceberg::ContentVersion) {
+        if(separate_trial_record(district,run_seed,route_version())) {
           auto it=std::find_if(profile.challenges.begin(),profile.challenges.end(),[&](const iceberg::SeedRecord &r){
             return r.seed==run_seed&&r.district==district&&r.version==route_version();});
           if(it==profile.challenges.end()) {
