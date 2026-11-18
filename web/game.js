@@ -150,6 +150,7 @@ function translateUI(){
  const overlay=overlayFlags();
  const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
  const showRoute=!!(overlay&roomMapFlag);
+ for(const controls of document.querySelectorAll('.route-browse'))controls.hidden=!expeditionMap||showRoute;
  const mapViewLabel=showRoute?tr('Trasa','Route'):tr('Pokój','Room');
  const mapViewAction=showRoute?tr('Pokaż trasę','Show route map'):tr('Pokaż plan pokoju','Show room map');
  for(const button of document.querySelectorAll('.map-view-switch')){

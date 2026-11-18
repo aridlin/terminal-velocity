@@ -636,27 +636,51 @@ const server=http.createServer((req,res)=>{
   const desktopToolbar=expedition.locator('#toolbar');
   const desktopMap=desktopToolbar.locator('[data-tap="11"]');
   const desktopSwitch=desktopToolbar.locator('.map-view-switch');
+  const desktopBrowse=desktopToolbar.locator('.route-browse');
   await desktopMap.click();
   await expedition.waitForFunction(()=>uiFlags&128);
   assert.equal(await desktopSwitch.isVisible(),false,'the Campaign has its own map controls');
+  assert.equal(await desktopBrowse.isVisible(),false);
   await desktopToolbar.locator('[data-tap="12"]').click();
   await expedition.waitForFunction(()=>uiFlags&1);
   await expedition.keyboard.press('Digit3');
   await expedition.keyboard.press('Enter');
   await expedition.waitForFunction(()=>(uiFlags&(8192|128|1))===8192);
+  await expedition.evaluate(()=>{
+   const draw=window.tvFrame;
+   window.tvFrame=(cells,w,h)=>{
+    if(uiFlags&128)window.desktopMapFrame=Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>
+     String.fromCodePoint(cells[4*(y*w+x)])).join('')).join('\n');
+    draw(cells,w,h);
+   };
+  });
   await desktopMap.click();
   await expedition.waitForFunction(()=>uiFlags&128);
+  const nextRoom=desktopBrowse.getByRole('button',{name:'Next room'});
+  const previousRoom=desktopBrowse.getByRole('button',{name:'Previous room'});
+  await nextRoom.click();
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 2:'));
+  await nextRoom.hover();
+  await expedition.mouse.down();
+  try {
+   await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 8:'),null,{timeout:5000});
+  } finally {await expedition.mouse.up();}
+  await previousRoom.click();
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 7:'));
   assert.equal(await desktopSwitch.getAttribute('aria-label'),'Show room map');
   await desktopSwitch.click();
   await expedition.waitForFunction(()=>uiFlags&(1<<17));
+  assert.equal(await desktopBrowse.isVisible(),false);
   assert.equal(await desktopSwitch.getAttribute('aria-label'),'Show route map');
   await desktopSwitch.press('Enter');
   await expedition.waitForFunction(()=>(uiFlags&(128|(1<<17)))===128);
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 7:'));
   await desktopMap.click();
   await expedition.waitForFunction(()=>!(uiFlags&128));
   assert.equal(await desktopSwitch.isVisible(),false);
+  assert.equal(await desktopBrowse.isVisible(),false);
   await expedition.close();
-  console.log('PASS desktop Expedition view switches with a mouse or focused keyboard control');
+  console.log('PASS desktop Expedition mouse navigation browses rooms and survives switching views');
 
   const mobile=await browser.newContext({locale:'pl-PL',viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
   const page=await mobile.newPage();page.on('pageerror',e=>errors.push(String(e)));await page.goto(url);await page.waitForFunction(()=>!document.querySelector('#start').disabled);
@@ -973,6 +997,7 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(()=>!!(uiFlags&128));
    assert.equal(await page.locator('#toolbar .map-view-switch').isVisible(),false,
     'touch uses its existing room and route control');
+   assert.equal(await page.locator('#toolbar .route-browse').isVisible(),false);
    if(roomMap){
     await inspectControl.tap();
     await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
