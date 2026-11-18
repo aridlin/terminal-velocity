@@ -24,6 +24,15 @@ int main() {
         bounces+=game.state.player.wall_bounce_left>before.wall_bounce_left;
         lifts+=before.support==0&&c.jump_pressed&&game.state.player.vy<-23;
       };
+      // Exercise the timing deliberately on the first runway. The motion
+      // search may now choose a ledge climb while crossing the wider gap.
+      for(int n=0;n<30&&(!game.state.player.grounded||!game.state.player.can_dash());++n)
+        input({},1./120);
+      Controls launch;launch.move=1;launch.dash_pressed=true;
+      input(launch,1./120);
+      launch.dash_pressed=false;launch.jump_pressed=launch.jump_held=true;
+      input(launch,1./120);
+      for(int n=0;n<90&&!game.state.player.grounded;++n)input({},1./120);
       for(size_t target=0;target<targets.size();++target) {
         auto path=find_motion_path(game.grid,game.state,targets[target],[&](const GameState &s){
           return target==4?s.player.grounded&&s.player.support==0:target==2?s.player.grounded:true;
