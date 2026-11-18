@@ -126,6 +126,33 @@ int main(){try {
       features.state.collected.back()=false;
     }
   }
+  auto rack_room=verified_room(47,73,3);
+  auto rack_view=new_state(rack_room);
+  rack_view.adventure.map=rack_view.adventure.map_room=true;
+  RenderGrid(rack_room,rack_view,24,34,2).draw();
+  ui_check(count_map("▲",0xe5b276)==0&&count_map("┆",0x718c9d)==0,
+    "the original Last Stack has no rack indicators");
+  add_expedition_archive_racks(rack_room);
+  rack_view=new_state(rack_room);
+  rack_view.adventure.map=rack_view.adventure.map_room=true;
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    rack_view.adventure.language=language;
+    const auto legend=language==iceberg::Language::English?"▲▼ Racks":"▲▼ Regały";
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      for(double phase:{0.,1.6,3.2,4.8}) {
+        rack_view.elapsed=phase;
+        const auto deck=rack_room.platforms.back().at(phase);
+        rack_view.player.x=deck.x+(deck.w-kPlayerWidth)*.5;
+        rack_view.player.y=deck.y-kPlayerHeight;
+        RenderGrid(rack_room,rack_view,rows,cols,2).draw();
+        const bool turning=phase==1.6||phase==4.8;
+        ui_check(count_map("▲",0xe5b276)==!turning&&count_map("▼",0xe5b276)==!turning&&
+          count_map("■",0xe5b276)==(turning?2:0)&&count_map("@",0xffd68a)==1&&
+          count_map("┆",0x718c9d)>0&&ui_text(frame).find(legend)!=std::string::npos,
+          "rack map directions, travel and localized legend remain visible with a rider");
+      }
+    }
+  }
   AdventureSession winter(options,"/tmp/tv-ui-ice-map-unused");
   winter.begin_campaign(true);winter.profile.unlocked=4;winter.run_district=4;
   auto &garden=winter.profile.expeditions[0];

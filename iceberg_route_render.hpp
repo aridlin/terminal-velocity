@@ -9,7 +9,9 @@
     const bool has_wind=crosswind!=grid_.air_fields.end();
     const bool has_ice=!grid_.ice_strips.empty()||
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy;});
-    const bool has_features=has_water||has_boost||has_wind||has_ice||!grid_.sweets.empty();
+    const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.archive_rack;});
+    const bool has_features=has_water||has_boost||has_wind||has_ice||has_racks||!grid_.sweets.empty();
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
       return node.kind==InteractionKind::RouteChoice;
     });
@@ -66,6 +68,12 @@
     }
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
+      if(platform.archive_rack) {
+        const int x=column(platform.base.x+platform.base.w*.5);
+        const double range=std::abs(platform.dy);
+        for(int y=row(platform.base.y-range);y<=row(platform.base.y+range);++y)
+          if(map[size_t(y)][size_t(x)]==' ')map[size_t(y)][size_t(x)]=':';
+      }
       if(!platform.available(state_,i,state_.elapsed))continue;
       const auto deck=platform.at(state_.elapsed);
       auto &line=map[size_t(row(deck.y))];
@@ -76,6 +84,7 @@
       case '#':paint_text(first+y,left+x,"▪",0x8ba2ae);break;
       case '!':paint_text(first+y,left+x,"░",0xa26666);break;
       case '=':paint_text(first+y,left+x,"─",0x9dd4dd);break;
+      case ':':paint_text(first+y,left+x,"┆",0x718c9d);break;
       case 'i':paint_text(first+y,left+x,"━",0xa6e9ea);break;
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
@@ -134,6 +143,10 @@
       boost(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑");
     if(has_wind)
       mark(crosswind->area.x+crosswind->area.w*.5,crosswind->area.y+3,"↔",0xb4d7e4);
+    for(const auto &platform:grid_.platforms)if(platform.archive_rack) {
+      const auto rack=platform.at(state_.elapsed);
+      mark(rack.x+rack.w*.5,rack.y,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);
+    }
     // Reserve uncontested positions before moving overlapping markers.
     // Nearby slots keep the displaced icons close to their real positions.
     static constexpr std::pair<int,int> nearby[]={
@@ -162,6 +175,7 @@
     if(has_water)label(tr("≈ Woda","≈ Water"),0x66bfd7);
     if(has_ice)label(tr("━ Lód","━ Ice"),0xa6e9ea);
     if(has_wind)label(tr("↔ Wiatr","↔ Wind"),0xb4d7e4);
+    if(has_racks)label(tr("▲▼ Regały","▲▼ Racks"),ArchiveRackMarker);
   }
 
   void draw_iceberg_route_map(int top,int height) {

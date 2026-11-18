@@ -1,4 +1,9 @@
   static constexpr double ArchiveCableY=21.;
+  static constexpr uint32_t ArchiveRackMarker=0xe5b276;
+  static const char *archive_rack_direction(const MovingPlatform &platform,double time) {
+    const double motion=platform.at(time+.025).y-platform.at(time-.025).y;
+    return motion<-.02?"▲":motion>.02?"▼":"■";
+  }
   void draw_archive_rack(const MovingPlatform &platform,const Rect &deck) {
     const double row=aspect_*scale_;
     const int width=std::max(4,int(std::round(deck.w/scale_)));
@@ -7,11 +12,10 @@
       surface+="═";files+=i%4==0?"│":i%4==1?" ":"▥";base+="═";
     }
     const double center=deck.x+deck.w*.5;
-    const double motion=platform.at(state_.elapsed+.05).y-deck.y;
     world_text(deck.x,deck.y,surface+"╗",0xaecee0);
     world_text(deck.x,deck.y+row,files+"║",0x6d92a9);
     world_text(deck.x,deck.y+2*row,base+"╝",0x749cb3);
-    world_text(center,deck.y-row*1.1,motion<-.02?"▲":motion>.02?"▼":"◆",0xe5b276);
+    world_text(center,deck.y-row*1.1,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);
   }
 
 // RenderGrid members. Shelves and catalogue rails belong to the room's
