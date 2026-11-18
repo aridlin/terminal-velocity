@@ -3,9 +3,15 @@
 <body><header><a href="./" aria-label="Terminal Velocity home">TERMINAL VELOCITY</a><div id="language" role="group" aria-label="Language / Język"><button type="button" data-language="pl" lang="pl" aria-pressed="true">PL</button><button type="button" data-language="en" lang="en" aria-pressed="false">EN</button></div><span id="save-status" aria-live="polite">Ładowanie gry…</span><button id="fullscreen" data-pl="Pełny ekran" data-en="Fullscreen">Pełny ekran</button></header>
 <div id="playfield"><main id="stage"><canvas id="game" tabindex="0" aria-describedby="hint" data-aria-pl="Terminal Velocity — gra platformowa" data-aria-en="Terminal Velocity — platform game" aria-label="Terminal Velocity — platform game"></canvas>
 </main>
-<div id="save-replacement-actions" hidden>
+<div id="save-replacement-actions" class="menu-actions" hidden>
 <button data-tap="9" data-pl="Anuluj" data-en="Cancel">Anuluj</button>
 <button id="replace-save" data-tap="6" data-pl="Zastąp" data-en="Replace">Zastąp</button>
+</div>
+<div id="profile-picker-actions" class="menu-actions" hidden>
+<button data-key="2" data-aria-pl="Poprzednia opcja" data-aria-en="Previous option" aria-keyshortcuts="ArrowUp">↑</button>
+<button data-key="3" data-aria-pl="Następna opcja" data-aria-en="Next option" aria-keyshortcuts="ArrowDown">↓</button>
+<button data-tap="8" data-pl="Wybierz" data-en="Select">Wybierz</button>
+<button data-tap="9" data-pl="Wróć" data-en="Back">Wróć</button>
 </div>
 <nav id="touch" data-aria-pl="Sterowanie dotykowe" data-aria-en="Touch controls" aria-label="Touch controls"><div class="directions"><button data-key="0" data-aria-pl="W lewo" data-aria-en="Move left" aria-label="Move left">◀</button><button data-key="2" data-aria-pl="W górę / skok" data-aria-en="Up / jump" aria-label="Up / jump">▲</button><button data-key="1" data-aria-pl="W prawo" data-aria-en="Move right" aria-label="Move right">▶</button><button data-key="3" data-aria-pl="W dół" data-aria-en="Down" aria-label="Down">▼</button></div><div class="actions"><button data-key="5" class="dash" data-pl="Zryw" data-en="Dash">Zryw</button><button data-key="4" class="jump" data-pl="Skok" data-en="Jump">Skok</button><button data-key="6" id="touch-use">Użyj</button><button id="touch-inspect" data-key="7" data-pl="Obejrzyj" data-en="Inspect">Obejrzyj</button></div></nav><nav id="fullscreen-tools" aria-label="Fullscreen controls" data-aria-pl="Sterowanie na pełnym ekranie" data-aria-en="Fullscreen controls">
 <button data-tap="12">Menu</button>

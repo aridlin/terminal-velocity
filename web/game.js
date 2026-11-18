@@ -148,6 +148,7 @@ function translateUI(){
  const replacingSave=!!(uiFlags&confirmSaveFlag);
  const replacingRun=!!(uiFlags&replaceRunFlag);
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
+ document.querySelector('#profile-picker-actions').hidden=!(uiFlags&profilePickerFlag);
  if(replacingSave){
   const replace=document.querySelector('#replace-save');
   replace.dataset.tap=replacingRun?'6':'8';
