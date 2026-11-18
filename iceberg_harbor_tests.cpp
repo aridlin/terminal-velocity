@@ -160,11 +160,38 @@ int main() {
     use_harbor(s,InteractionKind::Npc,0);
     use_harbor(s,InteractionKind::Secret,0);
     check_harbor(s.profile.hidden_room==0,"the original first secret remains reachable through real hub movement");
-    use_harbor(s,InteractionKind::Note,10);use_harbor(s,InteractionKind::Return);
-    use_harbor(s,InteractionKind::Board,0);
-    check_harbor(s.grid.template_id==601,"the quay board opens the authored rooftop lesson");
-    use_harbor(s,InteractionKind::Secret,1);
-    check_harbor(s.profile.hidden_room==1,"the earned second secret remains reachable on the new lesson route");
+    use_harbor(s,InteractionKind::Note,10);
+    AdventureSession corridor(options,file);corridor.begin_campaign(false);
+    check_harbor(corridor.profile.hidden_room==0,"reload resumes inside the secret corridor");
+    use_harbor(corridor,InteractionKind::Return);
+    check_harbor(corridor.profile.hidden_room<0&&std::abs(corridor.state.player.x-28)<1&&
+      std::abs(corridor.state.player.rect().bottom()-43)<.01,
+      "the secret corridor returns to the quay roof entrance after reload");
+    check_harbor(corridor.state.spawn_x==6,"the return position preserves the original retry lamp");
+    use_harbor(corridor,InteractionKind::Board,0);
+    check_harbor(corridor.grid.template_id==601,"the quay board opens the authored rooftop lesson");
+    use_harbor(corridor,InteractionKind::Secret,1);
+    check_harbor(corridor.profile.hidden_room==1,"the earned second secret remains reachable on the new lesson route");
+    use_harbor(corridor,InteractionKind::Note,11);
+    use_harbor(corridor,InteractionKind::Return);
+    check_harbor(corridor.grid.template_id==601&&std::abs(corridor.state.player.x-99)<1&&
+      std::abs(corridor.state.player.rect().bottom()-30)<.01,
+      "the internal line returns to the upper lesson entrance");
+
+    corridor.stage=7;corridor.load_room();corridor.state.elapsed=1.5;
+    const auto lift=corridor.grid.platforms.front().at(corridor.state.elapsed);
+    corridor.state.player.x=83;corridor.state.player.y=lift.y-kPlayerHeight;
+    Controls enter;enter.interact=true;corridor.tick(enter,1./120);
+    check_harbor(corridor.profile.hidden_room==2,"the lift entrance opens the reservoir");
+    Controls leave;leave.interact=true;leave.move=1;leave.dash_pressed=true;
+    corridor.tick(leave,.1);
+    check_harbor(corridor.profile.hidden_room<0&&corridor.state.player.support==0&&corridor.state.player.dash_available&&
+      corridor.state.elapsed==1.5&&std::abs(corridor.state.player.rect().bottom()-lift.y)<.01,
+      "the reservoir returns onto the lift at the saved phase without carrying a queued dash outside");
+    corridor.tick({},.1);
+    check_harbor(corridor.state.player.support==0&&std::abs(corridor.state.player.rect().bottom()-
+      corridor.grid.platforms.front().at(corridor.state.elapsed).y)<.01,"the courier rides the lift after returning");
+
     std::filesystem::remove(file);std::filesystem::remove(file.string()+".bak");
     return 0;
   }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}

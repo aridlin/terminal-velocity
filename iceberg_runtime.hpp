@@ -511,7 +511,31 @@ public:
       return;
     }
     if(profile.hidden_room>=0) {
-      profile.hidden_room=-1;load_room(true);persist();return;
+      const int secret=profile.hidden_room;
+      profile.hidden_room=-1;load_room(true);
+      const auto entrance=std::find_if(grid.interactions.begin(),grid.interactions.end(),[secret](const auto &node){
+        return node.kind==InteractionKind::Secret&&node.id==secret;
+      });
+      if(entrance!=grid.interactions.end()) {
+        auto &courier=state.player;
+        const auto &door=entrance->area;
+        courier.x=door.x+(door.w-kPlayerWidth)*.5;
+        courier.y=door.bottom()-kPlayerHeight;
+        courier.grounded=true;
+        // The reservoir entrance is on a lift, whose phase comes from the source room.
+        for(size_t i=0;i<grid.platforms.size();++i) {
+          const auto &lift=grid.platforms[i];
+          if(lift.base.x==door.x&&lift.base.y==door.bottom()&&lift.base.w==door.w) {
+            const auto surface=lift.at(state.elapsed);
+            courier.x+=surface.x-lift.base.x;
+            courier.y=surface.y-kPlayerHeight;
+            courier.support=int(i);
+            break;
+          }
+        }
+        update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10);
+      }
+      persist();return;
     }
     if(profile.revisit.active) {
       const int scene=profile.revisit.scene;
@@ -920,7 +944,11 @@ public:
     // A retry queued between physics steps still takes priority at a doorway.
     if(!retrying) {
       if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
-      if(c.interact){interact();if(v.dialogue.active()){sync_view();return;}}
+      if(c.interact) {
+        const int previous_secret=profile.hidden_room;
+        interact();
+        if(v.dialogue.active()||profile.hidden_room!=previous_secret){sync_view();return;}
+      }
       if(state.won&&(c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))) {
         advance_room();
         sync_view();return;
