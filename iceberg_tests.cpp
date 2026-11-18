@@ -338,6 +338,27 @@ int main(int argc,char **argv) {
     archive.advance_room();
     check(archive.grid.growth.empty()&&archive.grid.switch_flags==0,
       "drawer state does not carry into the next expedition room");
+    archive_run.itinerary={47,36,37,38,39,40,41,42};
+    archive_run.room=archive_run.depth=archive.room=archive.depth=0;
+    archive.load_room();
+    const auto &racks=archive.grid.platforms;
+    check(racks.size()==5&&racks[3].archive_rack&&racks[4].archive_rack&&
+      std::abs(racks[3].at(1.6).y-44.)<.01&&std::abs(racks[4].at(1.6).y-30.)<.01&&
+      std::abs(racks[3].at(4.8).y-30.)<.01&&std::abs(racks[4].at(4.8).y-44.)<.01,
+      "Archive racks move in opposite directions over the same height range");
+    if(racks.size()==5) {
+      auto rider=new_state(archive.grid);
+      rider.player.x=racks[4].base.x+2.;
+      rider.player.y=racks[4].at(0).y-kPlayerHeight;
+      rider.player.grounded=true;rider.player.support=4;
+      for(int tick=0;tick<120;++tick)world_step(rider,archive.grid,{},1./120);
+      check(rider.player.support==4&&rider.player.rect().bottom()<32.&&rider.player.lift_y<-3.,
+        "the rising rack carries a rider and supplies upward momentum");
+    }
+    archive_run.layout_version=2;archive.load_room();
+    check(archive.grid.platforms.size()==3&&
+      archive.grid.sweets.size()==verified_room(47,archive.grid.seed,3).sweets.size(),
+      "older Endless saves retain the original room decks and token count");
     AdventureSession gardens(options,path);
     gardens.begin_campaign(true);
     gardens.profile.unlocked=4;gardens.run_district=4;

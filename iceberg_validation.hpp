@@ -248,6 +248,22 @@ inline void add_expedition_copy_belts(EngineGrid &room) {
   else room.sorting_belts.clear();
 }
 
+inline void add_expedition_archive_racks(EngineGrid &room) {
+  if(room.district!=3||room.template_id!=47)return;
+  const size_t original=room.platforms.size();
+  // The two racks share a cable. Each is at its highest when the other
+  // reaches the lower winding drum.
+  room.platforms.push_back({.base={58,37,6,.5},.dy=7,.period=6.4,.archive_rack=true});
+  room.platforms.push_back({.base={74,37,6,.5},.dy=7,.period=6.4,.phase=.5,.archive_rack=true});
+  room.sweets.push_back({76.5,24.});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else {
+    room.platforms.resize(original);
+    room.sweets.pop_back();
+  }
+}
+
 inline void add_expedition_stairwells(EngineGrid &room) {
   if(room.district!=2||room.template_id!=25)return;
   auto original=room;

@@ -1,3 +1,19 @@
+  static constexpr double ArchiveCableY=21.;
+  void draw_archive_rack(const MovingPlatform &platform,const Rect &deck) {
+    const double row=aspect_*scale_;
+    const int width=std::max(4,int(std::round(deck.w/scale_)));
+    std::string surface="╔",files="║",base="╚";
+    for(int i=1;i<width-1;++i) {
+      surface+="═";files+=i%4==0?"│":i%4==1?" ":"▥";base+="═";
+    }
+    const double center=deck.x+deck.w*.5;
+    const double motion=platform.at(state_.elapsed+.05).y-deck.y;
+    world_text(deck.x,deck.y,surface+"╗",0xaecee0);
+    world_text(deck.x,deck.y+row,files+"║",0x6d92a9);
+    world_text(deck.x,deck.y+2*row,base+"╝",0x749cb3);
+    world_text(center,deck.y-row*1.1,motion<-.02?"▲":motion>.02?"▼":"◆",0xe5b276);
+  }
+
 // RenderGrid members. Shelves and catalogue rails belong to the room's
 // architecture; moving carriages stay attached to their collision platform.
   void draw_archive_landmarks() {
@@ -47,9 +63,26 @@
         world_art(176+opening*7,24,{"╭──────────╮","│ ░░░░░░░░ │","│ ░░░░░░░░ │","│ ░░░░░░░░ │","╰──────────╯"},d.shadow);
       }
     }
+    const double row_height=aspect_*scale_;
+    const MovingPlatform *first_rack=nullptr;
     for(const auto &platform:grid_.platforms) {
+      if(platform.archive_rack) {
+        const double center=platform.base.x+platform.base.w*.5;
+        if(first_rack) {
+          const double left=first_rack->base.x+first_rack->base.w*.5;
+          for(double x=left;x<center;x+=scale_)world_text(x,ArchiveCableY,"═",0x5c768b);
+        } else first_rack=&platform;
+        continue;
+      }
       auto p=platform.at(state_.elapsed);
       world_art(p.x+.5,p.y+.7,{"╭─────────────────────╮","│ ▥▥▥ ▥▥▥▥ ▥▥▥ ▥▥▥▥▥  │","╰──◉───────────────◉──╯"},0x4c6075);
+    }
+    for(const auto &platform:grid_.platforms)if(platform.archive_rack) {
+      const auto rack=platform.at(state_.elapsed);
+      const double center=rack.x+rack.w*.5;
+      world_art(center-2*scale_,ArchiveCableY-row_height,{"╔═══╗","╠═◉═╣","╚═╤═╝"},0x6b8ba0);
+      for(double y=ArchiveCableY+2*row_height;y<rack.y;y+=row_height)
+        world_text(center,y,"│",0x60788c);
     }
     for(const auto &belt:grid_.sorting_belts) {
       const double row=aspect_*scale_;
