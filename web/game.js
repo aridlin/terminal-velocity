@@ -74,7 +74,9 @@ function clearPresses(){
  pressed=completedPresses=0;
  for(const pointer of pointers.values())pointer.pending=0;
 }
-const routeMapOpen=()=>(uiFlags&(128|2048))===(128|2048);
+const overlayFlags=()=>uiFlags&1?0:uiFlags;
+const routeMapOpen=()=>(overlayFlags()&(128|2048))===(128|2048);
+const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function translateUI(){
  document.documentElement.lang=english?'en':'pl';
  document.title='Terminal Velocity — '+tr('Pod powierzchnią','Below the surface');
@@ -96,8 +98,22 @@ function translateUI(){
   button.setAttribute('aria-label',districtControl?tr('Zmień dzielnicę','Change district'):button.textContent);
  }
  const touchInspect=document.querySelector('#touch-inspect');
- touchInspect.hidden=!!((uiFlags&128)&&(uiFlags&8192));
- if(uiFlags&128)touchInspect.textContent=uiFlags&2048?tr('Dzielnice','Districts'):tr('Trasa','Route');
+ const overlay=overlayFlags();
+ touchInspect.hidden=!!((overlay&128)&&(overlay&8192));
+ let inspectLabel;
+ if(questRecordOpen()){
+  touchInspect.textContent=tr('Wróć','Back');
+  inspectLabel=tr('Wróć do księgi zadań','Back to quest book');
+ }else if(overlay&8){
+  touchInspect.textContent=tr('Zamknij','Close');
+  inspectLabel=tr('Zamknij podgląd','Close inspection');
+ }else if(overlay&64){
+  touchInspect.textContent=tr('Zakładka','Tab');
+  inspectLabel=tr('Następna zakładka','Next quest tab');
+ }else if(overlay&128){
+  touchInspect.textContent=overlay&2048?tr('Dzielnice','Districts'):tr('Trasa','Route');
+ }
+ touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
  if(!started){start.textContent=ready?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');saveStatus.textContent=ready?tr('Gotowe','Ready'):tr('Ładowanie gry…','Loading game…');}
 }
@@ -167,9 +183,10 @@ function finishPointer(id,completed){
 }
 for(const button of document.querySelectorAll('[data-key]')){
  const action=()=>{
+  if(button.id==='touch-inspect'&&questRecordOpen())return 9;
   if(button.id!=='touch-use'||!lastBlocked)return +button.dataset.key;
   if(routeMapOpen())return 11;
-  return uiFlags&64?6:8;
+  return overlayFlags()&64?6:8;
  };
  button.addEventListener('click',e=>{
   // Pointer clicks already sent their input on pointerdown.

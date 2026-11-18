@@ -282,6 +282,13 @@ const server=http.createServer((req,res)=>{
   const page=await mobile.newPage();page.on('pageerror',e=>errors.push(String(e)));await page.goto(url);await page.waitForFunction(()=>!document.querySelector('#start').disabled);
   await page.locator('[data-language="en"]').click();await page.locator('#start').click();await page.waitForTimeout(150);
   await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);await page.screenshot({path:path.join(out,'web-mobile-opening.png')});
+  const inspectControl=page.locator('#touch-inspect');
+  await inspectControl.tap();
+  await page.waitForFunction(()=>!!(uiFlags&8));
+  assert.equal(await inspectControl.getAttribute('aria-label'),'Close inspection');
+  await inspectControl.tap();
+  await page.waitForFunction(()=>!(uiFlags&8));
+  assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
   const touchSession=await mobile.newCDPSession(page);
   const [left,up,right]=await Promise.all([0,2,1].map(async key=>{
    const box=await page.locator('#touch [data-key="'+key+'"]').boundingBox();
@@ -382,10 +389,22 @@ const server=http.createServer((req,res)=>{
      assert.equal(await route.innerText(),'Districts');
      assert.equal(await use.getAttribute('aria-label'),'Close map');
      await use.tap();
-    }else await button.tap();
+    }else {
+     assert.equal(await inspectControl.getAttribute('aria-label'),'Next quest tab');
+     await button.tap();
+    }
     await page.waitForFunction(flag=>!(uiFlags&flag),flag);
+    assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
     assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
    }
+   await tools.locator('[data-tap="10"]').tap();
+   await page.waitForFunction(()=>!!(uiFlags&64));
+   await tools.locator('[data-tap="12"]').tap();
+   await page.waitForFunction(()=>(uiFlags&(1|64))===(1|64));
+   const menuConfirm=page.locator('#touch-use');
+   assert.equal(await menuConfirm.getAttribute('aria-label'),'Confirm');
+   await menuConfirm.tap();
+   await page.waitForFunction(()=>!(uiFlags&1));
    const bounds=await tools.locator('button:visible').evaluateAll(buttons=>buttons.every(button=>{
     const rect=button.getBoundingClientRect();
     return rect.left>=0&&rect.right<=window.innerWidth&&rect.bottom<=window.innerHeight;
