@@ -60,6 +60,12 @@
 #playfield.expanded{position:fixed;inset:0;z-index:10}
 #playfield:fullscreen #fullscreen-tools,#playfield.expanded #fullscreen-tools{display:flex}
 
+#touch[data-map-view] .directions,#touch[data-map-view] .actions{display:flex;min-width:0}
+#touch[data-map-view] .directions button:is([data-key="0"],[data-key="1"]),
+#touch[data-map-view] .actions :is(.dash,.jump),
+#touch[data-map-view="room"] .directions{display:none}
+#touch[data-map-view="room"]{justify-content:center}
+
 #downloads{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 12px;margin-top:5px;font-size:12px}
 #downloads span{color:#9baeb7}#downloads a{color:#e4ad68;text-underline-offset:3px;padding:3px 0}
 #downloads a:focus-visible{outline:2px solid #e4ad68;outline-offset:3px}

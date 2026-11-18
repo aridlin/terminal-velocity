@@ -938,8 +938,11 @@ const server=http.createServer((req,res)=>{
   console.log('PASS a quick touch slide drops the obsolete direction before the next frame');
   await page.keyboard.press('j');
   await page.waitForFunction(()=>(uiFlags&(64|128))===128);
-  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[right]});
-  await page.waitForFunction(()=>held===2);
+  const mapDown=await page.locator('#touch [data-key="3"]').boundingBox();
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[
+   {x:mapDown.x+mapDown.width/2,y:mapDown.y+mapDown.height/2,id:1}
+  ]});
+  await page.waitForFunction(()=>held===8);
   await page.keyboard.press('Tab');
   await page.waitForFunction(()=>(uiFlags&(64|128))===64);
   const directionState=()=>page.evaluate(()=>({held,highlight:!!document.querySelector('#touch .held')}));
@@ -1244,9 +1247,12 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#toolbar .map-view-switch').isVisible(),false,
     'touch uses its existing room and route control');
    assert.equal(await page.locator('#toolbar .route-browse').isVisible(),false);
+   for(const key of [0,1,4,5])assert.equal(await page.locator('#touch [data-key="'+key+'"]').isVisible(),false,
+    'the map hides gameplay movement, jump and dash');
    if(roomMap){
     await inspectControl.tap();
     await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
+    assert.equal(await page.locator('#touch .directions').isVisible(),false,'the room map has no directional actions');
     assert.deepEqual(await touchDirectionNames(),['Up','Down']);
    }else{
     assert.deepEqual(await touchDirectionNames(),['Previous room','Next room']);
@@ -1262,6 +1268,7 @@ const server=http.createServer((req,res)=>{
    assert.equal(await action.getAttribute('aria-label'),'Use',
     'closing either Expedition map restores the touch interaction action');
    assert.deepEqual(await touchDirectionNames(),['Up / jump','Down']);
+   assert.equal(await page.locator('#touch [data-key="5"]').isVisible(),true,'Dash returns to the play controls');
   }
 
   await openMenu();

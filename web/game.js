@@ -209,6 +209,9 @@ function translateUI(){
  }
  const touchInspect=document.querySelector('#touch-inspect');
  const overlay=overlayFlags();
+ const touchControls=document.querySelector('#touch');
+ if(overlay&128)touchControls.dataset.mapView=overlay&roomMapFlag?'room':'route';
+ else delete touchControls.dataset.mapView;
  nameTouchDirections(overlay);
  const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
  const showRoute=!!(overlay&roomMapFlag);
