@@ -136,8 +136,9 @@ int main(){try {
     game.tick(navigate,0);
    }
    game.dialogue_next();
-   dialogue_check(game.profile.story==0&&dialogue.active()&&dialogue.lines.size()==2,
-                  "a briefing answer leaves progression and saved civic choices untouched");
+   dialogue_check((game.profile.story&~iceberg::BriefingReplyMask)==0&&
+                  iceberg::pending_briefing_option(game.profile.story)==option&&dialogue.active()&&dialogue.lines.size()==2,
+                  "the pending briefing reply leaves progression and saved civic choices untouched");
    dialogue_check(dialogue.lines[0].speaker==iceberg::CourierSpeaker&&dialogue.lines[0].text.en==reply.said.en&&
                   dialogue.lines[1].speaker==reply.answer.speaker&&dialogue.lines[1].text.en==reply.answer.text.en,
                   "the selected answer is spoken by the courier and gets its own reply");

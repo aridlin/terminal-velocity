@@ -14,6 +14,28 @@ int main(){try{
  std::filesystem::create_directories(folder);auto file=folder/"campaign";
  iceberg::SessionOptions options;options.mute=true;
  for(int option=0;option<2;++option) {
+  auto briefing_file=folder/("briefing-"+std::to_string(option));
+  AdventureSession briefing(options,briefing_file);briefing.begin_campaign(true);
+  briefing.advance_room();read_to_reply(briefing);
+  briefing.state.adventure.dialogue.reply_option=option;
+  briefing.dialogue_next();
+  AdventureSession resumed(options,briefing_file);resumed.begin_campaign(false);
+  const auto &exchange=resumed.state.adventure.dialogue;
+  const auto &reply=iceberg::briefing_reply(0,option);
+  require_end(resumed.stage==0&&!(resumed.profile.story&1)&&exchange.active()&&!exchange.choosing()&&
+              exchange.lines.size()==2&&exchange.lines.front().speaker==iceberg::CourierSpeaker&&
+              std::string_view(exchange.lines.front().text.en)==reply.said.en&&
+              std::string_view(exchange.lines.back().text.pl)==reply.answer.text.pl,
+              "a reload after choosing resumes the briefing reply without advancing the district");
+  read_end(resumed);
+  AdventureSession completed(options,briefing_file);completed.begin_campaign(false);
+  require_end(completed.stage==0&&(completed.profile.story&1)&&
+              iceberg::pending_briefing_option(completed.profile.story)<0&&!completed.state.adventure.dialogue.active(),
+              "finishing the reply records the briefing and clears the pending exchange");
+  completed.advance_room();
+  require_end(completed.stage==1,"the resumed briefing opens the regular district route");
+ }
+ for(int option=0;option<2;++option) {
   auto witness_file=folder/("witness-"+std::to_string(option));
   AdventureSession witness(options,witness_file);witness.begin_campaign(true);
   witness.stage=3;witness.load_room();witness.persist();

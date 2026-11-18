@@ -138,6 +138,12 @@ struct DialogueLine { int speaker = 0; Text text; DialogueCue cue = DialogueCue:
 inline constexpr int CourierSpeaker = -2;
 inline constexpr int ReplyPrompt = -3;
 inline constexpr int BriefingReplyBase = DistrictCount + 1; // After the homecomings and Crown hearing.
+// Only the briefing of the active campaign district can be unfinished.
+inline constexpr int BriefingReplyShift = 44;
+inline constexpr uint64_t BriefingReplyMask = uint64_t(3) << BriefingReplyShift;
+inline constexpr int pending_briefing_option(uint64_t story) {
+  return int((story & BriefingReplyMask) >> BriefingReplyShift) - 1;
+}
 inline constexpr uint64_t reply_value(int scene) { return uint64_t(1) << (48+scene); }
 inline constexpr uint64_t reply_recorded(int scene) { return uint64_t(1) << (55+scene); }
 inline constexpr uint64_t HomecomingReplyPending = uint64_t(1) << 62;
