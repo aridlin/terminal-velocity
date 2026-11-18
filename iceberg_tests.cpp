@@ -42,6 +42,13 @@ int main(int argc,char **argv) {
     check(estate_openings.count(24)&&estate_openings.count(25)&&
       archive_openings.count(38)&&archive_openings.count(39)&&archive_openings.count(44)&&archive_openings.count(47),
       "district openings can showcase different local mechanics, including newer rooms");
+    std::set<int> archive_closers;
+    for(uint32_t seed=0;seed<128;++seed) {
+      const auto order=iceworld::make_itinerary(seed,3,iceberg::RoomsPerLeg,iceberg::ContentVersion,iceberg::Mode::Endless);
+      archive_closers.insert(order.back());
+    }
+    check(archive_closers.count(43)&&archive_closers.count(40)&&archive_closers.count(44),
+      "Archive Endless legs can close with exploration or recovery");
     for(int d=0;d<2;++d) {
       auto old_route=iceworld::make_itinerary(73,d,24,2);
       check(std::all_of(old_route.begin(),old_route.end(),[](int id){return id<24;}),"legacy route version retains the released room library");

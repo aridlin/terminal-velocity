@@ -119,6 +119,9 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
   std::vector<int> result;
   int previous = -1;
   const bool reserve_mechanic=mode==Mode::Endless&&layout_version>=4&&district>=1&&district<AuthoredDistrictCount;
+  // Some legs end on an exploration room, so a district with only one
+  // recovery room doesn't keep returning to the same ending.
+  const bool explore_closer=reserve_mechanic&&(mix(seed ^ 0x62f4a1bdu)&1u);
   int early_mechanic=-1;
   const auto has_mechanic=[&](int id){return has_expedition_mechanic(district,id);};
   while (int(result.size()) < count) {
@@ -137,7 +140,8 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
       size_t choice=0;int best=harbor_graph?INT_MAX:10000;
       static const Rhythm phrase[]={Rhythm::Flow,Rhythm::Explore,Rhythm::Precision,Rhythm::Vertical,
         Rhythm::Timing,Rhythm::Flow,Rhythm::Vertical,Rhythm::Recovery};
-      auto desired=phrase[result.size()%8];
+      const auto slot=result.size()%RoomsPerLeg;
+      const auto desired=explore_closer&&slot==RoomsPerLeg-1?Rhythm::Explore:phrase[slot];
       for(size_t i=0;i<bag.size();++i) {
         if(mechanic_due&&bag[i]!=early_mechanic)continue;
         const auto &candidate=pattern(bag[i]);
