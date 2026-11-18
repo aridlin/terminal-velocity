@@ -63,6 +63,29 @@ int main(){try{
   world_step(shield,game.grid,{},1./120);
   require_end(shield.deaths==1&&shield.crown.hits==0,"the marked sweep hits a courier who stays on the floor");
  }
+ {
+  auto beam=game.state;
+  beam.crown.hits=1;beam.crown.target=27;
+  beam.adventure.door_left=0.;
+  const auto lane=crown_attack_areas(beam.crown).front();
+  CellFrame frame;cell_frame_sink=[&](const CellFrame &cells){frame=cells;};
+  for(double aspect:{1.5,2.,2.5}) {
+   update_camera(beam,game.grid,110,27,aspect,10);
+   const int left=int(std::floor((lane.left()-beam.camera_x)/.4));
+   const int right=int(std::floor((std::nextafter(lane.right(),lane.left())-beam.camera_x)/.4));
+   const int row=4+int(std::floor((lane.top()+3-beam.camera_y)/(.4*aspect)));
+   beam.crown.time=crown_warning_time;
+   RenderGrid(game.grid,beam,34,110,aspect).draw();
+   require_end(frame.at(row).at(left).rgb==0xe4b872&&frame.at(row).at(right).rgb==0xe4b872,
+               "warning marks both edges of the damaging beam lane");
+   beam.crown.time=crown_strike_time;
+   RenderGrid(game.grid,beam,34,110,aspect).draw();
+   require_end(std::all_of(frame.at(row).begin()+left,frame.at(row).begin()+right+1,
+                          [](const Cell &cell){return cell.rgb==0xf78677;}),
+               "the live beam fills the collision lane at the current terminal aspect");
+  }
+  cell_frame_sink={};
+ }
  play_crown_sentinel(game,1);
  {
   auto phase_file=folder/"crown-phase";
