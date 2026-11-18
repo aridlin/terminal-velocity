@@ -159,8 +159,8 @@ int main() {
       const auto tag=cell_at(0xbbae86,"▤");
       const auto hand=cell_at(0xbf967b,phase<.45?"╱":"╸");
       check_harbor(helmet_x>=0&&stripe==std::pair{helmet_x,helmet_y+2}&&
-        tag==std::pair{helmet_x+4,helmet_y+1}&&
-        hand==(phase<.45?std::pair{helmet_x+3,helmet_y+1}:std::pair{helmet_x+2,helmet_y+2}),
+        tag==std::pair{helmet_x+5,helmet_y+2}&&
+        hand==std::pair{helmet_x+2,helmet_y+(phase<.45?1:2)},
         "dockworker clothing and both cargo-tag poses align at compact and wide widths");
     }
     cell_frame_sink={};

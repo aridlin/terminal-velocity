@@ -157,9 +157,9 @@
     world_art(x,top,{"",""," ▐██▌"},0xac7341);
     world_art(x,top,{"","","  ▄▄"},0xd5c48b);
     world_art(x,top,{"","",""," ▟▌▐▙"},0x6d8590);
-    world_art(x,top,{"","","     ┌──┬─┐","     └──┴─┘"},0x997653);
-    world_art(x,top,{"","      ▤"},0xbbae86);
-    world_art(x,top,{"",checking_tag?"  ██ ╱":"  ██",checking_tag?"":"    ╸"},0xbf967b);
+    world_art(x,top,{"","     ┌────┐","     │    │","     └────┘"},0x997653);
+    world_art(x,top,{"","","       ▤"},0xbbae86);
+    world_art(x,top,{"",checking_tag?"  ██╱":"  ██",checking_tag?"":"    ╸"},0xbf967b);
   }
 
   void draw_harbor_landmarks() {
