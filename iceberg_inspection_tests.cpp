@@ -48,6 +48,17 @@ int main(){try {
       require_inspect(!v.inspecting&&game.state.elapsed==elapsed&&game.profile.task_items==original_items,"reading inspection changes the world or does not close");
     }
   }
+  game.grid.interactions={{{5,40,3,4},InteractionKind::Note,0,{"Tablica","Sign"}}};
+  game.state.player.x=5;game.state.player.y=41;
+  Controls inspect;inspect.inspect=true;
+  game.tick(inspect,0);
+  require_inspect(game.state.adventure.inspecting,"could not reopen inspection for focus check");
+  game.tick({},.1,false);game.tick({},.1,true);
+  require_inspect(game.state.adventure.inspecting&&!game.state.paused,
+    "refocusing the inspection must keep it open without adding a pause");
+  game.tick(inspect,0);
+  require_inspect(!game.state.adventure.inspecting&&!game.state.paused,"closing the inspection should return to play");
+  std::cout<<"PASS inspection survives a focus round trip without adding a pause\n";
   cell_frame_sink={};std::cout<<"PASS "<<studies<<" detailed studies and "<<pages<<" actual inspection pages, both languages, five screen sizes; no clipping or world mutation\n";
   return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

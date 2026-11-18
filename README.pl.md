@@ -31,7 +31,7 @@ Linux, w terminalu:
 ./ghostty-play.sh               # nowe okno Ghostty
 ```
 
-Podróż fabularna obsługuje **34×24 komórki** albo szeroki układ **56×20**; zalecane **110×34**. Klasyczne trasy wymagają **76×24**. Okno można skalować; **F11** przełącza pełny ekran. **Ctrl +/−** zmienia wielkość komórek, a **Ctrl 0** ją resetuje; ekrany o dużej gęstości pikseli skalują się automatycznie. Utrata fokusu pauzuje grę; **Enter/P** wznawia.
+Podróż fabularna obsługuje **34×24 komórki** albo szeroki układ **56×20**; zalecane **110×34**. Klasyczne trasy wymagają **76×24**. Okno można skalować; **F11** przełącza pełny ekran. **Ctrl +/−** zmienia wielkość komórek, a **Ctrl 0** ją resetuje; ekrany o dużej gęstości pikseli skalują się automatycznie. Domyślnie utrata fokusu podczas gry włącza pauzę. **Enter/P** wznawia. Możesz to wyłączyć w ustawieniach.
 
 Windows 10/11 x64: rozpakuj całą paczkę, uruchom **play.cmd** w Windows Terminal albo **play-window.cmd** dla wersji okienkowej. Zachowaj katalog `assets/` obok plików wykonywalnych. Wersja okienkowa potrzebuje też dołączonego `SDL2.dll`; terminalowa nie potrzebuje SDL. Administrator nie jest wymagany.
 

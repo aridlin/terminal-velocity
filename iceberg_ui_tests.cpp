@@ -37,6 +37,33 @@ int main(){try {
     game.tick(tab,1./120);
     ui_check(!game.state.adventure.map_room&&!game.state.adventure.map_route,"B returns to the campaign district map");
   }
+  AdventureSession focus(options,"/tmp/tv-ui-overlay-focus-unused");
+  auto lose_and_regain_focus=[&](){focus.tick({},.1,false);focus.tick({},.1);};
+  lose_and_regain_focus();
+  ui_check(focus.state.menu&&!focus.state.paused,"losing focus in the menu does not create a gameplay pause");
+  focus.begin_campaign(true);
+  Controls pause_overlay;pause_overlay.pause=true;
+  focus.tick(map,0);focus.tick(tab,0);focus.tick(tab,0);
+  const double reading_time=focus.state.elapsed;
+  lose_and_regain_focus();
+  ui_check(focus.state.adventure.map&&focus.state.adventure.map_room&&!focus.state.paused&&focus.state.elapsed==reading_time,
+    "focus loss preserves the room map without adding a second pause");
+  focus.tick(map,0);focus.tick(book,0);focus.tick(tab,0);
+  const int book_tab=focus.state.adventure.journal_tab;
+  lose_and_regain_focus();
+  ui_check(focus.state.journal&&focus.state.adventure.journal_tab==book_tab&&!focus.state.paused,
+    "focus loss preserves the quest book tab without adding a second pause");
+  focus.tick(pause_overlay,0);
+  ui_check(!focus.state.journal&&!focus.state.paused,"closing the quest book returns to play after refocus");
+  focus.tick(pause_overlay,0);focus.tick(map,0);
+  lose_and_regain_focus();focus.tick(map,0);
+  ui_check(!focus.state.adventure.map&&focus.state.paused,"closing a map after refocus preserves the manual pause underneath");
+  focus.tick(enter,0);
+  lose_and_regain_focus();
+  ui_check(focus.state.paused,"losing focus during active play still pauses");
+  focus.tick(enter,0);focus.profile.pause_on_focus_loss=false;
+  lose_and_regain_focus();
+  ui_check(!focus.state.paused,"disabling focus pause still keeps active play unpaused");
   AdventureSession detour(options,"/tmp/tv-ui-room-detour-unused");detour.begin_campaign(true);
   detour.profile.language=iceberg::Language::English;
   detour.profile.hidden_room=0;detour.load_room();
