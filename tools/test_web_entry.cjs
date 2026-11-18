@@ -493,6 +493,11 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(()=>expanded());
    assert.equal(await page.evaluate(()=>!!document.fullscreenElement),!fallback);
    const tools=page.locator('#fullscreen-tools');
+   const language=tools.locator('[data-language-toggle]');
+   await language.tap();
+   await page.waitForFunction(()=>document.documentElement.lang==='pl');
+   await language.tap();
+   await page.waitForFunction(()=>document.documentElement.lang==='en');
    for(const [key,flag] of [[11,128],[10,64]]){
     const button=tools.locator('[data-tap="'+key+'"]');
     assert.equal(await button.count(),1,'fullscreen keeps Map and Quests in reach');
@@ -574,6 +579,7 @@ const server=http.createServer((req,res)=>{
    await page.locator('#leave-fullscreen').tap();
    await page.waitForFunction(()=>!expanded());
    await page.locator("footer #settings-keys").waitFor({state:"attached"});
+   await page.locator('#toolbar [data-language-toggle]').waitFor({state:'visible'});
   }
   console.log('PASS mobile native and fallback fullscreen Map, Quests and settings controls');
   console.log('PASS mobile, landscape, resized and large canvas preserve proportions; language remains reachable');

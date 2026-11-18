@@ -145,7 +145,8 @@ function selectLanguage(language){
  else drawBoot();
 }
 for(const b of document.querySelectorAll('[data-language]'))b.onclick=()=>selectLanguage(b.dataset.language);
-for(const b of document.querySelectorAll('[data-language-toggle]'))b.onclick=()=>selectLanguage(english?'pl':'en');
+const languageToggle=document.querySelector('[data-language-toggle]');
+languageToggle.onclick=()=>selectLanguage(english?'pl':'en');
 window.tvUI=u=>{
  const nextEnglish=!!(u.flags&512);
  // The game sends UI state every frame. Only a transition changes the controls.
@@ -326,8 +327,13 @@ const settingsKeys=document.querySelector('#settings-keys');
 const expanded=()=>!!document.fullscreenElement||playfield.classList.contains('expanded');
 function fullscreenLayout(){
  const active=expanded();
- if(active)document.querySelector('#fullscreen-tools').append(settingsKeys);
- else document.querySelector('#hint').before(settingsKeys);
+ if(active){
+  document.querySelector('#leave-fullscreen').before(languageToggle);
+  document.querySelector('#fullscreen-tools').append(settingsKeys);
+ }else{
+  document.querySelector('#toolbar').append(languageToggle);
+  document.querySelector('#hint').before(settingsKeys);
+ }
  clearInput();
  resize();
  canvas.focus();
