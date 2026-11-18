@@ -9,7 +9,9 @@
     const bool has_wind=wind!=grid_.air_fields.end();
     const char *wind_symbol=has_wind?(wind->reverses?"↔":wind->ax<0?"←":"→"):"";
     const bool has_ice=!grid_.ice_strips.empty()||
-      std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy;});
+      std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy&&!platform.fragile;});
+    const bool has_fragile=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.fragile;});
     const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_rack;});
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
@@ -52,8 +54,9 @@
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const bool has_vents=!grid_.pulses.empty();
     constexpr uint32_t service_lift_color=0xe4ad68;
+    constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f;
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
-      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift);
+      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)+int(has_fragile);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -122,6 +125,7 @@
       const int last=column(std::nextafter(belt.x+belt.width,belt.x));
       for(int x=column(belt.x);x<=last;++x)line[size_t(x)]='b';
     }
+    std::vector<std::array<int,3>> cracking_spans;
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       if(platform.archive_rack||platform.service_lift) {
@@ -138,8 +142,16 @@
       }
       if(!platform.available(state_,i,state_.elapsed))continue;
       const auto deck=platform.at(state_.elapsed);
-      auto &line=map[size_t(row(deck.y))];
-      for(int x=column(deck.x);x<=column(deck.right());++x)line[size_t(x)]=platform.icy?'i':'=';
+      char tile=platform.icy?'i':'=';
+      if(platform.fragile) {
+        const bool cracking=platform.crack_age(state_,i,state_.elapsed)<MovingPlatform::CrackTime;
+        tile=cracking?'c':platform.icy?'j':'f';
+      }
+      const int y=row(deck.y),start=column(deck.left());
+      const int last=column(std::nextafter(deck.right(),deck.left()));
+      if(tile=='c')cracking_spans.push_back({y,start,last});
+      auto &line=map[size_t(y)];
+      for(int x=start;x<=last;++x)line[size_t(x)]=tile;
     }
     for(int y=0;y<map_rows;++y)for(int x=0;x<width;++x) {
       switch(map[size_t(y)][size_t(x)]) {
@@ -151,6 +163,9 @@
       case 'b':paint_text(first+y,left+x,"═",belt_color);break;
       case 'g':paint_text(first+y,left+x,"═",bridge_color);break;
       case 'i':paint_text(first+y,left+x,"━",0xa6e9ea);break;
+      case 'f':paint_text(first+y,left+x,"┅",fragile_color);break;
+      case 'j':paint_text(first+y,left+x,"┅",0xa6e9ea);break;
+      case 'c':paint_text(first+y,left+x,"╍",cracking_color);break;
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
     }
@@ -252,6 +267,15 @@
     };
     for(const auto &marker:overlaps)for(const auto &[dx,dy]:nearby)
       if(place(marker,dx*marker.direction,dy))break;
+    // On a compact map an entire floe can sit under the courier marker.
+    // Keep its warning visible above the deck if its footprint is covered.
+    for(const auto &[y,start,last]:cracking_spans) {
+      const auto &line=map[size_t(y)];
+      if(line.find('c',size_t(start))<=size_t(last))continue;
+      const Marker warning{(start+last)/2,y,1,"╍",cracking_color};
+      if(!place(warning,0,-1))
+        for(const auto &[dx,dy]:nearby)if(place(warning,dx,dy))break;
+    }
     int legend=top+height-legend_rows;
     if(fork) {
       paint_text(legend++,2,tr("@ Ty · ◆ Lampa","@ You · ◆ Lamp"),0xc7d9df);
@@ -306,6 +330,13 @@
         x+=int(glyphs(label).size());
       }
       ++legend;
+    }
+    if(has_fragile) {
+      const auto name=tr("┅ Kruche","┅ Fragile");
+      const int separator=2+int(glyphs(name).size());
+      paint_text(legend,2,name,fragile_color);
+      paint_text(legend,separator," · ",0xc7d9df);
+      paint_text(legend++,separator+3,tr("╍ Pękają","╍ Cracking"),cracking_color);
     }
     int feature_col=2;
     auto label=[&](const std::string &entry,uint32_t color) {

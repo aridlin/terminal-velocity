@@ -365,6 +365,36 @@ int main(){try {
       }
     }
   }
+  auto pots=verified_room(51,73,4);
+  add_expedition_fragile_pots(pots);
+  const size_t first_pot=pots.platforms.size()-2;
+  const auto pots_view=new_state(pots);
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    const bool en=language==iceberg::Language::English;
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      auto view=pots_view;
+      view.adventure.map=view.adventure.map_room=true;
+      view.adventure.language=language;
+      RenderGrid(pots,view,rows,cols,2).draw();
+      const int intact=count_map("┅",0xd5aa80);
+      ui_check(intact>1&&count_map("╍",0xf1c66f)==0&&
+        ui_text(frame).find(en?"┅ Fragile · ╍ Cracking":"┅ Kruche · ╍ Pękają")!=std::string::npos,
+        "the map identifies fragile planters before they crack");
+      view.platform_armed_at[first_pot]=1.;
+      view.elapsed=1.2;
+      RenderGrid(pots,view,rows,cols,2).draw();
+      const int cracking=count_map("╍",0xf1c66f);
+      ui_check(cracking>0&&count_map("┅",0xd5aa80)+cracking==intact,
+        "only the armed planter is shown cracking");
+      view.elapsed=1.8;
+      RenderGrid(pots,view,rows,cols,2).draw();
+      ui_check(count_map("╍",0xf1c66f)==0&&count_map("┅",0xd5aa80)==intact-cracking,
+        "the broken planter leaves the map while its neighbor remains");
+      view.elapsed=4.;
+      RenderGrid(pots,view,rows,cols,2).draw();
+      ui_check(count_map("┅",0xd5aa80)==intact,"the restored planter returns as intact on the map");
+    }
+  }
   auto reservoir=verified_room(55,73,4);
   auto reservoir_view=new_state(reservoir);
   reservoir_view.adventure.map=reservoir_view.adventure.map_room=true;
@@ -380,11 +410,23 @@ int main(){try {
   add_reservoir_ice(reservoir);
   reservoir_view=new_state(reservoir);
   reservoir_view.adventure.map=reservoir_view.adventure.map_room=true;
-  for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+  for(auto [cols,rows]:{std::pair{34,24},std::pair{38,28},std::pair{60,20},std::pair{110,34}}) {
     RenderGrid(reservoir,reservoir_view,rows,cols,2).draw();
     const int water=count_background(0x14394e);
-    ui_check(water>0&&count_background(0x214b62,"━")>0,
+    ui_check(water>0&&count_background(0x214b62,"┅")>0,
       "the reservoir map shows the blue basin below intact white ice");
+    auto cracking_ice=reservoir_view;
+    cracking_ice.elapsed=1.2;
+    cracking_ice.platform_armed_at[0]=1.0;
+    RenderGrid(reservoir,cracking_ice,rows,cols,2).draw();
+    ui_check(count_background(0x214b62,"╍")>0&&count_background(0x214b62,"┅")>0,
+      "the first cracking floe is distinguishable from intact ice over the same basin");
+    const auto &floe=reservoir.platforms[0].base;
+    cracking_ice.player.x=floe.x+floe.w*.5-kPlayerWidth*.5;
+    cracking_ice.player.y=floe.y-kPlayerHeight;
+    RenderGrid(reservoir,cracking_ice,rows,cols,2).draw();
+    ui_check(count_map("╍",0xf1c66f)>0&&count_map("@",0xffd68a)==1,
+      "the courier marker cannot hide the cracking floe warning");
     auto gap=reservoir_view;
     gap.elapsed=1.8;
     for(size_t i=0;i<reservoir.platforms.size();++i)
