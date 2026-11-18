@@ -662,6 +662,9 @@ const server=http.createServer((req,res)=>{
       assert.equal(await route.innerText(),'Room');
       await route.tap();
       await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
+     }
+     if(await page.evaluate(()=>!!(uiFlags&(1<<17)))){
+      assert.equal(await route.innerText(),'Districts');
       await route.tap();
       await page.waitForFunction(()=>!(uiFlags&(2048|(1<<17))));
      }
@@ -674,6 +677,11 @@ const server=http.createServer((req,res)=>{
      await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
      assert.equal(await route.innerText(),'Districts');
      assert.equal(await use.getAttribute('aria-label'),'Close map');
+     await use.tap();
+     await page.waitForFunction(()=>!(uiFlags&128));
+     await button.tap();
+     await page.waitForFunction(()=>(uiFlags&(128|(1<<17)))===(128|(1<<17)));
+     assert.equal(await route.innerText(),'Districts','fullscreen reopens the room map');
      await use.tap();
     }else {
      assert.equal(await inspectControl.getAttribute('aria-label'),'Next quest tab');
