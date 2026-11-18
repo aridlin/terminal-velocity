@@ -59,6 +59,32 @@
     }
   }
 
+  void draw_reservoir_floe(const Rect &floe,double age) {
+    const int cells=std::max(3,int(floe.w/scale_));
+    const double row=aspect_*scale_;
+    constexpr uint32_t rim=0xb1e9e9,crack=0xf2fafa;
+    if(age>=MovingPlatform::CrackTime&&age<MovingPlatform::RestoreTime) {
+      const double fall=age-MovingPlatform::CrackTime;
+      if(fall<.55)for(int i=0;i<5;++i) {
+        const double spread=(i-2)*fall*.55;
+        world_art(floe.x+floe.w*(.14+.17*i)+spread,floe.y+row+fall*fall*11,
+          {i%2?"◇":"▴"},0x6bb8c9);
+      }
+      if(age>MovingPlatform::RestoreTime-.4)
+        world_text(floe.x+floe.w*.4,floe.y+row,"·∙·",0x7bbfd0);
+      return;
+    }
+    const bool cracking=age<MovingPlatform::CrackTime;
+    std::string lip="╶",ice="╲";
+    for(int i=1;i<cells-1;++i) {
+      const bool fracture=cracking&&(i==cells/2||(age>.27&&i%4==2));
+      lip+=fracture?"╳":"━";
+      ice+=fracture?"╱":i%4==0?"░":"▒";
+    }
+    world_text(floe.x,floe.y,lip+"╴",cracking?crack:rim);
+    world_text(floe.x,floe.y+row,ice+"╱",0x629eb6);
+  }
+
   void draw_fragile_planter(const Rect &pot,double age) {
     const double row=aspect_*scale_;
     const int cells=std::max(5,int(pot.w/scale_));

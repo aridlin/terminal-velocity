@@ -220,6 +220,7 @@ public:
     add_expedition_post_launchers(room);
     add_expedition_copy_belts(room);
     add_expedition_ice(room);
+    add_reservoir_ice(room);
     add_expedition_root_pod(room);
     add_expedition_fragile_pots(room);
     strengthen_expedition_wind(room);

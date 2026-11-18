@@ -225,7 +225,7 @@
     draw_iceberg_landmarks();
     draw_expedition_infrastructure();
     if(grid_.district==3)draw_archive_drawers();
-    if(!grid_.ice_strips.empty())draw_garden_ice();
+    if(grid_.district==4)draw_garden_ice();
     if(grid_.district==1)for(const auto &jet:grid_.air_fields) {
       if(grid_.room_role==iceberg::RoomRole::Traverse&&state_.adventure.mode==iceberg::Mode::Endless) {
         draw_expedition_steam_lift(jet);
@@ -249,6 +249,7 @@
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       const auto r=platform.at(state_.elapsed);
+      if(platform.icy){draw_reservoir_floe(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile){draw_fragile_planter(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.tram){draw_estate_tram(platform,r);continue;}
       if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}

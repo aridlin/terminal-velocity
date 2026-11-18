@@ -413,6 +413,38 @@ int main(int argc,char **argv) {
     garden_run.layout_version=2;gardens.load_room();
     check(gardens.grid.template_id==51&&gardens.grid.platforms.empty(),
       "older Gardens itineraries keep the original footholds");
+    garden_run.itinerary[3]=55;gardens.load_room();
+    const auto old_token_count=gardens.grid.sweets.size();
+    check(gardens.grid.template_id==55&&gardens.grid.platforms.empty()&&gardens.grid.water_basins.empty(),
+      "older Warm Reservoir layouts keep the original route");
+    garden_run.layout_version=iceberg::ContentVersion;gardens.load_room();
+    const auto &spillway=gardens.grid;
+    check(spillway.platforms.size()==5&&spillway.water_basins.size()==1&&
+          spillway.sweets.size()==old_token_count+1&&verify_route(spillway).complete,
+      "current Endless Reservoir adds an optional ice spillway with a token and a verified upper route");
+    const auto &floe=spillway.platforms.front();
+    auto on_floe=new_state(spillway);
+    on_floe.player.x=floe.base.x+2.5;
+    on_floe.player.y=floe.base.y-kPlayerHeight-.2;
+    for(int tick=0;tick<20;++tick)world_step(on_floe,spillway,{},1./120);
+    check(on_floe.player.support==0&&spillway.on_ice(on_floe.player)&&
+          on_floe.platform_armed_at.front()>0.&&on_floe.platform_armed_at[1]==0.,
+      "each floe is slippery and starts cracking only when the courier lands on it");
+    auto skater=on_floe,dry_walker=on_floe;
+    skater.player.vx=dry_walker.player.vx=10.;
+    auto dry_spillway=spillway;dry_spillway.platforms[0].icy=false;
+    for(int tick=0;tick<30;++tick) {
+      world_step(skater,spillway,{},1./120);
+      world_step(dry_walker,dry_spillway,{},1./120);
+    }
+    check(skater.player.x-dry_walker.player.x>1.2&&skater.player.support==0,
+      "releasing movement glides farther on the floe than on a dry platform");
+    for(int tick=0;tick<66;++tick)world_step(on_floe,spillway,{},1./120);
+    check(on_floe.deaths==0&&on_floe.player.support<0&&on_floe.player.rect().bottom()>48.&&
+          !floe.available(on_floe,0,on_floe.elapsed)&&spillway.platforms[1].available(on_floe,1,on_floe.elapsed),
+      "the cracked floe drops the courier and neighboring floes stay solid");
+    check(floe.available(on_floe,0,on_floe.platform_armed_at[0]+MovingPlatform::RestoreTime+.01),
+      "the broken floe is solid again after its recovery time");
     AdventureSession crown(options,path);
     crown.begin_campaign(true);
     crown.profile.unlocked=5;crown.run_district=5;

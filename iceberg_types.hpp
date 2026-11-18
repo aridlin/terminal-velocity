@@ -174,6 +174,7 @@ inline constexpr std::array DebugTour{
   TourStop{4,57,{"Ruchome wiadra koła nawadniającego","The irrigation wheel's bucket lifts"}},
   TourStop{5,60,{"Podmuchy i rękawy wiatrowe","Gusts and windsocks"}},
   TourStop{5,68,{"Wiatr zmienia kierunek nad górnymi półkami","Crosswinds reverse above the upper ledges"}},
+  TourStop{4,55,{"Kruche kry na zamarzniętym przelewie","Brittle ice over the reservoir spillway"}},
 };
 struct View {
   RouteView route;

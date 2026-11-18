@@ -186,6 +186,22 @@ inline void add_expedition_ice(EngineGrid &room) {
   else room.ice_strips.clear();
 }
 
+inline void add_reservoir_ice(EngineGrid &room) {
+  if(room.district!=4||room.template_id!=55)return;
+  const size_t existing=room.platforms.size();
+  for(int x=76;x<106;x+=6)
+    room.platforms.push_back({.base={double(x),48,6,.5},.fragile=true,.icy=true});
+  room.water_basins.push_back({76,48,30,14});
+  room.sweets.push_back({98.5,46.7});
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else {
+    room.platforms.resize(existing);
+    room.water_basins.pop_back();
+    room.sweets.pop_back();
+  }
+}
+
 inline void add_expedition_root_pod(EngineGrid &room) {
   if(room.district!=4||room.template_id!=49)return;
   // The outer end of the turnaround lets riders reach the side shelves.

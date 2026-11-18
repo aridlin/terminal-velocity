@@ -323,6 +323,7 @@ struct MovingPlatform {
   double dx = 0, dy = 0, period = 4, phase = 0;
   bool tram = false;
   bool fragile = false;
+  bool icy = false;
   static constexpr double CrackTime = .55, RestoreTime = 2.9;
   double crack_age(const GameState &state, size_t index, double time) const {
     const double start = state.platform_armed_at[index];
@@ -516,6 +517,7 @@ public:
   std::vector<Rect> ice_strips;
   bool on_ice(const Player &player) const {
     if(!player.grounded)return false;
+    if(player.support>=0&&size_t(player.support)<platforms.size()&&platforms[size_t(player.support)].icy)return true;
     const double center=player.x+kPlayerWidth*.5,feet=player.rect().bottom();
     return std::any_of(ice_strips.begin(),ice_strips.end(),[&](const Rect &strip){
       return center>=strip.left()&&center<strip.right()&&std::abs(feet-strip.top())<.12;

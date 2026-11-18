@@ -95,6 +95,11 @@
       int id=grid_.template_id;
       if(id==49||id==53)world_art(36,8,{"    ╭───╮","╭───┤   ├────╮","╰╮  │   │   ╭╯"," │╲ │   │ ╱ │"," │ ╲│   │╱  │"," │  │   │   │","╭╯  │   │   ╰╮","╰───┤   ├────╯","    │   │","    │   │","   ╱│   │╲","  ╱ ╰───╯ ╲"},d.stone);
       if(id==55||id==52)world_art(46,47,{"╭────────────────────────────────╮","│  ≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋   │","│     ╲        ╲        ╲        │","╰────────────────────────────────╯"},d.shadow);
+      if(id==55&&!grid_.water_basins.empty()) {
+        draw_scenery_pipe({{53,50},{53,53},{74,53},{74,48},{76,48}},0x5f8790);
+        world_text(74,47.2,"╔╤╗",0x9dbbb7);
+        if(std::fmod(clock,1.25)<.7)world_text(75.2,48.5,"·",0x92e1ec);
+      }
       if(id==56)world_art(60,30,{"╭──────────────────────╮","│  ╭─╮   ╭─╮   ╭─╮     │","│  │⠿│   │⠿│   │⠿│     │","│  ╰─╯   ╰─╯   ╰─╯     │","├──────────────────────┤","│  01    02    03      │","╰──────────────────────╯"},d.stone);
       if(id==57||id==81)wheel(88,25);
       if(id==48||id==59)world_art(67,8,{"     ╭───────────────╮","  ╭──┤░░░░░░░░░░░░░░░├──╮","  ╰──┴───────────────┴──╯","    ╲       │       ╱","     ╲      │      ╱"},d.stone);
@@ -108,7 +113,10 @@
       if(alive&&bridge.amount<1)world_text(bridge.area.x+width,bridge.area.y,"╭╯",d.light);
     }
     if(grid_.template_id!=50&&grid_.template_id!=57)
-      for(const auto &platform:grid_.platforms){auto r=platform.at(state_.elapsed);world_art(r.x,r.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱"},d.stone);}
+      for(const auto &platform:grid_.platforms)if(!platform.icy) {
+        const auto r=platform.at(state_.elapsed);
+        world_art(r.x,r.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱"},d.stone);
+      }
     // Pollen stays muted and sparse; collision edges remain the brightest layer.
     for(int i=0;i<8;++i)world_text(std::fmod(i*23.1+std::sin(clock*.3+i)*2+grid_.width(),double(grid_.width())),std::fmod(i*8.7+clock*.4,58.),i%2?"⠁":"·",d.shadow);
   }
