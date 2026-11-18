@@ -96,6 +96,12 @@ int main(){try{
   require_end(resumed.stage==5&&dialogue.active()&&
               std::string_view(dialogue.lines.front().text.en)==expected.front().text.en,
               "reloading restores the second homecoming conversation");
+  auto later_file=folder/"later-homecoming";
+  auto later_profile=resumed.profile;later_profile.district=later_profile.unlocked=2;
+  require_end(iceberg::SaveStore(later_file).save(later_profile),"fixture saves the next district on an older client");
+  AdventureSession later(options,later_file);later.begin_campaign(false);
+  require_end(later.district==2&&!later.state.adventure.dialogue.active(),
+              "a previous district's conversation does not reopen at another settlement");
   read_end(resumed);
   AdventureSession completed(options,return_file);completed.begin_campaign(false);
   require_end(completed.stage==5&&!completed.state.adventure.dialogue.active(),
@@ -195,7 +201,7 @@ int main(){try{
   read_end(resume);
   require_end(resume.grid.template_id==330,"the resumed reply still advances to the epilogue");
  }
- read_end(game);
+ while(game.grid.template_id==iceberg::CrownSentinel&&game.state.adventure.dialogue.active())game.dialogue_next();
  require_end(game.grid.template_id==330&&!game.profile.finished&&game.profile.records[5].complete,"beacon completion records Crown and starts a playable epilogue before marking the journey finished");
  {
   AdventureSession resume(options,file);resume.begin_campaign(false);
