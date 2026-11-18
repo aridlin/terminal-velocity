@@ -468,7 +468,12 @@ start.onclick=()=>{
   failStartup(error);
  }
 };
-canvas.onclick=()=>{if(!started)start.click();else if(!accounts?.active&&(uiFlags&(2|4|1024)))tap(8);};
+canvas.onclick=()=>{
+ if(!started){start.click();return;}
+ if(accounts?.active||importPending)return;
+ const overlay=overlayFlags();
+ if((overlay&4)||(!(overlay&(8|64|128))&&(overlay&(2|1024))))tap(8);
+};
 addEventListener('keydown',e=>{
  if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
 });

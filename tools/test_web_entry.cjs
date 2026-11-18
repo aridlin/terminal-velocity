@@ -176,19 +176,36 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.evaluate(()=>accounts.active),true,'a held press does not activate the account action');
     await page.mouse.up();
     await page.waitForFunction(()=>!accounts.active&&(uiFlags&2)&&canvas===document.activeElement);
+    await page.evaluate(()=>{
+     const tick=Module._web_tick;
+     window.canvasConfirms=0;
+     Module._web_tick=(dt,held,pressed,...rest)=>{
+      if(pressed&(1<<8))window.canvasConfirms++;
+      return tick(dt,held,pressed,...rest);
+     };
+    });
+    const clickGameCanvas=async()=>{
+     await page.locator('#game').click();
+     await page.evaluate(async()=>{for(let i=0;i<3;i++)await new Promise(requestAnimationFrame);});
+    };
     await page.keyboard.press('j');
     await page.waitForFunction(()=>!!(uiFlags&128)&&entryFrame.includes('JOURNEY MAP'));
+    await clickGameCanvas();
+    assert.equal(await page.evaluate(()=>window.canvasConfirms),0,'clicking the paused map does not confirm travel');
     assert.equal(await page.evaluate(()=>entryFrame.includes('A MOMENT TO BREATHE')),false);
     await page.keyboard.press('p');
     await page.waitForFunction(()=>(uiFlags&(2|128))===2&&entryFrame.includes('A MOMENT TO BREATHE'));
     await page.locator('footer [data-tap="10"]').click();
     await page.waitForFunction(()=>!!(uiFlags&64)&&entryFrame.includes('QUEST BOOK'));
     assert.equal(await page.evaluate(()=>entryFrame.includes('A MOMENT TO BREATHE')),false);
+    await clickGameCanvas();
+    assert.equal(await page.evaluate(()=>window.canvasConfirms),0,'clicking the paused quest book does not select an entry');
     await page.keyboard.press('Tab');
     await page.waitForFunction(()=>(uiFlags&(2|64))===2);
-    console.log('PASS map and quests stay readable over pause and close back to the paused game');
-    await page.keyboard.press('Enter');
+    await clickGameCanvas();
     await page.waitForFunction(()=>!(uiFlags&2));
+    assert.equal(await page.evaluate(()=>window.canvasConfirms),1,'clicking the pause screen still resumes');
+    console.log('PASS map and quests above pause ignore stray canvas clicks and closing them returns to pause');
 
 
     await page.screenshot({path:path.join(out,'web-opening-en.png')});
