@@ -217,6 +217,34 @@ int main(){try {
       features.state.collected.back()=false;
     }
   }
+  auto tram_room=verified_room(24,73,2);
+  auto tram_view=new_state(tram_room);
+  tram_view.adventure.map=tram_view.adventure.map_room=true;
+  RenderGrid(tram_room,tram_view,24,34,2).draw();
+  ui_check(count_map("▰",0xefcd74)==0&&count_map("○",0xc2accf)==0,
+    "ordinary lifts do not appear as scheduled trams");
+  add_expedition_trams(tram_room);
+  tram_view=new_state(tram_room);
+  tram_view.adventure.map=tram_view.adventure.map_room=true;
+  for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+    RenderGrid(tram_room,tram_view,rows,cols,2).draw();
+    ui_check(count_map("▰",0xefcd74)==3&&count_map("○",0xc2accf)==6&&
+      ui_text(frame).find("○ Przystanek")!=std::string::npos,
+      "the compact Estate room map shows three tram cars and both stops on each track");
+  }
+  auto tram_markers=[&](const char *glyph,uint32_t color){
+    std::vector<std::pair<size_t,size_t>> cells;
+    for(size_t y=6;y+7<frame.size();++y)for(size_t x=0;x<frame[y].size();++x)
+      if(frame[y][x].glyph==glyph&&frame[y][x].rgb==color)cells.emplace_back(y,x);
+    return cells;
+  };
+  const auto first_cars=tram_markers("▰",0xefcd74),stops=tram_markers("○",0xc2accf);
+  tram_view.elapsed=3;
+  tram_view.adventure.language=iceberg::Language::English;
+  RenderGrid(tram_room,tram_view,34,110,2).draw();
+  ui_check(tram_markers("▰",0xefcd74)!=first_cars&&tram_markers("○",0xc2accf)==stops&&
+    ui_text(frame).find("○ Stop")!=std::string::npos,
+    "tram markers follow the actual cars across their routes");
   auto rack_room=verified_room(47,73,3);
   auto rack_view=new_state(rack_room);
   rack_view.adventure.map=rack_view.adventure.map_room=true;

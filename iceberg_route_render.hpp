@@ -12,6 +12,8 @@
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy;});
     const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_rack;});
+    const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.tram;});
     const bool has_features=has_water||has_boost||has_wind||has_ice||has_racks||!grid_.sweets.empty();
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
       return node.kind==InteractionKind::RouteChoice;
@@ -26,7 +28,8 @@
     };
     const bool has_valves=std::any_of(grid_.interactions.begin(),grid_.interactions.end(),required_valve);
     constexpr uint32_t valve_color=0xf0a277;
-    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves);
+    constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
+    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -81,6 +84,12 @@
         for(int y=row(platform.base.y-range);y<=row(platform.base.y+range);++y)
           if(map[size_t(y)][size_t(x)]==' ')map[size_t(y)][size_t(x)]=':';
       }
+      if(platform.tram) {
+        const double center=platform.base.x+platform.base.w*.5,range=std::abs(platform.dx);
+        auto &rail=map[size_t(row(platform.base.y))];
+        for(int x=column(center-range);x<=column(center+range);++x)
+          if(rail[size_t(x)]==' ')rail[size_t(x)]='-';
+      }
       if(!platform.available(state_,i,state_.elapsed))continue;
       const auto deck=platform.at(state_.elapsed);
       auto &line=map[size_t(row(deck.y))];
@@ -92,6 +101,7 @@
       case '!':paint_text(first+y,left+x,"░",0xa26666);break;
       case '=':paint_text(first+y,left+x,"─",0x9dd4dd);break;
       case ':':paint_text(first+y,left+x,"┆",0x718c9d);break;
+      case '-':paint_text(first+y,left+x,"┄",0x887b96);break;
       case 'i':paint_text(first+y,left+x,"━",0xa6e9ea);break;
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
@@ -105,9 +115,11 @@
       paint_text(first+y,left+x,marker.symbol,marker.color,true);
       return true;
     };
-    auto mark=[&](double x,double y,const char *symbol,uint32_t color,int direction=1){
-      const Marker marker{column(x),row(y),direction,symbol,color};
+    auto mark_cell=[&](Marker marker){
       if(!place(marker,0,0))overlaps.push_back(marker);
+    };
+    auto mark=[&](double x,double y,const char *symbol,uint32_t color,int direction=1){
+      mark_cell({column(x),row(y),direction,symbol,color});
     };
     // Give the courier and doorways first choice of their exact cells.
     mark(state_.player.x+kPlayerWidth*.5,state_.player.y+kPlayerHeight*.5,"@",0xffd68a);
@@ -133,6 +145,14 @@
     for(size_t i=0;i<grid_.checkpoint_points.size();++i)if(i!=active) {
       const auto [x,y]=grid_.checkpoint_points[i];
       mark(x+kPlayerWidth*.5,y,"◇",0x9dd4dd);
+    }
+    for(const auto &platform:grid_.platforms)if(platform.tram) {
+      const auto car=platform.at(state_.elapsed);
+      const double center=platform.base.x+platform.base.w*.5,range=std::abs(platform.dx);
+      mark(center-range,platform.base.y,"○",stop_color,-1);
+      mark(center+range,platform.base.y,"○",stop_color);
+      // The car sits above the track so a docked car leaves both stops visible.
+      mark_cell({column(car.x+car.w*.5),std::max(0,row(car.y)-1),1,"▰",tram_color});
     }
     bool remaining_token=false;
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
@@ -173,6 +193,13 @@
         tr("@ Ty · ◆ Lampa · ▣ Wyjście","@ You · ◆ Lamp · ▣ Exit"),0xc7d9df);
     }
     if(has_valves)paint_text(legend++,2,tr("⊗ Wymagany zawór","⊗ Required valve"),valve_color);
+    if(has_trams) {
+      const auto name=tr("▰ Tramwaj","▰ Tram");
+      paint_text(legend,2,name,tram_color);
+      const int separator=2+int(glyphs(name).size());
+      paint_text(legend,separator," · ",0xc7d9df);
+      paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
+    }
     int feature_col=2;
     auto label=[&](const std::string &entry,uint32_t color) {
       if(feature_col>2){paint_text(legend,feature_col," · ",0xc7d9df);feature_col+=3;}
