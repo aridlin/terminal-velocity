@@ -373,6 +373,18 @@ function updateBrowserSaveStatus(status){
  browserSaveStatus=status;
  renderSaveStatus();
 }
+function runStorageOperation(start,onComplete){
+ let completed=false;
+ const finish=error=>{
+  if(completed)return;
+  completed=true;
+  onComplete(error);
+ };
+ try{start(finish);}catch(error){
+  if(completed)throw error;
+  finish(error);
+ }
+}
 function flushBrowserStorage(){
  // A failed restore or a second tab cannot safely replace the IndexedDB contents.
  if(!browserStorageWritable)return;
@@ -386,7 +398,7 @@ function flushBrowserStorage(){
   ];
  }
  syncing=true;
- Module.FS.syncfs(false,error=>{
+ runStorageOperation(done=>Module.FS.syncfs(false,done),error=>{
   syncing=false;
   if(!bootFailed&&storageFlushQueued){
    storageFlushQueued=false;
@@ -770,8 +782,13 @@ async function restoreBrowserStorage(){
 var Module={
  onRuntimeInitialized(){
   try {
+   const idbfs=Module.IDBFS,reconcile=idbfs.reconcile;
+   // Reconciliation runs from a cursor event, outside the initial syncfs call.
+   // Starting its write transaction can throw if the connection is closing.
+   if(typeof reconcile==='function')idbfs.reconcile=(local,remote,done)=>
+    runStorageOperation(finish=>reconcile.call(idbfs,local,remote,finish),done);
    Module.FS.mkdir(persistentSaveDirectory);
-   Module.FS.mount(Module.IDBFS,{},persistentSaveDirectory);
+   Module.FS.mount(idbfs,{},persistentSaveDirectory);
    restoreBrowserStorage().catch(failStartup);
   }catch(error){failStartup(error);}
  },

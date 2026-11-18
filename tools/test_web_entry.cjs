@@ -236,6 +236,52 @@ const server=http.createServer((req,res)=>{
   await pendingSave.close();
   console.log('PASS a delayed save reports progress, keeps backup available and confirms only the last write');
 
+  const rejectedSave=await browser.newPage({locale:'en-US'});
+  const saveErrors=[];
+  rejectedSave.on('pageerror',error=>saveErrors.push(error.message));
+  await rejectedSave.goto(url);
+  await rejectedSave.waitForFunction(()=>!document.querySelector('#start').disabled);
+  await rejectedSave.locator('[data-language="en"]').click();
+  await rejectedSave.evaluate(()=>{
+   const syncfs=Module.FS.syncfs;
+   Module.FS.syncfs=function(populate,done){
+    if(populate)return syncfs.call(this,populate,done);
+    Module.FS.syncfs=syncfs;
+    throw Error('Simulated synchronous storage failure');
+   };
+   const transaction=IDBDatabase.prototype.transaction;
+   IDBDatabase.prototype.transaction=function(stores,mode,...args){
+    if(window.rejectWriteTransaction&&this.name==='/persist'&&mode==='readwrite'){
+     window.rejectedWrites=(window.rejectedWrites||0)+1;
+     throw new DOMException('The database connection is closing','InvalidStateError');
+    }
+    return transaction.call(this,stores,mode,...args);
+   };
+  });
+  await rejectedSave.locator('#start').click();
+  const recoveryStatus=rejectedSave.locator('#save-status');
+  const warning='Save failed — download a copy';
+  const savedText='Saved in this browser ✓';
+  await recoveryStatus.getByText(warning,{exact:true}).waitFor();
+  assert.equal(await rejectedSave.evaluate(()=>started&&!bootFailed&&!syncing),true);
+  await rejectedSave.evaluate(()=>syncSave());
+  await recoveryStatus.getByText(savedText,{exact:true}).waitFor();
+  await rejectedSave.evaluate(()=>window.rejectWriteTransaction=true);
+  await rejectedSave.keyboard.press('r');
+  await rejectedSave.waitForFunction(()=>window.rejectedWrites>0&&!syncing);
+  await recoveryStatus.getByText(warning,{exact:true}).waitFor();
+  const [recoveryBackup]=await Promise.all([
+   rejectedSave.waitForEvent('download'),rejectedSave.locator('#export-save').click(),
+  ]);
+  assert.match(fs.readFileSync(await recoveryBackup.path(),'utf8'),/^TVICE6 /);
+  await rejectedSave.locator('footer [data-tap="9"]').click();
+  await rejectedSave.waitForFunction(()=>uiFlags&2);
+  await rejectedSave.evaluate(()=>{window.rejectWriteTransaction=false;syncSave();});
+  await recoveryStatus.getByText(savedText,{exact:true}).waitFor();
+  assert.deepEqual(saveErrors,[]);
+  await rejectedSave.close();
+  console.log('PASS a failed browser save leaves the game playable, allows a backup and recovers on the next write');
+
   const located=await browser.newPage({locale:'en-US'});
   await located.route('**/language.php',route=>route.fulfill({json:{language:'pl'}}));
   await located.goto(url);
