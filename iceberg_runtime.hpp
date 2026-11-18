@@ -212,6 +212,7 @@ public:
           add_expedition_steam(grid);
           add_expedition_trams(grid);
           add_expedition_drawers(grid);
+          add_expedition_copy_belts(grid);
           add_expedition_ice(grid);
           strengthen_expedition_wind(grid);
         }

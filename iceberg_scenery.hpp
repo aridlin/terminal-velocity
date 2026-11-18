@@ -130,17 +130,20 @@
     } else if(phase<1.8)
       world_art(x-2*scale_,floor-row,{phase<1.60?"  ˇ":"· ∙ ·"},0x8baab6);
   }
+  void draw_belt_tread(const SortingBelt &belt,uint32_t color) {
+    const int count=std::max(3,int(belt.width/scale_));
+    const int travel=int(std::floor(state_.elapsed*belt.speed/scale_));
+    std::string tread="◉";
+    for(int i=2;i<count;++i)tread+=(i-travel)%5==0?(belt.speed>0?"▶":"◀"):"─";
+    world_text(belt.x,belt.y+aspect_*scale_,tread+"◉",color);
+  }
   void draw_sorting_belts() {
     for(const auto &belt:grid_.sorting_belts) {
       const double row=aspect_*scale_;
-      const int count=std::max(3,int(belt.width/scale_));
       const double loading_end=belt.speed>0?belt.x:belt.x+belt.width-5*scale_;
       world_art(loading_end-scale_,belt.y-6*row,
         {"╔═════╗","║╲   ╱║","║ ╲ ╱ ║","║  ▄  ║","║     ║","╨     ╨"},0x7e9297);
-      const int travel=int(std::floor(state_.elapsed*belt.speed/scale_));
-      std::string tread="◉";
-      for(int i=2;i<count;++i)tread+=(i-travel)%5==0?(belt.speed>0?"▶":"◀"):"─";
-      world_text(belt.x,belt.y+row,tread+"◉",0xab946f);
+      draw_belt_tread(belt,0xab946f);
       double pos=std::fmod(state_.elapsed*std::abs(belt.speed),belt.width-2);
       if(belt.speed<0)pos=belt.width-2-pos;
       world_art(belt.x+pos,belt.y-3*row,{"┏━┯━┓","┃╲│╱┃","▙▄▄▄▟"},0xc6a078);

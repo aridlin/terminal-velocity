@@ -184,6 +184,15 @@ inline void add_expedition_drawers(EngineGrid &room) {
   room.growth.push_back({{65,35,12,1},1});
 }
 
+inline void add_expedition_copy_belts(EngineGrid &room) {
+  if(room.district!=3||room.template_id!=44)return;
+  // Leave ordinary footing at both ends of each landing.
+  room.sorting_belts={{29,50,8,5},{47,47,9,-4},{67,44,8,6}};
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.sorting_belts.clear();
+}
+
 inline void add_expedition_trams(EngineGrid &room) {
   if(room.district!=2||room.template_id!=24||room.platforms.size()!=3)return;
   auto original=room.platforms;

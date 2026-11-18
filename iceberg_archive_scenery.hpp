@@ -51,6 +51,20 @@
       auto p=platform.at(state_.elapsed);
       world_art(p.x+.5,p.y+.7,{"╭─────────────────────╮","│ ▥▥▥ ▥▥▥▥ ▥▥▥ ▥▥▥▥▥  │","╰──◉───────────────◉──╯"},0x4c6075);
     }
+    for(const auto &belt:grid_.sorting_belts) {
+      const double row=aspect_*scale_;
+      const bool forward=belt.speed>0;
+      const double loader=forward?belt.x:belt.x+belt.width-5*scale_;
+      world_art(loader,belt.y-5*row,
+        {"╔════╗","║ ▤▤ ║","╠════╣","╰─┬┬─╯","  ╵╵"},0x78929e);
+      draw_belt_tread(belt,0xa0d6df);
+      const double travel=belt.width-4*scale_;
+      for(int i=0;i<2;++i) {
+        const double offset=std::fmod(state_.elapsed*std::abs(belt.speed)+i*travel*.5,travel);
+        const double x=belt.x+(forward?offset:travel-offset);
+        world_art(x,belt.y-2*row,{"╭──╮","╰≋─╯"},0xc9c9aa);
+      }
+    }
     // Fine frost drifts behind the walkable surfaces, without hiding hazards.
     for(int i=0;i<9;++i) {
       double x=std::fmod(i*19.7+clock*.65,double(grid_.width()));

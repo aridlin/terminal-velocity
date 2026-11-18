@@ -44,6 +44,25 @@ int main() {
       auto legacy=iceworld::make_itinerary(73,0,24,version);
       require(std::none_of(legacy.begin(),legacy.end(),[](int v){return v>=500;}),"published generator versions exclude new rooms");
     }
+    options.no_save=true;
+    AdventureSession archive(options,{});
+    archive.begin_campaign(true);archive.profile.unlocked=3;archive.run_district=3;
+    auto &copies=archive.profile.expeditions[0];
+    copies.active=true;copies.district=3;copies.seed=copies.origin_seed=73;
+    copies.itinerary=iceworld::make_itinerary(copies.seed,3,iceberg::RoomsPerLeg);
+    copies.itinerary[0]=44;const auto reserved=copies.itinerary;
+    copies.layout_version=3;archive.begin_run(iceberg::Mode::Endless);
+    require(archive.grid.template_id==44&&archive.grid.sorting_belts.empty(),"older Archive itineraries retain their original footing");
+    copies.layout_version=4;archive.load_room(true);
+    require(archive.grid.sorting_belts.size()==3&&copies.itinerary==reserved&&verify_route(archive.grid).complete,
+      "the Archives add three rideable belts to the saved Copies Conveyor room without changing its itinerary");
+    for(const auto &belt:archive.grid.sorting_belts) {
+      auto rider=new_state(archive.grid);
+      rider.player.x=belt.x+belt.width*.5;rider.player.y=belt.y-kPlayerHeight;rider.player.grounded=true;
+      const double x=rider.player.x;
+      for(int tick=0;tick<48;++tick)world_step(rider,archive.grid,{},1./120);
+      require(std::abs(rider.player.x-x-belt.speed*.4)<.02,"a Copies Conveyor belt carries a standing courier in its indicated direction");
+    }
     for(int q:{500,503,506})require(std::find(original.begin(),original.begin()+16,q)!=original.begin()+16,"parcel landmark remains before the last turn-in");
     std::filesystem::remove(path);std::filesystem::remove(path.string()+".bak");
     return 0;
