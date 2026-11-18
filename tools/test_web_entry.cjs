@@ -515,6 +515,41 @@ const server=http.createServer((req,res)=>{
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.waitForFunction(()=>held===0&&!document.querySelector('#touch .held'));
   console.log('PASS a touch slide reverses direction and releases without triggering a jump');
+  // Put a whole slide between game frames while Chrome still dispatches touch events.
+  await page.evaluate(()=>{
+   const raf=window.requestAnimationFrame;
+   window.requestAnimationFrame=callback=>{
+    if(callback.name!=='frame')return raf.call(window,callback);
+    window.resumeTouchFrames=()=>{
+     window.requestAnimationFrame=raf;
+     raf.call(window,callback);
+    };
+    return 0;
+   };
+  });
+  await page.waitForFunction(()=>typeof window.resumeTouchFrames==='function');
+  try {
+   const touch=(type,touchPoints)=>touchSession.send('Input.dispatchTouchEvent',{type,touchPoints});
+   const touchState=()=>page.evaluate(()=>({held,pressed}));
+   await touch('touchStart',[left]);
+   await touch('touchMove',[right]);
+   await touch('touchEnd',[]);
+   assert.deepEqual(await touchState(),{held:0,pressed:2},'a completed slide queues its final direction');
+   await page.evaluate(()=>clearPresses());
+   await touch('touchStart',[left]);
+   await page.keyboard.press('ArrowRight');
+   await touch('touchMove',[up]);
+   await touch('touchEnd',[]);
+   assert.deepEqual(await touchState(),{held:0,pressed:2},'leaving the direction buttons keeps only the independent keyboard press');
+   await page.evaluate(()=>clearPresses());
+   await touch('touchStart',[left]);
+   await touch('touchMove',[up]);
+   await touch('touchEnd',[]);
+   assert.deepEqual(await touchState(),{held:0,pressed:0},'a contact released outside the direction controls leaves no queued aim');
+  } finally {
+   await page.evaluate(()=>window.resumeTouchFrames());
+  }
+  console.log('PASS a quick touch slide drops the obsolete direction before the next frame');
   await page.keyboard.press('j');
   await page.waitForFunction(()=>(uiFlags&(64|128))===128);
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[right]});

@@ -210,14 +210,17 @@ const horizontalTouchControls='#touch .directions :is(button[data-key="0"], butt
 function releaseHighlight(button){
  if(button&&![...pointers.values()].some(pointer=>pointer.button===button))button.classList.remove('held');
 }
+function recomputePresses(){
+ pressed=completedPresses;
+ for(const pointer of pointers.values())pressed|=pointer.pending;
+}
 function finishPointer(id,completed){
  const pointer=pointers.get(id);
  if(!pointer)return;
  pointers.delete(id);
  if(completed)completedPresses|=pointer.pending;
  // A cancelled contact must not erase other inputs of the same action.
- pressed=completedPresses;
- for(const active of pointers.values())pressed|=active.pending;
+ recomputePresses();
  releaseHighlight(pointer.button);
  recompute();
 }
@@ -261,8 +264,11 @@ for(const button of document.querySelectorAll('[data-key]')){
   const previous=pointer.button;
   pointer.button=next;
   pointer.key=next?+next.dataset.key:null;
+  // A slide replaces this contact's unconsumed direction.
+  pointer.pending=0;
   releaseHighlight(previous);
   if(next){next.classList.add('held');pointerPress(pointer);}
+  recomputePresses();
   recompute();
  });
  for(const type of ['pointerup','pointercancel','lostpointercapture'])
