@@ -231,6 +231,7 @@ public:
     add_expedition_ice(room);
     add_reservoir_ice(room);
     add_expedition_root_pod(room);
+    add_expedition_channel_bridge(room);
     add_expedition_fragile_pots(room);
     strengthen_expedition_wind(room);
     add_overhang_windbreak(room);

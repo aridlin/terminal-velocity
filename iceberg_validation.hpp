@@ -236,6 +236,16 @@ inline void add_expedition_root_pod(EngineGrid &room) {
   else room.springs.pop_back();
 }
 
+inline void add_expedition_channel_bridge(EngineGrid &room) {
+  if(room.district!=4||room.template_id!=52)return;
+  // Extend from the overlook over the lower landing. The old route stays
+  // open under the trellis, and the bridge ends above the next platform.
+  room.interactions.push_back({{80,38,3,3},InteractionKind::Valve,0,
+    {"Podlej pnącza","Water the vines"}});
+  room.growth.push_back({{86,41,27,1},1});
+  room.sweets.push_back({101.5,39.5});
+}
+
 inline void add_expedition_fragile_pots(EngineGrid &room) {
   if(room.district!=4||room.template_id!=51)return;
   const size_t original=room.platforms.size();

@@ -570,6 +570,37 @@ int main(int argc,char **argv) {
       "the cracked floe drops the courier and neighboring floes stay solid");
     check(floe.available(on_floe,0,on_floe.platform_armed_at[0]+MovingPlatform::RestoreTime+.01),
       "the broken floe is solid again after its recovery time");
+    garden_run.layout_version=2;gardens.room=4;gardens.load_room();
+    const auto original_channel=gardens.grid;
+    check(original_channel.template_id==52&&original_channel.growth.empty(),
+      "older greenhouse channels retain their original route");
+    garden_run.layout_version=iceberg::ContentVersion;gardens.load_room();
+    const auto &channel=gardens.grid;
+    check(channel.growth.size()==1&&channel.sweets.size()==original_channel.sweets.size()+1&&
+          !channel.solid_at(101,41)&&verify_route(channel).complete,
+      "the dormant catwalk leaves the original lower channel usable");
+    gardens.state.player.x=80.5;gardens.state.player.y=41-kPlayerHeight;
+    gardens.state.player.grounded=true;
+    Controls water_vines;water_vines.interact=true;
+    gardens.tick(water_vines,1./120);
+    check((channel.switch_flags&1)&&!channel.solid_at(101,41),
+      "using the valve starts the bridge growing from the overlook");
+    for(int tick=0;tick<150;++tick)gardens.tick({},1./120);
+    check(channel.solid_at(86,41)&&channel.solid_at(112,41)&&!channel.solid_at(113,41),
+      "the grown trellis stops before the drop onto the next landing");
+    Controls cross_channel;cross_channel.move=1;
+    int retries=gardens.state.deaths;
+    const auto landed_below=[&] {
+      return gardens.state.player.x>=118&&gardens.state.player.grounded&&
+             std::abs(gardens.state.player.rect().bottom()-49)<.01;
+    };
+    for(int tick=0;tick<420&&!landed_below();++tick)
+      gardens.tick(cross_channel,1./120);
+    check(landed_below()&&gardens.state.deaths==retries&&gardens.state.collected.back(),
+      "walking over the vines collects the token and drops onto the old route");
+    gardens.begin_campaign(false);gardens.begin_run(iceberg::Mode::Endless);
+    check(gardens.grid.template_id==52&&gardens.grid.solid_at(112,41)&&gardens.state.collected.back(),
+      "resuming the greenhouse channel restores both the bridge and its token");
     AdventureSession crown(options,path);
     crown.begin_campaign(true);
     crown.profile.unlocked=5;crown.run_district=5;
