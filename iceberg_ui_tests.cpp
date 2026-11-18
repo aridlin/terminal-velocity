@@ -781,6 +781,19 @@ int main(){try {
     RenderGrid(game.grid,game.state,24,34,2).draw();
     ui_check(ui_text(frame).find("Room 8:")!=std::string::npos&&ui_text(frame).find("╰╯")!=std::string::npos,
       "compact expedition timeline names and marks the browsed room");
+    const auto ending=[&](bool en) {
+      return mode==iceberg::Mode::Endless
+        ?(en?"Exit starts leg 3":"Wyjście do odcinka 3")
+        :(en?"Exit completes the trial":"Wyjście kończy próbę");
+    };
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      game.profile.language=language;game.sync_view();
+      for(auto size:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
+        ui_check(normalize_ui(ui_text(frame)).find(ending(language==iceberg::Language::English))!=std::string::npos,
+          "browsing to room eight previews the exit before the courier arrives");
+      }
+    }
     if(mode==iceberg::Mode::Trial) {
       for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
         game.profile.language=language;game.sync_view();
@@ -839,10 +852,7 @@ int main(){try {
     game.tick(map,0);
     for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
       game.profile.language=language;game.sync_view();
-      const bool en=language==iceberg::Language::English;
-      const auto destination=mode==iceberg::Mode::Endless
-        ?(en?"Exit starts leg 3":"Wyjście do odcinka 3")
-        :(en?"Exit completes the trial":"Wyjście kończy próbę");
+      const auto destination=ending(language==iceberg::Language::English);
       for(auto size:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
         RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
         ui_check(normalize_ui(ui_text(frame)).find(destination)!=std::string::npos,

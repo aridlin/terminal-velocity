@@ -446,18 +446,22 @@
       return;
     }
     // Put the room details just below the route and wrap at terminal-cell width.
-    int row=top+8;
+    int row=top+7;
     for(const auto &line:wrap(current,cols_-9))clipped(row++,5,line,0xffd68a);
     const int selected=v.route_room_selection;
-    if(selected>=0&&selected<int(r.rooms.size())&&selected!=r.current) {
+    const int count=int(r.rooms.size());
+    const bool browsing=selected>=0&&selected<count&&selected!=r.current;
+    if(browsing) {
       const auto detail=tr("Pokój ","Room ")+std::to_string(selected+1)+": "+r.rooms[size_t(selected)].get(v.language);
       for(const auto &line:wrap(detail,cols_-9))clipped(row++,5,line,0xc7d9df);
-    } else if(r.current>=0&&r.current<int(r.rooms.size())) {
-      const auto next=r.current+1<int(r.rooms.size())
-        ?tr("Plan: ","Planned: ")+r.rooms[size_t(r.current+1)].get(v.language)
-        :v.mode==iceberg::Mode::Endless
-          ?tr("Wyjście do odcinka ","Exit starts leg ")+std::to_string(endless_leg+1)
-          :tr("Wyjście kończy próbę","Exit completes the trial");
+    }
+    if(count>0&&(browsing?selected:r.current)==count-1) {
+      const auto exit=v.mode==iceberg::Mode::Endless
+        ?tr("Wyjście do odcinka ","Exit starts leg ")+std::to_string(endless_leg+1)
+        :tr("Wyjście kończy próbę","Exit completes the trial");
+      for(const auto &line:wrap(exit,cols_-9))clipped(row++,5,line,0xc7d9df);
+    } else if(!browsing&&r.current>=0&&r.current+1<count) {
+      const auto next=tr("Plan: ","Planned: ")+r.rooms[size_t(r.current+1)].get(v.language);
       for(const auto &line:wrap(next,cols_-9))clipped(row++,5,line,0xc7d9df);
     }
   }
