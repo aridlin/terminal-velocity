@@ -76,7 +76,12 @@
       panel(tr("CHWILA ODDECHU","A MOMENT TO BREATHE"));
       y=6;
       if(v.save_error)compact_paragraph(y,save_failure_hint(),rows_-3,warning_color);
-      else compact_paragraph(y,tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."),rows_-3);
+      else if(v.tour_scene>=0) {
+        compact_paragraph(y,v.room_name,rows_-3,d.light);
+        ++y;
+        compact_paragraph(y,tr("↑ poprzedni · ↓ następny","↑ previous · ↓ next"),rows_-3,d.accent);
+        compact_paragraph(y,tr("Przegląd nie zapisuje postępu.","Tour progress is never saved."),rows_-3);
+      } else compact_paragraph(y,tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."),rows_-3);
       paint_text(rows_-2,2,tr("ENTER dalej · M menu","ENTER continue · M menu"),d.accent);
     }
     draw_iceberg_dialogue();

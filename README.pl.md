@@ -83,7 +83,7 @@ Stary `progress.dat` pozostaje nienaruszony. Kopiuj oba pliki przy robieniu kopi
 
 Wybierz **Ustawienia → 6 Zapisy i przegląd zmian**, aby przełączać się między trzema zapisami. Dotychczasowy zapis jest w pierwszym miejscu. Tylko ono synchronizuje się z kontem w przeglądarce. W wersji komputerowej możesz uruchomić grę z `--save-slot 2` lub `--save-slot 3`.
 
-**Przegląd zmian** pozwala wypróbować przykładowe pokoje i zobaczyć, co się w nich zmieniło. Wyjście prowadzi do kolejnego przykładu, a klawisz **M** wraca do listy. Postęp w przeglądzie nie jest zapisywany.
+**Przegląd zmian** pozwala wypróbować przykładowe pokoje i zobaczyć, co się w nich zmieniło. Wyjście prowadzi do kolejnego przykładu. W menu pauzy zmienisz pokój strzałkami **↑ / ↓**. Klawisz **M** wraca do listy. Postęp w przeglądzie nie jest zapisywany.
 
 ## Dźwięk i SSH
 

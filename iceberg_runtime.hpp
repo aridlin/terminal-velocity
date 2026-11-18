@@ -1020,7 +1020,15 @@ public:
       if(mode!=iceberg::Mode::Campaign)v.map_route=true;
     }
     if(c.pause){if(state.journal||v.map){state.journal=false;v.map=false;}else state.paused=!state.paused;stepper={};}
-    if(state.paused&&c.confirm&&!state.journal&&!v.map)state.paused=false;
+    if(state.paused&&!state.journal&&!v.map) {
+      if(c.confirm)state.paused=false;
+      else if(tour_scene>=0&&c.navigate&&!c.pause) {
+        const int count=int(iceberg::DebugTour.size());
+        load_tour_scene((tour_scene+c.navigate+count)%count);
+        state.paused=true;sync_view();
+        return;
+      }
+    }
     if(state.journal) {
       if(c.inspect){v.journal_tab=(v.journal_tab+1)%3;v.selected=0;}
       auto entries=iceberg::journal_entries(v);

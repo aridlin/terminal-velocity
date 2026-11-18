@@ -246,6 +246,14 @@ int main(int argc,char **argv) {
       check(session.tour_scene<0,"debug tour waits for an in-flight account action");
       session.profile_action_busy=false;
       press({.confirm=true});
+      press({.pause=true});
+      press({.navigate=-1});
+      check(session.state.paused&&session.tour_scene==int(iceberg::DebugTour.size())-1,
+        "paused debug tour previews the previous scene and wraps around");
+      press({.navigate=1});
+      check(session.state.paused&&session.tour_scene==0,"paused debug tour can preview the next scene");
+      press({.confirm=true});
+      check(!session.state.paused&&session.tour_scene==0,"resuming plays the previewed scene");
       for(size_t i=0;i<iceberg::DebugTour.size();++i) {
         const auto &stop=iceberg::DebugTour[i];
         check(session.tour_scene==int(i)&&session.grid.template_id==stop.room&&session.grid.district==stop.district,

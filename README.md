@@ -83,7 +83,7 @@ Old `progress.dat` records remain intact. Keep both files when backing up. Futur
 
 Open **Settings → 6 Saves and debug tour** to switch between three save slots. Slot 1 uses your existing save and is the slot synced with a browser account. The other browser slots are local. On desktop, use `--save-slot 2` or `--save-slot 3` to start in another slot.
 
-**Debug tour** in the same menu lets you play selected room templates and read what changed. Go through the exit to continue to the next sample, or press **M** to return to the list. The tour does not write to any save slot.
+**Debug tour** in the same menu lets you play selected room templates and read what changed. Go through the exit to continue to the next sample. While paused, use **↑ / ↓** to change rooms. Press **M** to return to the list. The tour does not write to any save slot.
 
 ## Sound and SSH
 

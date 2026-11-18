@@ -423,7 +423,9 @@
       for(int i=first;i<first+visible;++i) {
         const auto &sample=iceberg::DebugTour[size_t(i)];
         const bool chosen=i==v.picker_choice;
-        line(4+i-first,(chosen?"▸ ":"  ")+std::to_string(i+1)+" "+sample.change.get(v.language),chosen?d.accent:d.light);
+        const int y=4+i-first;
+        if(chosen)paint_text(y,edge+1,"▸",d.accent);
+        line(y,iceworld::pattern(sample.room).name.get(v.language),chosen?d.accent:d.light);
       }
       line(rows_-7,iceberg::Districts[size_t(stop.district)].name.get(v.language),d.accent);
       int y=rows_-6;
@@ -433,7 +435,7 @@
       int y=rows_-4;
       for(const auto &part:wrap(v.save_error?save_failure_hint():v.notice,width-4))if(y<rows_-1)line(y++,part,d.accent);
     } else {
-      if(v.tour_picker)line(rows_-3,tr("Postęp nie jest zapisywany.","Progress is not saved."),d.light);
+      if(v.tour_picker)line(rows_-3,tr("Przegląd nie zapisuje postępu.","Tour progress is never saved."),d.light);
       line(rows_-2,tr("↑↓ · ENTER wybierz · P wróć","↑↓ · ENTER select · P back"),d.accent);
     }
   }
@@ -661,7 +663,10 @@
       frame(8,5,cols_-10,9,d.stone);
       center(10,tr("CHWILA ODDECHU","A MOMENT TO BREATHE"),Color::Gold);
       center(12,tr("ENTER / P wznów   M menu","ENTER / P resume   M menu"));
-      center(14,v.tour_scene>=0?tr("Postęp nie jest zapisywany.","Progress is not saved."):tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."));
+      if(v.tour_scene>=0) {
+        center(14,tr("↑ poprzedni pokój   ↓ następny pokój","↑ previous room   ↓ next room"),Color::Player);
+        center(15,tr("Przegląd nie zapisuje postępu.","Tour progress is never saved."));
+      } else center(14,tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."));
     }
     if(state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active()) {
       fill(rows_-3,0,cols_,2,Color::Default);
