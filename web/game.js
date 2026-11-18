@@ -14,6 +14,7 @@ let preferredLanguage=(navigator.languages?.[0]||navigator.language||'en').toLow
 try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en'){preferredLanguage=saved;hasStoredLanguage=true;}const pending=localStorage.getItem(pendingLanguageKey);if(pending==='pl'||pending==='en')preferredLanguage=pendingBootLanguage=pending;}catch{}
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootFailed=false,explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
+const soundMutedFlag=1<<15,mutePreferenceKey='terminal-velocity.muted';
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
 let browserSaveStatus=['Gotowe','Ready'],saveActionError=null;
 function renderSaveStatus(){
@@ -134,7 +135,7 @@ function translateUI(){
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
- soundButton.setAttribute('aria-pressed',String(started&&!(uiFlags&32768)));
+ soundButton.setAttribute('aria-pressed',String(started&&!(uiFlags&soundMutedFlag)));
  if(!started)start.textContent=ready||bootFailed?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');
  renderSaveStatus();
 }
@@ -158,6 +159,7 @@ window.tvUI=u=>{
  lastBlocked=!!(u.flags&(modalFlags|1024));
  const before=uiFlags;uiFlags=u.flags;
  if((before&255)!==(uiFlags&255))resize();
+ if((before^uiFlags)&soundMutedFlag)try{localStorage.setItem(mutePreferenceKey,uiFlags&soundMutedFlag?'1':'0');}catch{}
  if(english!==nextEnglish){english=nextEnglish;try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}}
  settingsKeys.hidden=!(u.flags&16);
  translateUI();
@@ -484,7 +486,9 @@ start.onclick=()=>{
  if(!ready||started)return;
  try {
   clearInput();
-  Module._web_start(Date.now()>>>0,english?1:0);
+  let muted=false;
+  try{muted=localStorage.getItem(mutePreferenceKey)==='1';}catch{}
+  Module._web_start(Date.now()>>>0,english?1:0,muted?1:0);
   Module._web_enter_campaign();
   started=true;
   syncSave();accounts?.start();resize();

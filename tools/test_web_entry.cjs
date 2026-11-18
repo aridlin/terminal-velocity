@@ -350,6 +350,8 @@ const server=http.createServer((req,res)=>{
     assert.equal(await saveMessage.textContent(),'Nieprawidłowy plik zapisu','a pending import error follows the selected language');
     await page.locator('[data-language="en"]').click();
 
+    await page.keyboard.press('u');
+    await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='false');
     const picker=await openPicker();
     await page.evaluate(()=>{
       const runImport=Module._web_import_save;
@@ -376,10 +378,13 @@ const server=http.createServer((req,res)=>{
     assert.equal(imported.manual,imported.previous,'the previous-save download uses that same profile');
     await page.waitForFunction(()=>!syncing);
     assert.equal(await saveMessage.textContent(),'Zapis w tej przeglądarce ✓','a valid retry clears the previous import error');
+    assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'false','import keeps the browser muted');
     await page.reload();
     await page.waitForFunction(()=>!document.querySelector('#start').disabled);
     await page.locator('#start').click();
     assert.equal(await page.locator('#export-previous-save').isVisible(),true);
+    await page.waitForFunction(()=>!!(uiFlags&256));
+    assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'false','reload keeps the browser muted');
     assert.equal(await page.evaluate(()=>Module.FS.readFile('/persist/before-manual-import.iceberg',{encoding:'utf8'})),imported.previous);
     console.log('PASS silent file picker dismissal, real Polish save import and rollback after reload');
    }

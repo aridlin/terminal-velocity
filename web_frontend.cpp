@@ -38,8 +38,8 @@ EMSCRIPTEN_KEEPALIVE int web_saved_language() {
   iceberg::SaveStore store("/persist/progress.dat.iceberg");
   return store.load(saved)?int(saved.language):-1;
 }
-EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language) {
-  iceberg::SessionOptions options;options.seed=seed;options.mute=false;
+EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language,int muted) {
+  iceberg::SessionOptions options;options.seed=seed;options.mute=muted!=0;
   if(language==0||language==1){options.language=iceberg::Language(language);options.language_override=true;}
   web_game=std::make_unique<AdventureSession>(options,"/persist/progress.dat.iceberg");
   cell_frame_sink=[](const CellFrame &frame) {
@@ -54,7 +54,7 @@ EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language) {
   // Called by the start button's user gesture so the browser can unlock audio.
   web_game->audio.update(AudioScene::Menu,2,0,true);
   EM_ASM({console.info("Terminal Velocity audio: ready="+$0+", loaded clips="+$1);},web_game->audio.ready(),int(web_game->audio.loaded_clips()));
-  if(!web_game->audio.ready())web_game->notice(web_game->t("Dźwięk niedostępny w tej przeglądarce.","Audio is unavailable in this browser."),8);
+  if(!options.mute&&!web_game->audio.ready())web_game->notice(web_game->t("Dźwięk niedostępny w tej przeglądarce.","Audio is unavailable in this browser."),8);
 }
 EMSCRIPTEN_KEEPALIVE void web_enter_campaign() {
   if(web_game)web_game->begin_campaign(false);
@@ -93,12 +93,14 @@ EMSCRIPTEN_KEEPALIVE int web_import_save() {
   if(!iceberg::SaveStore::validate_file("/persist/import.iceberg",imported))return 0;
   // Validate before replacing anything. SaveStore preserves the prior profile.
   if(!web_game||!web_game->saves.save(imported))return 0;
-  web_game.reset();web_start(imported.seed,-1);return 1;
+  const bool muted=web_game->audio.muted;
+  web_game.reset();web_start(imported.seed,-1,muted);return 1;
 }
 EMSCRIPTEN_KEEPALIVE void web_guest_profile() {
   if(!web_game)return;
   iceberg::Profile fresh;fresh.language=web_game->profile.language;fresh.seed=unsigned(std::chrono::system_clock::now().time_since_epoch().count());
-  web_game->saves.save(fresh);web_game.reset();web_start(fresh.seed,-1);
+  const bool muted=web_game->audio.muted;
+  web_game->saves.save(fresh);web_game.reset();web_start(fresh.seed,-1,muted);
 }
 EMSCRIPTEN_KEEPALIVE void web_account_pause() {
   if(web_game){web_account_was_paused=web_game->state.paused;web_game->state.paused=!web_game->state.menu;web_game->audio.update(AudioScene::Paused,web_game->music_track(),.05,true);}
