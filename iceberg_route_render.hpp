@@ -46,8 +46,10 @@
     constexpr uint32_t valve_color=0xf0a277,bridge_color=0xabc9e4;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
     constexpr uint32_t belt_color=0xa0d6df;
+    constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
+    const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
-      +int(bridge_legend)+int(has_return&&!return_only);
+      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -202,6 +204,13 @@
     }
     for(const auto &belt:grid_.sorting_belts)if(powered(belt))
       mark(belt.x+belt.width*.5,belt.y,belt.speed>0?"▶":"◀",belt_color,belt.speed>0?1:-1);
+    bool recharging=false;
+    if(has_refills)for(size_t i=0;i<grid_.refills.size();++i) {
+      const auto [x,y]=grid_.refills[i];
+      const bool spent=state_.refill_cooldown[i]>0;
+      mark(x,y,spent?"▯":"▥",spent?recharging_color:refill_color);
+      recharging|=spent;
+    }
     bool remaining_token=false;
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];
@@ -263,6 +272,16 @@
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
     if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);
+    if(has_refills) {
+      const auto name=tr("▥ Zapas zrywu","▥ Dash refill");
+      paint_text(legend,2,name,refill_color);
+      if(recharging) {
+        const int separator=2+int(glyphs(name).size());
+        paint_text(legend,separator," · ",0xc7d9df);
+        paint_text(legend,separator+3,tr("▯ Ładuje się","▯ Recharging"),recharging_color);
+      }
+      ++legend;
+    }
     int feature_col=2;
     auto label=[&](const std::string &entry,uint32_t color) {
       if(feature_col>2){paint_text(legend,feature_col," · ",0xc7d9df);feature_col+=3;}

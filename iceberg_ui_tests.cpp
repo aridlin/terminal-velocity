@@ -299,6 +299,28 @@ int main(){try {
   ui_check(partial_drawer_cells>0&&count_map("═",0xabc9e4)>partial_drawer_cells&&
     ui_text(frame).find("═ Bridge")!=std::string::npos,
     "the room map draws only the available length of an extending bridge");
+  auto examination=iceworld::build_mastery_course(0);
+  auto refill_view=new_state(examination);
+  refill_view.adventure.map=refill_view.adventure.map_room=true;
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    refill_view.adventure.language=language;
+    const bool en=language==iceberg::Language::English;
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(examination,refill_view,rows,cols,2).draw();
+      ui_check(count_map("▥",0x8ee0dd)==3&&count_map("▯",0x7895a0)==0&&
+        ui_text(frame).find(en?"▥ Dash refill":"▥ Zapas zrywu")!=std::string::npos,
+        "the Mastery room map identifies each refill in both languages");
+      refill_view.refill_cooldown[0]=2;
+      RenderGrid(examination,refill_view,rows,cols,2).draw();
+      ui_check(count_map("▥",0x8ee0dd)==2&&count_map("▯",0x7895a0)==1&&
+        ui_text(frame).find(en?"▯ Recharging":"▯ Ładuje się")!=std::string::npos,
+        "the room map distinguishes a spent refill at compact widths");
+      refill_view.refill_cooldown[0]=0;
+    }
+  }
+  examination.dash_lock=1;examination.switch_flags=1;
+  RenderGrid(examination,refill_view,24,34,2).draw();
+  ui_check(count_map("▥",0x8ee0dd)==0,"the map omits dash refills while dashing is locked");
   auto reservoir=verified_room(55,73,4);
   auto reservoir_view=new_state(reservoir);
   reservoir_view.adventure.map=reservoir_view.adventure.map_room=true;
