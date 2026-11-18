@@ -31,6 +31,9 @@
   std::string save_failure_hint() const {
     return tr("Błąd zapisu — postęp pozostaje w tej sesji.","Save error — progress remains in this session.");
   }
+  std::string branch_door_hint() const {
+    return tr("E: przejście B · ENTER: główne","E: passage B · ENTER: main");
+  }
   void paint_text(int row,int col,const std::string &s,uint32_t rgb,bool bold=false) {
     for(auto ch:glyphs(s))put(row,col++,{ch,Color::Text,false,bold,0,rgb});
   }
@@ -603,7 +606,8 @@
     }
     if(state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active()) {
       fill(rows_-3,0,cols_,2,Color::Default);
-      paint_text(rows_-3,2,tr("E / ENTER — przejdź przez drzwi","E / ENTER — go through the door"),d.accent,true);
+      paint_text(rows_-3,2,v.branch_at_door?branch_door_hint():
+        tr("E / ENTER — przejdź przez drzwi","E / ENTER — go through the door"),d.accent,true);
       paint_text(rows_-2,2,tr("R — wróć do lampy","R — return to the lamp"),d.light);
     }
     draw_iceberg_dialogue();

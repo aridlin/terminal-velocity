@@ -133,6 +133,8 @@ public:
     v.pause_on_focus_loss=profile.pause_on_focus_loss;
     state.audio_muted=audio.muted;state.audio_error=audio.error();
     v.current_objective=iceworld::harbor_objective(grid.template_id,grid.switch_flags).get(profile.language);
+    const int nearby=state.won?near_interaction():-1;
+    v.branch_at_door=nearby>=0&&grid.interactions[size_t(nearby)].kind==InteractionKind::RouteChoice;
     sync_route_view();
   }
   void network_frame(double dt,bool focused,int columns,int rows) {

@@ -20,7 +20,16 @@ int main() {
     const auto original=s.profile.itinerary;const auto fork=s.grid;
     auto at=std::find_if(s.grid.interactions.begin(),s.grid.interactions.end(),[](auto &n){return n.kind==InteractionKind::RouteChoice;});
     require(at!=s.grid.interactions.end(),"actual fork doorway exists at the second room");
-    const auto choice=*at;s.choose_route(choice);
+    auto enter_fork=[](AdventureSession &game) {
+      game.state.player.x=game.grid.goal.x-.25;
+      game.state.player.y=game.grid.goal.bottom()-kPlayerHeight;
+      game.state.won=true;
+      game.sync_view();
+    };
+    const auto choice=*at;
+    enter_fork(s);
+    require(s.state.adventure.branch_at_door,"the view offers both choices while overlapping the fork and the main exit");
+    Controls use;use.interact=true;s.tick(use,1./120);
     require(s.room==2&&s.grid.template_id==choice.id,"alternate doorway enters its named room");
     require(s.profile.itinerary==original,"branch choice never rewrites the reserved itinerary");
     require(s.profile.route_choices[0]==1&&s.profile.route_decisions[0]==1,"branch decision recorded once");
@@ -37,7 +46,9 @@ int main() {
     require((resumed.profile.route_visited[0]&15)==14,"visited map does not invent visits to skipped cells");
     resumed.profile.hidden_room=0;resumed.load_room();resumed.sync_view();
     require(!resumed.state.adventure.route.available,"secret rooms are absent from the route map");
-    AdventureSession direct(options,path);direct.profile.hidden_room=-1;direct.profile.route_choices={};direct.profile.route_decisions={};direct.room=1;direct.stage=2;direct.load_room();direct.advance_room();
+    AdventureSession direct(options,path);direct.profile.hidden_room=-1;direct.profile.route_choices={};direct.profile.route_decisions={};direct.room=1;direct.stage=2;direct.load_room();
+    enter_fork(direct);
+    Controls confirm;confirm.confirm=true;direct.tick(confirm,1./120);
     require(direct.grid.template_id==original[2]&&direct.profile.route_decisions[0]==1&&direct.profile.route_choices[0]==0,
       "normal doorway keeps the main branch");
     for(unsigned version:{1u,2u,3u}) {

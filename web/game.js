@@ -98,6 +98,7 @@ function clearPresses(){
 }
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
 const roomMapFlag=1<<17;
+const forkDoorFlag=1<<18;
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&(overlayFlags()&(2048|roomMapFlag)));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function translateUI(){
@@ -108,7 +109,10 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
  document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  const touchUse=document.querySelector('#touch-use');
- if(readOnlyMapOpen()){
+ if(uiFlags&forkDoorFlag){
+  touchUse.textContent=tr('Przejście B','Passage B');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(readOnlyMapOpen()){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));
  }else{
@@ -123,7 +127,9 @@ function translateUI(){
  const touchInspect=document.querySelector('#touch-inspect');
  const overlay=overlayFlags();
  let inspectLabel;
- if(questRecordOpen()){
+ if(overlay&forkDoorFlag){
+  touchInspect.textContent=tr('Główne drzwi','Main door');
+ }else if(questRecordOpen()){
   touchInspect.textContent=tr('Wróć','Back');
   inspectLabel=tr('Wróć do księgi zadań','Back to quest book');
  }else if(overlay&8){
@@ -233,6 +239,10 @@ function finishPointer(id,completed){
 }
 for(const button of document.querySelectorAll('[data-key]')){
  const action=()=>{
+  if(uiFlags&forkDoorFlag){
+   if(button.id==='touch-use')return 6;
+   if(button.id==='touch-inspect')return 8;
+  }
   if(button.id==='touch-inspect'&&questRecordOpen())return 9;
   if(button.id!=='touch-use'||!lastBlocked)return +button.dataset.key;
   if(readOnlyMapOpen())return 11;

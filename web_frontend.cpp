@@ -27,11 +27,13 @@ uint32_t first_codepoint(const std::string &s) {
 void send_web_ui() {
   const auto &s=web_game->state;const auto &v=s.adventure;
   const bool district_control=s.menu&&!v.settings&&!v.confirm_new&&(v.selected==2||v.selected==3);
+  const bool fork_door=v.branch_at_door&&!s.menu&&!s.paused&&!s.journal&&!v.map&&!v.inspecting&&!v.dialogue.active();
   int flags=int(s.menu)|(int(s.paused)<<1)|(int(v.dialogue.active())<<2)|(int(v.inspecting)<<3)|
     (int(v.settings)<<4)|(int(v.confirm_new)<<5)|(int(s.journal)<<6)|(int(v.map)<<7)|
     (int(v.can_continue)<<8)|(int(v.language==iceberg::Language::English)<<9)|(int(s.won)<<10)|
     (int(v.map_route)<<11)|(int(v.pause_on_focus_loss)<<12)|(int(v.mode!=iceberg::Mode::Campaign)<<13)|
-    (int(district_control)<<14)|(int(s.audio_muted)<<15)|(int(v.save_error)<<16)|(int(v.map&&v.map_room)<<17);
+    (int(district_control)<<14)|(int(s.audio_muted)<<15)|(int(v.save_error)<<16)|(int(v.map&&v.map_room)<<17)|
+    (int(fork_door)<<18);
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }

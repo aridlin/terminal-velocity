@@ -17,7 +17,8 @@
     const uint32_t warning_color=cell_color({" ",Color::Hazard});
     y=rows_-(lines.size()>2?3:2);
     if(y>rows_-3) {
-      if(at_exit)paint_text(rows_-3,2,tr("E / ENTER — przejdź dalej","E / ENTER — pass through"),d.accent);
+      if(at_exit)paint_text(rows_-3,2,v.branch_at_door?branch_door_hint():
+        tr("E / ENTER — przejdź dalej","E / ENTER — pass through"),d.accent);
       else paint_text(rows_-3,1,tr("E użyj · B obejrzyj · P pauza","E use · B inspect · P pause"),d.light);
     }
     for(const auto &line:lines) {
