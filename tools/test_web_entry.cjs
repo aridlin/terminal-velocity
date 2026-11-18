@@ -350,6 +350,28 @@ const server=http.createServer((req,res)=>{
     assert.equal(await saveMessage.textContent(),'Nieprawidłowy plik zapisu','a pending import error follows the selected language');
     await page.locator('[data-language="en"]').click();
 
+    const blockedPicker=await openPicker();
+    await page.evaluate(()=>{
+      const importSave=Module._web_import_save;
+      const fs=Module.FS;
+      window.restoreImportWrite=()=>{Module._web_import_save=importSave;};
+      Module._web_import_save=()=>{
+        const rename=fs.rename;
+        fs.rename=(from,to)=>{
+          if(to==='/persist/progress.dat.iceberg')throw new fs.ErrnoError(28);
+          return rename.call(fs,from,to);
+        };
+        try{return importSave();}
+        finally{fs.rename=rename;}
+      };
+    });
+    const acceptBlocked=page.waitForEvent('dialog').then(dialog=>dialog.accept());
+    await blockedPicker.setFiles({name:'polish.iceberg',mimeType:'application/octet-stream',buffer:sample});
+    await acceptBlocked;
+    await page.waitForFunction(()=>!importPending&&saveStatus.textContent==='Could not write the imported save');
+    assert.equal(await page.locator('html').getAttribute('lang'),'en','the failed replacement leaves the old session active');
+    await page.evaluate(()=>window.restoreImportWrite());
+
     await page.keyboard.press('u');
     await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='false');
     const picker=await openPicker();

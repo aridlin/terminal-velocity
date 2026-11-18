@@ -90,7 +90,7 @@ window.TVAccounts=class {
   const response=await fetch(new URL(base,location.href)+'?action='+action,{method,signal:AbortSignal.timeout(12000),credentials:'same-origin',cache:'no-store',headers:method==='GET'?{}:{'Content-Type':'application/json','X-TV-CSRF':this.csrf},body:data?JSON.stringify(data):undefined});
   let body;try{body=await response.json();}catch{throw Error('unavailable');}if(!response.ok)throw Error(body.error||'unavailable');return body;
  }
- error(e){const map={invalid_credentials:['Nieprawidłowy login lub hasło.','Incorrect username or password.'],name_unavailable:['Ta nazwa jest już zajęta.','That username is taken.'],credentials_format:['Login: 3–24 znaki a–z, 0–9, _ lub -. Hasło: 8–72 bajty.','Username: 3–24 letters, digits, _ or -. Password: 8–72 bytes.'],rate_limit:['Za dużo prób. Spróbuj później.','Too many attempts. Try again later.'],save_invalid:['Nie można odczytać zapisu. Poprzednia gra pozostaje bez zmian.','Cannot read that save. Your previous game is unchanged.'],save_conflict:['Inne urządzenie zapisało nowszą grę. Wybierz zapis.','Another device saved a newer game. Choose a save.'],session_expired:['Zaloguj się ponownie. Zapis jest tutaj bezpieczny.','Sign in again. Your save is safe here.']};return (map[e.message]||['Konto jest chwilowo niedostępne. Zapis lokalny działa.','Accounts are temporarily unavailable. Local saves still work.'])[this.host.english()?1:0];}
+ error(e){const map={invalid_credentials:['Nieprawidłowy login lub hasło.','Incorrect username or password.'],name_unavailable:['Ta nazwa jest już zajęta.','That username is taken.'],credentials_format:['Login: 3–24 znaki a–z, 0–9, _ lub -. Hasło: 8–72 bajty.','Username: 3–24 letters, digits, _ or -. Password: 8–72 bytes.'],rate_limit:['Za dużo prób. Spróbuj później.','Too many attempts. Try again later.'],save_invalid:['Nie można odczytać zapisu. Poprzednia gra pozostaje bez zmian.','Cannot read that save. Your previous game is unchanged.'],save_write_failed:['Nie udało się zapisać gry w tej przeglądarce.','Could not write the save in this browser.'],save_conflict:['Inne urządzenie zapisało nowszą grę. Wybierz zapis.','Another device saved a newer game. Choose a save.'],session_expired:['Zaloguj się ponownie. Zapis jest tutaj bezpieczny.','Sign in again. Your save is safe here.']};return (map[e.message]||['Konto jest chwilowo niedostępne. Zapis lokalny działa.','Accounts are temporarily unavailable. Local saves still work.'])[this.host.english()?1:0];}
  async start(){
   try{this.entries=Object.assign(Object.create(null),JSON.parse(this.read('/persist/accounts.json')||'{}'));}catch{this.entries=Object.create(null);}
   try{const session=await this.request('session');this.csrf=session.csrf;if(session.username){this.pendingUser=session.username;const entry=this.entries[session.username];if(entry?.active){const remote=await this.request('save');this.candidate=this.local();this.remote=remote;if(remote.revision===entry.revision){this.bind(session.username,entry.revision,entry.synced);return;}if(this.candidate===entry.synced&&remote.save){this.apply(remote.save);this.bind(session.username,remote.revision,remote.save);return;}this.openChoice();}}}catch{}
@@ -110,7 +110,15 @@ window.TVAccounts=class {
   }catch(e){this.message=this.error(e);}finally{this.busy=false;this.draw();}
  }
  openChoice(){if(!this.active)Module._web_account_pause();this.active=true;document.body.classList.add('account-open');this.host.clear();this.mode='choose';this.message=this.tr('Masz dwa zapisy. Który kontynuujesz?','You have two saves. Which will you continue?');this.draw();}
- apply(save){Module.FS.writeFile('/persist/import.iceberg',save);if(!Module._web_import_save())throw Error('save_invalid');Module.FS.unlink('/persist/import.iceberg');this.host.flush();}
+ apply(save){
+  const path='/persist/import.iceberg';
+  Module.FS.writeFile(path,save);
+  try{
+   const imported=Module._web_import_save();
+   if(imported!==1)throw Error(imported===0?'save_invalid':'save_write_failed');
+  }finally{Module.FS.unlink(path);}
+  this.host.flush();
+ }
  ensureGuest(){if(!this.user&&!this.read('/persist/guest.iceberg'))Module.FS.writeFile('/persist/guest.iceberg',this.local());}
  bind(name,revision,synced){
   this.user=name;this.revision=revision;this.synced=synced;

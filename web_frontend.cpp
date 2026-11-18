@@ -100,8 +100,8 @@ EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
 EMSCRIPTEN_KEEPALIVE int web_import_save() {
   iceberg::Profile imported;
   if(!iceberg::SaveStore::validate_file("/persist/import.iceberg",imported))return 0;
-  // Validate before replacing anything. SaveStore preserves the prior profile.
-  if(!web_game||!web_game->saves.save(imported))return 0;
+  // A valid input with a failed replacement is different from an invalid file.
+  if(!web_game||!web_game->saves.save(imported))return -1;
   const bool muted=web_game->audio.muted;
   web_game.reset();web_start(imported.seed,-1,muted);return 1;
 }

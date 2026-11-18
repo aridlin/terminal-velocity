@@ -444,13 +444,19 @@ saveFile.onchange=async()=>{
    :tr('Zastąpić obecny zapis w tej przeglądarce?','Replace the current save in this browser?');
   if(!window.confirm(question))return;
   const fs=Module.FS;
-  Module._web_save();
+  if(!Module._web_save()){
+   setSaveActionError(['Błąd zapisu — pobierz kopię','Save failed — download a copy']);
+   return;
+  }
   const previous=fs.readFile('/persist/progress.dat.iceberg');
   const incoming='/persist/import.iceberg';
   fs.writeFile(incoming,bytes);
   try {
-   if(!Module._web_import_save()){
-    setSaveActionError(['Nieprawidłowy plik zapisu','Invalid save file']);
+   const imported=Module._web_import_save();
+   if(imported!==1){
+    setSaveActionError(imported===0
+     ?['Nieprawidłowy plik zapisu','Invalid save file']
+     :['Nie udało się zapisać wczytywanej gry','Could not write the imported save']);
     return;
    }
   } finally {fs.unlink(incoming);}

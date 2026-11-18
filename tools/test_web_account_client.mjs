@@ -20,6 +20,11 @@ function pass(label){console.log('PASS',label);}
 try{
  const a=browser(sample),b=browser(variant(1));await a.controller.start();a.controller.open();a.controller.mode='register';a.controller.name.value='sync_courier';a.controller.pass.value='fixture-password-3';await a.controller.authenticate();assert.equal(a.controller.user,'sync_courier');assert.equal(a.controller.synced,sample);pass('registration keeps the guest game and saves it to the account');
  await b.controller.start();b.controller.open();b.controller.name.value='sync_courier';b.controller.pass.value='fixture-password-3';await b.controller.authenticate();assert.equal(b.controller.mode,'choose');assert.equal(b.files.get('/persist/progress.dat.iceberg'),variant(1));pass('login with different progress asks before replacing anything');
+ const originalImport=b.context.Module._web_import_save;
+ b.context.Module._web_import_save=()=>-1;
+ assert.throws(()=>b.controller.apply(sample),{message:'save_write_failed'});
+ assert.equal(b.files.has('/persist/import.iceberg'),false);
+ b.context.Module._web_import_save=originalImport;
  await b.controller.choose(true);assert.equal(b.files.get('/persist/progress.dat.iceberg'),sample);assert.equal(b.files.get('/persist/guest.iceberg'),variant(1));pass('account load preserves the previous guest profile');
  a.files.set('/persist/progress.dat.iceberg',variant(2));await a.controller.sync();b.files.set('/persist/progress.dat.iceberg',variant(3));await b.controller.sync();assert.equal(b.controller.mode,'choose');assert.equal(b.files.get('/persist/progress.dat.iceberg'),variant(3));pass('a stale device keeps its local progress and opens a conflict choice');
  b.controller.close();b.controller.open();assert.equal(b.controller.mode,'choose');pass('closing the panel cannot bypass a save conflict');
