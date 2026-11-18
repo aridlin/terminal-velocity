@@ -804,11 +804,28 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>!!(uiFlags&16));
   await page.keyboard.press('Digit6');
   await page.waitForFunction(()=>!!(uiFlags&(1<<23)));
+  await page.evaluate(()=>{
+   const render=window.tvFrame;
+   window.tvFrame=(cells,w,h)=>{
+    window.tourPickerHeading=Array.from({length:w},(_,x)=>String.fromCodePoint(cells[4*(2*w+x)])).join('');
+    render(cells,w,h);
+   };
+  });
   await page.keyboard.press('Digit4');
   await action.tap();
-  await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR'));
+  await action.tap();
   await page.waitForFunction(()=>(uiFlags&((1<<22)|1))===(1<<22));
   assert.equal(await action.getAttribute('aria-label'),'Use','Debug Tour play supports touch interactions');
+  await page.evaluate(()=>{
+   const tick=Module._web_tick;
+   Module._web_tick=(dt,held,pressed,...args)=>{
+    if(pressed&64)window.tourUseReceived=true;
+    tick(dt,held,pressed,...args);
+   };
+  });
+  await action.tap();
+  await page.waitForFunction(()=>window.tourUseReceived===true);
   console.log('PASS Expedition maps and Debug Tour restore the normal touch Use action');
   await mobile.close();
   assert.deepEqual(errors,[],'browser errors');console.log(visualOnly?'PASS current Chromium/WASM visual smoke':'PASS real Chromium/WASM entry, save-language restoration and responsive rendering');
