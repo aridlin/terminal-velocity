@@ -158,8 +158,7 @@ public:
     v.smooth_camera=profile.smooth_camera;
     state.audio_muted=audio.muted;state.audio_error=audio.error();
     v.current_objective=iceworld::harbor_objective(grid.template_id,grid.switch_flags).get(profile.language);
-    const int nearby=state.won?near_interaction():-1;
-    v.branch_at_door=nearby>=0&&grid.interactions[size_t(nearby)].kind==InteractionKind::RouteChoice;
+    v.branch_at_door=at_route_fork();
     sync_route_view();
   }
   void network_frame(double dt,bool focused,int columns,int rows) {
@@ -183,6 +182,8 @@ public:
     if(tour_scene>=0){autosave_left=15;return;}
     if (mode == iceberg::Mode::Campaign && profile.started && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       profile.district=district;profile.stage=stage;profile.room=room;
+      profile.story&=~iceberg::ForkResumeMask;
+      if(at_route_fork())profile.story|=iceberg::fork_resume_bits(route_leg());
       // The Crown arena stores its shield count in place of room switches.
       profile.checkpoint=state.checkpoint;
       profile.switches=grid.template_id==iceberg::CrownSentinel?uint64_t(state.crown.hits):grid.switch_flags;
@@ -417,6 +418,7 @@ public:
       }
       state.elapsed=e.room_seconds;state.deaths=e.room_deaths;
     }
+    if(resume)restore_route_fork();
     stepper={};sync_view();
     update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
     if(grid.template_id==iceberg::CrownSentinel&&(profile.story&iceberg::CrownSentinelDefeated)) {
@@ -1291,6 +1293,7 @@ public:
     v.pickup_left=std::max(0.,v.pickup_left-dt);
     v.door_left=std::max(0.,v.door_left-dt);
     const bool at_door=state.won;
+    const bool at_fork=v.branch_at_door;
     const bool first_exit=mode==iceberg::Mode::Campaign&&district==0&&stage<=1&&
       profile.hidden_room<0&&profile.visit_district<0&&!profile.revisit.active;
     if(at_door)v.door_open=std::min(1.,v.door_open+dt*4.5);
@@ -1374,7 +1377,8 @@ public:
     const bool crown_advanced=state.crown.hits>old_crown_hits;
     const bool crown_victory=crown_advanced&&state.crown.hits==3;
     if(crown_victory&&tour_scene<0)profile.story|=iceberg::CrownSentinelDefeated;
-    if(crown_advanced||old_cp!=state.checkpoint||(state.won&&!at_door)||(retrying&&deaths>0)||autosave_left<=0)persist();
+    if(crown_advanced||old_cp!=state.checkpoint||(state.won&&!at_door)||at_route_fork()!=at_fork||
+       (retrying&&deaths>0)||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,
       profile.smooth_camera&&deaths>0?10.:dt,profile.smooth_camera);
     if(crown_advanced) {

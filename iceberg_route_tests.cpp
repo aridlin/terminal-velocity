@@ -29,8 +29,19 @@ int main() {
     const auto choice=*at;
     enter_fork(s);
     require(s.state.adventure.branch_at_door,"the view offers both choices while overlapping the fork and the main exit");
-    Controls use;use.interact=true;
+    s.persist();
+    AdventureSession waiting(options,path);waiting.begin_campaign(false);
+    require(waiting.room==1&&waiting.state.adventure.branch_at_door&&waiting.profile.route_decisions[0]==0,
+            "reloading at the split restores both exits without choosing one");
+    require(waiting.state.spawn_x==s.state.spawn_x&&waiting.state.spawn_y==s.state.spawn_y&&
+            waiting.state.checkpoint==s.state.checkpoint,"the fork resume point preserves the Retry lamp");
     Controls retry;retry.restart=true;
+    waiting.tick(retry,1./120);
+    AdventureSession after_retry(options,path);after_retry.begin_campaign(false);
+    require(after_retry.room==1&&!after_retry.state.adventure.branch_at_door&&
+            after_retry.state.player.x==after_retry.state.spawn_x&&after_retry.state.deaths==1,
+            "Retry after restoring a fork returns to the lamp and saves that restart");
+    Controls use;use.interact=true;
     s.tick(retry,0);
     s.tick(use,1./120);
     require(s.room==1&&!s.state.won&&s.state.deaths==1&&s.profile.route_decisions[0]==0,
@@ -50,7 +61,8 @@ int main() {
     auto id=s.grid.template_id;auto seed=s.grid.seed;s.profile.quest_focus=2;s.persist();
     iceberg::Profile persisted;require(iceberg::SaveStore::validate_file(path,persisted),"TVICE6 validates with graph state");
     require(persisted.quest_focus==2,"chosen quest focus survives save/reload");
-    require(persisted.route_choices[0]==1&&persisted.layout_version==4,"save retains chosen branch and generator");
+    require(persisted.route_choices[0]==1&&persisted.layout_version==4&&!(persisted.story&iceberg::ForkResumeMask),
+            "choosing a branch saves the room and clears the waiting fork");
     AdventureSession resumed(options,path);resumed.begin_campaign(false);
     require(resumed.grid.template_id==id&&resumed.grid.seed==seed,"resume rebuilds the same alternate room");
     resumed.state.deaths++;resumed.load_room(true);

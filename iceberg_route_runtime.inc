@@ -8,6 +8,29 @@
     return mode==iceberg::Mode::Campaign&&profile.hidden_room<0&&profile.visit_district<0&&
       !profile.revisit.active&&!profile.interlude&&(stage==2||stage==4||stage==6);
   }
+  bool at_route_fork() const {
+    if(!state.won)return false;
+    const int nearby=near_interaction();
+    return nearby>=0&&grid.interactions[size_t(nearby)].kind==InteractionKind::RouteChoice;
+  }
+  void restore_route_fork() {
+    if(!on_campaign_route()||!route_forks_enabled()||room!=1)return;
+    const int leg=route_leg();
+    if((profile.story&iceberg::ForkResumeMask)!=iceberg::fork_resume_bits(leg)||
+       (profile.route_decisions[size_t(district)]&(1u<<leg)))return;
+    const double x=grid.goal.x-.25,y=grid.goal.bottom()-kPlayerHeight;
+    const int floor=int(std::lround(grid.goal.bottom()));
+    const Rect courier{x,y,kPlayerWidth,kPlayerHeight};
+    if(std::abs(grid.goal.bottom()-floor)>.001||!grid.touches_exit(courier)||!ledge_clearance(grid,courier)||
+       !grid.solid_at(int(std::floor(x+kPlayerWidth*.5)),floor))return;
+    const auto previous=state.player;
+    state.player.x=x;state.player.y=y;state.won=true;
+    if(!at_route_fork()) {
+      state.player=previous;state.won=false;return;
+    }
+    state.player.grounded=true;
+    state.adventure.door_open=1.;
+  }
   int route_room_id(int leg,int cell) const {
     if(route_forks_enabled()&&cell==2&&(profile.route_choices[size_t(district)]&(1u<<leg)))
       return iceworld::harbor_alternate(profile.itinerary,leg,profile.seed);
