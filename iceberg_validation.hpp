@@ -303,7 +303,8 @@ inline void add_estate_clotheslines(EngineGrid &room) {
   const size_t original=room.platforms.size();
   // The upper lines bridge the small balconies without changing the street route.
   room.platforms.push_back({.base={32,39.5,21,.5},.dy=.45,.period=3.8,.clothesline=true});
-  room.platforms.push_back({.base={66,30.5,17,.5},.dy=.4,.period=4.3,.phase=.5,.clothesline=true});
+  // Clear the upper balcony at y=29 throughout the line's sway.
+  room.platforms.push_back({.base={66,27.5,17,.5},.dy=.4,.period=4.3,.phase=.5,.clothesline=true});
   const auto route=verify_route(room);
   if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
   else room.platforms.resize(original);

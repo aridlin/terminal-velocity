@@ -391,12 +391,18 @@ int main(int argc,char **argv) {
       "current Estate expeditions have two rideable clotheslines in Laundry over the street");
     const auto &laundry=estate.grid.platforms[1];
     estate.profile.language=iceberg::Language::English;
-    estate.state.player.x=79.;
+    estate.state.player.x=66.5;
     estate.state.player.y=laundry.at(0).y-kPlayerHeight;
     estate.state.player.grounded=true;estate.state.player.support=1;
     estate.tick({},1./120);
     check(estate.state.player.support==1&&estate.state.adventure.prompt.find("drop through")!=std::string::npos,
       "a courier on a clothesline sees how to drop through it");
+    Controls cross;cross.move=1;
+    for(int tick=0;tick<180&&estate.state.player.x<79.5;++tick)estate.tick(cross,1./120);
+    check(estate.state.player.x>=79.5&&estate.state.player.support==1&&estate.state.deaths==0,
+      "the full upper clothesline clears the balcony with the courier aboard");
+    // Stop before dropping onto the street landing under the line.
+    estate.state.player.vx=0;
     Controls drop;drop.fast_fall=true;
     for(int tick=0;tick<100;++tick)estate.tick(drop,1./120);
     check(estate.state.player.grounded&&estate.state.player.support==-1&&estate.state.deaths==0&&
