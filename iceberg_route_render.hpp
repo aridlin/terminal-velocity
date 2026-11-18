@@ -24,6 +24,10 @@
     const bool settlement=grid_.room_role==iceberg::RoomRole::Settlement;
     const bool show_goal=!settlement&&grid_.goal.x>=0&&grid_.goal.x<grid_.width()&&
       grid_.goal.y>=0&&grid_.goal.y<grid_.height();
+    const auto return_door=[](const auto &node){return node.kind==InteractionKind::Return;};
+    const bool has_return=std::any_of(grid_.interactions.begin(),grid_.interactions.end(),return_door);
+    const bool return_only=has_return&&!show_goal&&!settlement;
+    constexpr uint32_t return_color=0x91d4ce;
     const auto missing=show_goal?grid_.goal_requires&~grid_.switch_flags:0;
     const auto required_valve=[missing](const auto &node) {
       return node.kind==InteractionKind::Valve&&(missing&(uint64_t(1)<<node.id));
@@ -42,7 +46,8 @@
     constexpr uint32_t valve_color=0xf0a277,bridge_color=0xabc9e4;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
     constexpr uint32_t belt_color=0xa0d6df;
-    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)+int(bridge_legend);
+    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
+      +int(bridge_legend)+int(has_return&&!return_only);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -179,8 +184,9 @@
     }
     for(const auto &node:grid_.interactions) {
       const bool board=settlement&&node.kind==InteractionKind::Board;
-      if(board||node.kind==InteractionKind::Return)
-        mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,board?"▤":"▣",0xd7e8cd);
+      if(board||return_door(node))
+        mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,board?"▤":"↶",
+          board?0xd7e8cd:return_color,board?1:-1);
     }
     for(size_t i=0;i<grid_.checkpoint_points.size();++i)if(i!=active) {
       const auto [x,y]=grid_.checkpoint_points[i];
@@ -230,10 +236,15 @@
       const auto main=tr("▣ Główne · ","▣ Main · ");
       paint_text(legend,2,main,0xc7d9df);
       paint_text(legend++,2+int(glyphs(main).size()),tr("▧ Przejście B","▧ Passage B"),0xe8a758);
+    } else if(return_only) {
+      const auto base=tr("@ Ty · ◆ Lampa · ","@ You · ◆ Lamp · ");
+      paint_text(legend,2,base,0xc7d9df);
+      paint_text(legend++,2+int(glyphs(base).size()),tr("↶ Powrót","↶ Return"),return_color);
     } else {
       paint_text(legend++,2,settlement?tr("@ Ty · ◆ Lampa · ▤ Tablica","@ You · ◆ Lamp · ▤ Board"):
         tr("@ Ty · ◆ Lampa · ▣ Wyjście","@ You · ◆ Lamp · ▣ Exit"),0xc7d9df);
     }
+    if(has_return&&!return_only)paint_text(legend++,2,tr("↶ Powrót","↶ Return"),return_color);
     if(has_valves)paint_text(legend++,2,tr("⊗ Wymagany zawór","⊗ Required valve"),valve_color);
     if(bridge_legend) {
       std::string label;

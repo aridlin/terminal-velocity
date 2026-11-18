@@ -137,12 +137,31 @@ int main(){try {
   ui_check(!detour.state.adventure.route.available,"a detour stays absent from the campaign route");
   detour.tick(tab,1./120);
   detour.state.player.x+=8;
+  auto count_marker=[&](const char *glyph,uint32_t color){
+    int marks=0;
+    for(const auto &row:frame)for(const auto &cell:row)
+      marks+=cell.glyph==glyph&&cell.rgb==color;
+    return marks;
+  };
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    detour.profile.language=language;detour.sync_view();
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(detour.grid,detour.state,rows,cols,2).draw();
+      const auto text=ui_text(frame);
+      ui_check(count_marker("↶",0x91d4ce)==2&&count_marker("▣",0xd7e8cd)==0&&
+        text.find(language==iceberg::Language::English?"↶ Return":"↶ Powrót")!=std::string::npos,
+        "the detour minimap identifies its real return without advertising a finish door");
+    }
+  }
+  detour.profile.hidden_room=-1;
+  detour.profile.revisit.active=true;
+  detour.load_room();
+  detour.tick(map,0);
+  if(!detour.state.adventure.map_room){detour.tick(tab,0);detour.tick(tab,0);}
   RenderGrid(detour.grid,detour.state,24,34,2).draw();
-  int doors=0;
-  for(const auto &row:frame)for(const auto &cell:row)
-    doors+=cell.glyph=="▣"&&cell.rgb==0xd7e8cd;
-  ui_check(doors==1&&ui_text(frame).find("Service corridor")!=std::string::npos,
-    "the detour minimap shows only its real return doorway");
+  ui_check(count_marker("↶",0x91d4ce)==2&&count_marker("▣",0xd7e8cd)==1&&
+    ui_text(frame).find("▣ Exit")!=std::string::npos,
+    "a revisited course distinguishes the early return from the course's exit");
   AdventureSession features(options,"/tmp/tv-ui-room-features-unused");features.begin_campaign(true);
   features.profile.unlocked=3;features.run_district=3;
   auto &archive=features.profile.expeditions[0];
@@ -185,12 +204,6 @@ int main(){try {
   for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
     features.state.player=at_spawn;
     RenderGrid(features.grid,features.state,rows,cols,2).draw();
-    auto count_marker=[&](const char *glyph,uint32_t color) {
-      int count=0;
-      for(const auto &row:frame)for(const auto &cell:row)
-        count+=cell.glyph==glyph&&cell.rgb==color;
-      return count;
-    };
     ui_check(count_marker("@",0xffd68a)==1&&count_marker("◆",0x9dd4dd)==1,
       "courier and checkpoint remain visible when they share a projected map cell");
     features.state.player.x=goal.x+(goal.w-kPlayerWidth)*.5;
