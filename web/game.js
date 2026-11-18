@@ -146,7 +146,14 @@ function translateUI(){
  document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  const touchUse=document.querySelector('#touch-use');
  const replacingSave=!!(uiFlags&confirmSaveFlag);
+ const replacingRun=!!(uiFlags&replaceRunFlag);
+ document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  if(replacingSave){
+  const replace=document.querySelector('#replace-save');
+  replace.dataset.tap=replacingRun?'6':'8';
+  replace.setAttribute('aria-label',replacingRun
+   ?tr('Zastąp zapisaną rozgrywkę','Replace saved run')
+   :tr('Zastąp zapisaną podróż','Replace saved journey'));
   touchUse.textContent=tr('Zastąp','Replace');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(uiFlags&forkDoorFlag){
@@ -163,8 +170,10 @@ function translateUI(){
   touchUse.setAttribute('aria-label',lastBlocked?tr('Zatwierdź','Confirm'):tr('Użyj','Use'));
  }
  const districtControl=!!(uiFlags&16384);
- retryButton.hidden=!!(uiFlags&1)&&!districtControl;
- if(districtControl){
+ // Keep the initiating button's space so the confirmation does not move under it.
+ retryButton.hidden=!!(uiFlags&1)&&!districtControl&&!replacingRun;
+ retryButton.style.visibility=replacingRun?'hidden':'';
+ if(districtControl||replacingRun){
   retryButton.textContent=tr('Od nowa','New run');
   retryButton.setAttribute('aria-label',tr('Rozpocznij od nowa','Start a new run'));
  }else retryButton.removeAttribute('aria-label');
