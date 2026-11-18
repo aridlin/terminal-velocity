@@ -325,6 +325,17 @@
     }
     draw_machinery_reaction();
     draw_water_splash();
+    auto goal=grid_.goal;
+    double opening=state_.adventure.door_open;
+    bool unlocked=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
+    double center=goal.x+goal.w*.5,door_feet=goal.bottom();
+    if(!unlocked)prop_art(center,door_feet,{"╔═══════╗","║┌──┬──┐║","║│  │  │║","║│ ▪│▪ │║","║│  │  │║","╚╧══╧══╧╝"},d.stone);
+    if(unlocked) {
+      const char *face=opening>.66?"║       ║":opening>.2?"║│     │║":"║│ ▪│▪ │║";
+      prop_art(center,door_feet,{"╔═══════╗",face,face,face,"║       ║","╚═══════╝"},d.accent);
+      if(opening>.66)world_text(center-.5,goal.y+1.6,"▱",d.light);
+    }
+
     // A small readable courier silhouette, with a scarf that follows motion.
     const auto &p=state_.player;
     static const uint32_t coats[]={0xe4ad68,0xdab0d5,0x88d3d9,0xc9bb85,0xabbcf4,0xb8dfb7,0xe99462,0xdce9ef};
@@ -352,17 +363,6 @@
         else {world_text(x-.4,y-.8,"╲ ╱",d.accent);world_text(x-.4,y,"╱ ╲",d.accent);}
       }
     }
-    auto goal=grid_.goal;
-    double opening=state_.adventure.door_open;
-    bool unlocked=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
-    double center=goal.x+goal.w*.5,door_feet=goal.bottom();
-    if(!unlocked)prop_art(center,door_feet,{"╔═══════╗","║┌──┬──┐║","║│  │  │║","║│ ▪│▪ │║","║│  │  │║","╚╧══╧══╧╝"},d.stone);
-    if(unlocked) {
-      const char *face=opening>.66?"║       ║":opening>.2?"║│     │║":"║│ ▪│▪ │║";
-      prop_art(center,door_feet,{"╔═══════╗",face,face,face,"║       ║","╚═══════╝"},d.accent);
-      if(opening>.66)world_text(center-.5,goal.y+1.6,"▱",d.light);
-    }
-
   }
   void draw_iceberg_inspection() {
     const auto &v=state_.adventure;
