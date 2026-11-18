@@ -163,6 +163,11 @@ function translateUI(){
   touchUse.setAttribute('aria-label',lastBlocked?tr('Zatwierdź','Confirm'):tr('Użyj','Use'));
  }
  const districtControl=!!(uiFlags&16384);
+ retryButton.hidden=!!(uiFlags&1)&&!districtControl;
+ if(districtControl){
+  retryButton.textContent=tr('Od nowa','New run');
+  retryButton.setAttribute('aria-label',tr('Rozpocznij od nowa','Start a new run'));
+ }else retryButton.removeAttribute('aria-label');
  for(const button of document.querySelectorAll('[data-tap="11"]')){
   button.textContent=districtControl?tr('Dzielnica','District'):tr('Mapa','Map');
   button.setAttribute('aria-label',districtControl?tr('Zmień dzielnicę','Change district'):button.textContent);

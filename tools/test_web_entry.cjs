@@ -1050,8 +1050,14 @@ const server=http.createServer((req,res)=>{
   };
   await openMenu();
   await page.keyboard.press('Digit3');
+  await page.waitForFunction(()=>uiFlags&16384);
+  const newRun=page.locator('#toolbar [data-tap="13"]');
+  assert.equal(await newRun.textContent(),'New run');
+  assert.equal(await newRun.getAttribute('aria-label'),'Start a new run');
   await action.tap();
   await page.waitForFunction(()=>(uiFlags&(8192|1))===8192);
+  assert.equal(await newRun.textContent(),'Retry');
+  assert.equal(await newRun.getAttribute('aria-label'),null);
   const expeditionMap=page.locator('footer #toolbar [data-tap="11"]');
   await page.evaluate(()=>{
    const render=window.tvFrame;
@@ -1089,6 +1095,8 @@ const server=http.createServer((req,res)=>{
 
   await openMenu();
   await page.keyboard.press('Digit5');
+  await page.waitForFunction(()=>!(uiFlags&16384));
+  assert.equal(await newRun.isVisible(),false,'the run action is hidden for other menu choices');
   await action.tap();
   await page.waitForFunction(()=>!!(uiFlags&16));
   await page.keyboard.press('Digit6');
