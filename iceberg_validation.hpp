@@ -191,6 +191,16 @@ inline void add_overhang_windbreak(EngineGrid &room) {
   }
 }
 
+inline void add_shutter_service_lift(EngineGrid &room) {
+  if(room.district!=5||room.template_id!=69)return;
+  // The narrow lift travels between the lower approach and the upper
+  // service shelves. Its shaft sits in the gap between the solid ledges.
+  room.platforms.push_back({.base={68.5,40.5,3.5,.5},.dy=9.,.period=7.2,.phase=.25});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms.pop_back();
+}
+
 inline void add_expedition_ice(EngineGrid &room) {
   if(room.district!=4)return;
   if(room.template_id==48)room.ice_strips={{8,56,12,1},{48,50,9,1},{68,47,12,1},{108,47,9,1}};

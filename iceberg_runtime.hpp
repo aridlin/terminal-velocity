@@ -230,6 +230,7 @@ public:
     strengthen_expedition_wind(room);
     add_overhang_windbreak(room);
     add_ridge_crosswind(room);
+    add_shutter_service_lift(room);
   }
   void refresh_slots() {
     auto &v=state.adventure;

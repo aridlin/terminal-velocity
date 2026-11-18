@@ -600,6 +600,28 @@ int main(int argc,char **argv) {
       std::abs(drift(sheltered,17.)-drift(exposed,17.))<.01&&drift(sheltered,17.)<76.7,
       "wind still pushes on the upper route while the lower route is sheltered");
 
+    crown_run.itinerary[1]=69;crown.load_room();
+    const auto &counterweights=crown.grid;
+    const auto original_counterweights=verified_room(69,counterweights.seed,5);
+    const auto lower_route=verify_route(counterweights);
+    check(counterweights.platforms.size()==original_counterweights.platforms.size()+1&&
+          lower_route.complete&&lower_route.deaths==0,
+      "current Shutter Counterweights adds a service lift and retains its lower route");
+    const auto &service_lift=counterweights.platforms.back();
+    auto lift_rider=new_state(counterweights);
+    lift_rider.player.x=service_lift.base.x+1.;
+    lift_rider.player.y=service_lift.at(0).y-kPlayerHeight;
+    lift_rider.player.grounded=true;
+    lift_rider.player.support=int(counterweights.platforms.size()-1);
+    const auto low_landing=lift_rider.player.rect().bottom();
+    for(int tick=0;tick<350;++tick)world_step(lift_rider,counterweights,{},1./120);
+    check(lift_rider.player.support==int(counterweights.platforms.size()-1)&&
+          lift_rider.deaths==0&&low_landing-lift_rider.player.rect().bottom()>15.,
+      "the service lift carries a neutral rider from the lower route toward the upper shelves");
+    crown_run.layout_version=2;crown.load_room();
+    check(crown.grid.template_id==69&&crown.grid.platforms.size()==original_counterweights.platforms.size(),
+      "legacy Shutter Counterweights retains its original platforms");
+
     AdventureSession prior_leg(options,path);
     prior_leg.begin_campaign(true);
     prior_leg.profile.unlocked=2;prior_leg.run_district=2;
