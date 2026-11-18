@@ -150,6 +150,12 @@ inline constexpr int pending_briefing_option(uint64_t story,int district) {
   const int option=int((story & BriefingReplyMask) >> BriefingReplyShift)-district*2-1;
   return option>=0&&option<2?option:-1;
 }
+// This field keeps the district and the last checkpoint before a reply.
+inline constexpr int BriefingOpeningShift = 28;
+inline constexpr uint64_t BriefingOpeningMask = uint64_t(15) << BriefingOpeningShift;
+inline constexpr uint64_t briefing_opening_bits(int district,bool at_prompt) {
+  return uint64_t(district+1+(at_prompt?DistrictCount:0)) << BriefingOpeningShift;
+}
 inline constexpr uint64_t reply_value(int scene) { return uint64_t(1) << (48+scene); }
 inline constexpr uint64_t reply_recorded(int scene) { return uint64_t(1) << (55+scene); }
 inline constexpr uint64_t HomecomingReplyPending = uint64_t(1) << 62;

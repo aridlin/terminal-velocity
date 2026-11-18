@@ -441,9 +441,12 @@ public:
         if(profile.story&iceberg::reply_recorded(district))
           reply_dialogue(district,(profile.story&iceberg::reply_value(district))!=0,FinishHomecomingReply);
         else talk_homecoming(0);
-      } else if(int option=iceberg::pending_briefing_option(profile.story,district);
-                option>=0&&!(profile.story&(uint64_t(1)<<district))) {
-        reply_dialogue(iceberg::BriefingReplyBase+district,option,1);
+      } else if(!(profile.story&(uint64_t(1)<<district))) {
+        const int option=iceberg::pending_briefing_option(profile.story,district);
+        const auto opening=profile.story&iceberg::BriefingOpeningMask;
+        if(option>=0)reply_dialogue(iceberg::BriefingReplyBase+district,option,1);
+        else if(opening==iceberg::briefing_opening_bits(district,true))talk_briefing(true);
+        else if(opening==iceberg::briefing_opening_bits(district,false))talk_briefing();
       }
     }
   }
@@ -471,8 +474,19 @@ public:
       talk_arrival(iceberg::homecoming(district,leg,profile.story),district+1);
     }
   }
-  void talk_briefing() {
-    talk(iceberg::introduction(district),1,iceberg::BriefingReplyBase+district);
+  void remember_briefing(bool at_prompt) {
+    if(tour_scene>=0)return;
+    const auto next=(profile.story&~(iceberg::BriefingOpeningMask|iceberg::BriefingReplyMask))|
+      iceberg::briefing_opening_bits(district,at_prompt);
+    if(next==profile.story)return;
+    profile.story=next;
+    persist();
+  }
+  void talk_briefing(bool at_prompt=false) {
+    const int scene=iceberg::BriefingReplyBase+district;
+    if(at_prompt)talk({},1,scene);
+    else talk(iceberg::introduction(district),1,scene);
+    remember_briefing(at_prompt);
   }
   void reply_dialogue(int scene,int option,int action) {
     const auto &reply=iceberg::civic_reply(scene,option);
@@ -566,7 +580,7 @@ public:
           if(option)profile.story|=iceberg::reply_value(scene);
           else profile.story&=~iceberg::reply_value(scene);
         } else {
-          profile.story=(profile.story&~iceberg::BriefingReplyMask)|
+          profile.story=(profile.story&~(iceberg::BriefingReplyMask|iceberg::BriefingOpeningMask))|
             iceberg::briefing_reply_bits(scene-iceberg::BriefingReplyBase,option);
         }
         persist();
@@ -578,11 +592,15 @@ public:
     auto layout=iceberg::dialogue_layout(dialogue.lines[dialogue.page].text.get(profile.language),last_columns,last_rows,1000,dialogue.segment);
     if(dialogue.segment+1<layout.pages)++dialogue.segment;
     else {++dialogue.page;dialogue.segment=0;}
-    if(dialogue.active()){dialogue.reset_reveal();if(dialogue.instant)dialogue.reveal_all();frame_dialogue();audio.play(AudioCue::Paper,.4f);return;}
+    if(dialogue.active()){
+      dialogue.reset_reveal();if(dialogue.instant)dialogue.reveal_all();
+      if(dialogue.choosing()&&dialogue.reply_scene>=iceberg::BriefingReplyBase)remember_briefing(true);
+      frame_dialogue();audio.play(AudioCue::Paper,.4f);return;
+    }
     int action=dialogue.action;
     dialogue={};
     if(action==1) {
-      profile.story&=~iceberg::BriefingReplyMask;
+      profile.story&=~(iceberg::BriefingReplyMask|iceberg::BriefingOpeningMask);
       profile.story|=uint64_t(1)<<district;
     } else if(action==2) {
       complete_district();

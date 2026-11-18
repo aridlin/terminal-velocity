@@ -16,9 +16,16 @@ int main(){try{
  for(int option=0;option<2;++option) {
   auto briefing_file=folder/("briefing-"+std::to_string(option));
   AdventureSession briefing(options,briefing_file);briefing.begin_campaign(true);
-  briefing.advance_room();read_to_reply(briefing);
-  briefing.state.adventure.dialogue.reply_option=option;
-  briefing.dialogue_next();
+  briefing.advance_room();
+  AdventureSession reading(options,briefing_file);reading.begin_campaign(false);
+  require_end(reading.stage==0&&reading.state.adventure.dialogue.active()&&!reading.state.adventure.dialogue.choosing(),
+              "reloading an open briefing restores its introduction");
+  read_to_reply(reading);
+  AdventureSession prompted(options,briefing_file);prompted.begin_campaign(false);
+  require_end(prompted.stage==0&&prompted.state.adventure.dialogue.choosing(),
+              "reloading at the briefing question restores the reply prompt");
+  prompted.state.adventure.dialogue.reply_option=option;
+  prompted.dialogue_next();
   AdventureSession resumed(options,briefing_file);resumed.begin_campaign(false);
   const auto &exchange=resumed.state.adventure.dialogue;
   const auto &reply=iceberg::briefing_reply(0,option);
