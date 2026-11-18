@@ -1133,8 +1133,17 @@ const server=http.createServer((req,res)=>{
    await tools.locator('[data-tap="12"]').tap();
    await page.waitForFunction(()=>!!(uiFlags&1));
    await page.keyboard.press('Digit5');
-   await page.locator('#touch-use').tap();
-   await page.waitForFunction(()=>!!(uiFlags&16));
+   const settingsTouch=await mobile.newCDPSession(page);
+   const holdSettingsAction=async enter=>{
+    const box=await menuConfirm.boundingBox();
+    const point={x:box.x+box.width/2,y:box.y+box.height/2,id:1};
+    await settingsTouch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+    await page.waitForFunction(enter=>Boolean(uiFlags&16)===enter,enter);
+    assert.equal(await page.evaluate(()=>held),0,'changing Settings context releases the old touch');
+    assert.equal(await menuConfirm.evaluate(button=>button.classList.contains('held')),false);
+    await settingsTouch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   };
+   await holdSettingsAction(true);
    assert.equal(await page.locator('#touch .directions').isVisible(),false,'Settings has no direction actions');
    const settings=tools.locator('#settings-keys');
    assert.equal(await settings.count(),1,'fullscreen contains the settings buttons');
@@ -1156,8 +1165,8 @@ const server=http.createServer((req,res)=>{
    if(initialFocusPause==='true')await focusPause.tap();
    await page.waitForFunction(()=>!(uiFlags&4096));
    await page.screenshot({path:path.join(out,fallback?"web-settings-fallback.png":"web-settings-fullscreen.png")});
-   await page.locator('#touch').getByRole('button',{name:'Back',exact:true}).tap();
-   await page.waitForFunction(()=>!(uiFlags&16));
+   await holdSettingsAction(false);
+   await settingsTouch.detach();
    await page.keyboard.press('Digit1');
    await page.locator('#touch-use').tap();
    await page.waitForFunction(()=>!(uiFlags&1));

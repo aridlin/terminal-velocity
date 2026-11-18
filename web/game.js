@@ -278,7 +278,7 @@ window.tvUI=u=>{
  const previousSlot=selectedSlot;
  if(started)selectedSlot=1+((u.flags>>>20)&3);
  const blockingFlags=1|2|4|8|64|128;
- const inputContextFlags=blockingFlags|2048|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag;
+ const inputContextFlags=blockingFlags|2048|settingsFlag|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&inputContextFlags)!==(uiFlags&inputContextFlags))clearInput();
  lastBlocked=!!(u.flags&(blockingFlags|1024));
