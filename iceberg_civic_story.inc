@@ -88,7 +88,7 @@ inline const CivicReply &briefing_reply(int district,int option) {
        {2,{"Że po nich wrócę. Kiedyś kazałem wszystkim czekać przy słupku, nawet kiedy słupek już leżał w wodzie.","Tell them I'll come back for them. I used to tell people to wait by the stop sign even after it fell in the water."}}},
       {{"Kto odbierze leki?","Who'll take the medicine?"},
        {"A pani z czwartego? Czeka na dole czy w mieszkaniu?","What about the woman on the fourth floor? Is she waiting downstairs or at home?"},
-       {2,{"W mieszkaniu. Grażyna rozpisała dawki na odwrocie rozkładu. Po leki pójdę na górę sam.","At home. Grażyna wrote the doses on the back of the timetable. I'll take the medicine upstairs myself."}}},
+       {2,{"W mieszkaniu. Grażyna rozpisała dawki na odwrocie rozkładu. Sam zaniosę jej leki.","At home. Grażyna wrote the doses on the back of the timetable. I'll take the medicine upstairs myself."}}},
     }},
     {{
       {{"Kto wydał kopie?","Who issued the copies?"},
