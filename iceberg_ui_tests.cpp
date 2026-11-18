@@ -786,14 +786,36 @@ int main(){try {
     ui_check(v.route_room_selection==selection_before_tab,
       "changing map tabs stops holding the old arrow");
 
+    const auto final_name=v.route.rooms.back();
+    game.tick(map,0);
+    for(int i=game.room;i<iceberg::RoomsPerLeg-1;++i)game.advance_room();
     if(mode==iceberg::Mode::Trial) {
-      const auto final_name=v.route.rooms.back();
-      game.tick(map,0);
-      for(int i=game.room;i<iceberg::RoomsPerLeg-1;++i)game.advance_room();
       ui_check(game.grid.template_id==320&&
         game.grid.room_name.get(iceberg::Language::Polish)==final_name.get(iceberg::Language::Polish)&&
         game.grid.room_name.get(iceberg::Language::English)==final_name.get(iceberg::Language::English),
         "the planned final trial room title matches the course on arrival");
+    }
+    game.tick(map,0);
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      game.profile.language=language;game.sync_view();
+      const bool en=language==iceberg::Language::English;
+      const auto destination=mode==iceberg::Mode::Endless
+        ?(en?"Exit starts leg 3":"Wyjście do odcinka 3")
+        :(en?"Exit completes the trial":"Wyjście kończy próbę");
+      for(auto size:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
+        ui_check(normalize_ui(ui_text(frame)).find(destination)!=std::string::npos,
+          "the final room on the timeline shows where its exit leads");
+      }
+    }
+    game.tick(map,0);
+    if(mode==iceberg::Mode::Endless) {
+      game.advance_room();game.tick(map,0);
+      RenderGrid(game.grid,game.state,24,34,2).draw();
+      ui_check(v.route.current==0&&v.route.visited==1&&
+        ui_text(frame).find("Leg 3 · Depth 16")!=std::string::npos,
+        "the last exit leads to the promised leg with fresh visit markers");
+      game.tick(map,0);
     }
   }
   game.begin_campaign(false);game.tick(map,1./120);

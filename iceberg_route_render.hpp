@@ -374,10 +374,11 @@
     const int room_count=iceberg::RoomsPerLeg;
     const int leg=campaign?std::clamp(v.route_page<0?r.leg:v.route_page,0,2):0;
     const int offset=leg*room_count;
+    const int endless_leg=v.depth/room_count+1;
     std::string progress;
     if(campaign)progress=tr("Odcinek ","Leg ")+std::to_string(leg+1)+" / 3  ·  "+
       iceberg::route_title(v.district,2+2*leg).get(v.language);
-    else if(v.mode==iceberg::Mode::Endless)progress=tr("Odcinek ","Leg ")+std::to_string(v.depth/room_count+1)+
+    else if(v.mode==iceberg::Mode::Endless)progress=tr("Odcinek ","Leg ")+std::to_string(endless_leg)+
       tr(" · Głębokość "," · Depth ")+std::to_string(v.depth);
     else progress=tr("Pokój ","Room ")+std::to_string(r.current+1)+" / "+std::to_string(r.rooms.size());
     clipped(top+1,5,progress,0xc7d9df);
@@ -427,8 +428,12 @@
     if(selected>=0&&selected<int(r.rooms.size())&&selected!=r.current) {
       const auto detail=tr("Pokój ","Room ")+std::to_string(selected+1)+": "+r.rooms[size_t(selected)].get(v.language);
       for(const auto &line:wrap(detail,cols_-9))clipped(row++,5,line,0xc7d9df);
-    } else if(r.current>=0&&r.current+1<int(r.rooms.size())) {
-      const auto next=tr("Plan: ","Planned: ")+r.rooms[size_t(r.current+1)].get(v.language);
+    } else if(r.current>=0&&r.current<int(r.rooms.size())) {
+      const auto next=r.current+1<int(r.rooms.size())
+        ?tr("Plan: ","Planned: ")+r.rooms[size_t(r.current+1)].get(v.language)
+        :v.mode==iceberg::Mode::Endless
+          ?tr("Wyjście do odcinka ","Exit starts leg ")+std::to_string(endless_leg+1)
+          :tr("Wyjście kończy próbę","Exit completes the trial");
       for(const auto &line:wrap(next,cols_-9))clipped(row++,5,line,0xc7d9df);
     }
   }
