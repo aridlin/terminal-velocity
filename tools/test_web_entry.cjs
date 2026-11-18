@@ -234,8 +234,14 @@ const server=http.createServer((req,res)=>{
     const fullscreenTools=page.locator('#fullscreen-tools');
     const fullscreenMap=fullscreenTools.locator('[data-tap="11"]');
     assert.equal(await fullscreenTools.isVisible(),false);
-    await page.locator('#fullscreen').click();
+    await page.keyboard.down('Alt');
+    await page.keyboard.down('Enter');
     await page.waitForFunction(()=>document.fullscreenElement===playfield);
+    await page.keyboard.down('Enter');
+    await page.keyboard.up('Enter');
+    await page.keyboard.up('Alt');
+    await page.evaluate(async()=>{for(let i=0;i<4;i++)await new Promise(requestAnimationFrame);});
+    assert.equal(await page.evaluate(()=>document.fullscreenElement===playfield),true,'holding Alt+Enter enters fullscreen once');
     await fullscreenMap.click();
     await page.waitForFunction(()=>!!(uiFlags&128));
     await fullscreenTools.locator('#leave-fullscreen').click();

@@ -346,7 +346,8 @@ async function toggleFullscreen(){
 }
 addEventListener('keydown',e=>{
  if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&expanded()&&!accounts?.active)){
-  e.preventDefault();e.stopImmediatePropagation();toggleFullscreen();
+  e.preventDefault();e.stopImmediatePropagation();
+  if(!e.repeat)toggleFullscreen();
  }
 },{capture:true});
 document.querySelector('#fullscreen').onclick=toggleFullscreen;
