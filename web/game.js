@@ -392,8 +392,18 @@ function downloadSave(path,name) {
  }
 }
 exportSave.onclick=()=>{
- Module._web_save();
- downloadSave('/persist/progress.dat.iceberg','terminal-velocity.iceberg');
+ const name='terminal-velocity.iceberg';
+ if(Module._web_save()){
+  downloadSave('/persist/progress.dat.iceberg',name);
+  return;
+ }
+ if(!Module._web_export_recovery()){
+  setSaveActionError(['Brak zapisu do pobrania','No save to download']);
+  return;
+ }
+ const recovery='/tmp/terminal-velocity-export.iceberg';
+ try{downloadSave(recovery,name);}
+ finally{Module.FS.unlink(recovery);}
 };
 exportPreviousSave.onclick=()=>downloadSave(previousImportPath,'terminal-velocity-previous.iceberg');
 function finishImport(){

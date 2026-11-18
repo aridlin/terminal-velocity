@@ -81,8 +81,15 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   }
   RenderGrid(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2).draw();send_web_ui();
 }
-EMSCRIPTEN_KEEPALIVE void web_save() {
-  if(web_game){web_game->persist();send_web_ui();}
+EMSCRIPTEN_KEEPALIVE int web_save() {
+  if(!web_game)return 0;
+  web_game->persist();
+  send_web_ui();
+  return !web_game->state.adventure.save_error;
+}
+EMSCRIPTEN_KEEPALIVE int web_export_recovery() {
+  // The preceding save attempt has already snapped the live session into profile.
+  return web_game&&iceberg::SaveStore("/tmp/terminal-velocity-export.iceberg").save(web_game->profile);
 }
 EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
   if(!web_game||(language!=0&&language!=1))return;

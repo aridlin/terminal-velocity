@@ -397,6 +397,9 @@ const server=http.createServer((req,res)=>{
     });
     await page.waitForFunction(()=>!syncing);
     assert.equal(await saveMessage.textContent(),'Błąd zapisu','IndexedDB completion cannot hide a game save write failure');
+    const [recovery]=await Promise.all([page.waitForEvent('download'),page.locator('#export-save').click()]);
+    assert.match(fs.readFileSync(await recovery.path(),'utf8'),/^TVICE6 /,'the live session remains downloadable');
+    assert.equal(await saveMessage.textContent(),'Błąd zapisu','a recovery download preserves the storage warning');
     await page.evaluate(()=>{
       const fs=Module.FS,save='/persist/progress.dat.iceberg';
       fs.unlink(save+'/blocked');
