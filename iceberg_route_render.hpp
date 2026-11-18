@@ -7,7 +7,8 @@
       return field.reverses&&field.active(grid_.switch_flags);
     });
     const bool has_wind=crosswind!=grid_.air_fields.end();
-    const bool has_ice=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy;});
+    const bool has_ice=!grid_.ice_strips.empty()||
+      std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy;});
     const bool has_features=has_water||has_boost||has_wind||has_ice||!grid_.sweets.empty();
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
       return node.kind==InteractionKind::RouteChoice;
@@ -52,6 +53,11 @@
         }
         else if(tile==' '&&grid_.hazard_at(x,y))tile='!';
       }
+    }
+    for(const auto &strip:grid_.ice_strips) {
+      auto &line=map[size_t(row(strip.top()))];
+      const int last=column(std::nextafter(strip.right(),strip.left()));
+      for(int x=column(strip.left());x<=last;++x)line[size_t(x)]='i';
     }
     for(const auto &basin:grid_.water_basins) {
       auto &line=map[size_t(row(basin.top()))];

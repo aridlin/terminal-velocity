@@ -126,6 +126,34 @@ int main(){try {
       features.state.collected.back()=false;
     }
   }
+  AdventureSession winter(options,"/tmp/tv-ui-ice-map-unused");
+  winter.begin_campaign(true);winter.profile.unlocked=4;winter.run_district=4;
+  auto &garden=winter.profile.expeditions[0];
+  garden.active=true;garden.district=4;garden.seed=garden.origin_seed=73;
+  garden.itinerary={48,58,49,50,51,52,53,54};
+  winter.begin_run(iceberg::Mode::Endless);
+  for(int index=0;index<2;++index) {
+    ui_check(winter.grid.template_id==garden.itinerary[size_t(index)]&&!winter.grid.ice_strips.empty(),
+      "the map test starts in a room with static ice and its original terrain");
+    winter.tick(map,0);
+    if(!winter.state.adventure.map_room)winter.tick(tab,0);
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      winter.profile.language=language;winter.sync_view();
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(winter.grid,winter.state,rows,cols,2).draw();
+        const auto label=language==iceberg::Language::English?"━ Ice":"━ Lód";
+        ui_check(count_map("━",0xa6e9ea)>0&&ui_text(frame).find(label)!=std::string::npos,
+          "the room map draws fixed ice and its localized legend at supported sizes");
+      }
+    }
+    winter.tick(map,0);
+    if(index==0)winter.advance_room();
+  }
+  garden.layout_version=2;winter.load_room();winter.tick(map,0);
+  if(!winter.state.adventure.map_room)winter.tick(tab,0);
+  RenderGrid(winter.grid,winter.state,24,34,2).draw();
+  ui_check(count_map("━",0xa6e9ea)==0&&ui_text(frame).find("━ Ice")==std::string::npos,
+    "the legacy dry layout does not show ice glyphs or a legend");
   features.begin_campaign(true);features.stage=1;features.load_room();
   features.tick(map,1./120);features.tick(tab,1./120);features.tick(tab,1./120);
   RenderGrid(features.grid,features.state,24,34,2).draw();
