@@ -1213,8 +1213,17 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(old=>window.volumeLine&&window.volumeLine!==old,oldVolume);
    const focusPause=settings.locator('#focus-pause');
    const initialFocusPause=await focusPause.getAttribute('aria-pressed');
-   if(initialFocusPause==='true')await focusPause.tap();
+   await focusPause.focus();
+   await page.keyboard.press('Enter');
+   await page.waitForFunction(before=>document.querySelector('#focus-pause').getAttribute('aria-pressed')!==before,initialFocusPause);
+   assert.equal(await focusPause.evaluate(button=>button===document.activeElement),true);
+   if(initialFocusPause==='false')await page.keyboard.press('Enter');
    await page.waitForFunction(()=>!(uiFlags&4096));
+   await page.keyboard.press('Tab');
+   assert.equal(await page.evaluate(()=>document.activeElement.dataset.tap),'25');
+   await page.keyboard.press('Tab');
+   const smoothCamera=settings.locator('#smooth-camera');
+   assert.equal(await smoothCamera.evaluate(button=>button===document.activeElement),true);
    await page.screenshot({path:path.join(out,fallback?"web-settings-fallback.png":"web-settings-fullscreen.png")});
    await holdSettingsAction(false);
    await settingsTouch.detach();

@@ -434,10 +434,13 @@ for(const button of document.querySelectorAll('[data-key]')){
  for(const type of ['pointerup','pointercancel','lostpointercapture'])
   button.addEventListener(type,e=>finishPointer(e.pointerId,type==='pointerup'));
 }
-for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
+for(const b of document.querySelectorAll('[data-tap]'))b.onclick=event=>{
  if(!started||accounts?.active||importPending)return;
- canvas.focus({preventScroll:true});
- tap(+b.dataset.tap);
+ const key=+b.dataset.tap;
+ // Keep keyboard focus on adjustments that leave the Settings panel open.
+ const adjustsSetting=settingsKeys.contains(b)&&key!==25;
+ if(event.detail!==0||!adjustsSetting)canvas.focus({preventScroll:true});
+ tap(key);
 };
 function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';canvasPress=null;held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function updateBrowserSaveStatus(status){
