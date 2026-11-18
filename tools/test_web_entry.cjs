@@ -964,11 +964,17 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>(uiFlags&(64|128))===64);
   const directionState=()=>page.evaluate(()=>({held,highlight:!!document.querySelector('#touch .held')}));
   assert.deepEqual(await directionState(),{held:0,highlight:false},'opening the quest book clears the map contact');
+  assert.deepEqual(await page.locator('#touch button:visible').evaluateAll(buttons=>
+   buttons.map(button=>button.dataset.key)),['2','3','6','7']);
+  assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Select');
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[left]});
   assert.deepEqual(await directionState(),{held:0,highlight:false},'the old contact cannot activate another direction');
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[left]});
-  await page.waitForFunction(()=>held===1);
+  const questDown=await page.locator('#touch [data-key="3"]').boundingBox();
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[
+   {x:questDown.x+questDown.width/2,y:questDown.y+questDown.height/2,id:1}
+  ]});
+  await page.waitForFunction(()=>held===8);
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.keyboard.press('Tab');
   await page.waitForFunction(()=>!(uiFlags&64)&&held===0);

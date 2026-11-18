@@ -165,6 +165,7 @@ function translateUI(){
  const showingPause=(overlay&(2|8|64|128))===2;
  const reading=!!(overlay&4);
  const inspecting=!!(overlay&8);
+ const browsingQuests=!!(overlay&64)&&!reading;
  touchUse.hidden=inspecting;
  if(inSettings||showingPause){
   for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-buttons > [data-tap="9"]'))
@@ -194,6 +195,9 @@ function translateUI(){
  }else if(reading){
   touchUse.textContent=tr('Dalej','Continue');
   touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(browsingQuests){
+  touchUse.textContent=tr('Wybierz','Select');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(uiFlags&forkDoorFlag){
   touchUse.textContent=tr('Przejście B','Passage B');
   touchUse.setAttribute('aria-label',touchUse.textContent);
@@ -221,7 +225,7 @@ function translateUI(){
  }
  const touchInspect=document.querySelector('#touch-inspect');
  const touchControls=document.querySelector('#touch');
- if(inMenu||overlay&128||showingPause||reading||inspecting){
+ if(inMenu||overlay&128||showingPause||reading||inspecting||browsingQuests){
   const browseTour=!!(overlay&tourFlag)&&!(overlay&4);
   const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:reading||!!(overlay&roomMapFlag);
   touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
@@ -253,7 +257,7 @@ function translateUI(){
  }else if(inspecting){
   touchInspect.textContent=tr('Zamknij','Close');
   inspectLabel=tr('Zamknij podgląd','Close inspection');
- }else if(overlay&64){
+ }else if(browsingQuests){
   touchInspect.textContent=tr('Zakładka','Tab');
   inspectLabel=tr('Następna zakładka','Next quest tab');
  }else if(overlay&128){
