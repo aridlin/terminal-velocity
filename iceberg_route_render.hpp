@@ -16,6 +16,8 @@
       [](const auto &platform){return platform.archive_rack;});
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.tram;});
+    const auto ferry=[&](size_t i){return quay_ferry(i)||grid_.template_id==50;};
+    const bool has_ferries=!grid_.platforms.empty()&&ferry(0);
     const bool has_service_lift=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.service_lift;});
     const auto powered=[](const SortingBelt &belt){return belt.speed!=0;};
@@ -49,6 +51,7 @@
     const bool bridge_legend=has_path_control||has_bridges;
     constexpr uint32_t valve_color=0xf0a277,bridge_color=0xabc9e4;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
+    constexpr uint32_t ferry_color=0xe4ad68,ferry_route_color=0x6f9eaa;
     constexpr uint32_t belt_color=0xa0d6df;
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
@@ -56,12 +59,15 @@
     constexpr uint32_t service_lift_color=0xe4ad68;
     constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f;
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
-      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)+int(has_fragile);
-    const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
-    const int left=(cols_-width)/2, first=top+3;
+      +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
+      +int(has_fragile)+int(has_ferries);
+    const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
+    const int title_rows=has_ferries&&title.size()==1?1:2;
+    const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
+    const int left=(cols_-width)/2,first=top+title_rows+1;
     int title_row=top;
-    for(const auto &line:wrap(grid_.room_name.get(state_.adventure.language),cols_-6)) {
-      if(title_row>=top+2)break;
+    for(const auto &line:title) {
+      if(title_row>=top+title_rows)break;
       center(title_row++,line,Color::Gold);
     }
     frame(first-1,left-1,width+2,map_rows+2,0x637f8e);
@@ -140,6 +146,12 @@
         for(int x=column(center-range);x<=column(center+range);++x)
           if(rail[size_t(x)]==' ')rail[size_t(x)]='-';
       }
+      if(ferry(i)) {
+        const double center=platform.base.x+platform.base.w*.5,range=std::abs(platform.dx);
+        auto &lane=map[size_t(std::max(0,row(platform.base.y)-1))];
+        for(int x=column(center-range);x<=column(center+range);++x)
+          if(lane[size_t(x)]==' ')lane[size_t(x)]='s';
+      }
       if(!platform.available(state_,i,state_.elapsed))continue;
       const auto deck=platform.at(state_.elapsed);
       char tile=platform.icy?'i':'=';
@@ -160,6 +172,7 @@
       case '=':paint_text(first+y,left+x,"─",0x9dd4dd);break;
       case ':':paint_text(first+y,left+x,"┆",0x718c9d);break;
       case '-':paint_text(first+y,left+x,"┄",0x887b96);break;
+      case 's':paint_text(first+y,left+x,"┄",ferry_route_color);break;
       case 'b':paint_text(first+y,left+x,"═",belt_color);break;
       case 'g':paint_text(first+y,left+x,"═",bridge_color);break;
       case 'i':paint_text(first+y,left+x,"━",0xa6e9ea);break;
@@ -220,6 +233,10 @@
       mark(center+range,platform.base.y,"○",stop_color);
       // The car sits above the track so a docked car leaves both stops visible.
       mark_cell({column(car.x+car.w*.5),std::max(0,row(car.y)-1),1,"▰",tram_color});
+    }
+    if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
+      const auto deck=grid_.platforms[i].at(state_.elapsed);
+      mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,"▱",ferry_color});
     }
     for(const auto &belt:grid_.sorting_belts)if(powered(belt))
       mark(belt.x+belt.width*.5,belt.y,belt.speed>0?"▶":"◀",belt_color,belt.speed>0?1:-1);
@@ -307,6 +324,13 @@
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
+    }
+    if(has_ferries) {
+      const auto name=tr("▱ Prom","▱ Ferry");
+      paint_text(legend,2,name,ferry_color);
+      const int separator=2+int(glyphs(name).size());
+      paint_text(legend,separator," · ",0xc7d9df);
+      paint_text(legend++,separator+3,tr("┄ Trasa","┄ Route"),ferry_route_color);
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);

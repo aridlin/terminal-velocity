@@ -509,6 +509,33 @@ int main(){try {
   RenderGrid(features.grid,features.state,24,34,2).draw();
   ui_check(count_map("≈",0x66bfd7)>0&&ui_text(frame).find("≈ Water")!=std::string::npos,
     "the compact Harbor lesson map shows the real ferry waterline");
+  for(const int id:{601,504,50}) {
+    auto grid=id==601?iceworld::build_harbor_lesson_v4():iceworld::build_room(id,73,id==50?4:0);
+    auto state=new_state(grid);
+    state.adventure.map=state.adventure.map_room=true;
+    auto boat_positions=[&](){
+      std::vector<int> positions;
+      for(size_t row=4;row+7<frame.size();++row)
+        for(size_t col=0;col<frame[row].size();++col)
+          if(frame[row][col].glyph=="▱"&&frame[row][col].rgb==0xe4ad68)positions.push_back(int(col));
+      return positions;
+    };
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      state.elapsed=0;
+      state.adventure.language=iceberg::Language::English;
+      RenderGrid(grid,state,rows,cols,2).draw();
+      const auto before=boat_positions();
+      ui_check(before.size()==size_t(id==601?1:3)&&count_map("┄",0x6f9eaa)>0&&
+        ui_text(frame).find("▱ Ferry · ┄ Route")!=std::string::npos,
+        "the compact and wide maps distinguish ferries from fixed decks and show their route");
+      state.elapsed=grid.platforms.front().period*.5;
+      state.adventure.language=iceberg::Language::Polish;
+      RenderGrid(grid,state,rows,cols,2).draw();
+      const auto after=boat_positions();
+      ui_check(before.size()==after.size()&&before!=after&&ui_text(frame).find("▱ Prom · ┄ Trasa")!=std::string::npos,
+        "the translated ferry markers follow the crossing phase");
+    }
+  }
   AdventureSession harbor_fork(options,"/tmp/tv-ui-room-fork-unused");harbor_fork.begin_campaign(true);
   harbor_fork.stage=2;harbor_fork.room=1;harbor_fork.load_room();
   const auto passage=std::find_if(harbor_fork.grid.interactions.begin(),harbor_fork.grid.interactions.end(),[](const auto &node){
