@@ -73,6 +73,7 @@ int main() {
     else if(game.state.won)c.confirm=true;
     else if(game.grid.room_role==iceberg::RoomRole::Settlement) {required.settlement();continue;}
     else if(iceworld::harbor_v4_mission(game.grid.template_id)) {required.harbor_mission();continue;}
+    else if(game.grid.template_id==iceberg::CrownSentinel) {play_crown_sentinel(game);continue;}
     else {
       c=pilot.controls(game.grid,game.state);
       int at=game.near_interaction();

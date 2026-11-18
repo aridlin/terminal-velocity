@@ -95,6 +95,7 @@ inline std::vector<DialogueLine> conclusion(int district) {
     {0,{"Wracaj, kiedy chcesz. Mamy ciepło, mamy herbatę i niestety nadal mamy pocztę.","Come back whenever you like. We have heat, we have tea, and unfortunately we still have mail."}}};
   }
 }
+#include "iceberg_crown_cutscene.inc"
 inline std::vector<DialogueLine> small_talk(int npc, unsigned quest_state) {
   if(quest_state==3) {
     static const Text after[]{

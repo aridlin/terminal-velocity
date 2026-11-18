@@ -219,6 +219,56 @@
     }
   }
 #include "iceberg_effects.hpp"
+  void draw_crown_sentinel() {
+    const auto &boss=state_.crown;
+    const bool stopped=boss.hits>=3, exposed=boss.time>=crown_open_time;
+    const bool warning=boss.time>=crown_warning_time&&boss.time<crown_strike_time;
+    const bool strike=boss.time>=crown_strike_time&&boss.time<crown_open_time;
+    const bool airlock=stopped&&state_.adventure.dialogue.page>=12;
+    const double motion=stopped?.7:std::sin(state_.elapsed*5)*.28;
+    const uint32_t shell=stopped?0x788996:0xc8cedf;
+    const uint32_t signal=stopped?0x596675:exposed?0x88e6dc:warning||strike?0xf48672:0xe4b872;
+    for(int side:{-1,1}) {
+      const double center=27.+side*15.5;
+      prop_art(center,47.9,{"╔╧╧╧╧═╗","║▥▥▥▥ ║","║ ● ● ║","╠═════╣",
+        "║ ▥▥▥ ║","║ ╎ ╎ ║","║ ▒▒▒ ║","╚═════╝"},0x405267);
+      const double arm=27.+side*(4.7+((warning||strike)?.6:0.));
+      prop_art(arm,46.55+motion,side<0?
+        std::vector<std::string>{"╭═══╤╤╤","│░░░└┴┴","╰╥╥╥╮  "," ╵╵╵╵  "}:
+        std::vector<std::string>{"╤╤╤═══╮","┴┴┘░░░│","  ╭╥╥╥╯","  ╵╵╵╵ "},shell);
+      world_text(center-.4,44.1,stopped?"○ ○":warning||strike?"● ▣":"● ○",signal);
+    }
+    world_art(18.6,33.4,{"╔═════════════════════════════════════════╗",
+      "║▤▤▤▤ ╭────┴────╮    │    ╭────┴────╮ ▤▤▤▤║",
+      "║ ▥▥  │ ▒▒▒▒▒▒▒ │   ╭┴╮   │ ▒▒▒▒▒▒▒ │  ▥▥ ║",
+      "╨─────┴─────────┴───╨─╨───┴─────────┴─────╨"},0x526275);
+    for(double y=36.6;y<41.5+motion;y+=.8)
+      world_text(26.3,y,stopped?"  ╷ ":" │╎│",0x617384);
+    world_text(26.3,35.1,warning||strike?" ▣╳▣":exposed?" ▪◈▪":" ▪□▪",signal);
+    prop_art(27,47.8+motion,{"          ╷ ╷          ","     ╔════╧═╧════╗     ",
+      "╭─┬──╣ ▓▓     ▓▓ ╠──┬─╮","│ ╞══╣ ▒ ╔═══╗ ▒ ╠══╡ │",
+      "╰─┘  ║   ║   ║   ║  └─╯","     ║ ▤ ╚═══╝ ▤ ║     ",
+      "     ╚═╤═══════╤═╝     ","      ╱╵       ╵╲      "},shell);
+    world_art(26.25,44.9+motion,{stopped?"─╳─":exposed?"◀█▶":strike?"╳▓╳":"[▪]"},signal);
+    if(airlock) {
+      for(double y=34;y<48;y+=.8)world_text(47.8,y,"│░│",0x99dad7);
+    }
+    if(stopped||(!warning&&!strike))return;
+    const uint32_t hazard=strike?0xf78677:0xe4b872;
+    for(const auto &area:crown_attack_areas(boss)) {
+      if(area.w<=0.)continue;
+      if(area.h>2.) {
+        world_text(area.x-.15,area.y-.8,warning?"   ▼":"└──┬──┘",hazard);
+        for(double y=area.y;y<area.bottom();y+=.8)
+          world_art(area.x,y,{strike?(int(state_.elapsed*26+y)&1?"║░▓░║":"║▓░▓║"):"  ┆  "},hazard);
+      } else {
+        auto [start,y]=screen(area.x,area.y+.8);
+        auto [end,unused]=screen(area.right(),area.y+.8);
+        if(y>=4&&y<rows_-3)for(int x=std::max(0,start);x<std::min(cols_,end);++x)
+          paint_text(y,x,strike?(x%3==0?"╱":"≈"):(x%3==0?"▴":"·"),hazard);
+      }
+    }
+  }
   void draw_iceberg_world() {
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     for(int y=0;y<play_rows_;++y)for(int x=0;x<cols_;++x) {
@@ -329,9 +379,11 @@
     }
     draw_machinery_reaction();
     draw_water_splash();
+    if(grid_.template_id==iceberg::CrownSentinel)draw_crown_sentinel();
     auto goal=grid_.goal;
     double opening=state_.adventure.door_open;
-    bool unlocked=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
+    bool unlocked=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires&&
+      (grid_.template_id!=iceberg::CrownSentinel||state_.crown.hits>=3);
     double center=goal.x+goal.w*.5,door_feet=goal.bottom();
     if(!unlocked)prop_art(center,door_feet,{"╔═══════╗","║┌──┬──┐║","║│  │  │║","║│ ▪│▪ │║","║│  │  │║","╚╧══╧══╧╝"},d.stone);
     if(unlocked) {

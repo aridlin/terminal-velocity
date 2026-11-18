@@ -104,7 +104,7 @@ int main() {
 
     GameAudio sound;
     sound.init("assets/audio", false, true);
-    check(sound.ready() && sound.loaded_clips() == 11 + 2 * size_t(AudioCue::Count) && sound.error().empty(),
+    check(sound.ready() && sound.loaded_clips() == 12 + 2 * size_t(AudioCue::Count) && sound.error().empty(),
           "all sourced music and effect voices decode offline");
     sound.update(AudioScene::Play, 0, .02);
     for (int voice = 0; voice < 2; ++voice)

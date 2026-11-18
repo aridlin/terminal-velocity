@@ -89,6 +89,7 @@ int main() {
       if(identity!=last){last=identity;pilot={};pilot.predictive=game.grid.verification_policy;++rooms;}
       if(game.state.won){Controls c;c.confirm=true;game.tick(c,1./120);continue;}
       if(iceworld::harbor_v4_mission(game.grid.template_id)){review.harbor_mission();continue;}
+      if(game.grid.template_id==iceberg::CrownSentinel){play_crown_sentinel(game);continue;}
       if(game.grid.room_role==iceberg::RoomRole::Settlement) {
         review.residents();
         for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Epilogue&&!(game.grid.switch_flags&(uint64_t(1)<<node.id))) {

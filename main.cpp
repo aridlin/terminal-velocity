@@ -281,10 +281,18 @@ inline const std::array<std::pair<double, double>, 15> kSweets = {{{15, 33},
                                                                    {153, 28},
                                                                    {169, 33}}};
 
+struct CrownEncounter {
+  int hits = 0;
+  int cycle = 0;
+  double time = 0.;
+  double target = 27.;
+};
+
 struct GameState {
   iceberg::View adventure;
   Player player;
   bool reference_movement = false;
+  CrownEncounter crown;
   double spawn_x = 0.0;
   double spawn_y = 0.0;
   double camera_x = 0.0;
@@ -816,7 +824,10 @@ void reset_player(GameState &state) {
   state.result_recorded = false;
   state.earned_stars = 0;
   state.new_best = false;
+  state.crown = {};
 }
+
+#include "iceberg_crown_boss.hpp"
 
 void move_axis(const EngineGrid &grid, Player &player, double dt, char axis) {
   if (axis == 'x') {
@@ -1277,6 +1288,10 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
     }
   for(const auto &pulse:g.pulses)if(pulse.active(s.elapsed)&&p.rect().intersects(pulse.area)) {
     ++s.deaths;reset_player(s);return;
+  }
+  if (g.template_id == iceberg::CrownSentinel) {
+    step_crown_sentinel(s,dt,dashing || p.dash_time_left > 0.);
+    if (s.crown.hits < 3) s.won = false;
   }
   if (g.adventure_level && !s.reference_movement && !was_grounded && p.grounded &&
       (spent_dash || p.dash_time_left > 0.))
