@@ -425,9 +425,12 @@ public:
       } else talk(iceberg::crown_cutscene(profile.story),2,6);
     } else if(resume&&mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&
               stage==3&&profile.visit_district<0&&(profile.story&iceberg::HomecomingReplyPending)) {
-      talk_homecoming(0);
+      if(profile.story&iceberg::reply_recorded(district))
+        reply_dialogue(district,(profile.story&iceberg::reply_value(district))!=0,FinishHomecomingReply);
+      else talk_homecoming(0);
     }
   }
+  static constexpr int FinishHomecomingReply=4;
   void talk(std::vector<iceberg::DialogueLine> lines,int action=0,int reply_scene=-1) {
     if(reply_scene>=0)lines.push_back({iceberg::ReplyPrompt,{"Odpowiedz","Reply"}});
     state.adventure.dialogue={std::move(lines),0,action};discard_pending_movement();
@@ -436,7 +439,7 @@ public:
   }
   void talk_homecoming(int leg) {
     if(leg==0)profile.story|=iceberg::HomecomingReplyPending;
-    talk(iceberg::homecoming(district,leg,profile.story),0,leg==0?district:-1);
+    talk(iceberg::homecoming(district,leg,profile.story),leg==0?FinishHomecomingReply:0,leg==0?district:-1);
   }
   void talk_briefing() {
     talk(iceberg::introduction(district),1,iceberg::BriefingReplyBase+district);
@@ -528,7 +531,6 @@ public:
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
       if(tour_scene<0&&scene<iceberg::BriefingReplyBase) {
-        if(scene<iceberg::DistrictCount)profile.story&=~iceberg::HomecomingReplyPending;
         profile.story|=iceberg::reply_recorded(scene);
         if(option)profile.story|=iceberg::reply_value(scene);
         else profile.story&=~iceberg::reply_value(scene);
@@ -550,6 +552,8 @@ public:
       complete_district();
     } else if(action==3) {
       profile.finished=true;profile.cosmetics|=1u<<7;audio.play(AudioCue::Win);
+    } else if(action==FinishHomecomingReply) {
+      profile.story&=~iceberg::HomecomingReplyPending;
     } else if(action>=100 && action<108) {
       int quest=action-100;
       profile.quests[size_t(quest)]=profile.quest_counts[size_t(quest)]>=unsigned(iceberg::Quests[size_t(quest)].required)?2:1;
