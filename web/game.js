@@ -166,7 +166,7 @@ addEventListener('keydown',e=>{
  const pauseScreen=(uiFlags&(2|64|128))===2;
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
- if(accounts.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
+ if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
  // Shift also starts browser shortcuts. Dash only if it was tapped alone.
@@ -215,12 +215,12 @@ for(const button of document.querySelectorAll('[data-key]')){
  };
  button.addEventListener('click',e=>{
   // Pointer clicks already sent their input on pointerdown.
-  if(e.detail!==0||accounts.active||!started)return;
+  if(e.detail!==0||accounts?.active||!started)return;
   canvas.focus();
   tap(action());
  });
  button.addEventListener('pointerdown',e=>{
-  if(e.button!==0||accounts.active||!started)return;
+  if(e.button!==0||accounts?.active||!started)return;
   e.preventDefault();
   canvas.focus({preventScroll:true});
   const key=action();
@@ -254,7 +254,7 @@ for(const button of document.querySelectorAll('[data-key]')){
   button.addEventListener(type,e=>finishPointer(e.pointerId,type==='pointerup'));
 }
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
- if(!started||accounts.active||importPending)return;
+ if(!started||accounts?.active||importPending)return;
  canvas.focus({preventScroll:true});
  tap(+b.dataset.tap);
 };
@@ -264,6 +264,7 @@ function flushBrowserStorage(){
  syncing=true;
  Module.FS.syncfs(false,error=>{
   syncing=false;
+  if(bootFailed){storageFlushQueued=false;return;}
   if(storageFlushQueued){
    storageFlushQueued=false;
    flushBrowserStorage();
@@ -289,7 +290,7 @@ function updateFocus(hasFocus){
  clearInput();
  // A hidden tab can lose every animation frame between blur and focus.
  // Deliver the focus edge without advancing the game clock.
- if(started&&!accounts.active)Module._web_tick(0,0,0,cols,rows,0);
+ if(started&&!accounts?.active)Module._web_tick(0,0,0,cols,rows,0);
  syncSave();
 }
 addEventListener('blur',()=>updateFocus(false));
@@ -334,7 +335,7 @@ async function toggleFullscreen(){
  }
 }
 addEventListener('keydown',e=>{
- if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&expanded()&&!accounts.active)){
+ if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&expanded()&&!accounts?.active)){
   e.preventDefault();e.stopImmediatePropagation();toggleFullscreen();
  }
 },{capture:true});
@@ -370,7 +371,7 @@ function finishImport(){
  importSave.disabled=false;
  clearInput();
  last=performance.now();
- if(!accounts.active)canvas.focus({preventScroll:true});
+ if(!accounts?.active)canvas.focus({preventScroll:true});
 }
 importSave.onclick=()=>{
  clearInput();
@@ -393,11 +394,11 @@ saveFile.onchange=async()=>{
    return;
   }
   const bytes=new Uint8Array(await file.arrayBuffer());
-  if(accounts.active||accounts.busy||accounts.mode==='choose'){
+  if(accounts?.active||accounts?.busy||accounts?.mode==='choose'){
    saveStatus.textContent=tr('Zakończ obsługę konta przed wczytaniem zapisu','Finish the account action before importing a save');
    return;
   }
-  const question=accounts.user
+  const question=accounts?.user
    ?tr('Zastąpić obecny zapis? Nowy zapis będzie synchronizowany z kontem.','Replace your current save? The imported save will sync to your account.')
    :tr('Zastąpić obecny zapis w tej przeglądarce?','Replace the current save in this browser?');
   if(!window.confirm(question))return;
@@ -428,7 +429,7 @@ function frame(now){
  // Resume with a normal step after an isolated stall so rapid motion stays visible.
  const dt=stalled&&!frameWasStalled?1/60:Math.min(.1,elapsed);
  frameWasStalled=stalled;
- if(started&&accounts.active)accounts.draw();
+ if(started&&accounts?.active)accounts.draw();
  else if(started&&!importPending){
   Module._web_tick(dt,held,pressed,cols,rows,focused?1:0);
   clearPresses();
@@ -458,7 +459,7 @@ start.onclick=()=>{
   Module._web_start(Date.now()>>>0,english?1:0);
   Module._web_enter_campaign();
   started=true;
-  syncSave();accounts.start();resize();
+  syncSave();accounts?.start();resize();
   start.hidden=true;
   setGameButtons(true);
   exportPreviousSave.hidden=!Module.FS.analyzePath(previousImportPath).exists;
@@ -467,7 +468,7 @@ start.onclick=()=>{
   failStartup(error);
  }
 };
-canvas.onclick=()=>{if(!started)start.click();else if(!accounts.active&&(uiFlags&(2|4|1024)))tap(8);};
+canvas.onclick=()=>{if(!started)start.click();else if(!accounts?.active&&(uiFlags&(2|4|1024)))tap(8);};
 addEventListener('keydown',e=>{
  if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
 });
@@ -502,10 +503,15 @@ var Module={
  setStatus(){if(!started)drawBoot();},
  onAbort:failStartup
 };
-const accounts=new TVAccounts({english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame,needsRedraw:()=>previous.length===0,flush:flushBrowserStorage});
-document.querySelector('#account').onclick=()=>accounts.open();
-document.querySelector('#account-fullscreen').onclick=()=>accounts.open();
+const accounts=typeof window.TVAccounts==='function'?new window.TVAccounts({
+ english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame,
+ needsRedraw:()=>previous.length===0,flush:flushBrowserStorage
+}):null;
+for(const button of document.querySelectorAll('#account,#account-fullscreen')){
+ button.hidden=!accounts;
+ button.onclick=()=>accounts?.open();
+}
 setInterval(syncSave,5000);
-setInterval(()=>accounts.sync(),15000);
+if(accounts)setInterval(()=>accounts.sync(),15000);
 
 translateUI();resize();

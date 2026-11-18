@@ -40,6 +40,16 @@ const server=http.createServer((req,res)=>{
    await offline.close();
   }
   console.log('PASS missing startup assets report a localized reload message');
+  const guest=await browser.newPage({locale:'en-US'});
+  await guest.route('**/accounts.js',route=>route.abort('failed'));
+  await guest.goto(url,{waitUntil:'domcontentloaded'});
+  await guest.waitForFunction(()=>!document.querySelector('#start').disabled);
+  await guest.locator('#start').click();
+  await guest.waitForFunction(()=>started&&(uiFlags&256));
+  assert.equal(await guest.locator('#account').isHidden(),true);
+  assert.equal(await guest.locator('#export-save').isEnabled(),true);
+  await guest.close();
+  console.log('PASS local play starts when the optional account script is unavailable');
   const located=await browser.newPage({locale:'en-US'});
   await located.route('**/language.php',route=>route.fulfill({json:{language:'pl'}}));
   await located.goto(url);
