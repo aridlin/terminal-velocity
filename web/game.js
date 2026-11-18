@@ -45,7 +45,7 @@ const shiftKeys=new Set();
 let dashShift='';
 let frameWasStalled=false;
 let storageFlushQueued=false;
-let browserStorageRestored=false;
+let browserStorageWritable=false;
 let cellPixels=10;
 const colour=n=>'#'+n.toString(16).padStart(6,'0');
 function tile(code,fg,bg,bold){
@@ -275,8 +275,8 @@ for(const b of document.querySelectorAll('[data-tap]'))b.onclick=()=>{
 };
 function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function flushBrowserStorage(){
- // An incomplete startup restore cannot safely replace the IndexedDB contents.
- if(!browserStorageRestored)return;
+ // A failed restore or a second tab cannot safely replace the IndexedDB contents.
+ if(!browserStorageWritable)return;
  if(syncing){storageFlushQueued=true;return;}
  syncing=true;
  Module.FS.syncfs(false,error=>{
@@ -512,7 +512,7 @@ start.onclick=()=>{
   Module._web_enter_campaign();
   started=true;
   syncSave();
-  if(browserStorageRestored)accounts?.start();
+  if(browserStorageWritable)accounts?.start();
   resize();
   start.hidden=true;
   setGameButtons(true);
@@ -531,7 +531,7 @@ canvas.onclick=()=>{
 addEventListener('keydown',e=>{
  if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
 });
-async function finishBoot(storageError){
+async function finishBoot(storageError,canWrite=true){
  if(bootFailed)return;
  try {
   // The save's language takes precedence over approximate location, unless
@@ -546,18 +546,28 @@ async function finishBoot(storageError){
   }
   if(bootFailed)return;
   try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}
-  browserStorageRestored=!storageError;
+  browserStorageWritable=!storageError&&canWrite;
   if(storageError)browserSaveStatus=['Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups'];
+  else if(!canWrite)browserSaveStatus=['Inna karta zapisuje — pobierz kopię','Another tab is saving — download a copy'];
   ready=true;start.disabled=false;translateUI();
   drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
  }catch(error){failStartup(error);}
+}
+async function restoreBrowserStorage(){
+ const restore=()=>new Promise(resolve=>Module.FS.syncfs(true,resolve));
+ if(!navigator.locks){await finishBoot(await restore());return;}
+ await navigator.locks.request('terminal-velocity-browser-save',{ifAvailable:true},async lock=>{
+  await finishBoot(await restore(),!!lock);
+  // Keep the writer until this document closes. A new writer must restore a fresh save.
+  if(browserStorageWritable)await new Promise(()=>{});
+ }).catch(async error=>finishBoot((await restore())||error));
 }
 var Module={
  onRuntimeInitialized(){
   try {
    Module.FS.mkdir('/persist');
    Module.FS.mount(Module.IDBFS,{},'/persist');
-   Module.FS.syncfs(true,finishBoot);
+   restoreBrowserStorage().catch(failStartup);
   }catch(error){failStartup(error);}
  },
  setStatus(){if(!started)drawBoot();},
