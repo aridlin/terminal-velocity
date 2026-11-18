@@ -17,7 +17,16 @@
       return node.kind==InteractionKind::RouteChoice;
     });
     const bool fork=branch!=grid_.interactions.end();
-    const int legend_rows=1+int(has_features)+int(fork);
+    const bool settlement=grid_.room_role==iceberg::RoomRole::Settlement;
+    const bool show_goal=!settlement&&grid_.goal.x>=0&&grid_.goal.x<grid_.width()&&
+      grid_.goal.y>=0&&grid_.goal.y<grid_.height();
+    const auto missing=show_goal?grid_.goal_requires&~grid_.switch_flags:0;
+    const auto required_valve=[missing](const auto &node) {
+      return node.kind==InteractionKind::Valve&&(missing&(uint64_t(1)<<node.id));
+    };
+    const bool has_valves=std::any_of(grid_.interactions.begin(),grid_.interactions.end(),required_valve);
+    constexpr uint32_t valve_color=0xf0a277;
+    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves);
     const int width=std::min(cols_-8,72),map_rows=std::min(height-4-legend_rows,18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
@@ -32,9 +41,6 @@
       while(x<grid_.width()&&!grid_.solid_at(x,terrain_top)&&!grid_.hazard_at(x,terrain_top))++x;
       if(x<grid_.width())break;
     }
-    const bool settlement=grid_.room_role==iceberg::RoomRole::Settlement;
-    const bool show_goal=!settlement&&grid_.goal.x>=0&&grid_.goal.x<grid_.width()&&
-      grid_.goal.y>=0&&grid_.goal.y<grid_.height();
     double upper=show_goal?std::min(double(terrain_top),grid_.goal.y):terrain_top;
     for(const auto &platform:grid_.platforms)upper=std::min(upper,platform.base.y-std::abs(platform.dy));
     const int world_top=std::max(0,int(upper)-6);
@@ -106,9 +112,10 @@
     // Give the courier and doorways first choice of their exact cells.
     mark(state_.player.x+kPlayerWidth*.5,state_.player.y+kPlayerHeight*.5,"@",0xffd68a);
     if(show_goal) {
-      const bool open=(grid_.switch_flags&grid_.goal_requires)==grid_.goal_requires;
-      mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",open?0xd7e8cd:0x7c8492);
+      mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",missing?0x7c8492:0xd7e8cd);
     }
+    for(const auto &node:grid_.interactions)if(required_valve(node))
+      mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,"⊗",valve_color);
     if(fork) {
       const auto &door=branch->area;
       mark(door.x+door.w*.5,door.y+door.h*.5,"▧",0xe8a758,-1);
@@ -165,6 +172,7 @@
       paint_text(legend++,2,settlement?tr("@ Ty · ◆ Lampa · ▤ Tablica","@ You · ◆ Lamp · ▤ Board"):
         tr("@ Ty · ◆ Lampa · ▣ Wyjście","@ You · ◆ Lamp · ▣ Exit"),0xc7d9df);
     }
+    if(has_valves)paint_text(legend++,2,tr("⊗ Wymagany zawór","⊗ Required valve"),valve_color);
     int feature_col=2;
     auto label=[&](const std::string &entry,uint32_t color) {
       if(feature_col>2){paint_text(legend,feature_col," · ",0xc7d9df);feature_col+=3;}

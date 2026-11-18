@@ -106,6 +106,31 @@ int main(){try {
       count+=cell.glyph==glyph&&cell.rgb==rgb;
     return count;
   };
+  AdventureSession valves(options,"/tmp/tv-ui-room-valves-unused");
+  valves.begin_campaign(true);
+  valves.grid=iceworld::build_heatworks_sequence(true);
+  valves.state=new_state(valves.grid);
+  valves.profile.language=iceberg::Language::English;
+  valves.sync_view();
+  // An optional control must never be presented as a step toward the exit.
+  valves.grid.interactions.push_back({{10,52,3,4},InteractionKind::Valve,2,{"Zawór serwisowy","Service valve"}});
+  auto count_valves=[&](){
+    valves.state.adventure.map=valves.state.adventure.map_room=true;
+    RenderGrid(valves.grid,valves.state,24,34,2).draw();
+    return count_map("⊗",0xf0a277);
+  };
+  ui_check(count_valves()==2&&count_map("▣",0x7c8492)==1&&ui_text(frame).find("⊗ Required valve")!=std::string::npos,
+    "the locked room map identifies both required valves and excludes the optional control");
+  for(int i=0;i<2;++i) {
+    valves.state.adventure.map=valves.state.adventure.map_room=false;
+    const auto &area=valves.grid.interactions[size_t(i)].area;
+    valves.state.player.x=area.x;
+    valves.state.player.y=area.y;
+    valves.interact();
+    ui_check(count_valves()==1-i,"using a required valve removes only its own map marker");
+  }
+  ui_check(count_map("▣",0xd7e8cd)==1&&ui_text(frame).find("⊗ Required valve")==std::string::npos,
+    "the fully opened room displays its unlocked exit with no valve legend");
   const auto at_spawn=features.state.player;
   const auto &goal=features.grid.goal;
   for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
