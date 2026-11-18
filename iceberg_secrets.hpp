@@ -1,5 +1,5 @@
 #pragma once
-// Deliberately absent from the public journal, map, objectives, and counters.
+// Deliberately absent from the public journal, route map, objectives, and counters.
 // Entry fixtures are authored locations, independent of expedition randomness.
 namespace iceworld {
 inline EngineGrid build_hidden(int id) {

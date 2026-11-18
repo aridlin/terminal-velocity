@@ -19,8 +19,35 @@ int main(){try {
       ui_check(text.find(language==iceberg::Language::English?"Closed.":"Zamknięte.")!=std::string::npos,"lock explanation appears in wide and compact cell maps");
       ui_check(text.find(language==iceberg::Language::English?"three routes":"trzy trasy")!=std::string::npos,"Harbor unlock condition names the three required routes");
     }
-    game.tick(tab,1./120);ui_check(game.state.adventure.map&&game.state.adventure.map_route,"B switches to room route without closing map");game.tick(tab,1./120);
+    game.tick(tab,1./120);
+    ui_check(game.state.adventure.map&&game.state.adventure.map_route,"B switches to room route without closing map");
+    game.tick(tab,1./120);
+    ui_check(game.state.adventure.map_room&&!game.state.adventure.map_route,"B opens the campaign room map from the route");
+    for(auto size:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
+      bool board=false,exit=false;
+      for(const auto &row:frame)for(const auto &cell:row) {
+        board|=cell.glyph=="▤"&&cell.rgb==0xd7e8cd;
+        exit|=cell.glyph=="▣"&&cell.rgb==0xd7e8cd;
+      }
+      ui_check(board&&!exit,"the settlement minimap shows its real route board");
+    }
+    game.tick(tab,1./120);
+    ui_check(!game.state.adventure.map_room&&!game.state.adventure.map_route,"B returns to the campaign district map");
   }
+  AdventureSession detour(options,"/tmp/tv-ui-room-detour-unused");detour.begin_campaign(true);
+  detour.profile.language=iceberg::Language::English;
+  detour.profile.hidden_room=0;detour.load_room();
+  detour.tick(map,1./120);detour.tick(tab,1./120);
+  ui_check(!detour.state.adventure.route.available,"a detour stays absent from the campaign route");
+  detour.tick(tab,1./120);
+  detour.state.player.x+=8;
+  RenderGrid(detour.grid,detour.state,24,34,2).draw();
+  int doors=0;
+  for(const auto &row:frame)for(const auto &cell:row)
+    doors+=cell.glyph=="▣"&&cell.rgb==0xd7e8cd;
+  ui_check(doors==1&&ui_text(frame).find("Service corridor")!=std::string::npos,
+    "the detour minimap shows only its real return doorway");
   AdventureSession paused(options,"/tmp/tv-ui-paused-overlays-unused");paused.begin_campaign(true);
   paused.profile.language=iceberg::Language::English;
   paused.profile.quests[2]=3;paused.sync_view();
@@ -76,6 +103,10 @@ int main(){try {
   ui_check(compact_text().find("Leave the seeds by the stop and deliver the register copy to the counter.")!=std::string::npos,
            "compact notices can use all three footer rows");
   game.profile.unlocked=1;game.profile.story|=uint64_t(1)<<8;game.sync_view();game.state.adventure.selected=1;
+  game.tick(tab,1./120);game.tick(tab,1./120);game.tick(enter,1./120);
+  ui_check(game.state.adventure.map_room&&game.grid.district==0,"Confirm cannot travel from the campaign room map");
+  Controls switch_and_confirm=tab;switch_and_confirm.confirm=true;game.tick(switch_and_confirm,1./120);
+  ui_check(game.state.adventure.map&&game.grid.district==0,"switching to districts and confirming together cannot start travel");
   game.tick(enter,1./120);ui_check(!game.state.adventure.map&&game.grid.district==1&&game.profile.visit_district==1,"unlocked district travel enters the named settlement");
   ui_check(game.state.adventure.notice.find("ARRIVED")!=std::string::npos&&game.state.adventure.door_left>0,"allowed travel has arrival feedback and door animation");
   game.tick(map,1./120);game.state.adventure.selected=0;game.tick(enter,1./120);

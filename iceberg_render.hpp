@@ -469,11 +469,15 @@
     paint_text(1,2,v.map?(v.map_room?tr("PLAN POKOJU","ROOM MAP"):tr("MAPA PODRÓŻY","JOURNEY MAP")):
       tr("KSIĘGA ZADAŃ","QUEST BOOK"),d.accent,true);
     if(v.map) {
+      if(v.map_room) {
+        draw_room_map(3,rows_-7);
+        paint_text(rows_-2,2,v.mode==iceberg::Mode::Campaign?
+          tr("B dzielnice · J/P wróć","B districts · J/P return"):tr("B trasa · J/P wróć","B route · J/P return"),d.light);
+        return;
+      }
       if(v.mode!=iceberg::Mode::Campaign) {
-        if(v.map_room)draw_expedition_room_map(3,rows_-7);
-        else draw_iceberg_route_map(3,rows_-7);
-        paint_text(rows_-2,2,v.map_room?tr("B trasa · J/P wróć","B route · J/P return"):
-          tr("B pokój · J/P wróć","B room · J/P return"),d.light);
+        draw_iceberg_route_map(3,rows_-7);
+        paint_text(rows_-2,2,tr("B pokój · J/P wróć","B room · J/P return"),d.light);
         return;
       }
       paint_text(3,2,v.map_route?tr("  Dzielnice  ·  [Trasa]","  Districts  ·  [Route]"):tr("[Dzielnice]  ·   Trasa","[Districts]  ·   Route"),d.light);
@@ -488,8 +492,8 @@
         int y=first+6*spacing+1;
         for(const auto &line:wrap(iceberg::district_travel_status(v,std::clamp(v.selected,0,5)),cols_-4))if(y<rows_-4)paint_text(y++,2,line,0xeee7d6);
       }
-      paint_text(rows_-3,2,v.map_route?tr("↑↓ odcinek · B dzielnice","↑↓ leg · B districts"):tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"),d.light);
-      paint_text(rows_-2,2,v.map_route?tr("J/P wróć","J/P return"):tr("B trasa · J/P wróć","B route · J/P return"),d.light);
+      paint_text(rows_-3,2,v.map_route?tr("↑↓ odcinek","↑↓ leg"):tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"),d.light);
+      paint_text(rows_-2,2,v.map_route?tr("B pokój · J/P wróć","B room · J/P return"):tr("B trasa · J/P wróć","B route · J/P return"),d.light);
       return;
     }
     std::array<std::string,3> tabs{tr("Aktywne","Active"),tr("Ukończone","Completed"),tr("Notatki","Notes")};

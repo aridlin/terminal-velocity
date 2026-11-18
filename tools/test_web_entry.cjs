@@ -659,14 +659,19 @@ const server=http.createServer((req,res)=>{
      const route=page.locator('#touch-inspect');
      const use=page.locator('#touch-use');
      if(await page.evaluate(()=>!!(uiFlags&2048))){
-      assert.equal(await route.innerText(),'Districts');
+      assert.equal(await route.innerText(),'Room');
       await route.tap();
-      await page.waitForFunction(()=>!(uiFlags&2048));
+      await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
+      await route.tap();
+      await page.waitForFunction(()=>!(uiFlags&(2048|(1<<17))));
      }
      assert.equal(await route.innerText(),'Route');
      assert.equal(await use.getAttribute('aria-label'),'Confirm');
      await route.tap();
      await page.waitForFunction(()=>!!(uiFlags&2048));
+     assert.equal(await route.innerText(),'Room');
+     await route.tap();
+     await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
      assert.equal(await route.innerText(),'Districts');
      assert.equal(await use.getAttribute('aria-label'),'Close map');
      await use.tap();

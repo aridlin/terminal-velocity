@@ -98,7 +98,7 @@ function clearPresses(){
 }
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
 const roomMapFlag=1<<17;
-const routeMapOpen=()=>(overlayFlags()&(128|2048))===(128|2048);
+const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&(overlayFlags()&(2048|roomMapFlag)));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function translateUI(){
  document.documentElement.lang=english?'en':'pl';
@@ -108,7 +108,7 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
  document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
  const touchUse=document.querySelector('#touch-use');
- if(routeMapOpen()){
+ if(readOnlyMapOpen()){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));
  }else{
@@ -133,10 +133,14 @@ function translateUI(){
   touchInspect.textContent=tr('Zakładka','Tab');
   inspectLabel=tr('Następna zakładka','Next quest tab');
  }else if(overlay&128){
-  if(overlay&8192){
-   touchInspect.textContent=overlay&roomMapFlag?tr('Trasa','Route'):tr('Pokój','Room');
-   inspectLabel=overlay&roomMapFlag?tr('Pokaż trasę','Show route map'):tr('Pokaż plan pokoju','Show room map');
-  }else touchInspect.textContent=overlay&2048?tr('Dzielnice','Districts'):tr('Trasa','Route');
+  if((overlay&roomMapFlag)&&!(overlay&8192))touchInspect.textContent=tr('Dzielnice','Districts');
+  else if((overlay&2048)&&!(overlay&roomMapFlag)){
+   touchInspect.textContent=tr('Pokój','Room');
+   inspectLabel=tr('Pokaż plan pokoju','Show room map');
+  }else {
+   touchInspect.textContent=tr('Trasa','Route');
+   if(overlay&roomMapFlag)inspectLabel=tr('Pokaż trasę','Show route map');
+  }
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
@@ -158,7 +162,7 @@ window.tvUI=u=>{
  const nextEnglish=!!(u.flags&512);
  // The game sends UI state every frame. Only a transition changes the controls.
  if(u.flags===uiFlags&&english===nextEnglish)return;
- const modalFlags=1|2|4|8|64|128|roomMapFlag;
+ const modalFlags=1|2|4|8|64|128|2048|roomMapFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&modalFlags)!==(uiFlags&modalFlags))clearInput();
  lastBlocked=!!(u.flags&(modalFlags|1024));
@@ -231,7 +235,7 @@ for(const button of document.querySelectorAll('[data-key]')){
  const action=()=>{
   if(button.id==='touch-inspect'&&questRecordOpen())return 9;
   if(button.id!=='touch-use'||!lastBlocked)return +button.dataset.key;
-  if(routeMapOpen())return 11;
+  if(readOnlyMapOpen())return 11;
   return overlayFlags()&64?6:8;
  };
  button.addEventListener('click',e=>{

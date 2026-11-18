@@ -880,8 +880,14 @@ public:
         }
       }
     }
-    if(v.map&&mode==iceberg::Mode::Campaign) {
-      if(c.inspect)v.map_route=!v.map_route;
+    if(v.map&&c.inspect) {
+      if(mode==iceberg::Mode::Campaign) {
+        const bool next_room=v.map_route;
+        v.map_route=!v.map_route&&!v.map_room;
+        v.map_room=next_room;
+      } else v.map_room=!v.map_room;
+    }
+    if(v.map&&mode==iceberg::Mode::Campaign&&!v.map_room&&!c.inspect) {
       if(c.navigate&&!v.map_route)v.selected=(v.selected-c.navigate+iceberg::DistrictCount)%iceberg::DistrictCount;
       if(c.navigate&&v.map_route&&v.route.available)v.route_page=std::clamp((v.route_page<0?v.route.leg:v.route_page)+c.navigate,0,2);
       if(c.confirm&&!v.map_route) {
@@ -894,7 +900,6 @@ public:
         } else notice(iceberg::district_travel_status(v,v.selected),8);
       }
     }
-    if(v.map&&mode!=iceberg::Mode::Campaign&&c.inspect)v.map_room=!v.map_room;
     bool blocked=state.paused||state.journal||v.map||columns<34||rows<(columns>=56?20:24);
     audio.update(blocked?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
     if(blocked){sync_view();return;}
