@@ -468,7 +468,10 @@ public:
         profile.cosmetics|=(1u<<(district+1))|(1u<<(16+district));
         run_active=false;profile.expeditions[1].active=false;
         persist();state.menu=true;state.won=false;room=0;
-        notice(t("PRÓBA UKOŃCZONA — rekord zapisany","TRIAL COMPLETE — record saved"),6);
+        state.adventure.selected=3;
+        notice(options.no_save?t("PRÓBA UKOŃCZONA","TRIAL COMPLETE"):
+          state.adventure.save_error?t("PRÓBA UKOŃCZONA — błąd zapisu","TRIAL COMPLETE — save error"):
+          t("PRÓBA UKOŃCZONA — zapisano","TRIAL COMPLETE — record saved"),6);
       } else {
         if(room>=iceberg::RoomsPerLeg){room=0;run_seed=iceberg::mix(run_seed+1);profile.expeditions[0].itinerary.clear();}
         load_room();persist();

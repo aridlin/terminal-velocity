@@ -428,8 +428,7 @@
       int r=std::min(first+7,rows_-7);
       menu_line(r,tr("J zmień dzielnicę · ","J change district · ")+iceberg::Districts[size_t(v.run_district)].name.get(v.language),Color::Player);
       const auto &record=v.trials[size_t(v.run_district)];
-      if(v.selected==3&&record.complete)menu_line(r+1,tr("Rekordy: ","Records: ")+fixed(record.best_seconds)+"s  /  "+
-        std::to_string(record.best_deaths)+tr(" powrotów  /  "," retries  /  ")+std::to_string(record.best_treasures)+" ◆",Color::Gold);
+      if(v.selected==3&&record.complete)menu_line(r+1,trial_record_lines(record,cols_).front(),Color::Gold);
       else if(v.selected==2)menu_line(r+1,tr("Najdalsza wyprawa: ","Farthest expedition: ")+std::to_string(v.endless_best),Color::Gold);
     }
     center(rows_-5,tr("W/S wybór  ENTER graj  R nowa wyprawa  L język  Q wyjście","W/S choose  ENTER play  R new expedition  L language  Q quit"),Color::Text);
@@ -452,6 +451,14 @@
       center(17,tr("L  Język: POLSKI","L  Language: ENGLISH"));
       center(18,tr("1/2/3 zmień głośność  ENTER wróć","1/2/3 cycle volume  ENTER return"));
     }
+  }
+  std::vector<std::string> trial_record_lines(const iceberg::Record &record,int width) const {
+    const auto time=tr("Rekordy: ","Records: ")+fixed(record.best_seconds)+"s";
+    const auto rest=std::to_string(record.best_deaths)+tr(" powrotów · "," retries · ")+
+      std::to_string(record.best_treasures)+" ◆";
+    const auto summary=time+" · "+rest;
+    if(iceberg::cell_length(summary)<=width)return {summary};
+    return {time,rest};
   }
 #include "iceberg_route_render.hpp"
   void draw_iceberg_journal() {

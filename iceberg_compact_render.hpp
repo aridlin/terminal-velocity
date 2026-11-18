@@ -51,12 +51,19 @@
         v.trial_resume?tr("Wznów próbę","Resume trial"):tr("Próba mistrzowska","Mastery trial"),
         tr("Ustawienia","Settings"),tr("Trasy klasyczne","Classic courses")};
       for(int i=0;i<6;++i)paint_text((rows_<24?4+i:5+i*2),2,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+" "+labels[size_t(i)],v.selected==i?d.accent:0xc8bbb8);
+      const int notice_row=rows_<24?14:20;
       if(v.selected==2||v.selected==3) {
-        y=rows_<24?12:18;
+        const auto &record=v.trials[size_t(v.run_district)];
+        std::vector<std::string> stats;
+        if(v.selected==2)
+          stats=wrap(tr("Najdalsza wyprawa: ","Farthest expedition: ")+std::to_string(v.endless_best),cols_-4);
+        else if(record.complete)stats=trial_record_lines(record,cols_-4);
+        y=notice_row-2-int(stats.size());
         paint_text(y++,2,iceberg::Districts[size_t(v.run_district)].name.get(v.language),d.light);
-        paint_text(y,2,tr("J zmień dzielnicę","J change district"),d.light);
+        paint_text(y++,2,tr("J zmień dzielnicę","J change district"),d.light);
+        for(const auto &stat:stats)paint_text(y++,2,stat,d.accent);
       }
-      if(v.notice_left>0){y=rows_<24?14:20;compact_paragraph(y,v.notice,rows_-3,d.accent);}
+      if(v.notice_left>0){y=notice_row;compact_paragraph(y,v.notice,rows_-3,d.accent);}
       paint_text(rows_-3,2,tr("↑↓ wybór · ENTER graj","↑↓ choose · ENTER play"),d.light);
       paint_text(rows_-2,2,tr("R nowa wyprawa · L język","R new expedition · L language"),d.light);return;
     }

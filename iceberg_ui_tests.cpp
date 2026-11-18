@@ -171,6 +171,7 @@ int main(){try {
   ui_check(game.state.adventure.map&&!game.state.adventure.map_route,"returning to the campaign opens district travel");
   Controls menu;menu.menu_request=true;game.tick(menu,1./120);
   game.profile.expeditions[0].active=true;game.profile.expeditions[0].district=0;
+  game.profile.endless_best=17;
   Controls choose;choose.select_level=3;game.tick(choose,1./120);
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
     game.profile.language=language;game.sync_view();
@@ -180,12 +181,40 @@ int main(){try {
       const bool en=language==iceberg::Language::English;
       ui_check(text.find(en?"Resume expedition":"Wznów wyprawę")!=std::string::npos&&
           text.find(en?"J change district":"J zmień dzielnicę")!=std::string::npos&&
-          text.find(iceberg::Districts[0].name.get(language))!=std::string::npos,
-        "the compact menu identifies a saved expedition and its district control");
+          text.find(iceberg::Districts[0].name.get(language))!=std::string::npos&&
+          text.find(en?"Farthest expedition: 17":"Najdalsza wyprawa: 17")!=std::string::npos,
+        "the compact menu displays an expedition's district control and best depth");
     }
   }
   game.tick(map,1./120);
   ui_check(game.run_district==1&&!game.state.adventure.endless_resume,
     "district cycling leaves the saved expedition available in its own district");
+  game.profile.quests[6]=3;game.begin_run(iceberg::Mode::Trial,true);
+  game.options.no_save=false;game.saves=iceberg::SaveStore(std::filesystem::path{});
+  game.room=iceberg::RoomsPerLeg-1;
+  game.run_seconds=1234.5;game.run_deaths=12;game.run_treasures=8;
+  game.advance_room();
+  ui_check(game.state.menu&&game.state.adventure.selected==3&&game.state.adventure.save_error,
+    "a finished trial reselects the trial and flags a failed save");
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    game.profile.language=language;game.sync_view();
+    const bool en=language==iceberg::Language::English;
+    for(auto size:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
+      std::string interior;
+      for(const auto &row:frame) {
+        for(const auto &cell:row)if(cell.glyph!="│")interior+=cell.glyph;
+        interior+=' ';
+      }
+      const auto text=normalize_ui(interior);
+      ui_check(text.find("1234.5s")!=std::string::npos&&
+        text.find(en?"12 retries · 8 ◆":"12 powrotów · 8 ◆")!=std::string::npos&&
+        text.find("▸ 4")!=std::string::npos,"the trial menu shows all records and keeps retry selected");
+    }
+  }
+  ui_check(game.state.adventure.notice=="TRIAL COMPLETE — save error","completing a trial does not report a failed write as saved");
+  game.tick(enter,1./120);
+  ui_check(game.run_active&&game.room==0&&game.mode==iceberg::Mode::Trial&&!game.state.menu,
+    "confirm starts a fresh trial after completion");
   cell_frame_sink={};return 0;
 }catch(const std::exception &error){std::cerr<<"FAIL "<<error.what()<<'\n';return 1;}}
