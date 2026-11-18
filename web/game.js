@@ -12,8 +12,9 @@ let pendingBootLanguage=null;
 let hasStoredLanguage=false;
 let preferredLanguage=(navigator.languages?.[0]||navigator.language||'en').toLowerCase().split('-')[0]==='pl'?'pl':'en';
 try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en'){preferredLanguage=saved;hasStoredLanguage=true;}const pending=localStorage.getItem(pendingLanguageKey);if(pending==='pl'||pending==='en')preferredLanguage=pendingBootLanguage=pending;}catch{}
-let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootStatus='',explicitBootLanguage=pendingBootLanguage!==null;
+let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootFailed=false,explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
+const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
 async function suggestLanguage(){
  if(hasStoredLanguage||explicitBootLanguage)return null;
  const controller=new AbortController();
@@ -122,7 +123,10 @@ function translateUI(){
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
- if(!started){start.textContent=ready?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');saveStatus.textContent=ready?tr('Gotowe','Ready'):tr('Ładowanie gry…','Loading game…');}
+ if(!started){
+  start.textContent=ready||bootFailed?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');
+  saveStatus.textContent=bootFailed?startupError():ready?tr('Gotowe','Ready'):tr('Ładowanie gry…','Loading game…');
+ }
 }
 function selectLanguage(language){
  english=language==='en';explicitBootLanguage=true;
@@ -302,7 +306,7 @@ function drawBoot(){
  const line=(y,text,fg=0xc8bbb8)=>{let x=2;for(const ch of text){if(x>=w-2)break;const i=(y*w+x++)*4;cells[i]=ch.codePointAt(0);cells[i+1]=fg;}};
  line(3,'T E R M I N A L',0xe4ad68);line(5,'V E L O C I T Y',0xe4ad68);
  line(9,tr('POD POWIERZCHNIĄ','BELOW THE SURFACE'));line(12,tr('Miasto wewnątrz góry lodowej.','A city inside an iceberg.'));
- line(16,ready?tr('Dotknij / ENTER — rozpocznij','Tap / ENTER — start'):(bootStatus||tr('Ładowanie gry…','Loading game…')),0x9dd4dd);
+ line(16,bootFailed?startupError():ready?tr('Dotknij / ENTER — rozpocznij','Tap / ENTER — start'):tr('Ładowanie gry…','Loading game…'),0x9dd4dd);
  line(19,tr('Klawiatura lub ekran dotykowy.','Keyboard or touch controls.'));line(20,tr('Zapis zostaje w przeglądarce.','Progress stays in this browser.'));
  window.tvFrame(cells,w,h);
 }
@@ -424,7 +428,7 @@ function frame(now){
  // Resume with a normal step after an isolated stall so rapid motion stays visible.
  const dt=stalled&&!frameWasStalled?1/60:Math.min(.1,elapsed);
  frameWasStalled=stalled;
- if(accounts.active)accounts.draw();
+ if(started&&accounts.active)accounts.draw();
  else if(started&&!importPending){
   Module._web_tick(dt,held,pressed,cols,rows,focused?1:0);
   clearPresses();
@@ -432,6 +436,21 @@ function frame(now){
  last=now;
  requestAnimationFrame(frame);
 }
+function failStartup(error){
+ if(bootFailed)return;
+ if(error)console.error(error);
+ bootFailed=true;started=false;ready=false;
+ clearInput();
+ start.hidden=false;start.disabled=true;
+ setGameButtons(false);exportPreviousSave.hidden=true;
+ translateUI();drawBoot();
+}
+addEventListener('error',event=>{
+ if(event.target.id==='game-engine'||(!ready&&event.filename&&event.filename===document.querySelector('#game-engine')?.src))
+  failStartup(event.error);
+},{capture:true});
+// The engine's data preloader can reject before it calls Module.onAbort.
+addEventListener('unhandledrejection',event=>{if(!ready)failStartup(event.reason);});
 start.onclick=()=>{
  if(!ready||started)return;
  try {
@@ -445,32 +464,44 @@ start.onclick=()=>{
   exportPreviousSave.hidden=!Module.FS.analyzePath(previousImportPath).exists;
   last=performance.now();canvas.focus();requestAnimationFrame(frame);
  } catch(error) {
-  console.error(error);started=false;ready=false;start.hidden=false;start.disabled=true;
-  setGameButtons(false);exportPreviousSave.hidden=true;
-  bootStatus=tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
-  saveStatus.textContent=bootStatus;drawBoot();
+  failStartup(error);
  }
 };
 canvas.onclick=()=>{if(!started)start.click();else if(!accounts.active&&(uiFlags&(2|4|1024)))tap(8);};
 addEventListener('keydown',e=>{
  if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
 });
-var Module={onRuntimeInitialized(){try{Module.FS.mkdir('/persist');Module.FS.mount(Module.IDBFS,{},'/persist');Module.FS.syncfs(true,async error=>{
- // A valid game save is authoritative even before the player presses Start.
- // An explicit selection made while loading takes precedence over that save.
- if(!explicitBootLanguage){
-  const saved=Module._web_saved_language();
-  if(saved===0||saved===1)english=saved===1;
-  else {
-   const nearbyLanguage=await locationLanguage;
-   if(!explicitBootLanguage&&nearbyLanguage)english=nearbyLanguage==='en';
+async function finishBoot(storageError){
+ if(bootFailed)return;
+ try {
+  // The save's language takes precedence over approximate location, unless
+  // the player already made an explicit choice while the game was loading.
+  if(!explicitBootLanguage){
+   const saved=Module._web_saved_language();
+   if(saved===0||saved===1)english=saved===1;
+   else {
+    const nearbyLanguage=await locationLanguage;
+    if(!explicitBootLanguage&&nearbyLanguage)english=nearbyLanguage==='en';
+   }
   }
- }
- try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}
- ready=true;start.disabled=false;translateUI();
- if(error)saveStatus.textContent=tr('Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups');
- drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
- });}catch(e){bootStatus=tr('Błąd uruchamiania: ','Startup failed: ')+String(e);drawBoot();}},setStatus(text){if(!text)bootStatus='';drawBoot();},onAbort(error){bootStatus=tr('Błąd uruchamiania: ','Startup failed: ')+error;drawBoot();}};
+  if(bootFailed)return;
+  try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}
+  ready=true;start.disabled=false;translateUI();
+  if(storageError)saveStatus.textContent=tr('Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups');
+  drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
+ }catch(error){failStartup(error);}
+}
+var Module={
+ onRuntimeInitialized(){
+  try {
+   Module.FS.mkdir('/persist');
+   Module.FS.mount(Module.IDBFS,{},'/persist');
+   Module.FS.syncfs(true,finishBoot);
+  }catch(error){failStartup(error);}
+ },
+ setStatus(){if(!started)drawBoot();},
+ onAbort:failStartup
+};
 const accounts=new TVAccounts({english:()=>english,ready:()=>started,clear:clearInput,frame:window.tvFrame,needsRedraw:()=>previous.length===0,flush:flushBrowserStorage});
 document.querySelector('#account').onclick=()=>accounts.open();
 document.querySelector('#account-fullscreen').onclick=()=>accounts.open();

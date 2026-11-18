@@ -28,6 +28,18 @@ const server=http.createServer((req,res)=>{
   await loadingPage.waitForFunction(()=>!document.querySelector('#start').disabled);
   assert.equal(await loadingPage.locator('html').getAttribute('lang'),'pl','explicit choice during loading wins');
   await loadingContext.close();console.log('PASS explicit language choice during module loading');
+  for(const asset of ['terminal-velocity.js','terminal-velocity.wasm','terminal-velocity.data']){
+   const offline=await browser.newPage({locale:'en-US'});
+   await offline.route('**/'+asset,route=>route.abort('failed'));
+   await offline.goto(url,{waitUntil:'domcontentloaded'});
+   const status=offline.locator('#save-status');
+   await status.getByText('Startup failed — reload the page',{exact:true}).waitFor();
+   assert.equal(await offline.locator('#start').isDisabled(),true);
+   await offline.locator('[data-language="pl"]').click();
+   assert.equal(await status.innerText(),'Błąd uruchamiania — odśwież stronę');
+   await offline.close();
+  }
+  console.log('PASS missing startup assets report a localized reload message');
   const located=await browser.newPage({locale:'en-US'});
   await located.route('**/language.php',route=>route.fulfill({json:{language:'pl'}}));
   await located.goto(url);
