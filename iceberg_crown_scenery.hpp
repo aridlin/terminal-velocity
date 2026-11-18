@@ -78,14 +78,30 @@
     }
   }
 
+  void draw_ridge_sensors(double amount,bool right) {
+    const double row=aspect_*scale_;
+    for(const auto &pad:iceworld::pattern(grid_.template_id).optional) {
+      const double x=pad.x+pad.w-6*scale_,y=pad.y-5*row;
+      world_art(x,y,{"  ╥  ","┌─╨─┐","│   │","└─┬─┘","  ║  "},0x8298ac);
+      world_text(x+2*scale_,pad.y,"╨",0x8298ac);
+      if(amount<.2)world_text(x+scale_,y+2*row,"·○·",0xa2b9c4);
+      else world_text(x+scale_,y+2*row,right?"─▶·":"·◀─",right?0xf4d985:0xabdaee);
+      if(amount>=.2) {
+        const double tip=x+(right?3.5:.5)*scale_;
+        world_text(tip,y-row,amount>.65?(right?"╶╴":"╴╶"):"·",0xb3c4d2);
+      }
+    }
+  }
+
   void draw_crown_wind() {
     const double elapsed=state_.elapsed,row=aspect_*scale_;
     for(const auto &field:grid_.air_fields) {
       if(field.ax==0)continue;
       const bool active=field.active(grid_.switch_flags);
-      const double amount=active?field.strength(elapsed):0.;
-      const bool right=field.ax>0;
-      for(double edge:{field.area.left(),field.area.right()}) {
+      const double force=active?field.strength(elapsed):0.;
+      const double amount=std::abs(force);
+      const bool right=field.ax*force>0;
+      if(!field.reverses)for(double edge:{field.area.left(),field.area.right()}) {
         double best=20.;
         std::pair<double,double> landing{};
         for(auto [x,floor]:grid_.route_points) {
@@ -102,16 +118,16 @@
         else if(right)world_art(x+scale_,y,{amount>.65?"█▓▒░╴":"▓▒░╲"},0xd7ecfa);
         else world_art(x-(amount>.65?5:4)*scale_,y,{amount>.65?"╶░▒▓█":"╱░▒▓"},0xd7ecfa);
       }
-      if(!active||amount<.1)continue;
       const double width=field.area.w-3*scale_;
-      if(width<=0)continue;
-      const double direction=right?1.:-1.;
+      const int count=active&&amount>=.1&&width>0
+        ?std::clamp(int(field.area.w*.65),12,60):0;
+      const double direction=field.ax>0?1.:-1.;
       // Integrate the gust cycle so snow always travels in the displayed direction.
       const double angular=6.283185307179586/std::max(.01,field.period);
-      const double distance=field.period>0
-        ?8*elapsed-(4/angular)*(std::cos(elapsed*angular+field.phase*6.283185307179586)-std::cos(field.phase*6.283185307179586))
-        :12*elapsed;
-      const int count=std::clamp(int(field.area.w*.65),12,60);
+      const double drift=field.period>0
+        ?(4/angular)*(std::cos(field.phase*6.283185307179586)-std::cos(elapsed*angular+field.phase*6.283185307179586))
+        :0.;
+      const double distance=field.reverses?2*drift:field.period>0?8*elapsed+drift:12*elapsed;
       for(int i=0;i<count;++i) {
         double offset=std::fmod(i*6.29+direction*distance,width);
         if(offset<0)offset+=width;
@@ -119,6 +135,7 @@
         world_art(field.area.x+offset,y,{amount>.55?(right?"╶─›":"‹─╴"):(right?"·╴":"╶·")},
           amount>.55?0x93bbd6:0x526779);
       }
+      if(field.reverses)draw_ridge_sensors(amount,right);
     }
   }
   void draw_epilogue_landmarks() {

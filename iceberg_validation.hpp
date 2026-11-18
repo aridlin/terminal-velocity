@@ -156,6 +156,16 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   return recovery_room_for(candidate);
 }
 
+inline void add_ridge_crosswind(EngineGrid &room) {
+  if(room.district!=5||room.template_id!=68)return;
+  // The upper sensor ledges sit in the exposed strip. The lower landings
+  // stay below it and keep their original terrain and checkpoints.
+  room.air_fields.push_back({{73.,21.,44.,17.},52.,0.,7.2,0.,0,true});
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.air_fields.pop_back();
+}
+
 inline void strengthen_expedition_wind(EngineGrid &room) {
   if(room.district!=5||room.air_fields.size()!=1)return;
   auto &field=room.air_fields.front();

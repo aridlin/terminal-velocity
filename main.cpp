@@ -372,9 +372,12 @@ struct AirField {
   Rect area;
   double ax=0, ay=0, period=0, phase=0;
   uint64_t disabled_by=0;
+  bool reverses=false;
   bool active(uint64_t flags) const {return !disabled_by||(flags&disabled_by)!=disabled_by;}
   double strength(double elapsed) const {
-    return period<=0 ? 1. : .5+.5*std::sin((elapsed/period+phase)*6.283185307);
+    if(period<=0)return 1.;
+    const double wave=std::sin((elapsed/period+phase)*6.283185307);
+    return reverses?wave:.5+.5*wave;
   }
 };
 struct Gate { Rect area; uint64_t flag = 0; };

@@ -3,7 +3,11 @@
     const bool has_water=!grid_.water_basins.empty();
     const bool has_boost=!grid_.springs.empty()||
       std::any_of(grid_.air_fields.begin(),grid_.air_fields.end(),[](const auto &field){return field.ay<0;});
-    const bool has_features=has_water||has_boost||!grid_.sweets.empty();
+    const auto crosswind=std::find_if(grid_.air_fields.begin(),grid_.air_fields.end(),[&](const auto &field){
+      return field.reverses&&field.active(grid_.switch_flags);
+    });
+    const bool has_wind=crosswind!=grid_.air_fields.end();
+    const bool has_features=has_water||has_boost||has_wind||!grid_.sweets.empty();
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
       return node.kind==InteractionKind::RouteChoice;
     });
@@ -118,6 +122,8 @@
       boost(spring.x+spring.w*.5,spring.y,spring.push_x>0?"↗":spring.push_x<0?"↖":"↑");
     for(const auto &field:grid_.air_fields)if(field.ay<0&&field.active(grid_.switch_flags))
       boost(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑");
+    if(has_wind)
+      mark(crosswind->area.x+crosswind->area.w*.5,crosswind->area.y+3,"↔",0xb4d7e4,1);
     int legend=top+height-legend_rows;
     if(fork) {
       paint_text(legend++,2,tr("@ Ty · ◆ Lampa","@ You · ◆ Lamp"),0xc7d9df);
@@ -137,6 +143,7 @@
     if(remaining_token)label(tr("● Żeton","● Token"),0xedc278);
     if(!boost_symbols.empty())label(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
     if(has_water)label(tr("≈ Woda","≈ Water"),0x66bfd7);
+    if(has_wind)label(tr("↔ Wiatr","↔ Wind"),0xb4d7e4);
   }
 
   void draw_iceberg_route_map(int top,int height) {

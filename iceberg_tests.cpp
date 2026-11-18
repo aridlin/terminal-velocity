@@ -437,6 +437,29 @@ int main(int argc,char **argv) {
     crown_run.layout_version=2;crown.load_room();
     check(crown.grid.template_id==63&&crown.grid.air_fields[0].ax==-4.,
       "legacy Crown expeditions keep their original wind strength");
+    crown_run.itinerary[1]=68;crown.load_room();
+    check(crown.grid.template_id==68&&crown.grid.air_fields.empty(),
+      "older Ridge Sensors layouts remain calm");
+    crown_run.layout_version=4;crown.load_room();
+    const auto &ridge=crown.grid;
+    check(ridge.template_id==68&&ridge.air_fields.size()==1&&ridge.air_fields[0].reverses&&verify_route(ridge).complete,
+      "current Endless Ridge Sensors has a reversing crosswind and a verified lower route");
+    auto collect_upper_token=[](const EngineGrid &grid,double elapsed) {
+      auto s=new_state(grid);
+      s.player.x=91.;s.player.y=32.-kPlayerHeight;s.player.grounded=true;s.elapsed=elapsed;
+      FixedStepper motion;
+      Controls launch;launch.move=1;launch.dash_pressed=true;
+      motion.advance(s,grid,launch,1./120);
+      Controls leap;leap.move=1;leap.jump_pressed=leap.jump_held=true;
+      for(int i=0;i<100;++i) {
+        motion.advance(s,grid,leap,1./120);
+        leap.jump_pressed=false;
+      }
+      return s.collected.back()&&s.deaths==0;
+    };
+    const auto calm=verified_room(68,ridge.seed,5);
+    check(collect_upper_token(ridge,1.8)&&!collect_upper_token(ridge,5.4)&&!collect_upper_token(calm,1.8),
+      "a dash jump from the same ledge collects the upper token with the east gust only");
     AdventureSession prior_leg(options,path);
     prior_leg.begin_campaign(true);
     prior_leg.profile.unlocked=2;prior_leg.run_district=2;
