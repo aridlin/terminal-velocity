@@ -545,7 +545,8 @@
       }
       if(v.mode!=iceberg::Mode::Campaign) {
         draw_iceberg_route_map(3,rows_-7);
-        paint_text(rows_-2,2,tr("B pokój · J/P wróć","B room · J/P return"),d.light);
+        paint_text(rows_-2,2,v.route.rooms.empty()?tr("B pokój · J/P wróć","B room · J/P return"):
+          tr("↑↓ pokoje · B pokój · J/P wróć","↑↓ rooms · B room · J/P return"),d.light);
         return;
       }
       paint_text(3,2,v.map_route?tr("  Dzielnice  ·  [Trasa]","  Districts  ·  [Route]"):tr("[Dzielnice]  ·   Trasa","[Districts]  ·   Route"),d.light);

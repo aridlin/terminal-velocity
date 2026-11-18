@@ -191,7 +191,7 @@ struct View {
   int run_district = 0, endless_best = 0;
   bool revisit = false;
   bool can_travel = false, map_route = false, map_room = false;
-  int journal_tab = 0, quest_focus = -1, journey_district = 0, route_page = -1;
+  int journal_tab = 0, quest_focus = -1, journey_district = 0, route_page = -1, route_room_selection = -1;
   uint64_t story = 0;
   std::string current_objective;
   uint32_t seed = 1;

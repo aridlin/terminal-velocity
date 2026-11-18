@@ -1025,7 +1025,10 @@ public:
     if(c.journal){state.journal=!state.journal;v.map=false;v.selected=0;auto entries=iceberg::journal_entries(v);for(size_t i=0;i<entries.size();++i)if(entries[i]==v.quest_focus)v.selected=int(i);stepper={};}
     if(c.map) {
       v.map=!v.map;state.journal=false;v.selected=grid.district;stepper={};
-      if(mode!=iceberg::Mode::Campaign)v.map_route=true;
+      if(mode!=iceberg::Mode::Campaign) {
+        v.map_route=true;
+        v.route_room_selection=-1;
+      }
     }
     if(c.pause){if(state.journal||v.map){state.journal=false;v.map=false;}else state.paused=!state.paused;stepper={};}
     if(state.paused&&!state.journal&&!v.map) {
@@ -1058,6 +1061,10 @@ public:
         v.map_route=!v.map_route&&!v.map_room;
         v.map_room=next_room;
       } else v.map_room=!v.map_room;
+    }
+    if(v.map&&!v.map_room&&!c.inspect&&c.navigate&&mode!=iceberg::Mode::Campaign&&!v.route.rooms.empty()) {
+      const int selected=v.route_room_selection<0?v.route.current:v.route_room_selection;
+      v.route_room_selection=std::clamp(selected+c.navigate,0,int(v.route.rooms.size())-1);
     }
     if(v.map&&mode==iceberg::Mode::Campaign&&!v.map_room&&!c.inspect) {
       if(c.navigate&&!v.map_route)v.selected=(v.selected-c.navigate+iceberg::DistrictCount)%iceberg::DistrictCount;

@@ -410,6 +410,22 @@ int main(){try {
     ui_check(v.map&&v.map_room&&!game.state.journal,"reopening after the quest book keeps the room view");
     game.tick(map,1./120);game.advance_room();game.tick(map,1./120);
     ui_check(v.map&&v.map_room&&v.route.current==room+1,"the next expedition room keeps the map view and updates the room");
+    game.tick(tab,0);
+    Controls next_room;next_room.navigate=1;
+    Controls previous_room;previous_room.navigate=-1;
+    for(int i=0;i<8;++i)game.tick(next_room,0);
+    ui_check(v.route_room_selection==7&&v.route.current==room+1,
+      "browsing reaches the last planned room without moving the courier");
+    RenderGrid(game.grid,game.state,24,34,2).draw();
+    ui_check(ui_text(frame).find("Room 8:")!=std::string::npos&&ui_text(frame).find("╰╯")!=std::string::npos,
+      "compact expedition timeline names and marks the browsed room");
+    for(int i=0;i<8;++i)game.tick(previous_room,0);
+    ui_check(v.route_room_selection==0&&v.route.current==room+1,
+      "browsing stops at the first room without changing expedition progress");
+    game.tick(map,0);game.tick(map,0);
+    ui_check(v.route_room_selection==-1&&v.route.current==room+1,
+      "reopening the expedition timeline returns the selection to the current room");
+
   }
   game.begin_campaign(false);game.tick(map,1./120);
   ui_check(game.state.adventure.map&&!game.state.adventure.map_route,"returning to the campaign opens district travel");

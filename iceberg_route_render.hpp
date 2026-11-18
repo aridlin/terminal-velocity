@@ -224,6 +224,8 @@
         const auto label=wide?(current?"<":visited?"[":"(")+number+(current?">":visited?"]":")"):
           (current?"▶":visited?"●":"○")+number;
         clipped(y,left+n*stride,label,current?0xffd68a:visited?0x91d4ce:0x607887);
+        if(!campaign&&v.route_room_selection==idx&&!current)
+          clipped(y+1,left+n*stride+(wide?1:0),"╰╯",0xc7d9df);
         if(n+1<room_count&&idx+1<int(r.rooms.size()))clipped(y,left+n*stride+node_width,wide?"──":"─",0x607887);
       }
       if(r.branching) {
@@ -247,7 +249,11 @@
     // Put the room details just below the route and wrap at terminal-cell width.
     int row=top+8;
     for(const auto &line:wrap(current,cols_-9))clipped(row++,5,line,0xffd68a);
-    if(r.current>=0&&r.current+1<int(r.rooms.size())) {
+    const int selected=v.route_room_selection;
+    if(selected>=0&&selected<int(r.rooms.size())&&selected!=r.current) {
+      const auto detail=tr("Pokój ","Room ")+std::to_string(selected+1)+": "+r.rooms[size_t(selected)].get(v.language);
+      for(const auto &line:wrap(detail,cols_-9))clipped(row++,5,line,0xc7d9df);
+    } else if(r.current>=0&&r.current+1<int(r.rooms.size())) {
       const auto next=tr("Plan: ","Planned: ")+r.rooms[size_t(r.current+1)].get(v.language);
       for(const auto &line:wrap(next,cols_-9))clipped(row++,5,line,0xc7d9df);
     }
