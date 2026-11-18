@@ -1,4 +1,32 @@
 // Shared cell art for exposed ice, shutter counterweights and the morning quay.
+  void draw_crown_cradle(const MovingPlatform &platform,const Rect &deck) {
+    const double row=aspect_*scale_,base_center=platform.base.x+platform.base.w*.5;
+    const double deck_center=deck.x+deck.w*.5;
+    constexpr uint32_t steel=0x72889a,lamp=0xe4ad68;
+
+    if(platform.dx!=0.) {
+      const double rail_y=platform.base.y-5*row;
+      const double reach=std::abs(platform.dx)+3*scale_;
+      draw_scenery_pipe({{base_center-reach,rail_y},{base_center+reach,rail_y}},steel);
+      world_art(base_center-reach,rail_y-row,{"▣"},steel);
+      world_art(base_center+reach,rail_y-row,{"▣"},steel);
+      world_art(deck_center,rail_y,{"◉"},lamp);
+      world_art(deck_center,rail_y+row,{"║","║","║","║"},steel);
+    } else {
+      const double weight_x=platform.base.right()+2*scale_;
+      const double top=platform.base.y-std::abs(platform.dy)-4*row;
+      const double bottom=platform.base.y+std::abs(platform.dy)+2*row;
+      draw_scenery_pipe({{base_center,bottom},{base_center,top},
+        {weight_x,top},{weight_x,bottom}},steel);
+      world_art(base_center,top,{"◉"},lamp);
+      world_art(weight_x,top,{"◉"},lamp);
+      // The other end of the cable rises as the deck descends.
+      const double weight_y=2*platform.base.y-deck.y;
+      world_art(weight_x-scale_,weight_y-row,{"╔═╗","║▓║","╚═╝"},0x9db8c7);
+    }
+    world_art(deck_center-3*scale_,deck.y+row,{"╲──╥──╱"," ╲─╨─╱"},steel);
+  }
+
   void draw_crown_landmarks() {
     const auto &d=iceberg::Districts[5];double clock=state_.adventure.presentation_time;
     auto mast=[&](double x,double y) {world_art(x,y,{
@@ -34,8 +62,11 @@
         }
       }
     }
-    for(const auto &platform:grid_.platforms) {auto r=platform.at(state_.elapsed);
-      world_art(r.x,r.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱","      ╱╲"},d.stone);
+    for(const auto &platform:grid_.platforms) {
+      const auto deck=platform.at(state_.elapsed);
+      if(grid_.room_role==iceberg::RoomRole::Traverse&&state_.adventure.mode!=iceberg::Mode::Campaign)
+        draw_crown_cradle(platform,deck);
+      else world_art(deck.x,deck.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱","      ╱╲"},d.stone);
     }
     draw_crown_wind();
     for(int i=0;i<9;++i) {
