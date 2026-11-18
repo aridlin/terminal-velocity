@@ -285,7 +285,7 @@ public:
     }
     state=new_state(grid);state.ssh=options.remote;stepper={};
     update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
-    notice(stop.change.get(profile.language),8);
+    if(stop.room!=iceberg::CrownSentinel)notice(stop.change.get(profile.language),8);
     sync_view();
   }
   void start_tour(int index) {
