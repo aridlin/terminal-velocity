@@ -37,6 +37,29 @@ int main() {
     std::filesystem::remove(file);std::filesystem::remove(file.string()+".bak");
     iceberg::SessionOptions options;options.mute=true;options.seed=73;options.seed_override=true;
     AdventureSession s(options,file);
+    for(int layout:{3,4})for(int mission=0;mission<3;++mission) {
+      s.begin_campaign(true);s.profile.layout_version=layout;
+      s.stage=2+mission*2;s.room=iceberg::RoomsPerLeg-1;s.load_room();s.advance_room();
+      const int template_id=s.grid.template_id;
+      check_harbor(s.profile.interlude&&s.state.adventure.dialogue.active(),"entering the Harbor mission starts its instructions");
+      AdventureSession resumed(options,file);resumed.begin_campaign(false);
+      const auto expected=layout>=4?iceworld::harbor_mission_arrival(mission):iceberg::mission_arrival(mission);
+      const auto &dialogue=resumed.state.adventure.dialogue;
+      check_harbor(resumed.grid.template_id==template_id&&dialogue.active()&&
+                   std::string_view(dialogue.lines.front().text.en)==expected.front().text.en,
+                   "reloading the mission restores its layout-specific instructions");
+      auto progressed_file=file;progressed_file+=".progressed";
+      auto progressed_profile=resumed.profile;progressed_profile.switches=1;
+      check_harbor(iceberg::SaveStore(progressed_file).save(progressed_profile),"fixture saves machinery used on an older build");
+      AdventureSession progressed(options,progressed_file);progressed.begin_campaign(false);
+      check_harbor(progressed.grid.switch_flags==1&&!progressed.state.adventure.dialogue.active(),
+                   "a mission already underway resumes with its machinery state and no opening dialogue");
+      std::filesystem::remove(progressed_file);std::filesystem::remove(progressed_file.string()+".bak");
+      read_harbor(resumed);
+      AdventureSession finished(options,file);finished.begin_campaign(false);
+      check_harbor(finished.grid.template_id==template_id&&!finished.state.adventure.dialogue.active(),
+                   "the acknowledged instructions leave the restored mission playable");
+    }
     auto sorting=iceworld::build_room(503,73,0);
     check_harbor(sorting.sorting_belts.size()==5,"the sorting office has five powered treads");
     for(size_t i=0;i<sorting.sorting_belts.size();++i) {

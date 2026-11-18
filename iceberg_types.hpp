@@ -156,7 +156,8 @@ inline constexpr uint64_t HomecomingReplyPending = uint64_t(1) << 62;
 inline constexpr int ArrivalShift = 24;
 inline constexpr uint64_t ArrivalMask = uint64_t(15) << ArrivalShift;
 inline constexpr int EpilogueArrival = DistrictCount + 1;
-static_assert(EpilogueArrival <= 15);
+inline constexpr int FirstHarborMissionArrival = EpilogueArrival + 1;
+static_assert(FirstHarborMissionArrival + 2 <= 15);
 inline constexpr uint64_t arrival_bits(int scene) { return uint64_t(scene) << ArrivalShift; }
 struct Dialogue {
   std::vector<DialogueLine> lines;
