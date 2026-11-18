@@ -4,10 +4,37 @@
 #include <stdexcept>
 void require_end(bool ok,const char *message){if(!ok)throw std::runtime_error(message);std::cout<<"PASS "<<message<<'\n';}
 void read_end(AdventureSession &game){while(game.state.adventure.dialogue.active())game.dialogue_next();}
+void read_to_reply(AdventureSession &game) {
+  auto &dialogue=game.state.adventure.dialogue;
+  while(dialogue.active()&&!dialogue.choosing())game.dialogue_next();
+  if(!dialogue.choosing())throw std::runtime_error("expected a reply prompt");
+}
 int main(){try{
  auto folder=std::filesystem::temp_directory_path()/("tv-ending-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
  std::filesystem::create_directories(folder);auto file=folder/"campaign";
  iceberg::SessionOptions options;options.mute=true;
+ for(int option=0;option<2;++option) {
+  auto witness_file=folder/("witness-"+std::to_string(option));
+  AdventureSession witness(options,witness_file);witness.begin_campaign(true);
+  witness.stage=3;witness.load_room();witness.persist();
+  AdventureSession resumed(options,witness_file);resumed.begin_campaign(false);
+  read_to_reply(resumed);
+  Controls next;next.navigate=option;resumed.tick(next,1./60);
+  Controls accept;accept.confirm=true;resumed.tick(accept,1./60);
+  const auto &lines=resumed.state.adventure.dialogue.lines;
+  const auto &reply=iceberg::civic_reply(0,option);
+  require_end(lines.size()==2&&lines.front().speaker==iceberg::CourierSpeaker&&
+              std::string_view(lines.front().text.en)==reply.said.en&&
+              std::string_view(lines.back().text.pl)==reply.answer.text.pl,
+              "the selected response is spoken by the courier and answered by Helena");
+  AdventureSession later(options,witness_file);later.begin_campaign(false);later.talk_homecoming(1);
+  const auto followup=iceberg::civic_followup(0,option!=0);
+  const auto &continued=later.state.adventure.dialogue.lines;
+  require_end((later.profile.story&iceberg::reply_recorded(0))&&
+              ((later.profile.story&iceberg::reply_value(0))!=0)==(option!=0)&&
+              std::any_of(continued.begin(),continued.end(),[&](const auto &line){return std::string_view(line.text.en)==followup.text.en;}),
+              "the settlement remembers either reply after restarting");
+ }
  AdventureSession game(options,file);game.begin_campaign(true);
  game.district=4;game.profile.district=4;game.profile.at_content_boundary=true;game.persist();
  game.begin_campaign(false);
@@ -30,12 +57,24 @@ int main(){try{
   require_end(shield.deaths==1&&shield.crown.hits==0,"the marked sweep hits a courier who stays on the floor");
  }
  play_crown_sentinel(game);
- require_end(game.state.adventure.dialogue.lines.size()==14&&(game.profile.story&iceberg::CrownSentinelDefeated),
+ require_end(game.state.adventure.dialogue.lines.size()>=15&&(game.profile.story&iceberg::CrownSentinelDefeated),
              "three dodges and dash hits open the full Crown cutscene");
  {
   AdventureSession resume(options,file);resume.begin_campaign(false);
   require_end(resume.state.crown.hits==3&&resume.state.adventure.dialogue.active(),
               "reloading after victory reopens the cutscene without refighting");
+ }
+ read_to_reply(game);
+ require_end(game.state.crown.airlock_open,"the upper airlock opens at the cutscene cue");
+ Controls next;next.navigate=1;game.tick(next,1./60);
+ game.dialogue_next();
+ {
+  AdventureSession resume(options,file);resume.begin_campaign(false);
+  require_end((resume.profile.story&iceberg::reply_recorded(6))&&(resume.profile.story&iceberg::reply_value(6))&&
+              resume.state.crown.airlock_open&&resume.state.adventure.dialogue.lines.front().speaker==iceberg::CourierSpeaker,
+              "reloading after choosing keeps the chosen Crown reply");
+  read_end(resume);
+  require_end(resume.grid.template_id==330,"the resumed reply still advances to the epilogue");
  }
  read_end(game);
  require_end(game.grid.template_id==330&&!game.profile.finished&&game.profile.records[5].complete,"beacon completion records Crown and starts a playable epilogue before marking the journey finished");

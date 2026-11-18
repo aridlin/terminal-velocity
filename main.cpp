@@ -286,6 +286,7 @@ struct CrownEncounter {
   int cycle = 0;
   double time = 0.;
   double target = 27.;
+  bool airlock_open = false;
 };
 
 struct GameState {

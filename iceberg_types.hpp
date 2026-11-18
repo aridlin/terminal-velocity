@@ -133,7 +133,12 @@ struct Profile {
   bool smooth_camera = false;
 };
 
-struct DialogueLine { int speaker = 0; Text text; };
+enum class DialogueCue { None, CrownAirlock };
+struct DialogueLine { int speaker = 0; Text text; DialogueCue cue = DialogueCue::None; };
+inline constexpr int CourierSpeaker = -2;
+inline constexpr int ReplyPrompt = -3;
+inline constexpr uint64_t reply_value(int scene) { return uint64_t(1) << (48+scene); }
+inline constexpr uint64_t reply_recorded(int scene) { return uint64_t(1) << (55+scene); }
 struct Dialogue {
   std::vector<DialogueLine> lines;
   size_t page = 0;
@@ -145,9 +150,11 @@ struct Dialogue {
   bool revealing=true;
   std::optional<size_t> reflow_anchor=std::nullopt;
   size_t reflow_revealed=0;
+  int reply_scene=-1, reply_option=0;
   void reset_reveal(){visible_characters=byte_cursor=reflow_revealed=0;character_delay=speech_delay=0;revealing=true;reflow_anchor.reset();}
   void reveal_all(){visible_characters=size_t(-1);revealing=false;}
   bool active() const { return page < lines.size(); }
+  bool choosing() const {return active()&&lines[page].speaker==ReplyPrompt;}
 };
 struct RouteView {
   std::vector<Text> rooms;

@@ -127,6 +127,7 @@ const roomMapFlag=1<<17;
 const forkDoorFlag=1<<18;
 const replaceRunFlag=1<<19;
 const districtTravelFlag=1<<25;
+const replyChoiceFlag=1<<26;
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function nameTouchDirections(overlay){
@@ -138,6 +139,8 @@ function nameTouchDirections(overlay){
   else if(overlay&expeditionFlag)directions=tr(['Poprzedni pokój','Następny pokój'],['Previous room','Next room']);
   else if(overlay&2048)directions=tr(['Poprzedni odcinek','Następny odcinek'],['Previous leg','Next leg']);
   else directions=tr(['Poprzednia dzielnica','Następna dzielnica'],['Previous district','Next district']);
+ }else if(overlay&replyChoiceFlag){
+  directions=tr(['Poprzednia odpowiedź','Następna odpowiedź'],['Previous reply','Next reply']);
  }else if(overlay&8){
   directions=tr(['Poprzednia strona','Następna strona'],['Previous page','Next page']);
  }else if((overlay&64)&&!(overlay&4)){
@@ -165,6 +168,7 @@ function translateUI(){
  const overlay=overlayFlags();
  const showingPause=(overlay&(2|8|64|128))===2;
  const reading=!!(overlay&4);
+ const choosingReply=!!(overlay&replyChoiceFlag);
  const inspecting=!!(overlay&8);
  const browsingQuests=!!(overlay&64)&&!reading;
  touchUse.hidden=inspecting;
@@ -192,6 +196,9 @@ function translateUI(){
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(showingPause){
   touchUse.textContent=tr('Wznów','Resume');
+  touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(choosingReply){
+  touchUse.textContent=tr('Wybierz','Select');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(reading){
   touchUse.textContent=tr('Dalej','Continue');
@@ -231,7 +238,8 @@ function translateUI(){
  const touchControls=document.querySelector('#touch');
  if(inMenu||overlay&128||showingPause||reading||inspecting||browsingQuests){
   const browseTour=!!(overlay&tourFlag)&&!(overlay&4);
-  const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:reading||!!(overlay&roomMapFlag);
+  const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:
+   (reading&&!choosingReply)||!!(overlay&roomMapFlag);
   touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
  }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
@@ -298,7 +306,7 @@ window.tvUI=u=>{
  const previousSlot=selectedSlot;
  if(started)selectedSlot=1+((u.flags>>>20)&3);
  const blockingFlags=1|2|4|8|64|128;
- const inputContextFlags=blockingFlags|2048|settingsFlag|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag;
+ const inputContextFlags=blockingFlags|2048|settingsFlag|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag|replyChoiceFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&inputContextFlags)!==(uiFlags&inputContextFlags))clearInput();
  lastBlocked=!!(u.flags&(blockingFlags|doorReadyFlag));
