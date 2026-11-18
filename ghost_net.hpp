@@ -55,6 +55,17 @@ inline Packet encode(const Snapshot &s) {
   put(p, 56, s.epoch);
   return p;
 }
+// The high bit separates adventure from all historical course IDs. The
+// remaining fields compare content version, district, mode and template
+// exactly; the packet's seed still identifies the generated layout.
+inline uint32_t adventure_level(unsigned version,int district,int mode,int room_template) {
+  return 0x80000000u|((version&0x7fffu)<<16)|(unsigned(district)<<12)|
+    (unsigned(mode)<<10)|unsigned(room_template);
+}
+inline bool valid_level(uint32_t level) {
+  return level<=5 || ((level&0x80000000u)&&((level>>16)&0x7fff)>0&&
+    !(level&0x8000u)&&((level>>12)&7)<6&&((level>>10)&3)<3);
+}
 inline bool decode(const Packet &p, Snapshot &s) {
   if (std::memcmp(p.data(), "TVG1", 4) || p[27] != 0)
     return false;
@@ -75,7 +86,7 @@ inline bool decode(const Packet &p, Snapshot &s) {
   s.y = int32_t(get(p, 48)) / 1000.;
   s.flags = get(p, 52);
   s.epoch = get(p, 56);
-  return s.level <= 5 && s.flags <= 7 && s.x >= -64 && s.x <= 4096 &&
+  return valid_level(s.level) && s.flags <= 7 && s.x >= -64 && s.x <= 4096 &&
          s.y >= -64 && s.y <= 512;
 }
 inline bool newer(uint32_t a, uint32_t b) {

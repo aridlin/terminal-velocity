@@ -104,7 +104,7 @@ int main() {
 
     GameAudio sound;
     sound.init("assets/audio", false, true);
-    check(sound.ready() && sound.loaded_clips() == 26 && sound.error().empty(),
+    check(sound.ready() && sound.loaded_clips() == 11 + 2 * size_t(AudioCue::Count) && sound.error().empty(),
           "all sourced music and effect voices decode offline");
     sound.update(AudioScene::Play, 0, .02);
     for (int voice = 0; voice < 2; ++voice)
@@ -124,6 +124,39 @@ int main() {
               << " rms=" << std::sqrt(energy / frames.size()) << '\n';
     check(peak < .98 && energy > .001,
           "conservative overlapping audio mix leaves headroom");
+    sound.set_climax(true,1);
+    for(int block=0;block<150;++block) {
+      sound.update(AudioScene::Play,1,.02);
+      if(block%25==0)for(int i=0;i<int(AudioCue::Count);++i)sound.play(AudioCue(i));
+      if(!sound.render(frames.data(),960))throw std::runtime_error("climax block did not render");
+      for(int i=0;i<1920;++i)if(!std::isfinite(frames[size_t(i)])||std::abs(frames[size_t(i)])>=.98f)
+        throw std::runtime_error("layered climax clipped or produced nonfinite audio");
+    }
+    check(true,"layered climax with recorded effects retains mixing headroom");
+    GameAudio quiet_layers,loud_layers;
+    quiet_layers.init("assets/audio",false,true);loud_layers.init("assets/audio",false,true);
+    quiet_layers.set_climax(true,0);loud_layers.set_climax(true,1);
+    double difference=0;
+    std::vector<float> quiet(1920),loud(1920);
+    for(int block=0;block<150;++block) {
+      quiet_layers.update(AudioScene::Play,1,.02);loud_layers.update(AudioScene::Play,1,.02);
+      quiet_layers.render(quiet.data(),960);loud_layers.render(loud.data(),960);
+      for(size_t i=0;i<quiet.size();++i)difference+=std::abs(quiet[i]-loud[i]);
+    }
+    check(difference>1,"shutter intensity audibly changes the synchronized atmospheric layers");
+    loud_layers.set_mix(0,0,0);loud_layers.update(AudioScene::Play,1,.02);loud_layers.render(loud.data(),960);
+    check(std::all_of(loud.begin(),loud.end(),[](float x){return std::abs(x)<1e-7f;}),"music control silences both climax layers");
+    loud_layers.set_mix(1,1,1);loud_layers.update(AudioScene::Play,1,.02,false);loud_layers.render(loud.data(),960);
+    check(std::all_of(loud.begin(),loud.end(),[](float x){return std::abs(x)<1e-7f;}),"focus loss silences the entire layered score immediately");
+    sound.set_climax(false);
+    sound.set_mix(0,0,1);sound.set_environment(0);
+    sound.update(AudioScene::Play,0,.02);sound.render(frames.data(),48000);
+    check(std::any_of(frames.begin(),frames.end(),[](float x){return std::abs(x)>.0001f;}),
+      "ambience is audible with music and effects channels at zero");
+    sound.set_mix(0,0,0);sound.update(AudioScene::Play,0,.02);sound.render(frames.data(),48000);
+    check(std::all_of(frames.begin(),frames.end(),[](float x){return std::abs(x)<1e-7f;}),
+      "independent channel volumes silence all playing recordings");
+    sound.set_mix(1,1,1);sound.set_environment(-1);
     sound.muted = true;
     sound.update(AudioScene::Play, 0, .02);
     check(sound.render(frames.data(), 48000), "muted mix renders");

@@ -2,6 +2,13 @@
 set -eu
 cd -- "$(dirname -- "$(readlink -f -- "$0")")"
 if [ ! -x ./terminal_velocity ]; then make terminal_velocity; fi
+for arg in "$@"; do
+    case "$arg" in
+        --terminal-view|--diagnostic)
+            if [ ! -x ./terminal_velocity_sdl ]; then make terminal_velocity_sdl; fi
+            exec ./terminal_velocity_sdl "$@" ;;
+    esac
+done
 # SSH and explicitly selected terminal modes must never open the server keyboard.
 if [ -n "${SSH_CONNECTION:-}" ] || [ -n "${SSH_TTY:-}" ]; then
     exec ./terminal_velocity --ssh "$@"

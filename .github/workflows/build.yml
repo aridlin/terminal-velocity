@@ -13,6 +13,13 @@ jobs:
         run: make -j2 all test
       - name: Validate launchers
         run: sh -n play.sh ghostty-play.sh
+      - name: Package verified Linux binaries and source
+        run: python3 tools/package_release.py "$RUNNER_TEMP/terminal-velocity-release"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: terminal-velocity-linux-x64
+          path: ${{ runner.temp }}/terminal-velocity-release/*
+          if-no-files-found: error
   windows:
     runs-on: windows-latest
     steps:

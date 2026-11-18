@@ -1,0 +1,31 @@
+[Unit]
+Description=Terminal Velocity anonymous game entrance
+After=network.target
+ConditionFileIsExecutable=/opt/terminal-velocity/guest-root/game/terminal_velocity
+
+[Service]
+Type=simple
+ExecStartPre=/usr/sbin/sshd -t -f /etc/ssh/terminal-velocity-sshd.conf
+ExecStart=/usr/sbin/sshd -D -e -f /etc/ssh/terminal-velocity-sshd.conf
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=terminal-velocity-sshd
+RuntimeDirectoryMode=0755
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/terminal-velocity/guest-root/tmp
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+LockPersonality=yes
+MemoryMax=512M
+TasksMax=128
+CPUQuota=200%
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

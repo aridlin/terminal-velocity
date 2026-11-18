@@ -150,6 +150,13 @@ private:
     }
     if (k == 'x' || k == 'k' || k == 57441 || k == 57447)
       edges_.dash_pressed = true;
+    // Explicit vertical dash edges keep the full traversal vocabulary usable
+    // on terminals without key-release events. A/D still supplies diagonals;
+    // S then I/O produces a vertical dash without changing the latched run.
+    if (!protocol && (k == 'i' || k == 'o')) {
+      edges_.dash_pressed = true;
+      edges_.aim_y = k == 'i' ? -1 : 1;
+    }
     if (k == 'q' || k == 3)
       edges_.quit = true;
     if (k == 'r')
@@ -164,10 +171,16 @@ private:
       edges_.select_level = 1;
     if (k == '2')
       edges_.select_level = 2;
-    if (k >= '3' && k <= '6')
+    if (k >= '3' && k <= '7')
       edges_.select_level = int(k - '0');
     if (k == 'u')
       edges_.mute_audio = true;
+    if (k == 'e' || k == 'f') edges_.interact = true;
+    if (k == 'b') edges_.inspect = true;
+    if (k == 'j') edges_.map = true;
+    if (k == 'l') edges_.language = true;
+    if (k == 's') edges_.navigate = 1;
+    if (k == 'w') edges_.navigate = -1;
     if (k == 13 || k == 10)
       edges_.confirm = true;
     if (k == 27 || k == 'p')

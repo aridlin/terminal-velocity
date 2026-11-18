@@ -102,8 +102,13 @@ public:
                      : press('4') ? 4
                      : press('5') ? 5
                      : press('6') ? 6
+                     : press('7') ? 7
                                   : 0;
     c.mute_audio = press('U');
+    c.interact = press('E') || press('F');
+    c.map = press('J');
+    c.language = press('L');
+    c.navigate = int(press('S') || press(VK_DOWN)) - int(press('W') || press(VK_UP));
     c.next_seed = press('G');
     c.menu_request = press('M');
     c.pause = press(VK_ESCAPE) || press('P');

@@ -1,5 +1,6 @@
 #define TERMINAL_VELOCITY_NO_TUI_MAIN
 #include "main.cpp"
+#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -64,9 +65,29 @@ std::vector<unsigned> utf8(const std::string &s) {
   }
   return out;
 }
+struct UnicodeViewport {
+  int cell_w=10,cell_h=20,columns=110,rows=34,x=0,y=0;
+};
+UnicodeViewport unicode_viewport(int width,int height,int logical_width,int logical_height,int zoom) {
+  double density=std::max(1.,std::min(double(width)/std::max(1,logical_width),double(height)/std::max(1,logical_height)));
+  // Match the browser's useful camera span. A 4K/fullscreen drawable must not
+  // silently turn the normal view into a tiny, almost whole-room overview.
+  double base=std::max({10*density,std::ceil(width/160.),std::ceil(height/96.)});
+  int smallest=std::max({6,int(std::ceil(width/240.)),int(std::ceil(height/200.))});
+  // Keep either supported UI layout readable when zooming in. Ordinary small
+  // windows still show the shared resize prompt when neither layout fits.
+  int largest=std::max(std::min(width/56,height/40),std::min(width/34,height/48));
+  UnicodeViewport view;
+  view.cell_w=std::clamp(int(std::round(base*zoom/10.)),smallest,std::max(smallest,largest));
+  view.cell_h=view.cell_w*2;
+  view.columns=std::clamp(width/view.cell_w,1,240);view.rows=std::clamp(height/view.cell_h,1,100);
+  view.x=std::max(0,(width-view.columns*view.cell_w)/2);view.y=std::max(0,(height-view.rows*view.cell_h)/2);
+  return view;
+}
+
 class Font {
   FT_Library lib{};
-  FT_Face face{};
+  FT_Face face{}, fallback{};
   struct Glyph {
     SDL_Texture *texture = nullptr;
     int w = 0, h = 0, left = 0, top = 0, advance = 0;
@@ -74,18 +95,20 @@ class Font {
   std::map<std::pair<int, unsigned>, Glyph> cache;
 
 public:
-  bool init(const std::string &path) {
-    return FT_Init_FreeType(&lib) == 0 &&
-           FT_New_Face(lib, path.c_str(), 0, &face) == 0;
+  bool init(const std::string &path,const std::string &fallback_path={}) {
+    if(FT_Init_FreeType(&lib)!=0||FT_New_Face(lib,path.c_str(),0,&face)!=0)return false;
+    if(!fallback_path.empty())FT_New_Face(lib,fallback_path.c_str(),0,&fallback);
+    return true;
   }
   Glyph &glyph(int size, unsigned c) {
     auto key = std::make_pair(size, c);
     auto it = cache.find(key);
     if (it != cache.end())
       return it->second;
-    FT_Set_Pixel_Sizes(face, 0, size);
-    FT_Load_Char(face, c, FT_LOAD_RENDER);
-    auto b = face->glyph;
+    FT_Face selected=fallback&&!FT_Get_Char_Index(face,c)?fallback:face;
+    FT_Set_Pixel_Sizes(selected,0,size);
+    FT_Load_Char(selected,c,FT_LOAD_RENDER);
+    auto b=selected->glyph;
     Glyph g;
     g.w = b->bitmap.width;
     g.h = b->bitmap.rows;
@@ -128,10 +151,88 @@ public:
   void center(const std::string &s, int y, int size, RGBA c = cream) {
     text(s, (W - width(s, size)) / 2, y, size, c);
   }
+  void cell(const Cell &c, int x, int y, int cell_w, int cell_h) {
+    if(c.glyph.empty()||c.glyph==" ")return;
+    uint32_t rgb=cell_color(c);
+    RGBA fg{Uint8(rgb>>16),Uint8(rgb>>8),Uint8(rgb),255};
+    if(c.glyph=="█"){box(x,y,cell_w,cell_h,fg);return;}
+    auto codepoints=utf8(c.glyph);
+    if(codepoints.empty())return;
+    unsigned code=codepoints.front();
+    auto rectangle=[&](int left,int top,int width,int height){box(x+left,y+top,width,height,fg);};
+    auto design_rectangle=[&](int left,int top,int width,int height){
+      int x0=int(std::round(left*cell_w/10.)),y0=int(std::round(top*cell_h/20.));
+      int x1=int(std::round((left+width)*cell_w/10.)),y1=int(std::round((top+height)*cell_h/20.));
+      rectangle(x0,y0,std::max(1,x1-x0),std::max(1,y1-y0));
+    };
+    if(code>=0x2800&&code<=0x28ff) {
+      static const unsigned dots[4][2]={{1,8},{2,16},{4,32},{64,128}};
+      for(int row=0;row<4;++row)for(int col=0;col<2;++col)
+        if((code-0x2800)&dots[row][col])design_rectangle(col*5+1,row*5+1,2,2);
+      return;
+    }
+    if(code>=0x2581&&code<=0x2588){int h=cell_h*int(code-0x2580)/8;rectangle(0,cell_h-h,cell_w,h);return;}
+    if(code>=0x2589&&code<=0x258f){rectangle(0,0,cell_w*int(0x2590-code)/8,cell_h);return;}
+    if(code==0x2580){rectangle(0,0,cell_w,cell_h/2);return;}
+    if(code==0x2590){rectangle(cell_w/2,0,cell_w-cell_w/2,cell_h);return;}
+    if(code==0x2594){rectangle(0,0,cell_w,std::max(1,cell_h/8));return;}
+    if(code==0x2595){rectangle(cell_w-std::max(1,cell_w/8),0,std::max(1,cell_w/8),cell_h);return;}
+    if(code>=0x2591&&code<=0x2593) {
+      for(int py=0;py<20;py+=2)for(int px=0;px<10;px+=2)
+        if(((px/2+py/2*3)%4)<int(code-0x2590))design_rectangle(px,py,1,1);
+      return;
+    }
+    if(code>=0x2596&&code<=0x259f) {
+      static const int quadrants[]={4,8,1,13,9,7,11,2,6,14};int mask=quadrants[code-0x2596];
+      for(int row=0;row<2;++row)for(int col=0;col<2;++col)
+        if(mask&(1<<(row*2+col)))rectangle(col*cell_w/2,row*cell_h/2,(col+1)*cell_w/2-col*cell_w/2,(row+1)*cell_h/2-row*cell_h/2);
+      return;
+    }
+    int directions=0; // left, right, up, down; joins reach the cell boundary.
+    switch(code) {
+    case 0x2500:directions=3;break;case 0x2502:directions=12;break;
+    case 0x250c:case 0x256d:directions=10;break;
+    case 0x2510:case 0x256e:directions=9;break;
+    case 0x2514:case 0x2570:directions=6;break;
+    case 0x2518:case 0x256f:directions=5;break;
+    case 0x251c:directions=14;break;case 0x2524:directions=13;break;
+    case 0x252c:directions=11;break;case 0x2534:directions=7;break;case 0x253c:directions=15;break;
+    }
+    if(directions) {
+      int mx=cell_w/2,my=cell_h/2,stroke=std::max(1,int(std::round(cell_w/10.)));
+      if(directions&1)rectangle(0,my,mx+stroke,stroke);
+      if(directions&2)rectangle(mx,my,cell_w-mx,stroke);
+      if(directions&4)rectangle(mx,0,stroke,my+stroke);
+      if(directions&8)rectangle(mx,my,stroke,cell_h-my);
+      return;
+    }
+    if(code==0x2550){design_rectangle(0,8,10,1);design_rectangle(0,12,10,1);return;}
+    if(code==0x2551){design_rectangle(3,0,1,20);design_rectangle(7,0,1,20);return;}
+    // Keep the font's design-space proportions at every zoom/DPI. Fixed
+    // 3/4-pixel margins used to make high-DPI glyphs taller and then squeeze
+    // only their width back into the cell.
+    const double raster_scale=double(cell_h)/20.;
+    auto &g=glyph(std::max(1,int(std::round(17*raster_scale))),code);
+    if(!g.texture)return;
+    SDL_SetTextureColorMod(g.texture,fg.r,fg.g,fg.b);
+    SDL_SetTextureAlphaMod(g.texture,255);
+    double scale=std::min({1.,double(cell_w)/std::max(1,g.w),double(cell_h)/std::max(1,g.h)});
+    int width=std::max(1,int(std::round(g.w*scale))),height=std::max(1,int(std::round(g.h*scale)));
+    SDL_Rect rect{x+(cell_w-width)/2,y+int(std::round(16*raster_scale-g.top*scale)),width,height};
+    SDL_RenderCopy(ren,g.texture,nullptr,&rect);
+    if(c.bold) {
+      SDL_Rect previous_clip;SDL_RenderGetClipRect(ren,&previous_clip);
+      bool had_clip=SDL_RenderIsClipEnabled(ren);
+      SDL_Rect clip{x,y,cell_w,cell_h};SDL_RenderSetClipRect(ren,&clip);
+      rect.x+=std::max(1,int(std::round(raster_scale)));SDL_RenderCopy(ren,g.texture,nullptr,&rect);
+      SDL_RenderSetClipRect(ren,had_clip?&previous_clip:nullptr);
+    }
+  }
   ~Font() {
     for (auto &[key, g] : cache)
       if (g.texture)
         SDL_DestroyTexture(g.texture);
+    if(fallback)FT_Done_Face(fallback);
     if (face)
       FT_Done_Face(face);
     if (lib)
@@ -898,7 +999,226 @@ void pause_or_win(App &a, Font &f) {
   }
 }
 } // namespace
-int main(int argc, char **argv) {
+
+int terminal_window_main(int argc,char **argv) {
+  const Args args=parse_args(argc,argv,true);
+  // SDL reports logical window points and physical drawable pixels. Opt in
+  // before creating the window so Windows does not stretch a low-DPI bitmap.
+#ifdef SDL_HINT_WINDOWS_DPI_SCALING
+  SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING,"1");
+#endif
+  if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_TIMER)!=0)return 1;
+  SDL_Window *window=SDL_CreateWindow("Terminal Velocity • Unicode",SDL_WINDOWPOS_CENTERED,
+    SDL_WINDOWPOS_CENTERED,1100,680,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
+  if(!window){SDL_Quit();return 1;}
+  ren=SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
+  if(!ren)ren=SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE);
+  if(!ren){SDL_DestroyWindow(window);SDL_Quit();return 1;}
+  int result=0;
+  {
+    Font font;
+    auto font_file=audio_directory().parent_path()/"cell-font.ttf";
+    if(!font.init(font_file.string(),(audio_directory().parent_path()/"font.ttf").string())){std::cerr<<"Cannot load bundled font\n";result=1;}
+    else {
+      auto options=adventure_options(args);
+      std::string screenshot,scene="menu";int maxframes=0;
+      for(int i=1;i<argc;++i) {
+        std::string a=argv[i];
+        if(a=="--screenshot"&&i+1<argc)screenshot=argv[++i];
+        else if(a=="--scene"&&i+1<argc)scene=argv[++i];
+        else if(a=="--frames"&&i+1<argc)maxframes=std::atoi(argv[++i]);
+      }
+      options.no_save=args.smoke||!screenshot.empty();options.mute|=options.no_save;
+      AdventureSession session(options,options.no_save?std::filesystem::path{}:iceberg::SaveStore::default_file());
+      if(scene=="play")session.state.menu=false;
+      if(options.no_save&&(scene.rfind("room:",0)==0||scene.rfind("mission:",0)==0)) {
+        bool mission=scene.rfind("mission:",0)==0;
+        int id=std::atoi(scene.c_str()+(mission?8:5));
+        if(mission)session.grid=iceworld::build_harbor_mission(std::clamp(id,0,2));
+        else {const auto &layout=iceworld::pattern(id);session.grid=verified_room(layout.id,73,iceworld::district_of(layout));}
+        session.district=session.grid.district;session.stage=2;session.state=new_state(session.grid);session.state.menu=false;
+        if(scene.find(":mid")!=std::string::npos&&!session.grid.checkpoint_points.empty()) {
+          auto [x,y]=session.grid.checkpoint_points[session.grid.checkpoint_points.size()/2];
+          session.state.player.x=x;session.state.player.y=y;
+        }
+        update_camera(session.state,session.grid,110,27,2,10);session.sync_view();
+      }
+      if(options.no_save&&scene.rfind("jubilee",0)==0) {
+        session.grid=iceworld::build_jubilee();session.state=new_state(session.grid);session.state.menu=false;
+        if(scene.find(":mid")!=std::string::npos){session.state.player.x=110;session.state.player.y=24-kPlayerHeight;}
+        session.sync_view();update_camera(session.state,session.grid,110,27,2,10);
+      }
+      if(options.no_save&&(scene=="estate"||scene=="estate:finale"||scene=="estate:tram")) {
+        session.grid=scene=="estate"?iceworld::build_estate_settlement():iceworld::build_estate_sequence(true);
+        session.district=2;session.state=new_state(session.grid);session.state.menu=false;session.sync_view();
+        if(scene=="estate:tram") {
+          session.state.player.x=130;session.state.player.y=23-kPlayerHeight;session.grid.switch_flags=3;
+          Controls use;use.interact=true;session.tick(use,1./120);
+          for(int i=0;i<108;++i)session.tick({},1./120);
+        }
+        update_camera(session.state,session.grid,110,27,2,10);
+      }
+      if(options.no_save&&scene.rfind("archive",0)==0) {
+        session.grid=scene=="archive"?iceworld::build_archive_settlement():iceworld::build_archive_sequence(true);
+        session.district=3;session.state=new_state(session.grid);session.state.menu=false;session.sync_view();
+        if(scene=="archive:finale") {session.state.player.x=174;session.state.player.y=32-kPlayerHeight;session.grid.switch_flags=3;}
+        update_camera(session.state,session.grid,110,27,2,10);
+      }
+      if(options.no_save&&scene.rfind("garden",0)==0) {
+        session.grid=scene=="garden"?iceworld::build_garden_settlement():iceworld::build_garden_sequence(scene=="garden:finale");
+        session.district=4;session.state=new_state(session.grid);session.state.menu=false;session.sync_view();
+        if(scene=="garden:growth") {session.state.player.x=12;session.state.player.y=55-kPlayerHeight;Controls use;use.interact=true;session.tick(use,1./120);for(int i=0;i<65;++i)session.tick({},1./120);}
+        update_camera(session.state,session.grid,110,27,2,10);
+      }
+      if(options.no_save&&(scene=="crown"||scene=="crown:finale"||scene=="crown:lit"||scene=="epilogue")) {
+        bool morning=scene=="epilogue";
+        session.grid=morning?iceworld::build_epilogue():scene=="crown"?iceworld::build_crown_settlement():iceworld::build_crown_sequence(true);
+        session.district=morning?0:5;session.state=new_state(session.grid);session.state.menu=false;
+        if(scene=="crown:finale"||scene=="crown:lit") {session.state.player.x=162;session.state.player.y=22-kPlayerHeight;session.grid.switch_flags=scene=="crown:lit"?7:3;}
+        if(morning){session.state.player.x=103;session.grid.switch_flags=3;}
+        session.sync_view();update_camera(session.state,session.grid,110,27,2,10);
+      }
+      if(options.no_save&&scene=="dock:tram") {
+        session.grid=iceworld::build_harbor_mission(0);session.grid.switch_flags=1;
+        session.district=0;session.state=new_state(session.grid);session.state.menu=false;
+        session.state.player.x=144;session.state.player.y=44-kPlayerHeight;session.sync_view();
+        Controls use;use.interact=true;session.tick(use,1./120);
+        for(int i=0;i<3;++i){Controls c;c.confirm=true;session.tick(c,1./120);}
+        for(int i=0;i<84;++i)session.tick({},1./120);
+        update_camera(session.state,session.grid,110,27,2,10);
+      }
+      if(options.no_save&&scene=="heat") {
+        session.profile.started=true;session.district=1;session.stage=0;session.load_room();session.state.menu=false;
+      }
+      if(options.no_save&&scene=="route") {
+        session.profile.started=true;session.district=1;session.stage=2;session.room=0;session.load_room();session.state.menu=false;
+      }
+      if(scene=="dialogue"){session.state.menu=false;session.talk(iceberg::introduction(0));}
+      if(options.no_save&&scene=="journal"){session.state.menu=false;session.state.journal=true;session.profile.quests[0]=1;session.sync_view();}
+      if(options.no_save&&scene=="map"){session.state.menu=false;session.state.adventure.map=true;session.profile.unlocked=1;session.sync_view();}
+      if(options.no_save&&scene.rfind("inspect:",0)==0) {
+        int id=std::clamp(std::atoi(scene.c_str()+8),0,16);
+        session.grid.interactions.clear();session.grid.sweets.clear();session.grid.refills.clear();session.grid.checkpoint_points.clear();
+        Interaction node{{5,40,3,4},InteractionKind::Task,0,{"Drzwi przejściowe","Passage door"}};
+        if(id<=6){const int quests[]={0,1,2,3,4,5,7};node.id=quests[id];node.detail=node.id*3;}
+        else if(id==7)node.kind=InteractionKind::Carry;
+        else if(id==8||id==9){node.kind=InteractionKind::Note;node.id=id==9?30:0;}
+        else if(id==10)node.kind=InteractionKind::Board;
+        else if(id==11)node.kind=InteractionKind::Replay;
+        else if(id==15)node.kind=InteractionKind::Npc;
+        else if(id==16)node.kind=InteractionKind::Deliver;
+        if(id==12)session.grid.sweets={{5.5,41.5}};
+        else if(id==13)session.grid.refills={{5.5,41.5}};
+        else if(id==14)session.grid.checkpoint_points={{5.5,41.5}};
+        else session.grid.interactions.push_back(node);
+        session.state=new_state(session.grid);session.state.menu=false;
+        session.state.player.x=5;session.state.player.y=41;session.sync_view();session.inspect_nearby();
+      }
+      if(args.smoke){session.state.menu=false;maxframes=120;}
+      std::array<bool,SDL_NUM_SCANCODES> held{};
+      bool focused=true,fullscreen=false;
+      int cell_w=10,cell_h=20,origin_x=0,origin_y=0,zoom=10;
+      int smoke_initial_columns=0;bool smoke_zoomed=false,smoke_reset=false;
+      cell_frame_sink=[&](const CellFrame &frame){
+        color(ink);SDL_RenderClear(ren);
+        // Draw the same per-cell backgrounds as ANSI, coalesced into row runs.
+        for(size_t y=0;y<frame.size();++y)for(size_t x=0;x<frame[y].size();) {
+          uint32_t rgb=cell_background(frame[y][x]);size_t end=x+1;
+          while(end<frame[y].size()&&cell_background(frame[y][end])==rgb)++end;
+          box(origin_x+int(x)*cell_w,origin_y+int(y)*cell_h,int(end-x)*cell_w,cell_h,{Uint8(rgb>>16),Uint8(rgb>>8),Uint8(rgb),255});x=end;
+        }
+        for(size_t y=0;y<frame.size();++y)for(size_t x=0;x<frame[y].size();++x)
+          font.cell(frame[y][x],origin_x+int(x)*cell_w,origin_y+int(y)*cell_h,cell_w,cell_h);
+      };
+      auto last=std::chrono::steady_clock::now(),render_at=last;
+      int frames=0;
+      while(session.running) {
+        Controls c;
+        if(args.smoke&&(frames==20||frames==40)) {
+          SDL_Event zoom_event{};zoom_event.type=SDL_KEYDOWN;
+          zoom_event.key.keysym.scancode=frames==20?SDL_SCANCODE_EQUALS:SDL_SCANCODE_0;
+          zoom_event.key.keysym.mod=KMOD_CTRL;SDL_PushEvent(&zoom_event);
+        }
+        SDL_Event event;
+        while(SDL_PollEvent(&event)) {
+          if(event.type==SDL_QUIT)c.quit=true;
+          if(event.type==SDL_WINDOWEVENT) {
+            if(event.window.event==SDL_WINDOWEVENT_FOCUS_LOST){focused=false;held.fill(false);}
+            if(event.window.event==SDL_WINDOWEVENT_FOCUS_GAINED)focused=true;
+          }
+          if(event.type==SDL_KEYUP)held[event.key.keysym.scancode]=false;
+          if(event.type!=SDL_KEYDOWN||event.key.repeat||!focused)continue;
+          auto key=event.key.keysym.scancode;
+          if(event.key.keysym.mod&KMOD_CTRL) {
+            if(key==SDL_SCANCODE_EQUALS||key==SDL_SCANCODE_KP_PLUS){zoom=std::min(24,zoom+1);continue;}
+            if(key==SDL_SCANCODE_MINUS||key==SDL_SCANCODE_KP_MINUS){zoom=std::max(6,zoom-1);continue;}
+            if(key==SDL_SCANCODE_0||key==SDL_SCANCODE_KP_0){zoom=10;continue;}
+            // Ctrl+Shift+= is a zoom shortcut, not a gameplay dash.
+            continue;
+          }
+          held[key]=true;
+          c.jump_pressed|=key==SDL_SCANCODE_SPACE||key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP;
+          c.dash_pressed|=key==SDL_SCANCODE_X||key==SDL_SCANCODE_LSHIFT||key==SDL_SCANCODE_RSHIFT;
+          c.interact|=key==SDL_SCANCODE_E||key==SDL_SCANCODE_F;
+          c.inspect|=key==SDL_SCANCODE_B;
+          c.confirm|=key==SDL_SCANCODE_RETURN;
+          c.restart|=key==SDL_SCANCODE_R;c.new_run|=key==SDL_SCANCODE_N;
+          c.pause|=key==SDL_SCANCODE_P||key==SDL_SCANCODE_ESCAPE;
+          c.menu_request|=key==SDL_SCANCODE_M;c.journal|=key==SDL_SCANCODE_TAB;
+          c.map|=key==SDL_SCANCODE_J;c.language|=key==SDL_SCANCODE_L;
+          c.mute_audio|=key==SDL_SCANCODE_U;c.debug|=key==SDL_SCANCODE_F3;
+          c.quit|=key==SDL_SCANCODE_Q;
+          if(key>=SDL_SCANCODE_1&&key<=SDL_SCANCODE_7)c.select_level=int(key-SDL_SCANCODE_1)+1;
+          if(key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP)c.navigate=-1;
+          if(key==SDL_SCANCODE_S||key==SDL_SCANCODE_DOWN)c.navigate=1;
+          if(key==SDL_SCANCODE_F11){fullscreen=!fullscreen;SDL_SetWindowFullscreen(window,fullscreen?SDL_WINDOW_FULLSCREEN_DESKTOP:0);}
+        }
+        c.move=int(held[SDL_SCANCODE_D]||held[SDL_SCANCODE_RIGHT])-int(held[SDL_SCANCODE_A]||held[SDL_SCANCODE_LEFT]);
+        c.jump_held=held[SDL_SCANCODE_SPACE]||held[SDL_SCANCODE_W]||held[SDL_SCANCODE_UP];
+        c.fast_fall=held[SDL_SCANCODE_S]||held[SDL_SCANCODE_DOWN];
+        c.aim_y=int(c.fast_fall)-int(held[SDL_SCANCODE_W]||held[SDL_SCANCODE_UP]);
+        if(args.smoke){c.move=1;c.jump_held=true;}
+        int w,h;SDL_GetRendererOutputSize(ren,&w,&h);
+        int logical_w,logical_h;SDL_GetWindowSize(window,&logical_w,&logical_h);
+        const auto viewport=unicode_viewport(w,h,logical_w,logical_h,zoom);
+        cell_w=viewport.cell_w;cell_h=viewport.cell_h;
+        int cols=viewport.columns,rows=viewport.rows;
+        origin_x=viewport.x;origin_y=viewport.y;
+        if(args.smoke) {
+          if(frames==0)smoke_initial_columns=cols;
+          if(frames==20)smoke_zoomed=cols<smoke_initial_columns;
+          if(frames==40)smoke_reset=cols==smoke_initial_columns;
+        }
+        auto now=std::chrono::steady_clock::now();
+        double dt=(args.smoke||!screenshot.empty())?1./120:std::chrono::duration<double>(now-last).count();last=now;
+        bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
+        if(c.debug)session.state.debug=!session.state.debug;
+        const double cell_aspect=double(cell_h)/cell_w;
+        session.tick(c,dt,focused,cols,rows,cell_aspect);
+        bool blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
+        if(was_blocked!=blocked)held.fill(false);
+        if(now>=render_at||args.smoke||!screenshot.empty()) {
+          RenderGrid(session.grid,session.state,rows,cols,cell_aspect).draw();
+          if(!screenshot.empty()&&frames+1>=std::max(1,maxframes)) {
+            SDL_Surface *surface=SDL_CreateRGBSurfaceWithFormat(0,w,h,32,SDL_PIXELFORMAT_ARGB8888);
+            if(SDL_RenderReadPixels(ren,nullptr,surface->format->format,surface->pixels,surface->pitch)!=0||
+              SDL_SaveBMP(surface,screenshot.c_str())!=0)result=2;
+            SDL_FreeSurface(surface);session.running=false;
+          }
+          SDL_RenderPresent(ren);++frames;
+          render_at=now+std::chrono::microseconds(16667);
+          if(maxframes&&frames>=maxframes)session.running=false;
+        }
+        if(!args.smoke)SDL_Delay(1);
+      }
+      session.persist();cell_frame_sink={};
+      if(session.legacy_requested)result=10;
+      if(args.smoke){std::cout<<"SDL cell view smoke x="<<session.state.player.x<<" zoom="<<smoke_zoomed<<" reset="<<smoke_reset<<'\n';if(session.state.player.x<10||!smoke_zoomed||!smoke_reset)result=3;}
+    }
+  }
+  SDL_DestroyRenderer(ren);ren=nullptr;SDL_DestroyWindow(window);SDL_Quit();return result;
+}
+int diagnostic_window_main(int argc, char **argv) {
   bool smoke = false;
   std::string screenshot, scene = "menu";
   int maxframes = 0;
@@ -1020,8 +1340,10 @@ int main(int argc, char **argv) {
     while (a.running) {
       SDL_Event e;
       while (SDL_PollEvent(&e)) {
-        if (!smoke && screenshot.empty())
-          a.event(e, window);
+        if (!smoke && screenshot.empty()) {
+          if(a.mode==App::Menu&&e.type==SDL_KEYDOWN&&e.key.keysym.scancode==SDL_SCANCODE_V){result=10;a.running=false;}
+          else a.event(e, window);
+        }
       }
       auto now = std::chrono::steady_clock::now();
       double dt = std::chrono::duration<double>(now - last).count();
@@ -1035,8 +1357,9 @@ int main(int argc, char **argv) {
         if (render_dt > .001)
           a.fps += (1 / render_dt - a.fps) * .1;
         world(a, f);
-        if (a.mode == App::Menu)
-          menu(a, f);
+        if (a.mode == App::Menu) {
+          menu(a, f);f.center("V — kampania / identyczny widok terminalowy", 685, 16, gold);
+        }
         else {
           hud(a, f);
           if (a.mode == App::Journal)
@@ -1080,4 +1403,20 @@ int main(int argc, char **argv) {
   SDL_DestroyWindow(window);
   SDL_Quit();
   return result;
+}
+
+int main(int argc,char **argv) {
+  SDL_SetMainReady();
+  bool cells=true,explicit_cells=false;
+  for(int i=1;i<argc;++i) {
+    std::string arg=argv[i];
+    if(arg=="--terminal-view")explicit_cells=true;
+    if(arg=="--diagnostic"||arg=="--legacy"||arg=="--smoke"||arg=="--scene")cells=false;
+  }
+  cells|=explicit_cells;
+  for(;;) {
+    int result=cells?terminal_window_main(argc,argv):diagnostic_window_main(argc,argv);
+    if(result!=10)return result;
+    cells=!cells;
+  }
 }

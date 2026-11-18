@@ -1,11 +1,19 @@
 #include "audio.hpp"
 #include "ghost_net.hpp"
 #include "progress.hpp"
+#include "iceberg_types.hpp"
+#include "iceberg_save.hpp"
+#include "iceberg_story.hpp"
+#include "iceberg_epilogue_story.hpp"
+#include "iceberg_inspection.hpp"
+#include "iceberg_ui.hpp"
 #include <csignal>
 #ifndef _WIN32
 #include <fcntl.h>
 #include <fstream>
+#ifndef __EMSCRIPTEN__
 #include <linux/input.h>
+#endif
 #include <map>
 #include <sstream>
 #include <sys/ioctl.h>
@@ -31,6 +39,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <functional>
 
 namespace {
 
@@ -109,6 +118,8 @@ struct Player {
   int last_wall = 0;
   int support = -1;
   double drop_left = 0.0;
+  double momentum_left = 0, dash_jump_left = 0, wall_bounce_left = 0;
+  double lift_x = 0, lift_y = 0, lift_left = 0;
 
   Rect rect() const { return Rect{x, y, kPlayerWidth, kPlayerHeight}; }
 };
@@ -126,6 +137,9 @@ struct Controls {
        new_run = false;
   int select_level = 0;
   bool next_seed = false, menu_request = false, mute_audio = false;
+  bool interact = false, inspect = false, map = false, language = false;
+  int navigate = 0;
+  std::optional<int> move_pressed={}, aim_pressed={};
 };
 
 struct HeldKeys {
@@ -253,6 +267,7 @@ inline const std::array<std::pair<double, double>, 15> kSweets = {{{15, 33},
                                                                    {169, 33}}};
 
 struct GameState {
+  iceberg::View adventure;
   Player player;
   double spawn_x = 0.0;
   double spawn_y = 0.0;
@@ -263,6 +278,7 @@ struct GameState {
   std::vector<bool> collected;
   std::vector<bool> defeated;
   std::vector<double> refill_cooldown;
+  std::vector<double> platform_armed_at;
   std::vector<ghosts::Ghost> ghosts;
   bool multiplayer = false;
   std::array<ChapterRecord, 3> records{};
@@ -305,8 +321,32 @@ enum class InputMode {
 struct MovingPlatform {
   Rect base;
   double dx = 0, dy = 0, period = 4, phase = 0;
+  bool tram = false;
+  bool fragile = false;
+  bool icy = false;
+  bool archive_rack = false;
+  bool service_lift = false;
+  bool clothesline = false;
+  static constexpr double CrackTime = .55, RestoreTime = 2.9;
+  double crack_age(const GameState &state, size_t index, double time) const {
+    const double start = state.platform_armed_at[index];
+    return start > 0 ? time - start : RestoreTime;
+  }
+  bool available(const GameState &state, size_t index, double time) const {
+    if (!fragile) return true;
+    const double age = crack_age(state, index, time);
+    return age < CrackTime || age >= RestoreTime;
+  }
+  double offset(double t) const {
+    const double cycle=t/period+phase;
+    if(!tram)return std::sin(cycle*6.283185307179586);
+    const double half_cycle=std::fmod(cycle,1.)*2;
+    const double travel=std::clamp((std::fmod(half_cycle,1.)-.22)/.78,0.,1.);
+    const double eased=travel*travel*(3-2*travel);
+    return half_cycle<1?2*eased-1:1-2*eased;
+  }
   Rect at(double t) const {
-    double a = std::sin((t / period + phase) * 6.283185307179586);
+    const double a=offset(t);
     return {base.x + dx * a, base.y + dy * a, base.w, base.h};
   }
 };
@@ -317,6 +357,49 @@ struct Patrol {
     double z = std::fmod(t * speed, 2 * w);
     return {left + (z < w ? z : 2 * w - z), y, 1.1, 1.0};
   }
+};
+enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence, Epilogue, RouteChoice, DockWorker };
+struct Interaction {
+  Rect area;
+  InteractionKind kind;
+  int id;
+  iceberg::Text label;
+  int detail = 0;
+};
+struct SortingBelt { double x, y, width, speed; };
+struct SpringPad : Rect {
+  double push_x, push_y;
+  SpringPad(double x,double y,double w,double h,double push_x=0.,double push_y=-31.)
+    :Rect{x,y,w,h},push_x(push_x),push_y(push_y){}
+};
+struct AirField {
+  Rect area;
+  double ax=0, ay=0, period=0, phase=0;
+  uint64_t disabled_by=0;
+  bool reverses=false;
+  bool active(uint64_t flags) const {return !disabled_by||(flags&disabled_by)!=disabled_by;}
+  double strength(double elapsed) const {
+    if(period<=0)return 1.;
+    const double wave=std::sin((elapsed/period+phase)*6.283185307);
+    return reverses?wave:.5+.5*wave;
+  }
+};
+struct Gate { Rect area; uint64_t flag = 0; };
+struct GrowingBridge {
+  Rect area;
+  uint64_t flag = 0;
+  double amount = 1.;
+  double extended_width(uint64_t switches) const {
+    return (switches&flag)==flag?std::floor(area.w*amount):0.;
+  }
+};
+struct PulseHazard {
+  Rect area;
+  double period=4,phase=0;
+  double cycle(double t) const {return std::fmod(t/period+phase,1.);}
+  bool active(double t) const {return cycle(t)<.24;}
+  static constexpr double warning_start=.82;
+  bool warning(double t) const {return cycle(t)>warning_start;}
 };
 class EngineGrid {
 public:
@@ -354,7 +437,45 @@ public:
     if (row < 0 || row >= height_) {
       return false;
     }
+    for (const auto &gate : gates)
+      if ((switch_flags & gate.flag) != gate.flag && gate.area.intersects({double(col),double(row),1,1}))
+        return true;
+    for (const auto &bridge : growth) {
+      const double width=bridge.extended_width(switch_flags);
+      if(width>0&&Rect{bridge.area.x,bridge.area.y,width,bridge.area.h}.intersects({double(col),double(row),1,1}))
+        return true;
+    }
     return solid_[index(col, row)];
+  }
+
+  void protect_exit() {
+    if (!adventure_level || goal.x < 0) return;
+    const int floor = int(std::lround(goal.bottom()));
+    const int edge = int(std::ceil(goal.right()));
+    const int wall = edge + 1;
+    if (floor < 5 || floor >= height_ || wall >= width_ ||
+        !solid_at(int(std::floor(goal.x + goal.w * .5)), floor)) return;
+    // A route can end on an interior shelf well before the room boundary.
+    // On those shelves the right edge is safe to close only for a west approach.
+    if (width_ - edge > 16 &&
+        (room_role != iceberg::RoomRole::Traverse || route_points.size() < 2 ||
+         route_points.back().second != floor || route_points[route_points.size()-2].first >= goal.left())) return;
+    bool drop = false;
+    for (int x = edge; x < std::min(width_, edge + 8); ++x)
+      drop = drop || !solid_at(x, floor);
+    if (!drop) return;
+    for (int y = floor - 5; y <= floor; ++y)
+      if (hazard_at(wall, y) || hazard_at(edge, y)) return;
+    add_solid_rect(edge, floor, 2, 1);
+    add_solid_rect(wall, floor - 5, 1, 5);
+    exit_wall_x_ = wall;
+  }
+
+  bool touches_exit(const Rect &rect) const {
+    if (!event_level && !adventure_level) return rect.right() >= goal.x;
+    Rect entrance = goal;
+    if (exit_wall_x_ >= 0) entrance.w = exit_wall_x_ - entrance.x;
+    return rect.intersects(entrance);
   }
 
   bool hazard_at(int col, int row) const {
@@ -399,6 +520,31 @@ public:
   }
 
   bool event_level = true;
+  bool adventure_level = false;
+  int verification_policy = 0, generation_fallback = 0;
+  int district = 0, template_id = -1;
+  iceberg::RoomRole room_role = iceberg::RoomRole::Traverse;
+  iceberg::Text room_name;
+  std::vector<std::pair<double,double>> checkpoint_points, route_points;
+  std::vector<Interaction> interactions;
+  std::vector<AirField> air_fields;
+  std::optional<Rect> windbreak_roof;
+  std::vector<SortingBelt> sorting_belts;
+  std::vector<Rect> ice_strips;
+  bool on_ice(const Player &player) const {
+    if(!player.grounded)return false;
+    if(player.support>=0&&size_t(player.support)<platforms.size()&&platforms[size_t(player.support)].icy)return true;
+    const double center=player.x+kPlayerWidth*.5,feet=player.rect().bottom();
+    return std::any_of(ice_strips.begin(),ice_strips.end(),[&](const Rect &strip){
+      return center>=strip.left()&&center<strip.right()&&std::abs(feet-strip.top())<.12;
+    });
+  }
+  std::vector<Rect> water_basins; // Scenery behind the walkable surfaces.
+  std::vector<PulseHazard> pulses;
+  std::vector<Gate> gates;
+  std::vector<GrowingBridge> growth;
+  uint64_t switch_flags = 0, goal_requires = 0, dash_lock = 0, dash_unlock = 0;
+  bool dash_locked() const {return (switch_flags&dash_lock)&&!(switch_flags&dash_unlock);}
   bool summit = false;
   int chapter = 0;
   uint32_t seed = 0;
@@ -406,13 +552,14 @@ public:
   std::vector<double> checkpoints;
   std::vector<MovingPlatform> platforms;
   std::vector<Patrol> enemies;
-  std::vector<Rect> springs;
+  std::vector<SpringPad> springs;
   std::vector<std::pair<double, double>> refills;
   double spawn_x = 5.0;
   double spawn_y = 36.0 - kPlayerHeight;
   Rect goal{173.0, 13.0, 3.0, 5.0};
 
 private:
+  int exit_wall_x_ = -1;
   bool inside(int col, int row) const {
     return col >= 0 && col < width_ && row >= 0 && row < height_;
   }
@@ -424,6 +571,9 @@ private:
   std::vector<bool> solid_;
   std::vector<bool> hazard_;
 };
+
+#include "iceberg_world.hpp"
+#include "iceberg_secrets.hpp"
 
 EngineGrid build_level() {
   EngineGrid grid(kWorldWidth, kWorldHeight);
@@ -612,6 +762,9 @@ GameState new_state(const EngineGrid &grid) {
   state.collected.resize(grid.sweets.size());
   state.defeated.resize(grid.enemies.size());
   state.refill_cooldown.resize(grid.refills.size());
+  if (std::any_of(grid.platforms.begin(), grid.platforms.end(),
+                  [](const auto &platform) { return platform.fragile; }))
+    state.platform_armed_at.resize(grid.platforms.size());
   state.spawn_x = grid.spawn_x;
   state.spawn_y = grid.spawn_y;
   state.player.x = grid.spawn_x;
@@ -634,8 +787,11 @@ void reset_player(GameState &state) {
   state.player.wall_coyote_left = 0;
   state.player.last_wall = 0;
   std::fill(state.refill_cooldown.begin(), state.refill_cooldown.end(), 0);
+  std::fill(state.platform_armed_at.begin(), state.platform_armed_at.end(), 0);
   state.player.support = -1;
   state.player.drop_left = 0;
+  state.player.momentum_left = state.player.dash_jump_left = state.player.wall_bounce_left = 0;
+  state.player.lift_x = state.player.lift_y = state.player.lift_left = 0;
   state.won = false;
   state.result_recorded = false;
   state.earned_stars = 0;
@@ -706,10 +862,14 @@ void update_step(GameState &state, const EngineGrid &grid,
   player.jump_buffer_left = std::max(0.0, player.jump_buffer_left - dt);
   player.dash_buffer_left = std::max(0.0, player.dash_buffer_left - dt);
   player.coyote_left = std::max(0.0, player.coyote_left - dt);
+  player.momentum_left = std::max(0., player.momentum_left - dt);
+  player.dash_jump_left = std::max(0., player.dash_jump_left - dt);
+  player.wall_bounce_left = std::max(0., player.wall_bounce_left - dt);
+  player.lift_left = std::max(0., player.lift_left - dt);
   if (controls.jump_pressed) {
     player.jump_buffer_left = kJumpBuffer;
   }
-  if (controls.dash_pressed) {
+  if (controls.dash_pressed && !grid.dash_locked()) {
     player.dash_buffer_left = kDashBuffer;
   }
 
@@ -738,6 +898,30 @@ void update_step(GameState &state, const EngineGrid &grid,
   }
 
   if (player.dash_time_left > 0.0) {
+    // These techniques apply to adventure physics, leaving legacy time records
+    // comparable. The input window is forgiving; the route decides difficulty.
+    if (grid.adventure_level && player.jump_buffer_left > 0) {
+      bool floor = player.grounded;
+      auto probe = player.rect(); probe.y += .14;
+      for (auto r : grid.solid_rects_near(probe)) floor |= probe.intersects(r);
+      int wall = wall_dir(grid, player);
+      if (floor && std::abs(player.vx) > 12 && player.vy >= -2) {
+        player.vx = std::copysign(26., player.vx);
+        player.vy = -kJumpSpeed;
+        player.dash_time_left = 0;
+        player.jump_buffer_left = 0;
+        player.grounded = false;
+        player.momentum_left = .42;
+        player.dash_jump_left = .8;
+      } else if (wall && player.vy < -10) {
+        player.vx = -wall * 20.; player.vy = -29.;
+        player.dash_time_left = 0; player.jump_buffer_left = 0;
+        player.wall_lock_left = .17; player.momentum_left = .35;
+        player.wall_bounce_left = .8; player.facing = -wall;
+      }
+    }
+  }
+  if (player.dash_time_left > 0.0) {
     player.dash_time_left = std::max(0.0, player.dash_time_left - dt);
     move_axis(grid, player, dt, 'x');
     move_axis(grid, player, dt, 'y');
@@ -763,8 +947,8 @@ void update_step(GameState &state, const EngineGrid &grid,
       reset_player(state);
       return;
     }
-    if (grid.event_level ? rect.intersects(grid.goal)
-                         : rect.right() >= grid.goal.x) {
+    if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires &&
+        grid.touches_exit(rect)) {
       state.won = true;
     }
     return;
@@ -789,6 +973,12 @@ void update_step(GameState &state, const EngineGrid &grid,
       player.grounded = false;
       player.coyote_left = 0.0;
       player.jump_buffer_left = 0.0;
+      if (grid.adventure_level && player.lift_left > 0) {
+        player.vx += clamp(player.lift_x, -12., 12.);
+        player.vy += clamp(player.lift_y, -12., 0.);
+        player.lift_left = 0;
+        player.momentum_left = .35;
+      }
     } else if (player.wall_coyote_left > 0) {
       player.vx = -player.last_wall * kWallJumpX;
       player.vy = -kWallJumpY;
@@ -799,15 +989,18 @@ void update_step(GameState &state, const EngineGrid &grid,
     }
   }
 
+  const bool ice=grid.on_ice(player);
   if (controls.move != 0 && player.wall_lock_left <= 0.0) {
     player.facing = controls.move;
     const double apex_bonus =
         (std::abs(player.vy) < 3.0 && !player.grounded) ? kApexAccelBonus : 0.0;
-    const double accel = player.grounded ? kMoveAccel : kAirAccel + apex_bonus;
+    const double accel = player.grounded ? (ice ? 46.0 : kMoveAccel) : kAirAccel + apex_bonus;
     const double target = controls.move * kMaxRunSpeed;
-    player.vx += clamp(target - player.vx, -accel * dt, accel * dt);
+    if (!(player.momentum_left > 0 && !player.grounded &&
+          player.vx * controls.move > kMaxRunSpeed))
+      player.vx += clamp(target - player.vx, -accel * dt, accel * dt);
   } else if (player.grounded) {
-    player.vx = approach_zero(player.vx, kGroundFriction * dt);
+    player.vx = approach_zero(player.vx, (ice ? 20.0 : kGroundFriction) * dt);
   } else if (controls.move == 0 && player.wall_lock_left <= 0.0) {
     player.vx = approach_zero(player.vx, 24.0 * dt);
   }
@@ -850,8 +1043,8 @@ void update_step(GameState &state, const EngineGrid &grid,
     reset_player(state);
     return;
   }
-  if (grid.event_level ? rect.intersects(grid.goal)
-                       : rect.right() >= grid.goal.x) {
+  if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires &&
+      grid.touches_exit(rect)) {
     state.won = true;
   }
 }
@@ -863,15 +1056,44 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   int deaths = s.deaths;
   p.drop_left = std::max(0.0, p.drop_left - dt);
   if (p.support >= 0 && size_t(p.support) < g.platforms.size()) {
-    auto old = g.platforms[p.support].at(before_time),
-         now = g.platforms[p.support].at(before_time + dt);
-    if (c.fast_fall) {
+    const auto &platform = g.platforms[p.support];
+    auto old = platform.at(before_time), now = platform.at(before_time + dt);
+    if (!platform.available(s, size_t(p.support), before_time + dt)) {
+      p.grounded = false;
+      p.support = -1;
+    } else if (c.fast_fall) {
       p.drop_left = .22;
       p.grounded = false;
       p.support = -1;
     } else {
-      p.x += now.x - old.x;
+      if (g.adventure_level) {
+        const double before_x = p.x;
+        const double run_speed = p.vx;
+        p.vx = (now.x - old.x) / dt;
+        move_axis(g, p, dt, 'x');
+        p.vx = run_speed;
+        p.lift_x = (p.x - before_x) / dt;
+        p.lift_y = (now.y - old.y) / dt;
+        p.lift_left = .12;
+      } else {
+        p.x += now.x - old.x;
+      }
       p.y += now.y - old.y;
+    }
+  }
+  if (p.grounded && p.support < 0) {
+    for (const auto &belt : g.sorting_belts) {
+      const auto feet = p.rect();
+      if (std::abs(feet.bottom() - belt.y) > .1 ||
+          feet.right() <= belt.x || feet.left() >= belt.x + belt.width) continue;
+      double run_speed = p.vx;
+      p.vx = belt.speed;
+      move_axis(g, p, dt, 'x');
+      p.vx = run_speed;
+      p.lift_x = belt.speed;
+      p.lift_y = 0;
+      p.lift_left = .12;
+      break;
     }
   }
   Rect old = p.rect();
@@ -882,10 +1104,19 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   p.support = -1;
   if (s.deaths != deaths || c.restart)
     return;
+  for (const auto &field : g.air_fields)
+    if (field.active(g.switch_flags) && p.rect().intersects(field.area) && p.dash_time_left <= 0) {
+      double amount = field.strength(s.elapsed);
+      p.vx += field.ax * amount * dt;
+      p.vy += field.ay * amount * dt;
+      p.vx = clamp(p.vx, -38., 38.);
+      p.vy = clamp(p.vy, -38., kMaxFallSpeed);
+    }
   if (p.drop_left <= 0 && p.vy >= 0) {
     for (size_t i = 0; i < g.platforms.size(); ++i) {
-      auto r = g.platforms[i].at(s.elapsed),
-           prev = g.platforms[i].at(before_time);
+      const auto &platform = g.platforms[i];
+      if (!platform.available(s, i, s.elapsed)) continue;
+      auto r = platform.at(s.elapsed), prev = platform.at(before_time);
       if (old.bottom() <= prev.top() + .10 && p.rect().bottom() >= r.top() &&
           p.rect().right() > r.left() && p.x < r.right()) {
         p.y = r.y - kPlayerHeight;
@@ -894,6 +1125,8 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
         p.dash_available = true;
         p.coyote_left = kCoyoteTime;
         p.support = int(i);
+        if (platform.fragile && platform.crack_age(s, i, s.elapsed) >= MovingPlatform::RestoreTime)
+          s.platform_armed_at[i] = s.elapsed;
       }
     }
   }
@@ -908,7 +1141,13 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   }
   for (auto spring : g.springs)
     if (p.vy >= 0 && p.rect().intersects(spring)) {
-      p.vy = -31;
+      p.vy = spring.push_y;
+      if (spring.push_x != 0) {
+        p.vx = spring.push_x;
+        p.facing = spring.push_x > 0 ? 1 : -1;
+        p.dash_time_left = 0;
+        p.momentum_left = .5;
+      }
       p.grounded = false;
       p.coyote_left = 0;
       p.dash_available = true;
@@ -933,6 +1172,9 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
         }
       }
     }
+  for(const auto &pulse:g.pulses)if(pulse.active(s.elapsed)&&p.rect().intersects(pulse.area)) {
+    ++s.deaths;reset_player(s);return;
+  }
   // A carried player must never remain embedded in static terrain.
   for (auto solid : g.solid_rects_near(p.rect()))
     if (p.rect().intersects(solid)) {
@@ -953,12 +1195,21 @@ public:
     pending.jump_pressed |= input.jump_pressed;
     pending.dash_pressed |= input.dash_pressed;
     pending.restart |= input.restart;
+    if(input.move_pressed)pending.move_pressed=input.move_pressed;
+    if(input.aim_pressed)pending.aim_pressed=input.aim_pressed;
+    const int held_move=input.move, held_aim=input.aim_y;
     accumulator += clamp(elapsed, 0.0, 0.1);
     while (accumulator + 1e-10 >= 1.0 / 120.0) {
+      // A released direction can still aim a queued dash, then expires.
+      input.move=held_move?held_move:pending.move_pressed.value_or(0);
+      input.aim_y=held_aim?held_aim:pending.aim_pressed.value_or(0);
       input.jump_pressed = pending.jump_pressed;
       input.dash_pressed = pending.dash_pressed;
       input.restart = pending.restart;
       pending = Controls{};
+      // Adventure goals indicate current doorway contact, while classic
+      // courses latch completion for the results screen.
+      if (grid.adventure_level) state.won = false;
       if (!state.won || input.restart) {
         world_step(state, grid, input, 1.0 / 120.0);
         for (size_t i = 0; i < grid.sweets.size(); ++i) {
@@ -973,6 +1224,16 @@ public:
       // Checkpoints only activate on safe ground, never while flying over a
       // gap.
       if (state.player.grounded) {
+        if (grid.adventure_level) {
+          for (size_t cp = 1; cp < grid.checkpoint_points.size(); ++cp) {
+            auto [x,y] = grid.checkpoint_points[cp];
+            if (int(cp) > state.checkpoint && std::abs(state.player.x - x) < 3 &&
+                std::abs(state.player.y - y) < .3) {
+              state.checkpoint = int(cp); state.notice = 1.5;
+              state.spawn_x = x; state.spawn_y = y;
+            }
+          }
+        }
         for (size_t cp = 1; cp < grid.checkpoints.size(); ++cp) {
           double x = grid.checkpoints[cp];
           if (int(cp) > state.checkpoint && state.player.x >= x - 1 &&
@@ -1093,11 +1354,28 @@ void update(GameState &state, const EngineGrid &grid, Controls input,
 }
 
 void update_camera(GameState &state, const EngineGrid &grid, int view_width,
-                   int play_height, double aspect, double dt) {
-  const double visible_w = view_width * kWorldUnitsPerRenderCol;
-  const double visible_h = play_height * aspect * kWorldUnitsPerRenderCol;
-  double target_x = state.player.x - visible_w * 0.42 + state.player.vx * 0.15;
-  double target_y = state.player.y - visible_h * 0.55 + state.player.vy * 0.065;
+                   int play_height, double aspect, double dt, bool smooth=false) {
+  const double scale=grid.adventure_level?.40:kWorldUnitsPerRenderCol;
+  const double visible_w = view_width * scale;
+  const double visible_h = play_height * aspect * scale;
+  const bool smooth_follow=smooth&&grid.adventure_level;
+  if(smooth_follow&&dt>0&&dt<1.) {
+    // Hold the old framing for small adjustments. Limit lag during dashes
+    // so the courier remains visible even at the smallest viewport size.
+    const auto follow=[dt](double camera,double target,double visible,double extent,
+                          double dead_zone,double max_lag,double rate) {
+      const double limit=std::max(0.,extent-visible);
+      const double closest=clamp(camera,target-visible*dead_zone,target+visible*dead_zone);
+      camera+=(closest-camera)*(1.-std::exp(-dt*rate));
+      return clamp(camera,clamp(target-visible*max_lag,0.,limit),clamp(target+visible*max_lag,0.,limit));
+    };
+    state.camera_x=follow(state.camera_x,state.player.x-visible_w*.42,visible_w,grid.width(),.045,.22,3.5);
+    state.camera_y=follow(state.camera_y,state.player.y-visible_h*.68,visible_h,grid.height(),.055,.15,4.5);
+    return;
+  }
+  // A forced reframe uses the selected camera's anchor, even mid-dash.
+  double target_x = state.player.x - visible_w * 0.42 + (smooth_follow?0.:state.player.vx*.15);
+  double target_y = state.player.y - visible_h * (grid.adventure_level?.68:.55) + (smooth_follow?0.:state.player.vy*.065);
   target_x = clamp(target_x, 0.0, std::max(0.0, grid.width() - visible_w));
   target_y = clamp(target_y, 0.0, std::max(0.0, grid.height() - visible_h));
   const double blend = 1.0 - std::exp(-dt * 10.5);
@@ -1105,6 +1383,7 @@ void update_camera(GameState &state, const EngineGrid &grid, int view_width,
   state.camera_y += (target_y - state.camera_y) * blend;
 }
 
+#ifndef __EMSCRIPTEN__
 struct TermSize {
   int rows = 24;
   int cols = 80;
@@ -1326,12 +1605,18 @@ public:
   }
 
   void ui_controls(Controls &c) const {
+    c.interact = press(KEY_E) || press(KEY_F);
+    c.inspect = press(KEY_B);
+    c.map = press(KEY_J);
+    c.language = press(KEY_L);
+    c.navigate = int(press(KEY_DOWN) || press(KEY_S)) - int(press(KEY_UP) || press(KEY_W));
     c.select_level = press(KEY_1)   ? 1
                      : press(KEY_2) ? 2
                      : press(KEY_3) ? 3
                      : press(KEY_4) ? 4
                      : press(KEY_5) ? 5
                      : press(KEY_6) ? 6
+                     : press(KEY_7) ? 7
                                     : 0;
     c.mute_audio = press(KEY_U);
     c.next_seed = press(KEY_G);
@@ -1541,9 +1826,13 @@ private:
 };
 
 #else
+#ifdef _WIN32
+#include <process.h>
+#endif
 #include "windows_console.hpp"
 #endif
 
+#endif
 enum class Color {
   Gold,
   Ghost,
@@ -1568,7 +1857,30 @@ struct Cell {
   bool reverse = false;
   bool bold = false;
   unsigned braille_mask = 0;
+  uint32_t rgb = 0;
+  uint32_t background = 0;
 };
+using CellFrame = std::vector<std::vector<Cell>>;
+std::function<void(const CellFrame &)> cell_frame_sink;
+
+uint32_t cell_color(const Cell &cell) {
+  if (cell.rgb) return cell.rgb;
+  switch (cell.color) {
+  case Color::Gold: case Color::Goal: return 0xf4cd5e;
+  case Color::Ghost:return 0x5dc9d2;
+  case Color::Moss:return 0x4c776b;
+  case Color::Ice:return 0x7497b1;
+  case Color::Trail:return 0x96753e;
+  case Color::ForestShade:return 0x273a33;
+  case Color::Fog:return 0x2b3648;
+  case Color::Decor:return 0x412a31;
+  case Color::Solid:return 0x7e414d;
+  case Color::Hazard:return 0xeb394f;
+  case Color::Player:return 0xfaf7ef;
+  default:return 0xc8bbb8;
+  }
+}
+uint32_t cell_background(const Cell &cell) {return cell.background?cell.background:0x191418;}
 
 std::string utf8(char32_t value) {
   std::string out;
@@ -1655,14 +1967,19 @@ public:
   RenderGrid(const EngineGrid &grid, const GameState &state, int rows, int cols,
              double aspect)
       : grid_(grid), state_(state), rows_(std::max(1, rows)),
-        cols_(std::max(1, cols)), aspect_(aspect),
+        cols_(std::max(1, cols)), aspect_(aspect), scale_(grid.adventure_level?.40:kWorldUnitsPerRenderCol),
         play_rows_(std::max(1, rows - 7)) {
     buffer_.assign(rows_, std::vector<Cell>(cols_));
   }
   void draw() {
-    if (rows_ < 24 || cols_ < 76) {
-      text(1, 2, "Powiększ terminal do co najmniej 76 × 24.");
-      text(3, 2, "Zalecane: 110 × 34. Q — wyjście.");
+    if (rows_ < (grid_.adventure_level&&cols_>=56?20:24) || cols_ < (grid_.adventure_level?34:76)) {
+      text(1, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Powiększ okno: 34 × 24 lub 56 × 20.","Resize the window: 34 × 24 or 56 × 20."):"Powiększ terminal do co najmniej 76 × 24.");
+      text(3, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Zalecane: 110 × 34. Q — wyjście.","Recommended: 110 × 34. Q — quit."):"Zalecane: 110 × 34. Q — wyjście.");
+      flush();
+      return;
+    }
+    if (grid_.adventure_level) {
+      draw_iceberg();
       flush();
       return;
     }
@@ -1691,7 +2008,7 @@ public:
       auto r = platform.at(state_.elapsed);
       auto [x, y] = screen(r.x, r.y);
       text(y, x,
-           std::string(std::max(1, int(r.w / kWorldUnitsPerRenderCol)), '='),
+           std::string(std::max(1, int(r.w / scale_)), '='),
            Color::Gold);
       text(y - 1, x, "↔", Color::Gold);
     }
@@ -1815,10 +2132,12 @@ public:
   }
 
 private:
+  static constexpr uint32_t water_surface_background=0x214b62,water_depth_background=0x14394e;
+#include "iceberg_render.hpp"
   const EngineGrid &grid_;
   const GameState &state_;
   int rows_, cols_;
-  double aspect_;
+  double aspect_,scale_;
   int play_rows_;
   std::vector<std::vector<Cell>> buffer_;
   static std::vector<std::string> glyphs(const std::string &s) {
@@ -1838,13 +2157,15 @@ private:
     return b;
   }
   void put(int row, int col, Cell c) {
-    if (row >= 0 && row < rows_ && col >= 0 && col < cols_)
+    if (row >= 0 && row < rows_ && col >= 0 && col < cols_) {
+      if(!c.background)c.background=buffer_[row][col].background;
       buffer_[row][col] = std::move(c);
+    }
   }
   void fill(int row, int col, int w, int h, Color c) {
     for (int y = row; y < row + h; ++y)
       for (int x = col; x < col + w; ++x)
-        put(y, x, {" ", c});
+        put(y, x, {" ", c,false,false,0,0,iceberg_base_background()});
   }
   void text(int row, int col, const std::string &s, Color c = Color::Text) {
     for (auto ch : glyphs(s))
@@ -1854,19 +2175,19 @@ private:
     text(row, (cols_ - int(glyphs(s).size())) / 2, s, c);
   }
   std::pair<int, int> screen(double x, double y) const {
-    return {int(std::floor((x - state_.camera_x) / kWorldUnitsPerRenderCol)),
+    return {int(std::floor((x - state_.camera_x) / scale_)),
             4 + int(std::floor((y - state_.camera_y) /
-                               (aspect_ * kWorldUnitsPerRenderCol)))};
+                               (aspect_ * scale_)))};
   }
   Cell world_cell(int x, int y) const {
-    double wx = state_.camera_x + x * kWorldUnitsPerRenderCol,
-           wy = state_.camera_y + y * aspect_ * kWorldUnitsPerRenderCol;
+    double wx = state_.camera_x + x * scale_,
+           wy = state_.camera_y + y * aspect_ * scale_;
     unsigned solid = 0, edge = 0, hazard = 0, body = 0, goal = 0, ghost = 0,
              trail = 0;
     for (int dy = 0; dy < 4; ++dy)
       for (int dx = 0; dx < 2; ++dx) {
-        double a = wx + (dx + .5) * kWorldUnitsPerRenderCol / 2,
-               b = wy + (dy + .5) * aspect_ * kWorldUnitsPerRenderCol / 4;
+        double a = wx + (dx + .5) * scale_ / 2,
+               b = wy + (dy + .5) * aspect_ * scale_ / 4;
         int col = int(std::floor(a)), row = int(std::floor(b));
         unsigned dot = braille_dot(dx, dy);
         if (state_.player.rect().intersects({a, b, .01, .01}))
@@ -1889,7 +2210,7 @@ private:
         if (grid_.goal.intersects({a, b, .01, .01}))
           goal |= dot;
       }
-    if (body)
+    if (body && !grid_.adventure_level)
       return braille_cell(
           body, state_.player.dash_available ? Color::Gold : Color::Player,
           true);
@@ -1899,15 +2220,38 @@ private:
       return braille_cell(trail, Color::Trail);
     if (ghost && !solid)
       return braille_cell(ghost, Color::Ghost);
-    if (goal)
+    if (goal && !grid_.adventure_level)
       return braille_cell(goal, Color::Gold);
     if (edge)
       return braille_cell(solid, Color::Player);
     if (solid) {
+      if (grid_.adventure_level) {
+        auto c=solid==255?Cell{"█",Color::Solid}:braille_cell(solid,Color::Solid);
+        const auto &district=iceberg::Districts[size_t(grid_.district)];
+        c.rgb=grid_.district==3?0x78929e:district.stone;
+        // Sparse masonry/plate seams retain a solid collision silhouette.
+        if(solid==255 && (int(std::floor(wx*2))+int(std::floor(wy))*3)%47==0) {
+          c.glyph=grid_.district==1?"▥":"▓";
+        }
+        return c;
+      }
       Color terrain = grid_.chapter == 1   ? Color::Moss
                       : grid_.chapter == 2 ? Color::Ice
                                            : Color::Solid;
       return solid == 255 ? Cell{"█", terrain} : braille_cell(solid, terrain);
+    }
+    if (grid_.adventure_level) {
+      for (const auto &water : grid_.water_basins) {
+        const double depth=wy+aspect_*scale_*.5-water.y;
+        if(wx<water.x||wx>=water.right()||depth<0||depth>=water.h)continue;
+        const int ripple=int(wx/scale_+state_.elapsed*6);
+        if(depth<aspect_*scale_)
+          return {ripple%8<3?"∿":"─",Color::Decor,false,false,0,0x8ed9e5,water_surface_background};
+        if(ripple%13==int(depth*2)%13)
+          return {"·",Color::Decor,false,false,0,0x5196ab,water_depth_background};
+        return {" ",Color::Decor,false,false,0,0,water_depth_background};
+      }
+      return iceberg_background(wx,wy,x,y);
     }
     if (grid_.chapter) {
       // Two distant ridgelines; decoration never enters collision geometry.
@@ -2065,7 +2409,9 @@ private:
            Color::Gold);
     center(17, "[N] PONÓW   [G] NOWY SEED   [M] MENU   [Q] WYJŚCIE");
   }
-  void flush() const {
+  void flush() {
+    for(auto &row:buffer_)for(auto &cell:row)if(!cell.background)cell.background=iceberg_base_background();
+    if (cell_frame_sink) {cell_frame_sink(buffer_);return;}
     static std::vector<std::vector<Cell>> previous;
     bool full = previous.size() != buffer_.size() || previous.empty() ||
                 previous[0].size() != buffer_[0].size();
@@ -2075,6 +2421,8 @@ private:
       out += "\x1b[2J";
     Color current = Color::Default;
     bool bold = false;
+    uint32_t last_rgb = 0;
+    uint32_t last_background = 0;
     out += ansi_for(current, false, false);
     for (int y = 0; y < rows_; ++y) {
       bool positioned = false;
@@ -2082,6 +2430,8 @@ private:
         const auto &c = buffer_[y][x];
         bool changed = full || c.glyph != previous[y][x].glyph ||
                        c.color != previous[y][x].color ||
+                       c.rgb != previous[y][x].rgb ||
+                       c.background != previous[y][x].background ||
                        c.bold != previous[y][x].bold;
         if (!changed) {
           positioned = false;
@@ -2092,10 +2442,18 @@ private:
                  "H";
           positioned = true;
         }
-        if (current != c.color || bold != c.bold) {
-          out += ansi_for(c.color, false, c.bold);
+        uint32_t rgb=cell_color(c);
+        uint32_t background=cell_background(c);
+        if (current != c.color || bold != c.bold || rgb != last_rgb || background != last_background) {
+          out += "\x1b[0m\x1b[48;2;"+std::to_string((background>>16)&255)+";"+
+            std::to_string((background>>8)&255)+";"+std::to_string(background&255)+"m";
+          if(c.bold)out+="\x1b[1m";
+          out += "\x1b[38;2;"+std::to_string((rgb>>16)&255)+";"+
+            std::to_string((rgb>>8)&255)+";"+std::to_string(rgb&255)+"m";
           current = c.color;
           bold = c.bold;
+          last_rgb=rgb;
+          last_background=background;
         }
         out += c.glyph;
       }
@@ -2160,6 +2518,10 @@ std::filesystem::path audio_directory() {
   return std::filesystem::current_path() / "assets/audio";
 }
 
+#include "iceberg_validation.hpp"
+#include "iceberg_runtime.hpp"
+
+#ifndef __EMSCRIPTEN__
 [[maybe_unused]] int run_game(double aspect, InputMode input_mode,
                               bool demo = false, bool event_level = false,
                               uint32_t seed = 1, bool summit = false,
@@ -2259,6 +2621,8 @@ std::filesystem::path audio_directory() {
       input.clear();
       stepper = FixedStepper{};
     }
+    if (c.select_level == 7)
+      c.select_level = 0;
     if (c.select_level >= 4 && c.select_level - 3 > progress.unlocked) {
       c.select_level = 0;
       state.moment = "Ukończ poprzedni etap.";
@@ -2391,11 +2755,17 @@ std::filesystem::path audio_directory() {
 }
 
 struct Args {
+  bool adventure = true, explicit_adventure = false, terminal_view = false, district_override = false;
+  iceberg::Mode adventure_mode = iceberg::Mode::Campaign;
+  iceberg::Language language = iceberg::Language::Polish;
+  bool language_override = false;
+  int district = 0, save_slot = 1;
   bool event_level = false, summit = false;
   int chapter = 1;
   bool mute = false, remote_audio = false;
   int relay_port = 0;
   std::string ghost_host, ghost_port = "27888", room = "default";
+  bool seed_override = false;
   uint32_t seed =
       uint32_t(std::chrono::system_clock::now().time_since_epoch().count());
   bool demo = false;
@@ -2412,15 +2782,39 @@ struct Args {
   Args args;
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
-    if (arg == "--event") {
+    if (arg == "--campaign" || arg == "--expedition" || arg == "--trial") {
+      args.adventure = args.explicit_adventure = true;
+      args.adventure_mode = arg=="--campaign"?iceberg::Mode::Campaign:
+        arg=="--trial"?iceberg::Mode::Trial:iceberg::Mode::Endless;
+    } else if(arg=="--terminal-view") {
+      args.terminal_view=true;
+    } else if(arg=="--diagnostic" || arg=="--legacy") {
+      args.adventure=false;
+    } else if(arg=="--language" && i+1<argc) {
+      std::string value=argv[++i];
+      if(value!="pl"&&value!="en"){std::cerr<<"Language: pl or en\n";std::exit(2);}
+      args.language=value=="en"?iceberg::Language::English:iceberg::Language::Polish;
+      args.language_override=true;
+    } else if(arg=="--district" && i+1<argc) {
+      std::string value=argv[++i];
+      if(value.size()!=1||value[0]<'1'||value[0]>'6'){std::cerr<<"District: 1..6\n";std::exit(2);}
+      args.district=value[0]-'1';args.district_override=true;
+    } else if(arg=="--save-slot") {
+      const std::string slot=i+1<argc?argv[++i]:"";
+      if(slot.size()!=1||slot[0]<'1'||slot[0]>'3'){std::cerr<<"Save slot: 1..3\n";std::exit(2);}
+      args.save_slot=slot[0]-'0';
+    } else if (arg == "--event") {
+      args.adventure=false;
       args.event_level = true;
       args.summit = false;
       args.chapter = 0;
     } else if (arg == "--summit") {
+      args.adventure=false;
       args.summit = true;
       args.event_level = false;
       args.chapter = 0;
     } else if (arg == "--chapter" && i + 1 < argc) {
+      args.adventure=false;
       std::string value = argv[++i];
       if (value != "1" && value != "2" && value != "3") {
         std::cerr << "Chapter must be 1..3\n";
@@ -2472,7 +2866,8 @@ struct Args {
         auto v = std::stoull(value, &used);
         if (used != value.size() || v > UINT32_MAX || value[0] == '-')
           throw std::invalid_argument("seed");
-        args.seed = uint32_t(v);
+        args.seed = uint32_t(v);args.seed_override=true;
+        if(!args.explicit_adventure)args.adventure=false;
         args.chapter = 0;
         args.summit = args.event_level = false;
       } catch (...) {
@@ -2484,7 +2879,7 @@ struct Args {
     else if (arg == "--ssh-basic")
       args.input_mode = InputMode::SshBasic;
     else if (arg == "--demo") {
-      args.demo = true;
+      args.demo = true;args.adventure=false;
     } else if (arg == "--preview" && i + 1 < argc) {
       args.preview = argv[++i];
     } else if (arg == "--smoke") {
@@ -2515,6 +2910,13 @@ struct Args {
              "[--seed N] [--summit] [--chapter 1..3] [--mute] [--ssh | "
              "--ssh-basic]\n"
              "  --audio               Enable server-local audio in SSH mode\n"
+             "  --campaign            Iceberg story (default)\n"
+             "  --expedition          Endless iceberg routes\n"
+             "  --trial               Eight-room mastery trial\n"
+             "  --district 1..6       Expedition/trial district\n"
+             "  --language pl|en      Polish (default) or English\n"
+             "  --terminal-view       SDL: same Unicode cell view as terminal\n"
+             "  --diagnostic          SDL: original graphical diagnostic view\n"
              "  --relay PORT          Run a headless UDP ghost relay\n"
              "  --connect HOST[:PORT] Join live ghosts (default port 27888)\n"
              "  --room NAME           Match friends in the same "
@@ -2532,6 +2934,43 @@ struct Args {
   }
   return args;
 }
+
+iceberg::SessionOptions adventure_options(const Args &args) {
+  iceberg::SessionOptions o;
+  o.seed=args.seed;o.seed_override=args.seed_override;o.language=args.language;o.language_override=args.language_override;
+  o.mode=args.adventure_mode;o.district=args.district;o.district_override=args.district_override;o.mute=args.mute;
+  o.ghost_host=args.ghost_host;o.ghost_port=args.ghost_port;o.ghost_room=args.room;
+  o.remote_audio=args.remote_audio;o.save_slot=args.save_slot;
+  o.remote=args.input_mode==InputMode::Ssh||args.input_mode==InputMode::SshBasic;
+  return o;
+}
+[[maybe_unused]] int run_adventure(const Args &args,double aspect) {
+  TerminalGuard terminal(args.input_mode==InputMode::Ssh);
+  if(!terminal.active()){std::cerr<<"Run in a terminal, or use terminal_velocity_sdl --terminal-view\n";return 1;}
+  TuiInput input(args.input_mode);
+  if(!input.ready()){std::cerr<<"Input unavailable. Use ./play.sh or --ssh.\n";return 1;}
+  AdventureSession session(adventure_options(args));
+  auto last=std::chrono::steady_clock::now(),render_at=last;
+  while(session.running&&!stop_requested) {
+    auto now=std::chrono::steady_clock::now();
+    double dt=clamp(std::chrono::duration<double>(now-last).count(),0.,.1);last=now;
+    auto size=term_size();
+    Controls c=input.poll(dt);
+    bool was_blocked=session.state.menu||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.dialogue.active()||session.state.adventure.inspecting;
+    session.state.ssh_basic=input.basic_ssh();session.state.input_source=input.label();
+    session.tick(c,dt,input.focused,size.cols,size.rows,aspect);
+    bool blocked=session.state.menu||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.dialogue.active()||session.state.adventure.inspecting;
+    if(was_blocked!=blocked)input.clear();
+    if(now>=render_at) {
+      RenderGrid(session.grid,session.state,size.rows,size.cols,aspect).draw();
+      render_at=now+std::chrono::microseconds(session.options.remote?33333:16667);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  session.persist();
+  return session.legacy_requested?10:0;
+}
+#endif
 
 } // namespace
 
@@ -2558,6 +2997,17 @@ int main(int argc, char **argv) {
       clamp(args.cell_aspect > 0.0 ? args.cell_aspect : detect_cell_aspect(),
             1.1, 3.4);
   if (!args.preview.empty()) {
+    if(args.adventure) {
+      auto o=adventure_options(args);o.no_save=true;o.mute=true;
+      AdventureSession session(o);
+      session.state.menu=args.preview=="menu";
+      session.state.journal=args.preview=="journal";
+      session.state.won=args.preview=="win";
+      if(args.preview=="dialogue")session.talk(iceberg::introduction(0));
+      update_camera(session.state,session.grid,110,27,aspect,10);
+      RenderGrid(session.grid,session.state,34,110,aspect).draw();
+      return 0;
+    }
     auto g = args.chapter       ? build_chapter(args.chapter)
              : args.summit      ? build_summit()
              : args.event_level ? build_level()
@@ -2572,6 +3022,24 @@ int main(int argc, char **argv) {
     update_camera(s, g, 110, 27, aspect, 10);
     RenderGrid(g, s, 34, 110, aspect).draw();
     return 0;
+  }
+  if(args.terminal_view) {
+    auto app=audio_directory().parent_path().parent_path()/
+#ifdef _WIN32
+      "terminal_velocity_sdl.exe";
+    std::vector<const char*> forwarded;auto executable=app.string();forwarded.push_back(executable.c_str());
+    for(int i=1;i<argc;++i)forwarded.push_back(argv[i]);
+    forwarded.push_back(nullptr);
+    int result=int(::_spawnv(_P_WAIT,executable.c_str(),forwarded.data()));
+    if(result>=0)return result;
+#else
+      "terminal_velocity_sdl";
+    std::vector<char*> forwarded;auto executable=app.string();forwarded.push_back(executable.data());
+    for(int i=1;i<argc;++i)forwarded.push_back(argv[i]);
+    forwarded.push_back(nullptr);
+    ::execv(executable.c_str(),forwarded.data());
+#endif
+    std::cerr<<"SDL cell view is unavailable. Build or restore terminal_velocity_sdl.\n";return 1;
   }
   if (args.input_test) {
 #ifdef _WIN32
@@ -2605,6 +3073,10 @@ int main(int argc, char **argv) {
     return run_smoke(aspect, args.smoke_steps);
   }
   try {
+    if(args.adventure) {
+      int result=run_adventure(args,aspect);
+      if(result!=10)return result;
+    }
     return run_game(aspect, args.input_mode, args.demo, args.event_level,
                     args.seed, args.summit, args.ghost_host, args.ghost_port,
                     args.room, args.chapter, args.mute, args.remote_audio);

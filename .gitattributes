@@ -2,3 +2,5 @@ vendor/miniaudio.h linguist-vendored -whitespace
 *.mp3 binary
 *.wav binary
 *.ico binary
+# Checksum fixtures must keep exact bytes on Windows checkouts.
+tests/fixtures/*.dat -text

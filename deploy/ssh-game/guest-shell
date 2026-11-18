@@ -1,0 +1,4 @@
+#!/bin/sh
+# Login shell: ignore every argument, including client commands and subsystems.
+# This path is mirrored into the chroot. Outside it, /game/session is absent.
+exec /game/session
