@@ -49,7 +49,13 @@
       const auto &layout=iceworld::pattern(grid_.template_id);auto p=layout.path[layout.path.size()/2];
       switch(grid_.template_id%12) {
       case 0:case 8:world_art(p.x,p.y-6,{"╭──────────────────────╮","│ 02  →  →  →  →  →  → │","├──────────────────────┤","│  ▥▥▥▥▥▥   ▥▥▥▥▥▥     │","╰───────────┬──────────╯","            │"},d.accent);break;
-      case 1:case 6:world_art(p.x-2,p.y-6,{"╔════════════════╗","║  ╲ ▯ ▯ ▯ ▯ ╱   ║","║   ╲       ╱    ║","║    ╲     ╱     ║","║     ╲   ╱      ║","║      ╳         ║"},d.stone);break;
+      case 1:
+        if(grid_.solid_at(iceworld::EstateStairwellWalls.front()[0],iceworld::EstateStairwellWalls.front()[1])) {
+          draw_estate_stairwells();
+          break;
+        }
+        [[fallthrough]];
+      case 6:world_art(p.x-2,p.y-6,{"╔════════════════╗","║  ╲ ▯ ▯ ▯ ▯ ╱   ║","║   ╲       ╱    ║","║    ╲     ╱     ║","║     ╲   ╱      ║","║      ╳         ║"},d.stone);break;
       case 2:world_art(p.x,p.y-7,{"╥─────────────────────────╥","║  ╭─╮  ╭──╮   ╭───╮      ║","║  │ │  │  │   │   │      ║","║  ╰─╯  ╰──╯   ╰───╯      ║"},0xb098aa);break;
       case 4:world_art(p.x,p.y-5,{"╭─────────────────────╮","│ ░░  11   ░░░░░░░░░░ │","├─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┤","╰─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─╯"},d.light);break;
       case 5:world_art(p.x,p.y-6,{"  ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲"," ╱________________╲"," │ ▱▱ ▱▱ ▱▱ ▱▱ ▱▱ │"," ├────────────────┤"," │   │        │   │"},d.accent);break;
@@ -57,5 +63,26 @@
       case 9:world_art(p.x-2,p.y-8,{"╔══╗","║  ║","║  ╚══════╗","╚══════╗  ║","       ║  ║","       ║  ║"},0x657f8a);break;
       default:world_art(p.x,p.y-4,{"  ╲│╱    ╲│╱    ╲│╱","   │      │      │","╭──┴──╮╭──┴──╮╭──┴──╮","╰─────╯╰─────╯╰─────╯"},0x9aab85);break;
       }
+    }
+  }
+  void draw_estate_stairwells() {
+    const double row=aspect_*scale_;
+    constexpr uint32_t plaster=0x88788d,mortar=0xc5a6b9,window=0xc9c088;
+    for(size_t tower=0;tower<iceworld::EstateStairwellWalls.size();++tower) {
+      const auto [x,y,w,h]=iceworld::EstateStairwellWalls[tower];
+      const double wall_face=x+.12,x_back=tower==0?x-9*scale_:x+w-scale_;
+      const double cap=y+row*.2;
+      const int floors=h>10?3:2;
+      const double storey=(h-row)/floors;
+      world_art(x_back,cap,{"╭────────╮"},plaster);
+      for(int i=0;i<floors;++i) {
+        const double floor=cap+row+i*storey;
+        world_art(x_back,floor,{"│ ┌────┐ │","│ │░░░░│ │","│ └─┬──┘ │","├───┴────┤"},plaster);
+        int phase=int(state_.adventure.presentation_time*.7+i+tower*2)%5;
+        if(phase<3)world_art(x_back+3*scale_,floor+row,{phase==0?"░░▒░":"▒░░░"},window);
+      }
+      world_art(x_back,y+h-row,{"╰──┬───┬─╯"},plaster);
+      for(int section=0;cap+section*row<y+h-row*.5;++section)
+        world_text(wall_face,cap+section*row,section==0?"╥":section%4==0?"╫":"║",mortar);
     }
   }

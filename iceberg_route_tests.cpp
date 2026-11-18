@@ -109,6 +109,28 @@ int main() {
               std::abs(courier.player.rect().bottom()-shelf_y)<.01&&courier.deaths==0,
         "a pressure launch delivers the courier to the next shelf with neutral input");
     }
+    AdventureSession estate(options,{});estate.begin_campaign(true);
+    estate.profile.unlocked=2;estate.run_district=2;
+    auto &stairs=estate.profile.expeditions[0];
+    stairs.active=true;stairs.district=2;stairs.seed=stairs.origin_seed=73;
+    stairs.itinerary={25,24,26,27,28,29,30,31};
+    stairs.layout_version=3;estate.begin_run(iceberg::Mode::Endless);
+    require(estate.grid.template_id==25&&!estate.grid.solid_at(59,37)&&!estate.grid.solid_at(72,27),
+      "an older stairwell expedition has its original geometry");
+    stairs.layout_version=4;estate.load_room();
+    require(estate.grid.solid_at(59,37)&&estate.grid.solid_at(72,27)&&verify_route(estate.grid).complete,
+      "both stairwell masonry faces are solid and retain the main route");
+    require(std::none_of(estate.grid.sweets.begin(),estate.grid.sweets.end(),[&](auto token){
+      return estate.grid.solid_at(int(token.first),int(token.second));
+    }),"the stairwell walls leave the original tokens clear");
+    for(auto [x,y,w,h]:iceworld::EstateStairwellWalls) {
+      auto climber=new_state(estate.grid);
+      climber.player.x=x-kPlayerWidth;climber.player.y=y+h-5;
+      Controls kick;kick.move=1;kick.jump_pressed=kick.jump_held=true;
+      world_step(climber,estate.grid,kick,1./120);
+      require(climber.player.vx<-15&&climber.player.vy<-20&&climber.player.wall_lock_left>0,
+        "the new stairwell face supports a wall jump while holding toward it");
+    }
     for(int q:{500,503,506})require(std::find(original.begin(),original.begin()+16,q)!=original.begin()+16,"parcel landmark remains before the last turn-in");
     std::filesystem::remove(path);std::filesystem::remove(path.string()+".bak");
     return 0;

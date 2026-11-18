@@ -222,6 +222,15 @@ inline void add_expedition_copy_belts(EngineGrid &room) {
   else room.sorting_belts.clear();
 }
 
+inline void add_expedition_stairwells(EngineGrid &room) {
+  if(room.district!=2||room.template_id!=25)return;
+  auto original=room;
+  for(auto [x,y,w,h]:iceworld::EstateStairwellWalls)room.add_solid_rect(x,y,w,h);
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room=std::move(original);
+}
+
 inline void add_expedition_trams(EngineGrid &room) {
   if(room.district!=2||room.template_id!=24||room.platforms.size()!=3)return;
   auto original=room.platforms;

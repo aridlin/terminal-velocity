@@ -1,4 +1,5 @@
 #pragma once
+inline constexpr std::array<std::array<int,4>,2> EstateStairwellWalls{{{59,37,2,9},{72,27,2,13}}};
 // The residential district introduces horizontal tram momentum, then combines
 // it with stairwell reversals and the existing lift/wall techniques.
 inline EngineGrid build_estate_settlement() {
