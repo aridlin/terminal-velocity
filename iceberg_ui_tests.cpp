@@ -256,7 +256,7 @@ int main(){try {
   belt_view.adventure.map=belt_view.adventure.map_room=true;
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
     belt_view.adventure.language=language;
-    const auto legend=language==iceberg::Language::English?"◀▶ Belts":"◀▶ Taśmy";
+    const auto legend=language==iceberg::Language::English?"◀ ▶ Belts":"◀ ▶ Taśmy";
     for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
       RenderGrid(belt_room,belt_view,rows,cols,2).draw();
       ui_check(count_map("▶",0xa0d6df)==2&&count_map("◀",0xa0d6df)==1&&

@@ -211,7 +211,7 @@
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
-    if(has_belts)paint_text(legend++,2,tr("◀▶ Taśmy","◀▶ Belts"),belt_color);
+    if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);
     int feature_col=2;
     auto label=[&](const std::string &entry,uint32_t color) {
       if(feature_col>2){paint_text(legend,feature_col," · ",0xc7d9df);feature_col+=3;}
