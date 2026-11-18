@@ -619,6 +619,14 @@ function finishImport(){
  last=performance.now();
  if(!accounts?.active)canvas.focus({preventScroll:true});
 }
+async function readImportFile(file){
+ let deadline;
+ try {
+  return await Promise.race([file.arrayBuffer(),new Promise((_,reject)=>{
+   deadline=setTimeout(()=>reject(new Error('Save read timed out')),6000);
+  })]);
+ }finally{clearTimeout(deadline);}
+}
 function applyManualImport(fs,previous){
  const backup=previousImportPath(),retained=backup+'.previous';
  const hadBackup=fs.analyzePath(backup).exists;
@@ -657,7 +665,13 @@ saveFile.onchange=async()=>{
    setSaveActionError(['Nieprawidłowy plik zapisu','Invalid save file']);
    return;
   }
-  const bytes=new Uint8Array(await file.arrayBuffer());
+  let data;
+  try{data=await readImportFile(file);}
+  catch{
+   setSaveActionError(['Nie można odczytać zapisu — spróbuj ponownie','Could not read save file — try again']);
+   return;
+  }
+  const bytes=new Uint8Array(data);
   if(accountSlot()&&(accountBooting||accounts?.active||accounts?.busy||accounts?.mode==='choose')){
    setSaveActionError(['Zakończ obsługę konta przed wczytaniem zapisu','Finish the account action before importing a save']);
    return;

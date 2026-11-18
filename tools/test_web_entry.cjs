@@ -600,6 +600,30 @@ const server=http.createServer((req,res)=>{
     assert.ok(liveTicks>0,'the chooser alone cannot freeze the game');
     assert.equal(await importButton.isEnabled(),true);
     assert.equal(await page.evaluate(()=>canvas===document.activeElement),true);
+    const stalledPicker=await openPicker();
+    await page.evaluate(()=>{
+      const read=File.prototype.arrayBuffer;
+      File.prototype.arrayBuffer=function(){
+        File.prototype.arrayBuffer=read;
+        return new Promise(resolve=>{
+          window.releaseSlowImport=async()=>resolve(await read.call(this));
+        });
+      };
+    });
+    await stalledPicker.setFiles({name:'slow.iceberg',mimeType:'application/octet-stream',buffer:sample});
+    await page.waitForFunction(()=>importPending&&typeof window.releaseSlowImport==='function');
+    await page.waitForFunction(()=>!importPending&&saveStatus.textContent==='Could not read save file — try again',null,{timeout:8000});
+    assert.equal(await importButton.isEnabled(),true);
+    assert.equal(await page.evaluate(async()=>{
+      const confirm=window.confirm;
+      let calls=0;
+      window.confirm=()=>{calls++;return false;};
+      try {
+        await window.releaseSlowImport();
+        await new Promise(requestAnimationFrame);
+        return calls;
+      }finally{window.confirm=confirm;}
+    }),0,'a late read must never confirm or apply an expired import');
     const invalidPicker=await openPicker();
     const acceptInvalid=page.waitForEvent('dialog').then(dialog=>dialog.accept());
     await invalidPicker.setFiles({name:'broken.iceberg',mimeType:'application/octet-stream',buffer:Buffer.from('broken save')});
