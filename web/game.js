@@ -23,7 +23,9 @@ try {
  if(value==='1'||value==='2'||value==='3')selectedSlot=Number(value);
 }catch{}
 const inTour=()=>!!(uiFlags&tourFlag);
-const accountSlot=()=>started&&selectedSlot===1&&!inTour();
+const persistentSaveDirectory='/persist';
+let saveDirectory=persistentSaveDirectory;
+const accountSlot=()=>started&&selectedSlot===1&&!inTour()&&saveDirectory===persistentSaveDirectory;
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
 let browserSaveStatus=['Gotowe','Ready'],saveActionError=null;
 function renderSaveStatus(){
@@ -446,8 +448,8 @@ const unreadableSaveButtons=[
 let unreadableSaveNames=[null,null];
 const saveFile=document.querySelector('#save-file');
 const slotPath=base=>selectedSlot===1?base:base+'.slot'+selectedSlot;
-const currentSavePath=()=>slotPath('/persist/progress.dat.iceberg');
-const previousImportPath=()=>slotPath('/persist/before-manual-import.iceberg');
+const currentSavePath=()=>slotPath(saveDirectory+'/progress.dat.iceberg');
+const previousImportPath=()=>slotPath(saveDirectory+'/before-manual-import.iceberg');
 let importPending=false;
 
 function refreshUnreadableSaveControls(){
@@ -455,7 +457,7 @@ function refreshUnreadableSaveControls(){
  if(started&&!inTour()){
   const base=currentSavePath().split('/').at(-1);
   const prefixes=[base+'.unreadable',base+'.bak.unreadable'];
-  const names=Module.FS.readdir('/persist');
+  const names=Module.FS.readdir(saveDirectory);
   for(const [i,prefix] of prefixes.entries()){
    let latest=-1;
    for(const name of names){
@@ -506,7 +508,7 @@ exportPreviousSave.onclick=()=>downloadSave('terminal-velocity-previous.iceberg'
 unreadableSaveButtons.forEach((button,i)=>{
  button.onclick=()=>{
   const name=unreadableSaveNames[i];
-  if(name)downloadSave(name,()=>Module.FS.readFile('/persist/'+name));
+  if(name)downloadSave(name,()=>Module.FS.readFile(saveDirectory+'/'+name));
  };
 });
 function finishImport(){
@@ -552,7 +554,7 @@ saveFile.onchange=async()=>{
    return;
   }
   const previous=fs.readFile(currentSavePath());
-  const incoming='/persist/import.iceberg';
+  const incoming=saveDirectory+'/import.iceberg';
   fs.writeFile(incoming,bytes);
   try {
    const imported=Module._web_import_save();
@@ -657,19 +659,43 @@ async function finishBoot(storageError,canWrite=true){
  }catch(error){failStartup(error);}
 }
 async function restoreBrowserStorage(){
- const restore=()=>new Promise(resolve=>Module.FS.syncfs(true,resolve));
- if(!navigator.locks){await finishBoot(await restore());return;}
+ let expired=false,deadline;
+ const timeout=new Promise(resolve=>{
+  deadline=setTimeout(()=>{
+   expired=true;
+   resolve();
+   if(bootFailed)return;
+   try {
+    // A pending IndexedDB read can still populate /persist after this point.
+    // Keep the running game and its exports in a different memory directory.
+    saveDirectory='/session-progress';
+    Module.FS.mkdir(saveDirectory);
+    Module._web_use_temporary_saves();
+    finishBoot(new Error('Browser storage restore timed out'),false);
+   } catch(error){failStartup(error);}
+  },6000);
+ });
+ const restore=async(canWrite,lockError)=>{
+  if(expired)return;
+  const storageError=await Promise.race([
+   timeout,new Promise(resolve=>Module.FS.syncfs(true,resolve)).catch(error=>error),
+  ]);
+  if(expired)return;
+  clearTimeout(deadline);
+  await finishBoot(storageError||lockError,canWrite);
+ };
+ if(!navigator.locks){await restore(true);return;}
  await navigator.locks.request('terminal-velocity-browser-save',{ifAvailable:true},async lock=>{
-  await finishBoot(await restore(),!!lock);
-  // Keep the writer until this document closes. A new writer must restore a fresh save.
+  await restore(!!lock);
+  // Keep the writer until this document closes. A timed-out restore releases it.
   if(browserStorageWritable)await new Promise(()=>{});
- }).catch(async error=>finishBoot((await restore())||error));
+ }).catch(error=>restore(false,error));
 }
 var Module={
  onRuntimeInitialized(){
   try {
-   Module.FS.mkdir('/persist');
-   Module.FS.mount(Module.IDBFS,{},'/persist');
+   Module.FS.mkdir(persistentSaveDirectory);
+   Module.FS.mount(Module.IDBFS,{},persistentSaveDirectory);
    restoreBrowserStorage().catch(failStartup);
   }catch(error){failStartup(error);}
  },

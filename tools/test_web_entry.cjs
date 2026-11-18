@@ -82,6 +82,63 @@ const server=http.createServer((req,res)=>{
   await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled);
   assert.equal(await interrupted.evaluate(()=>Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'})),legacySave);
   console.log('PASS an interrupted IndexedDB restore leaves the previous browser save intact');
+  // A database request can remain pending instead of firing an error. Delay
+  // the real open past Start, then let the normal IDBFS restore finish late.
+  await interrupted.addInitScript(()=>{
+   if(!sessionStorage.getItem('test-stalled-restore'))return;
+   sessionStorage.removeItem('test-stalled-restore');
+   const open=IDBFactory.prototype.open;
+   IDBFactory.prototype.open=function(name,...args){
+    if(name!=='/persist')return open.call(this,name,...args);
+    IDBFactory.prototype.open=open;
+    const deferred={};
+    window.releaseTestRestore=()=>{
+     const actual=open.call(this,name,...args);
+     actual.onupgradeneeded=deferred.onupgradeneeded;
+     actual.onerror=deferred.onerror;
+     actual.onsuccess=event=>{
+      deferred.result=actual.result;
+      deferred.onsuccess(event);
+     };
+    };
+    return deferred;
+   };
+  });
+  await interrupted.evaluate(()=>sessionStorage.setItem('test-stalled-restore','1'));
+  await interrupted.reload({waitUntil:'domcontentloaded'});
+  await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled,{},{timeout:9000});
+  await interrupted.locator('[data-language="en"]').click();
+  await interrupted.locator('#start').click();
+  await interrupted.waitForFunction(()=>started&&!syncing);
+  assert.equal(await interrupted.locator('#save-status').textContent(),'Browser storage unavailable — download backups');
+  assert.equal(await interrupted.locator('#account').isHidden(),true);
+  const sessionDownload=await Promise.all([
+   interrupted.waitForEvent('download'),interrupted.locator('#export-save').click(),
+  ]);
+  const sessionSave=fs.readFileSync(await sessionDownload[0].path(),'utf8');
+  assert.match(sessionSave,/^TVICE6 /);
+  // A new tab can become writer before the pending restore completes.
+  const recovered=await storageContext.newPage();
+  await recovered.goto(url,{waitUntil:'domcontentloaded'});
+  await recovered.waitForFunction(()=>!document.querySelector('#start').disabled);
+  assert.equal(await recovered.evaluate(()=>browserStorageWritable),true);
+  assert.equal(await recovered.evaluate(()=>Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'})),legacySave);
+  await interrupted.evaluate(()=>window.releaseTestRestore());
+  await interrupted.waitForFunction(()=>Module.FS.analyzePath('/persist/progress.dat.iceberg').exists);
+  assert.equal(await interrupted.evaluate(()=>Module._web_saved_language()),1,'the late Polish save must not replace the English guest session');
+  interrupted.once('dialog',dialog=>dialog.accept());
+  await interrupted.locator('#save-file').setInputFiles({
+   name:'recovered.iceberg',mimeType:'application/octet-stream',buffer:Buffer.from(legacySave),
+  });
+  await interrupted.waitForFunction(()=>!importPending&&Module._web_saved_language()===0);
+  assert.equal(await interrupted.locator('#export-previous-save').isVisible(),true);
+  assert.equal(await interrupted.evaluate(()=>Module.FS.readFile('/persist/progress.dat.iceberg',{encoding:'utf8'})),legacySave);
+
+  await recovered.close();
+  await interrupted.reload({waitUntil:'domcontentloaded'});
+  await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled);
+  console.log('PASS a stalled restore starts a temporary run and a late read preserves both saves');
+
   await interrupted.locator('[data-language="en"]').click();
   await interrupted.locator('#start').click();
   await interrupted.waitForFunction(()=>started&&!syncing);

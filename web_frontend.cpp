@@ -6,7 +6,7 @@ namespace {
 std::unique_ptr<AdventureSession> web_game;
 std::vector<uint32_t> web_cells;
 bool web_account_was_paused=false;
-constexpr auto web_save_base="/persist/progress.dat.iceberg";
+const char *web_save_base="/persist/progress.dat.iceberg";
 int web_slot=1;
 EM_JS(void, browser_frame, (const uint32_t *cells,int cols,int rows), {
   if(window.tvFrame)window.tvFrame(HEAPU32.subarray(cells>>>2,(cells>>>2)+cols*rows*4),cols,rows);
@@ -44,6 +44,9 @@ void send_web_ui() {
 extern "C" {
 EMSCRIPTEN_KEEPALIVE void web_set_start_slot(int slot) {
   if(!web_game&&slot>=1&&slot<=iceberg::SaveStore::SlotCount)web_slot=slot;
+}
+EMSCRIPTEN_KEEPALIVE void web_use_temporary_saves() {
+  if(!web_game)web_save_base="/session-progress/progress.dat.iceberg";
 }
 EMSCRIPTEN_KEEPALIVE void web_profile_action_busy(int busy) {
   if(web_game)web_game->profile_action_busy=busy!=0;
@@ -127,7 +130,8 @@ EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
 }
 EMSCRIPTEN_KEEPALIVE int web_import_save() {
   iceberg::Profile imported;
-  if(!iceberg::SaveStore::validate_file("/persist/import.iceberg",imported))return 0;
+  const auto directory=std::filesystem::path(web_save_base).parent_path();
+  if(!iceberg::SaveStore::validate_file(directory/"import.iceberg",imported))return 0;
   // A valid input with a failed replacement is different from an invalid file.
   if(!web_game||web_game->tour_scene>=0||!web_game->saves.save(imported))return -1;
   const bool muted=web_game->audio.muted;
