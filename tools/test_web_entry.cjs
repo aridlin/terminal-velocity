@@ -104,7 +104,10 @@ const server=http.createServer((req,res)=>{
     return deferred;
    };
   });
-  await interrupted.evaluate(()=>sessionStorage.setItem('test-stalled-restore','1'));
+  await interrupted.evaluate(()=>{
+   localStorage.setItem('terminal-velocity.save-slot','1');
+   sessionStorage.setItem('test-stalled-restore','1');
+  });
   await interrupted.reload({waitUntil:'domcontentloaded'});
   await interrupted.locator('[data-language="en"]').click();
   await interrupted.locator('#fullscreen').click();
@@ -144,11 +147,27 @@ const server=http.createServer((req,res)=>{
   await interrupted.waitForFunction(()=>!expanded());
   await interrupted.locator('header #save-status').waitFor({state:'visible'});
   await interrupted.locator('#toolbar #export-previous-save').waitFor({state:'visible'});
+  const chooseSlot=async(page,slot)=>{
+   await page.locator('footer [data-tap="12"]').click();
+   await page.waitForFunction(()=>uiFlags&1);
+   await page.keyboard.press('Digit5');
+   await page.keyboard.press('Enter');
+   await page.waitForFunction(()=>uiFlags&16);
+   await page.keyboard.press('Digit6');
+   await page.waitForFunction(()=>uiFlags&profilePickerFlag);
+   await page.keyboard.press('Digit'+slot);
+   await page.keyboard.press('Enter');
+   await page.waitForFunction(slot=>selectedSlot===slot,slot);
+  };
+  await chooseSlot(interrupted,3);
+  assert.equal(await interrupted.evaluate(()=>localStorage.getItem(selectedSlotKey)),'1',
+   'temporary slot switches preserve the last saved slot');
 
   await recovered.close();
   await interrupted.reload({waitUntil:'domcontentloaded'});
   await interrupted.waitForFunction(()=>!document.querySelector('#start').disabled);
-  console.log('PASS a stalled restore starts a temporary run and a late read preserves both saves');
+  assert.equal(await interrupted.evaluate(()=>selectedSlot),1,'normal reload opens the last saved slot');
+  console.log('PASS temporary play preserves the original saves and selected slot');
 
   await interrupted.locator('[data-language="en"]').click();
   await interrupted.locator('#start').click();
@@ -161,10 +180,21 @@ const server=http.createServer((req,res)=>{
   await secondTab.locator('#start').click();
   await secondTab.waitForFunction(()=>started&&!syncing);
   assert.equal(await secondTab.locator('#save-status').textContent(),'Another tab is saving — download a copy');
+  await chooseSlot(secondTab,2);
+  assert.equal(await secondTab.evaluate(()=>localStorage.getItem(selectedSlotKey)),'1',
+   'a read-only tab cannot change the writer’s remembered slot');
   await interrupted.close();
   await secondTab.reload({waitUntil:'domcontentloaded'});
   await secondTab.waitForFunction(()=>!document.querySelector('#start').disabled);
   assert.equal(await secondTab.evaluate(()=>Module._web_saved_language()),0,'stale tab preserved the writer’s profile');
+  assert.equal(await secondTab.evaluate(()=>selectedSlot),1);
+  await secondTab.locator('#start').click();
+  await secondTab.waitForFunction(()=>started&&!syncing&&browserStorageWritable);
+  await chooseSlot(secondTab,2);
+  assert.equal(await secondTab.evaluate(()=>localStorage.getItem(selectedSlotKey)),'2');
+  await secondTab.reload({waitUntil:'domcontentloaded'});
+  await secondTab.waitForFunction(()=>!document.querySelector('#start').disabled);
+  assert.equal(await secondTab.evaluate(()=>selectedSlot),2,'the writer still remembers a deliberate slot change');
   await storageContext.close();
   console.log('PASS a second browser tab preserves the current writer’s save');
   const pendingSave=await browser.newPage({locale:'en-US'});

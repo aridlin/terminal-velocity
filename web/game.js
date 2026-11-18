@@ -206,7 +206,9 @@ window.tvUI=u=>{
  if(english!==nextEnglish){english=nextEnglish;try{localStorage.setItem(languageKey,english?'en':'pl');}catch{}}
  settingsKeys.hidden=!(u.flags&16);
  if(previousSlot!==selectedSlot){
-  try{localStorage.setItem(selectedSlotKey,String(selectedSlot));}catch{}
+  // A temporary session or another tab's read-only session chooses only
+  // where it plays now. The writer owns the slot used at the next launch.
+  if(browserStorageWritable)try{localStorage.setItem(selectedSlotKey,String(selectedSlot));}catch{}
   setSaveActionError(null);
  }
  if(previousSlot!==selectedSlot||((before^uiFlags)&tourFlag)){
