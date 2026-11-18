@@ -137,6 +137,7 @@ enum class DialogueCue { None, CrownAirlock };
 struct DialogueLine { int speaker = 0; Text text; DialogueCue cue = DialogueCue::None; };
 inline constexpr int CourierSpeaker = -2;
 inline constexpr int ReplyPrompt = -3;
+inline constexpr int BriefingReplyBase = DistrictCount + 1; // After the homecomings and Crown hearing.
 inline constexpr uint64_t reply_value(int scene) { return uint64_t(1) << (48+scene); }
 inline constexpr uint64_t reply_recorded(int scene) { return uint64_t(1) << (55+scene); }
 inline constexpr uint64_t HomecomingReplyPending = uint64_t(1) << 62;

@@ -64,7 +64,62 @@ inline std::vector<DialogueLine> civic_homecoming(int district,int leg) {
 }
 
 struct CivicReply { Text choice, said; DialogueLine answer; };
+inline const CivicReply &briefing_reply(int district,int option) {
+  static const std::array<std::array<CivicReply,2>,DistrictCount> replies{{
+    {{
+      {{"Kto tam czeka?","Who's waiting up there?"},
+       {"Kto zgłosił, że na górze nie ma ciepła?","Who called about the heat upstairs?"},
+       {0,{"Kobieta z nocnej zmiany. Zamiast nazwiska podała godzinę ostatniego promu. Bogdan będzie wiedział.","A woman on the night shift. She gave me the time of the last ferry instead of her name. Bogdan will know."}}},
+      {{"A jeśli nie wrócę na czas?","What if I'm late?"},
+       {"A jeśli nie wrócę przed zamknięciem okienka?","What if I'm not back before you close the counter?"},
+       {0,{"Zostawię lampę w oknie. Poczta może poczekać do rana.","I'll leave a lamp in the window. The post can wait till morning."}}},
+    }},
+    {{
+      {{"Skąd ta rysa?","What's that scratch?"},
+       {"Kto zaznaczył tę kreskę na manometrze?","Who scratched that line into the gauge?"},
+       {1,{"Ja. Wtedy jeszcze wierzyłem, że wyżej wskazówka nie dojdzie.","I did. Back when I still thought the needle couldn't go any higher."}}},
+      {{"Kto mieszka nad kotłem?","Who lives over the boiler?"},
+       {"Mówiłeś o ścianie. Kto mieszka nad kotłem?","You mentioned the wall. Who lives over the boiler?"},
+       {1,{"Moja siostra mieszkała tam na trzecim. Teraz na tym piętrze są trzy rodziny. Znam ich po krokach.","My sister used to live on the third. Three families live there now. I know them by their footsteps."}}},
+    }},
+    {{
+      {{"Masz coś dla pasażerów?","What do I tell passengers?"},
+       {"Jeśli ktoś będzie czekał przy rozjeździe, co mam mu powiedzieć?","If someone's waiting by the junction, what should I tell them?"},
+       {2,{"Że po nich wrócę. Kiedyś kazałem wszystkim czekać przy słupku, nawet kiedy słupek już leżał w wodzie.","Tell them I'll come back for them. I used to tell people to wait by the stop sign even after it fell in the water."}}},
+      {{"Kto odbierze leki?","Who'll take the medicine?"},
+       {"A pani z czwartego? Czeka na dole czy w mieszkaniu?","What about the woman on the fourth floor? Is she waiting downstairs or at home?"},
+       {2,{"W mieszkaniu. Grażyna rozpisała dawki na odwrocie rozkładu. Sam zaniosę jej leki.","At home. Grażyna wrote the doses on the back of the timetable. I'll take the medicine upstairs myself."}}},
+    }},
+    {{
+      {{"Kto wydał kopie?","Who issued the copies?"},
+       {"Pamiętasz, kto wydał pierwszy plan bez tej ulicy?","Do you remember who issued the first plan without that street?"},
+       {4,{"Pamiętam własne inicjały pod rubryką «sprawdzono». Wtedy sprawdzałam, czy zgadza się liczba stron.","I remember my initials in the 'checked' box. Back then I checked the page count."}}},
+      {{"Czemu został oryginał?","Why keep the original?"},
+       {"Skoro nowe wydanie miało zastąpić stare, czemu masz oryginał?","If the new edition replaced the old one, why do you still have the original?"},
+       {4,{"Potrzebowałam adresu do kartki urodzinowej. Gdybym go znała na pamięć, może wyrzuciłabym plan razem z resztą.","I needed an address for a birthday card. If I'd known it by heart, I might have thrown the plan out with the rest."}}},
+    }},
+    {{
+      {{"Zaczekaj na mój sygnał","Wait for my signal"},
+       {"Zaczekaj przy śluzie, aż dam znać, że woda wróciła.","Wait by the airlock till I tell you the water's back."},
+       {6,{"Dobrze. Raz już ruszyłem, bo w rurze ucichło. Potem Witek mi powiedział, ile rzeczy może znaczyć cisza.","All right. I set off once because the pipe went quiet. Witek told me afterward how many things quiet can mean."}}},
+      {{"Słyszysz tam ludzi?","Can you hear anyone up there?"},
+       {"Po drugiej stronie śluzy słychać coś poza wiatrem?","Can you hear anything besides the wind on the other side?"},
+       {6,{"Stuka blacha. Przez chwilę myślałem, że ktoś odstukuje na mój sygnał. Dlatego chcę tam wrócić.","There's a tapping on the sheet metal. For a second I thought somebody was tapping back. That's why I want to go back."}}},
+    }},
+    {{
+      {{"Poproś ich, żeby słuchali","Ask them to listen"},
+       {"Poproś ich, żeby zostali przy odbiornikach. Jeśli ktoś odpowie z góry, chcę, żeby usłyszało go więcej niż jedno biuro.","Ask them to stay by their radios. If somebody answers from up here, I want more than one office to hear them."},
+       {0,{"Powiem im. Pierwszy raz puszczę sygnał na wszystkie okienka, także te zamknięte.","I'll tell them. For once I'll put the call through to every counter, even the closed ones."}}},
+      {{"Zapytaj o adresy","Ask them for addresses"},
+       {"Zapytaj, jak nazywali tę ulicę, zanim zniknęła z planu. Może każdy pamięta inny numer.","Ask what they called the street before it went off the map. Maybe everyone remembers a different number."},
+       {0,{"Wezmę pustą księgę. Tym razem nie zacznę od wykazu.","I'll get a blank ledger. This time I won't start from the register."}}},
+    }},
+  }};
+  return replies[size_t(district)][size_t(option)];
+}
+
 inline const CivicReply &civic_reply(int scene,int option) {
+  if(scene>=BriefingReplyBase)return briefing_reply(scene-BriefingReplyBase,option);
   static const std::array<std::array<CivicReply,2>,7> replies{{
     {{
       {{"Pokaż pierwszy zwrot","Show me the first return"},

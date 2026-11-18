@@ -438,6 +438,9 @@ public:
     if(leg==0)profile.story|=iceberg::HomecomingReplyPending;
     talk(iceberg::homecoming(district,leg,profile.story),0,leg==0?district:-1);
   }
+  void talk_briefing() {
+    talk(iceberg::introduction(district),1,iceberg::BriefingReplyBase+district);
+  }
   void reply_dialogue(int scene,int option,int action) {
     const auto &reply=iceberg::civic_reply(scene,option);
     talk({{iceberg::CourierSpeaker,reply.said},reply.answer},action);
@@ -524,7 +527,7 @@ public:
     if(dialogue.choosing()) {
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
-      if(tour_scene<0) {
+      if(tour_scene<0&&scene<iceberg::BriefingReplyBase) {
         if(scene<iceberg::DistrictCount)profile.story&=~iceberg::HomecomingReplyPending;
         profile.story|=iceberg::reply_recorded(scene);
         if(option)profile.story|=iceberg::reply_value(scene);
@@ -753,7 +756,7 @@ public:
         talk(iceberg::journey_end(),3);return;
       }
       if(!(profile.story&(uint64_t(1)<<district))) {
-        talk(iceberg::introduction(district),1);return;
+        talk_briefing();return;
       }
       stage=stage==0?1:stage==3?4:6;room=0;
     } else if(stage==1) {stage=2;room=0;}
@@ -922,7 +925,7 @@ public:
         return;
       }
       if(mode==iceberg::Mode::Campaign && profile.visit_district<0 && stage==0 && !(profile.story&(uint64_t(1)<<district))) {
-        talk(iceberg::introduction(district),1);return;
+        talk_briefing();return;
       }
       int quest=-1;
       for(size_t i=0;i<iceberg::Quests.size();++i)if(iceberg::Quests[i].owner==node.id){quest=int(i);break;}

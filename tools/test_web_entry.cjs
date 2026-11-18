@@ -531,9 +531,18 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#touch-inspect').getAttribute('hidden'),'');
     await page.keyboard.press('Enter');await page.waitForTimeout(80);assert.ok(await page.evaluate(()=>!!(entryFlags&4)),'reveal keeps unread objective on screen');
     await page.keyboard.press('Enter');await page.waitForTimeout(80);assert.match(await page.evaluate(()=>entryFrame),/Start at the board/,'next essential objective shown in one press after reveal');
-    await page.keyboard.press('Enter');await page.waitForFunction(()=>!(entryFlags&4));
+    await page.keyboard.press('Enter');await page.waitForFunction(()=>!!(entryFlags&(1<<26)));
+    assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Select');
+    await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('COURIER'));
+    await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('Who called about the heat upstairs'));
+    await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('HELENA'));
+    for(let i=0;i<6&&await page.evaluate(()=>!!(entryFlags&4));++i){
+     await page.keyboard.press('Enter');
+     await page.evaluate(async()=>{for(let frame=0;frame<2;++frame)await new Promise(requestAnimationFrame);});
+    }
+    assert.ok(await page.evaluate(()=>!(entryFlags&4)),'the briefing returns control after the reply exchange');
     assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
-    console.log('PASS locked map explanation, route tab, quest book and shortened reveal/continue flow through browser controls');
+    console.log('PASS locked map explanation, route tab, quest book and briefing reply through browser controls');
     await page.keyboard.press('Shift');
     await page.waitForFunction(()=>window.dashEdges===1);
     await page.keyboard.down('x');

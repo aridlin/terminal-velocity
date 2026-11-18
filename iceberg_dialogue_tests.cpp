@@ -112,5 +112,39 @@ int main(){try {
    dialogue_check(std::pair{game.state.player.x,game.state.player.y}==position,"reply framing does not move the courier in the world");
   }
  }
+ for(int district=0;district<iceberg::DistrictCount;++district) {
+  for(int option=0;option<2;++option) {
+   game.begin_campaign(true);
+   game.district=district;
+   game.stage=0;
+   game.profile.story=0;
+   game.load_room();
+   game.state.menu=false;
+   if(option==0) {
+    const auto resident=std::find_if(game.grid.interactions.begin(),game.grid.interactions.end(),
+       [](const Interaction &node){return node.kind==InteractionKind::Npc;});
+    dialogue_check(resident!=game.grid.interactions.end(),"the district has a briefing resident");
+    game.state.player.x=resident->area.x;
+    game.state.player.y=resident->area.y;
+    game.interact();
+   } else game.advance_room();
+   for(int i=0;i<30&&dialogue.active()&&!dialogue.choosing();++i)game.dialogue_next();
+   dialogue_check(dialogue.choosing(),"both the resident and first exit can open a briefing reply");
+   const auto &reply=iceberg::briefing_reply(district,option);
+   if(option) {
+    Controls navigate;navigate.navigate=1;
+    game.tick(navigate,0);
+   }
+   game.dialogue_next();
+   dialogue_check(game.profile.story==0&&dialogue.active()&&dialogue.lines.size()==2,
+                  "a briefing answer leaves progression and saved civic choices untouched");
+   dialogue_check(dialogue.lines[0].speaker==iceberg::CourierSpeaker&&dialogue.lines[0].text.en==reply.said.en&&
+                  dialogue.lines[1].speaker==reply.answer.speaker&&dialogue.lines[1].text.en==reply.answer.text.en,
+                  "the selected answer is spoken by the courier and gets its own reply");
+   for(int i=0;i<30&&dialogue.active();++i)game.dialogue_next();
+   dialogue_check(!dialogue.active()&&game.profile.story==(uint64_t(1)<<district),
+                  "the briefing completes after the final exchange");
+  }
+ }
  cell_frame_sink={};return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}
