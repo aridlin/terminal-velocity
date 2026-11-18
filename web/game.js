@@ -15,11 +15,12 @@ try{const saved=localStorage.getItem(languageKey);if(saved==='pl'||saved==='en')
 let ready=false,started=false,held=0,pressed=0,cols=110,rows=34,previous=new Uint32Array(0),last=0,focused=true,syncing=false,lastBlocked=false,uiFlags=0,english=preferredLanguage==='en',bootFailed=false,explicitBootLanguage=pendingBootLanguage!==null;
 const tr=(pl,en)=>english?en:pl;
 const soundMutedFlag=1<<15,mutePreferenceKey='terminal-velocity.muted';
+const localSaveFailedFlag=1<<16;
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
 let browserSaveStatus=['Gotowe','Ready'],saveActionError=null;
 function renderSaveStatus(){
  const text=bootFailed?startupError():ready
-  ?tr(...(saveActionError??browserSaveStatus))
+  ?tr(...(saveActionError??((uiFlags&localSaveFailedFlag)?['Błąd zapisu','Save failed']:browserSaveStatus)))
   :tr('Ładowanie gry…','Loading game…');
  if(saveStatus.textContent!==text)saveStatus.textContent=text;
 }

@@ -10,8 +10,20 @@
     int y=1;compact_paragraph(y,v.room_name,3,d.light);
     for(int x=0;x<cols_;++x)paint_text(3,x,"─",d.stone);
     fill(rows_-3,0,cols_,3,Color::Default);
-    paint_text(rows_-3,1,tr("E użyj · B obejrzyj · P pauza","E use · B inspect · P pause"),d.light);
-    y=rows_-2;compact_paragraph(y,v.notice_left>0?v.notice:v.prompt.empty()?quest_focus_hint():v.prompt,rows_,d.accent);
+    const bool at_exit=state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active();
+    const auto footer=v.save_error?save_failure_hint():at_exit?tr("R — wróć do lampy","R — return to the lamp"):
+      v.notice_left>0?v.notice:v.prompt.empty()?quest_focus_hint():v.prompt;
+    const auto lines=wrap(footer,cols_-4);
+    const uint32_t warning_color=cell_color({" ",Color::Hazard});
+    y=rows_-(lines.size()>2?3:2);
+    if(y>rows_-3) {
+      if(at_exit)paint_text(rows_-3,2,tr("E / ENTER — przejdź dalej","E / ENTER — pass through"),d.accent);
+      else paint_text(rows_-3,1,tr("E użyj · B obejrzyj · P pauza","E use · B inspect · P pause"),d.light);
+    }
+    for(const auto &line:lines) {
+      if(y==rows_)break;
+      paint_text(y++,2,line,v.save_error?warning_color:at_exit?d.light:d.accent);
+    }
     auto panel=[&](const std::string &title){frame(0,0,cols_,rows_,d.stone);paint_text(1,2,title,d.accent,true);};
     if(state_.menu) {
       panel("TERMINAL VELOCITY");
@@ -50,14 +62,11 @@
     }
     if(state_.journal||v.map)draw_iceberg_journal();
     else if(state_.paused) {
-      panel(state_.paused?tr("CHWILA ODDECHU","A MOMENT TO BREATHE"):tr("DROGA OTWARTA","THE WAY IS OPEN"));
-      y=6;compact_paragraph(y,state_.paused?tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."):tr("R wróć do lampy, jeśli coś zostało z tyłu.","R returns to the lamp if you left something behind."),rows_-3);
+      panel(tr("CHWILA ODDECHU","A MOMENT TO BREATHE"));
+      y=6;
+      if(v.save_error)compact_paragraph(y,save_failure_hint(),rows_-3,warning_color);
+      else compact_paragraph(y,tr("Postęp zapisuje się przy lampach i wyjściu.","Progress saves at lamps and when you leave."),rows_-3);
       paint_text(rows_-2,2,tr("ENTER dalej · M menu","ENTER continue · M menu"),d.accent);
-    }
-    if(state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active()) {
-      fill(rows_-3,0,cols_,2,Color::Default);
-      paint_text(rows_-3,2,tr("E / ENTER — przejdź dalej","E / ENTER — pass through"),d.accent);
-      paint_text(rows_-2,2,tr("R — wróć do lampy","R — return to the lamp"),d.light);
     }
     draw_iceberg_dialogue();
     if(v.inspecting)draw_iceberg_inspection();

@@ -49,6 +49,32 @@ int main(){try {
   ui_check(paused.state.paused&&paused.state.journal&&!paused.state.adventure.dialogue.active(),"back closes the record to the paused quest book");
   paused.tick(book,1./120);paused.tick(enter,1./120);
   ui_check(!paused.state.paused&&!paused.state.journal,"confirm resumes play from the bare pause screen");
+  paused.state.adventure.save_error=true;
+  paused.notice("Underfrost: bring spare seeds to the lower stop and deliver the register copy at the counter.",6);
+  auto compact_text=[&](){
+    RenderGrid(paused.grid,paused.state,24,34,2).draw();
+    std::string contents;
+    for(const auto &row:frame) {
+      for(size_t x=2;x+2<row.size();++x)contents+=row[x].glyph;
+      contents+=' ';
+    }
+    return normalize_ui(contents);
+  };
+  const std::string warning="Save error — progress remains in this session.";
+  ui_check(compact_text().find(warning)!=std::string::npos,"compact play shows the save failure over other notices");
+  paused.state.won=true;
+  const auto exit_with_error=compact_text();
+  ui_check(exit_with_error.find(warning)!=std::string::npos&&exit_with_error.find("E / ENTER — pass through")!=std::string::npos,
+           "compact doorway shows the save warning and keeps the continue prompt");
+  paused.state.won=false;
+  paused.tick(pause,1./120);
+  ui_check(compact_text().find(warning)!=std::string::npos,
+           "compact pause carries the save failure");
+  paused.tick(pause,1./120);
+  paused.state.adventure.save_error=false;
+  paused.notice("Leave the seeds by the stop and deliver the register copy to the counter.",6);
+  ui_check(compact_text().find("Leave the seeds by the stop and deliver the register copy to the counter.")!=std::string::npos,
+           "compact notices can use all three footer rows");
   game.profile.unlocked=1;game.profile.story|=uint64_t(1)<<8;game.sync_view();game.state.adventure.selected=1;
   game.tick(enter,1./120);ui_check(!game.state.adventure.map&&game.grid.district==1&&game.profile.visit_district==1,"unlocked district travel enters the named settlement");
   ui_check(game.state.adventure.notice.find("ARRIVED")!=std::string::npos&&game.state.adventure.door_left>0,"allowed travel has arrival feedback and door animation");

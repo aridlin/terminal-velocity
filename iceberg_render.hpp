@@ -28,6 +28,9 @@
   std::string tr(const char *pl,const char *en) const {
     return iceberg::tr(state_.adventure.language,pl,en);
   }
+  std::string save_failure_hint() const {
+    return tr("Błąd zapisu — postęp pozostaje w tej sesji.","Save error — progress remains in this session.");
+  }
   void paint_text(int row,int col,const std::string &s,uint32_t rgb,bool bold=false) {
     for(auto ch:glyphs(s))put(row,col++,{ch,Color::Text,false,bold,0,rgb});
   }
@@ -564,7 +567,7 @@
     text(rows_-3,2,state_.ssh_basic?tr("A/D bieg S stop SPACJA skok X zryw I/O ↑/↓ E rozmowa","A/D run S stop SPACE jump X dash I/O ↑/↓ E interact"):
       tr("A/D ruch  SPACJA skok  X zryw  E użyj  B obejrzyj","A/D move  SPACE jump  X dash  E use  B inspect"),Color::Player);
     text(rows_-2,2,tr("R powrót  TAB zadania  J mapa  P pauza  M menu  U dźwięk","R retry  TAB quests  J map  P pause  M menu  U sound"));
-    if(v.save_error)text(rows_-1,2,tr("Błąd zapisu — postęp pozostaje w tej sesji.","Save error — progress remains in this session."),Color::Hazard);
+    if(v.save_error)text(rows_-1,2,save_failure_hint(),Color::Hazard);
     else if(v.notice_left>0)text(rows_-1,2,v.notice,Color::Gold);
     else text(rows_-1,2,v.prompt.empty()?quest_focus_hint():v.prompt,Color::Gold);
     if(state_.debug)text(5,2,"vx "+fixed(state_.player.vx)+" vy "+fixed(state_.player.vy)+" 120 Hz",Color::Gold);

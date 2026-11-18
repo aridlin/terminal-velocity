@@ -387,6 +387,25 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'false','reload keeps the browser muted');
     assert.equal(await page.evaluate(()=>Module.FS.readFile('/persist/before-manual-import.iceberg',{encoding:'utf8'})),imported.previous);
     console.log('PASS silent file picker dismissal, real Polish save import and rollback after reload');
+    await page.waitForFunction(()=>!syncing);
+    await page.evaluate(()=>{
+      const fs=Module.FS,save='/persist/progress.dat.iceberg';
+      fs.rename(save,save+'.test');
+      fs.mkdir(save);
+      fs.writeFile(save+'/blocked','test');
+      syncSave();
+    });
+    await page.waitForFunction(()=>!syncing);
+    assert.equal(await saveMessage.textContent(),'Błąd zapisu','IndexedDB completion cannot hide a game save write failure');
+    await page.evaluate(()=>{
+      const fs=Module.FS,save='/persist/progress.dat.iceberg';
+      fs.unlink(save+'/blocked');
+      fs.rmdir(save);
+      fs.rename(save+'.test',save);
+      syncSave();
+    });
+    await page.waitForFunction(()=>!syncing&&saveStatus.textContent==='Zapis w tej przeglądarce ✓');
+    console.log('PASS browser save status reports an engine write failure and recovers on a successful save');
    }
    console.log('PASS',locale,'fresh boot/game language and entry control');await context.close();
   }

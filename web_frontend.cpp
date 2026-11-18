@@ -28,7 +28,7 @@ void send_web_ui() {
     (int(v.settings)<<4)|(int(v.confirm_new)<<5)|(int(s.journal)<<6)|(int(v.map)<<7)|
     (int(v.can_continue)<<8)|(int(v.language==iceberg::Language::English)<<9)|(int(s.won)<<10)|
     (int(v.map_route)<<11)|(int(v.pause_on_focus_loss)<<12)|(int(v.mode!=iceberg::Mode::Campaign)<<13)|
-    (int(district_control)<<14)|(int(s.audio_muted)<<15);
+    (int(district_control)<<14)|(int(s.audio_muted)<<15)|(int(v.save_error)<<16);
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }
@@ -81,7 +81,9 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   }
   RenderGrid(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2).draw();send_web_ui();
 }
-EMSCRIPTEN_KEEPALIVE void web_save() {if(web_game)web_game->persist();}
+EMSCRIPTEN_KEEPALIVE void web_save() {
+  if(web_game){web_game->persist();send_web_ui();}
+}
 EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
   if(!web_game||(language!=0&&language!=1))return;
   web_game->profile.language=iceberg::Language(language);
