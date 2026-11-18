@@ -785,11 +785,11 @@ const server=http.createServer((req,res)=>{
   const pickerActions=expedition.locator('#menu-selection-actions');
   assert.equal(await pickerActions.isVisible(),false);
   await desktopToolbar.locator('[data-tap="12"]').click();
-  await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 1  '));
+  await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 3  RESUME ENDLESS EXPEDITION'));
   assert.equal(await pickerActions.getByRole('button',{name:'Back'}).isVisible(),false);
-  await pickerActions.getByRole('button',{name:'Previous option'}).click();
-  await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 6  '));
-  await pickerActions.getByRole('button',{name:'Previous option'}).click();
+  await pickerActions.getByRole('button',{name:'Next option'}).click();
+  await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 4  '));
+  await pickerActions.getByRole('button',{name:'Next option'}).click();
   await expedition.waitForFunction(()=>window.desktopMenuFrame?.includes('▸ 5  SETTINGS'));
   await pickerActions.getByRole('button',{name:'Select'}).click();
   await desktopToolbar.getByRole('button',{name:'Back',exact:true}).click();

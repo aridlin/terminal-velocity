@@ -822,7 +822,16 @@ int main(){try {
           "the final room on the timeline shows where its exit leads");
       }
     }
-    game.tick(map,0);
+    const int resume_option=mode==iceberg::Mode::Endless?2:3;
+    const auto saved_seed=game.run_seed;
+    const int saved_depth=game.depth,saved_district=game.district;
+    Controls open_menu;open_menu.menu_request=true;
+    game.tick(open_menu,0);
+    ui_check(game.state.menu&&v.selected==resume_option&&v.run_district==saved_district,
+      "opening the menu over the map selects the current run and its district");
+    game.tick(enter,0);
+    ui_check(!game.state.menu&&!v.map&&game.mode==mode&&game.run_seed==saved_seed&&game.depth==saved_depth,
+      "confirming the preselected run resumes the same route and room");
     if(mode==iceberg::Mode::Endless) {
       game.advance_room();game.tick(map,0);
       RenderGrid(game.grid,game.state,24,34,2).draw();

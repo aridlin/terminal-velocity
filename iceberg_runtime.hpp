@@ -66,8 +66,7 @@ public:
     }
     load_room(true);
     state.menu = true;
-    state.adventure.selected=mode==iceberg::Mode::Endless?2:mode==iceberg::Mode::Trial?3:0;
-    choose_saved_run_district(state.adventure.selected);
+    select_resume_option();
     if(saves.recovered)notice(t("Przywrócono ostatni zdrowy zapis.","Recovered the last healthy save."),8);
     if(saves.protected_future)notice(t("Ten zapis wymaga nowszej wersji gry. Nie zostanie nadpisany.","This save needs a newer game version. It will not be overwritten."),12);
     sync_view();
@@ -113,6 +112,11 @@ public:
     if(options.district_override||selected<2||selected>3)return;
     const auto &e=profile.expeditions[size_t(selected-2)];
     run_district=e.active?e.district:std::min(run_district,expedition_unlocked());
+  }
+  void select_resume_option() {
+    auto &selected=state.adventure.selected;
+    selected=mode==iceberg::Mode::Endless?2:mode==iceberg::Mode::Trial?3:0;
+    choose_saved_run_district(selected);
   }
 #include "iceberg_route_runtime.inc"
   void sync_view() {
@@ -1049,7 +1053,10 @@ public:
     }
     if(state.menu) {menu(c,dt);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request&&tour_scene>=0){end_tour();return;}
-    if(c.menu_request){persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};sync_view();return;}
+    if(c.menu_request){
+      persist();state.menu=true;v.inspecting=false;v.dialogue={};stepper={};
+      select_resume_option();sync_view();return;
+    }
     if(v.inspecting) {
       auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,columns,rows);
       v.inspect_page=std::clamp(v.inspect_page,0,layout.pages-1);
