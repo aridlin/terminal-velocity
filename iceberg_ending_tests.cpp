@@ -83,6 +83,24 @@ int main(){try{
               "the settlement remembers either reply after restarting");
  }
  AdventureSession game(options,file);game.begin_campaign(true);
+ {
+  auto return_file=folder/"second-homecoming";
+  AdventureSession returning(options,return_file);returning.begin_campaign(true);
+  returning.district=1;returning.stage=4;returning.room=iceberg::RoomsPerLeg-1;
+  returning.load_room();returning.advance_room();
+  require_end(returning.stage==5&&returning.state.adventure.dialogue.active(),
+              "finishing the second route opens the settlement conversation");
+  AdventureSession resumed(options,return_file);resumed.begin_campaign(false);
+  const auto &dialogue=resumed.state.adventure.dialogue;
+  const auto expected=iceberg::homecoming(1,1,resumed.profile.story);
+  require_end(resumed.stage==5&&dialogue.active()&&
+              std::string_view(dialogue.lines.front().text.en)==expected.front().text.en,
+              "reloading restores the second homecoming conversation");
+  read_end(resumed);
+  AdventureSession completed(options,return_file);completed.begin_campaign(false);
+  require_end(completed.stage==5&&!completed.state.adventure.dialogue.active(),
+              "the finished second homecoming returns to ordinary settlement play");
+ }
  game.district=4;game.profile.district=4;game.profile.at_content_boundary=true;game.persist();
  game.begin_campaign(false);
  require_end(game.district==5&&!game.profile.at_content_boundary&&game.grid.template_id==105,"Underfrost boundary resumes into the authored Crown without resetting history");
@@ -179,6 +197,19 @@ int main(){try{
  }
  read_end(game);
  require_end(game.grid.template_id==330&&!game.profile.finished&&game.profile.records[5].complete,"beacon completion records Crown and starts a playable epilogue before marking the journey finished");
+ {
+  AdventureSession resume(options,file);resume.begin_campaign(false);
+  const auto &dialogue=resume.state.adventure.dialogue;
+  require_end(resume.grid.template_id==330&&dialogue.active()&&
+              std::string_view(dialogue.lines.front().text.en)==iceberg::epilogue_arrival().front().text.en,
+              "reloading after the Crown restores Helena's instructions for the epilogue");
+ }
+ read_end(game);
+ {
+  AdventureSession resume(options,file);resume.begin_campaign(false);
+  require_end(resume.grid.template_id==330&&!resume.state.adventure.dialogue.active(),
+              "finishing the epilogue arrival keeps the morning round playable after reload");
+ }
  game.advance_room();require_end(!game.profile.finished&&!game.state.adventure.dialogue.active(),"epilogue cannot finish before planting seeds and delivering the public register");
  auto use=[&](int id){for(auto node:game.grid.interactions)if(node.kind==InteractionKind::Epilogue&&node.id==id){game.state.player.x=node.area.x;game.state.player.y=node.area.y;game.interact();read_end(game);return;}};
  use(0);game.persist();

@@ -423,9 +423,14 @@ public:
         state.crown.airlock_open=true;
         reply_dialogue(6,(profile.story&iceberg::reply_value(6))!=0,2);
       } else talk(iceberg::crown_cutscene(profile.story),2,6);
-    } else if(resume&&mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&
-              profile.visit_district<0&&grid.template_id!=330) {
-      if(stage==3&&(profile.story&iceberg::HomecomingReplyPending)) {
+    } else if(resume&&mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&profile.visit_district<0) {
+      const auto arrival=profile.story&iceberg::ArrivalMask;
+      if(grid.template_id==330) {
+        if(arrival==iceberg::arrival_bits(iceberg::EpilogueArrival)&&!profile.finished&&!(grid.switch_flags&3))
+          talk_arrival(iceberg::epilogue_arrival(),iceberg::EpilogueArrival);
+      } else if(stage==5&&arrival==iceberg::arrival_bits(district+1)) {
+        talk_homecoming(1);
+      } else if(stage==3&&(profile.story&iceberg::HomecomingReplyPending)) {
         if(profile.story&iceberg::reply_recorded(district))
           reply_dialogue(district,(profile.story&iceberg::reply_value(district))!=0,FinishHomecomingReply);
         else talk_homecoming(0);
@@ -436,15 +441,24 @@ public:
     }
   }
   static constexpr int FinishHomecomingReply=4;
+  static constexpr int FinishArrival=5;
   void talk(std::vector<iceberg::DialogueLine> lines,int action=0,int reply_scene=-1) {
     if(reply_scene>=0)lines.push_back({iceberg::ReplyPrompt,{"Odpowiedz","Reply"}});
     state.adventure.dialogue={std::move(lines),0,action};discard_pending_movement();
     state.adventure.dialogue.reply_scene=reply_scene;
     state.player.vx=0;frame_dialogue();
   }
+  void talk_arrival(std::vector<iceberg::DialogueLine> lines,int scene) {
+    profile.story=(profile.story&~iceberg::ArrivalMask)|iceberg::arrival_bits(scene);
+    talk(std::move(lines),FinishArrival);
+  }
   void talk_homecoming(int leg) {
-    if(leg==0)profile.story|=iceberg::HomecomingReplyPending;
-    talk(iceberg::homecoming(district,leg,profile.story),leg==0?FinishHomecomingReply:0,leg==0?district:-1);
+    if(leg==0) {
+      profile.story|=iceberg::HomecomingReplyPending;
+      talk(iceberg::homecoming(district,leg,profile.story),FinishHomecomingReply,district);
+    } else {
+      talk_arrival(iceberg::homecoming(district,leg,profile.story),district+1);
+    }
   }
   void talk_briefing() {
     talk(iceberg::introduction(district),1,iceberg::BriefingReplyBase+district);
@@ -565,6 +579,8 @@ public:
       profile.finished=true;profile.cosmetics|=1u<<7;audio.play(AudioCue::Win);
     } else if(action==FinishHomecomingReply) {
       profile.story&=~iceberg::HomecomingReplyPending;
+    } else if(action==FinishArrival) {
+      profile.story&=~iceberg::ArrivalMask;
     } else if(action>=100 && action<108) {
       int quest=action-100;
       profile.quests[size_t(quest)]=profile.quest_counts[size_t(quest)]>=unsigned(iceberg::Quests[size_t(quest)].required)?2:1;
@@ -593,7 +609,7 @@ public:
     } else if(district+1==iceberg::DistrictCount){profile.story|=uint64_t(1)<<42;}
     else profile.at_content_boundary=true;
     stage=0;room=0;clear_room_record();load_room();
-    if(profile.story&(uint64_t(1)<<42))talk(iceberg::epilogue_arrival());
+    if(profile.story&(uint64_t(1)<<42))talk_arrival(iceberg::epilogue_arrival(),iceberg::EpilogueArrival);
     persist();
   }
   void begin_campaign(bool fresh) {
