@@ -774,6 +774,42 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(await page.evaluate(()=>!!window.landscapeToolbarClicked),false,'swiping over a button does not activate it');
   console.log('PASS a real landscape swipe reaches the end of the toolbar without pressing a button');
+  await page.setViewportSize({width:390,height:844});
+  const action=page.locator('#touch-use');
+  const openMenu=async()=>{
+   await page.locator('footer #toolbar [data-tap="12"]').tap();
+   await page.waitForFunction(()=>!!(uiFlags&1));
+  };
+  await openMenu();
+  await page.keyboard.press('Digit3');
+  await action.tap();
+  await page.waitForFunction(()=>(uiFlags&(8192|1))===8192);
+  const expeditionMap=page.locator('footer #toolbar [data-tap="11"]');
+  for(const roomMap of [false,true]){
+   await expeditionMap.tap();
+   await page.waitForFunction(()=>!!(uiFlags&128));
+   if(roomMap){
+    await inspectControl.tap();
+    await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
+   }
+   await action.tap();
+   await page.waitForFunction(()=>!(uiFlags&128));
+   assert.equal(await action.getAttribute('aria-label'),'Use',
+    'closing either Expedition map restores the touch interaction action');
+  }
+
+  await openMenu();
+  await page.keyboard.press('Digit5');
+  await action.tap();
+  await page.waitForFunction(()=>!!(uiFlags&16));
+  await page.keyboard.press('Digit6');
+  await page.waitForFunction(()=>!!(uiFlags&(1<<23)));
+  await page.keyboard.press('Digit4');
+  await action.tap();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>(uiFlags&((1<<22)|1))===(1<<22));
+  assert.equal(await action.getAttribute('aria-label'),'Use','Debug Tour play supports touch interactions');
+  console.log('PASS Expedition maps and Debug Tour restore the normal touch Use action');
   await mobile.close();
   assert.deepEqual(errors,[],'browser errors');console.log(visualOnly?'PASS current Chromium/WASM visual smoke':'PASS real Chromium/WASM entry, save-language restoration and responsive rendering');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
