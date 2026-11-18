@@ -253,7 +253,7 @@ public:
       Snapshot s;
       if (n != int(p.size()) || !decode(p, s))
         continue;
-      auto key = std::make_pair(address.sin_addr.s_addr, address.sin_port);
+      const std::pair<uint32_t, uint16_t> key{address.sin_addr.s_addr, address.sin_port};
       auto it = peers_.find(key);
       if (it == peers_.end()) {
         if (peers_.size() >= 32)
