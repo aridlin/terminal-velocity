@@ -252,6 +252,7 @@
       if(platform.icy){draw_reservoir_floe(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile){draw_fragile_planter(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.tram){draw_estate_tram(platform,r);continue;}
+      if(platform.clothesline){draw_estate_clothesline(r,i);continue;}
       if(platform.archive_rack){draw_archive_rack(platform,r);continue;}
       if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}
       if(grid_.template_id==50){draw_leaf_ferry(platform,r);continue;}

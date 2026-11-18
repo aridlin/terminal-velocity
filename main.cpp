@@ -326,6 +326,7 @@ struct MovingPlatform {
   bool icy = false;
   bool archive_rack = false;
   bool service_lift = false;
+  bool clothesline = false;
   static constexpr double CrackTime = .55, RestoreTime = 2.9;
   double crack_age(const GameState &state, size_t index, double time) const {
     const double start = state.platform_armed_at[index];

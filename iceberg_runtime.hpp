@@ -219,6 +219,7 @@ public:
     add_expedition_steam(room);
     add_expedition_trams(room);
     add_expedition_stairwells(room);
+    add_estate_clotheslines(room);
     add_expedition_drawers(room);
     add_expedition_post_launchers(room);
     add_expedition_copy_belts(room);
@@ -1191,6 +1192,8 @@ public:
     v.prompt=at>=0&&grid.interactions[size_t(at)].kind!=InteractionKind::Secret?"[E] "+grid.interactions[size_t(at)].label.get(profile.language):"";
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::RouteChoice)v.prompt="[E] B: "+grid.interactions[size_t(at)].label.get(profile.language);
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
+    if(at<0&&state.player.support>=0&&grid.platforms[size_t(state.player.support)].clothesline)
+      v.prompt=t("↓ / S — zeskocz z liny","↓ / S — drop through the line");
     autosave_left-=dt;
     if(old_cp!=state.checkpoint||(state.won&&!at_door)||(retrying&&deaths>0)||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,

@@ -385,6 +385,27 @@ int main(int argc,char **argv) {
     run.layout_version=2;estate.load_room();
     check(estate.grid.template_id==24&&!estate.grid.platforms.front().tram,
       "older Endless saves keep the original tram room movement");
+    run.itinerary[0]=26;run.layout_version=4;estate.load_room();
+    check(estate.grid.template_id==26&&estate.grid.platforms.size()==2&&
+      estate.grid.platforms[0].clothesline&&estate.grid.platforms[1].clothesline,
+      "current Estate expeditions have two rideable clotheslines in Laundry over the street");
+    const auto &laundry=estate.grid.platforms[1];
+    estate.profile.language=iceberg::Language::English;
+    estate.state.player.x=79.;
+    estate.state.player.y=laundry.at(0).y-kPlayerHeight;
+    estate.state.player.grounded=true;estate.state.player.support=1;
+    estate.tick({},1./120);
+    check(estate.state.player.support==1&&estate.state.adventure.prompt.find("drop through")!=std::string::npos,
+      "a courier on a clothesline sees how to drop through it");
+    Controls drop;drop.fast_fall=true;
+    for(int tick=0;tick<100;++tick)estate.tick(drop,1./120);
+    check(estate.state.player.grounded&&estate.state.player.support==-1&&estate.state.deaths==0&&
+          std::abs(estate.state.player.rect().bottom()-43.)<.03,
+      "a courier can drop through the second clothesline onto a lower street balcony");
+    run.layout_version=2;estate.load_room();
+    check(estate.grid.template_id==26&&estate.grid.platforms.empty(),
+      "legacy Estate expeditions keep their original Laundry over the street layout");
+
     AdventureSession archive(options,path);
     archive.begin_campaign(true);
     archive.profile.unlocked=3;archive.run_district=3;

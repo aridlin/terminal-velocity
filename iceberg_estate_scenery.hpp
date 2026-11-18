@@ -1,5 +1,25 @@
 // RenderGrid member: suspended homes have lit windows, balcony rails and
 // overhead cables; their silhouettes stay behind solid walking surfaces.
+  void draw_estate_clothesline(const Rect &line,size_t index) {
+    const double row=aspect_*scale_;
+    const auto count=int(line.w/scale_);
+    std::string rope="╞";
+    for(int column=2;column<count;++column)rope+="─";
+    rope+="╡";
+    world_text(line.x,line.y,rope,0xe6bb8d);
+    world_text(line.x,line.y-row,"┬",0x9c8198);
+    world_text(line.right()-scale_,line.y-row,"┬",0x9c8198);
+    for(int garment=0;garment<3;++garment) {
+      const double x=line.x+line.w*(.18+.27*garment);
+      const bool blown=std::sin(state_.adventure.presentation_time*3.+garment+index)>.05;
+      if(garment==1)
+        world_art(x,line.y+row,blown?std::vector<std::string>{"┌──┐"," ╲▒│","  ╲┘"}:
+          std::vector<std::string>{"┌──┐","│▒▒│","└──┘"},0xc4b9a2);
+      else
+        world_art(x,line.y+row,blown?std::vector<std::string>{"╭┴┬╮","╰▥╲"," ╵ ╵"}:
+          std::vector<std::string>{"╭┴┬╮","╰▥▥╯"," ╵╵ "},garment?0x9bb9c0:0xc38da7);
+    }
+  }
   void draw_estate_landmarks() {
     const auto &d=iceberg::Districts[2];
     if(grid_.room_role==iceberg::RoomRole::Settlement) {
