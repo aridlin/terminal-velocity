@@ -1,6 +1,10 @@
 // Included inside RenderGrid. The maps share the terrain and route state.
   void draw_room_map(int top,int height) {
-    const int width=std::min(cols_-8,72), map_rows=std::min(height-5,18);
+    const bool has_water=!grid_.water_basins.empty();
+    const bool has_boost=!grid_.springs.empty()||
+      std::any_of(grid_.air_fields.begin(),grid_.air_fields.end(),[](const auto &field){return field.ay<0;});
+    const bool has_features=has_water||has_boost||!grid_.sweets.empty();
+    const int width=std::min(cols_-8,72),map_rows=std::min(height-(has_features?6:5),18);
     const int left=(cols_-width)/2, first=top+3;
     int title_row=top;
     for(const auto &line:wrap(grid_.room_name.get(state_.adventure.language),cols_-6)) {
@@ -39,6 +43,11 @@
         else if(tile==' '&&grid_.hazard_at(x,y))tile='!';
       }
     }
+    for(const auto &basin:grid_.water_basins) {
+      auto &line=map[size_t(row(basin.top()))];
+      for(int x=column(basin.left());x<=column(basin.right());++x)
+        if(line[size_t(x)]==' ')line[size_t(x)]='~';
+    }
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       if(!platform.available(state_,i,state_.elapsed))continue;
@@ -51,10 +60,20 @@
       case '#':paint_text(first+y,left+x,"▪",0x8ba2ae);break;
       case '!':paint_text(first+y,left+x,"░",0xa26666);break;
       case '=':paint_text(first+y,left+x,"─",0x9dd4dd);break;
+      case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
     }
-    auto mark=[&](double x,double y,const char *symbol,uint32_t color){
-      paint_text(first+row(y),left+column(x),symbol,color,true);
+    auto mark=[&](double x,double y,const char *symbol,uint32_t color,bool feature=false){
+      int cx=column(x),cy=row(y);
+      auto &line=map[size_t(cy)];
+      // Nearby landmarks can project to the same cell on a narrow display.
+      if(feature&&line[size_t(cx)]=='@') {
+        if(cx+1<width&&line[size_t(cx+1)]!='@')++cx;
+        else if(cx>0&&line[size_t(cx-1)]!='@')--cx;
+        else return;
+      }
+      line[size_t(cx)]='@';
+      paint_text(first+cy,left+cx,symbol,color,true);
     };
     for(size_t i=0;i<grid_.checkpoint_points.size();++i) {
       const auto [x,y]=grid_.checkpoint_points[i];
@@ -70,8 +89,33 @@
         mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,board?"▤":"▣",0xd7e8cd);
     }
     mark(state_.player.x+kPlayerWidth*.5,state_.player.y+kPlayerHeight*.5,"@",0xffd68a);
-    paint_text(top+height-1,2,settlement?tr("@ Ty · ◆ Lampa · ▤ Tablica","@ You · ◆ Lamp · ▤ Board"):
+    bool remaining_token=false;
+    for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
+      const auto [x,y]=grid_.sweets[i];
+      mark(x,y,"●",0xedc278,true);
+      remaining_token=true;
+    }
+    std::string boost_symbols;
+    auto boost=[&](double x,double y,const char *symbol) {
+      mark(x,y,symbol,0x9dd39c,true);
+      if(boost_symbols.find(symbol)==std::string::npos)boost_symbols+=symbol;
+    };
+    for(const auto &spring:grid_.springs)
+      boost(spring.x+spring.w*.5,spring.y,spring.push_x>0?"↗":spring.push_x<0?"↖":"↑");
+    for(const auto &field:grid_.air_fields)if(field.ay<0&&field.active(grid_.switch_flags))
+      boost(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑");
+    const int legend=top+height-(has_features?2:1);
+    paint_text(legend,2,settlement?tr("@ Ty · ◆ Lampa · ▤ Tablica","@ You · ◆ Lamp · ▤ Board"):
       tr("@ Ty · ◆ Lampa · ▣ Wyjście","@ You · ◆ Lamp · ▣ Exit"),0xc7d9df);
+    int feature_col=2;
+    auto label=[&](const std::string &entry,uint32_t color) {
+      if(feature_col>2){paint_text(legend+1,feature_col," · ",0xc7d9df);feature_col+=3;}
+      paint_text(legend+1,feature_col,entry,color);
+      feature_col+=int(glyphs(entry).size());
+    };
+    if(remaining_token)label(tr("● Żeton","● Token"),0xedc278);
+    if(!boost_symbols.empty())label(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
+    if(has_water)label(tr("≈ Woda","≈ Water"),0x66bfd7);
   }
 
   void draw_iceberg_route_map(int top,int height) {

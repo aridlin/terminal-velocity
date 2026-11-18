@@ -50,6 +50,40 @@ int main(){try {
     doors+=cell.glyph=="▣"&&cell.rgb==0xd7e8cd;
   ui_check(doors==1&&ui_text(frame).find("Service corridor")!=std::string::npos,
     "the detour minimap shows only its real return doorway");
+  AdventureSession features(options,"/tmp/tv-ui-room-features-unused");features.begin_campaign(true);
+  features.profile.unlocked=3;features.run_district=3;
+  auto &archive=features.profile.expeditions[0];
+  archive.active=true;archive.district=3;archive.seed=archive.origin_seed=75;
+  archive.itinerary={38,36,37,39,40,41,42,43};
+  features.begin_run(iceberg::Mode::Endless);features.tick(map,1./120);features.tick(tab,1./120);
+  auto count_map=[&](const char *glyph,uint32_t rgb) {
+    int count=0;
+    for(size_t y=4;y+7<frame.size();++y)for(const auto &cell:frame[y])
+      count+=cell.glyph==glyph&&cell.rgb==rgb;
+    return count;
+  };
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    features.profile.language=language;features.sync_view();
+    const bool en=language==iceberg::Language::English;
+    for(auto [cols,rows]: {std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(features.grid,features.state,rows,cols,2).draw();
+      auto text=ui_text(frame);
+      ui_check(count_map("↗",0x9dd39c)==2&&text.find(en?"↗ Boost":"↗ Wybicie")!=std::string::npos,
+        "the compact room map indicates the directional postal launchers");
+      const int tokens=count_map("●",0xedc278);
+      ui_check(tokens>1&&text.find(en?"● Token":"● Żeton")!=std::string::npos,
+        "the room map identifies token shelves in both languages");
+      features.state.collected.back()=true;
+      RenderGrid(features.grid,features.state,rows,cols,2).draw();
+      ui_check(count_map("●",0xedc278)==tokens-1,"a collected token is removed from the map");
+      features.state.collected.back()=false;
+    }
+  }
+  features.begin_campaign(true);features.stage=1;features.load_room();
+  features.tick(map,1./120);features.tick(tab,1./120);features.tick(tab,1./120);
+  RenderGrid(features.grid,features.state,24,34,2).draw();
+  ui_check(count_map("≈",0x66bfd7)>0&&ui_text(frame).find("≈ Water")!=std::string::npos,
+    "the compact Harbor lesson map shows the real ferry waterline");
   AdventureSession preview(options,"/tmp/tv-ui-route-preview-unused");preview.begin_campaign(true);
   preview.stage=2;preview.load_room();
   Controls next_leg;next_leg.navigate=1;
