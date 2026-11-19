@@ -4,11 +4,14 @@
 #include <stdexcept>
 void check_jubilee(bool yes,const char *what){if(!yes)throw std::runtime_error(what);std::cout<<"PASS "<<what<<'\n';}
 Rect near_jubilee(Rect a){a.x-=1.5;a.y-=.9;a.w+=3;a.h+=1.8;return a;}
-void walk_jubilee(AdventureSession &game,Rect target) {
-  auto path=find_motion_path(game.grid,game.state,target);
+void walk_jubilee(AdventureSession &game,Rect target,bool land_at_target=false) {
+  auto path=find_motion_path(game.grid,game.state,target,[land_at_target](const GameState &state) {
+    return !land_at_target||state.player.grounded;
+  });
   if(!path.reached)throw std::runtime_error("No input path in scene "+std::to_string(game.grid.template_id)+" to "+std::to_string(target.x)+","+std::to_string(target.y));
   for(auto c:path.actions)game.tick(c,.1);
-  check_jubilee(game.state.player.rect().intersects(target),"ordinary inputs reach the requested apparatus");
+  check_jubilee(game.state.player.rect().intersects(target)&&(!land_at_target||game.state.player.grounded),
+    "ordinary inputs reach the requested apparatus");
 }
 void use_jubilee(AdventureSession &game){Controls c;c.interact=true;game.tick(c,1./120);}
 void read_jubilee(AdventureSession &game){while(game.state.adventure.dialogue.active()){Controls c;c.confirm=true;game.tick(c,1./120);}}
@@ -31,7 +34,8 @@ int main(){try {
   walk_jubilee(*game,near_jubilee(door.area));use_jubilee(*game);read_jubilee(*game);
   for(int valve=0;valve<3;++valve) {
     Interaction target{};for(auto n:game->grid.interactions)if(n.kind==InteractionKind::Valve&&n.id==valve)target=n;
-    walk_jubilee(*game,near_jubilee(target.area));use_jubilee(*game);
+    // Land at the pump before climbing back to the residential valve.
+    walk_jubilee(*game,near_jubilee(target.area),valve==1);use_jubilee(*game);
     check_jubilee(game->grid.switch_flags&(uint64_t(1)<<valve),"repair valve opens through production interaction");
     if(valve==0) {
       game->persist();auto saved=game->state.checkpoint;game.reset();game=std::make_unique<AdventureSession>(options,file);game->begin_campaign(false);
