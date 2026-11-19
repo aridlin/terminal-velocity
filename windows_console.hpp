@@ -92,6 +92,7 @@ public:
     c.dash_pressed = press(VK_SHIFT) || press(VK_LSHIFT) || press(VK_RSHIFT) ||
                      press('X') || press('K');
     c.fast_fall = key('S') || key(VK_DOWN);
+    c.fast_fall_pressed = press('S') || press(VK_DOWN);
     c.aim_y = int(c.fast_fall) - int(key('W') || key(VK_UP));
     c.restart = press('R');
     c.new_run = press('N') || (press('R') && key(VK_CONTROL));
