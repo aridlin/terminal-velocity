@@ -26,6 +26,8 @@
     const bool has_ferries=!grid_.platforms.empty()&&ferry(0);
     const bool has_service_lift=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.service_lift;});
+    const bool has_cargo_hoist=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.cargo_hoist;});
     const auto powered=[](const SortingBelt &belt){return belt.speed!=0;};
     const bool has_belts=std::any_of(grid_.sorting_belts.begin(),grid_.sorting_belts.end(),powered);
     const bool has_features=has_water||has_boost||has_wind||has_ice||has_racks||!grid_.sweets.empty();
@@ -87,7 +89,7 @@
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
       +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel)
-      +int(paper_landmarks)+int(tube_landmark);
+      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=(has_ferries||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
@@ -166,7 +168,7 @@
     std::vector<std::array<int,3>> cracking_spans;
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
-      if(platform.archive_rack||platform.service_lift) {
+      if(platform.archive_rack||platform.service_lift||platform.cargo_hoist) {
         const int x=column(platform.base.x+platform.base.w*.5);
         const double range=std::abs(platform.dy);
         for(int y=row(platform.base.y-range);y<=row(platform.base.y+range);++y)
@@ -293,7 +295,7 @@
     }
     for(const auto &belt:grid_.sorting_belts)if(powered(belt))
       mark(belt.x+belt.width*.5,belt.y,belt.speed>0?"▶":"◀",belt_color,belt.speed>0?1:-1);
-    for(const auto &platform:grid_.platforms)if(platform.service_lift) {
+    for(const auto &platform:grid_.platforms)if(platform.service_lift||platform.cargo_hoist) {
       const auto deck=platform.at(state_.elapsed);
       mark(deck.x+deck.w*.5,deck.y,"↕",service_lift_color);
     }
@@ -391,6 +393,7 @@
       paint_text(legend++,separator+3,tr("┄ Trasa","┄ Route"),ferry_route_color);
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
+    if(has_cargo_hoist)paint_text(legend++,2,tr("↕ Winda towarowa","↕ Cargo hoist"),service_lift_color);
     if(has_seam)paint_text(legend++,2,tr("↑ Wąski szyb","↑ Wall-kick shaft"),seam_color);
     if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);
     if(has_trolley) {

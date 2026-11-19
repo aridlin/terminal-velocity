@@ -355,6 +355,7 @@ struct MovingPlatform {
   bool clothesline = false;
   bool archive_trolley = false;
   bool irrigation_scoop = false;
+  bool cargo_hoist = false;
   static constexpr double CrackTime = .55, RestoreTime = 2.9;
   double crack_age(const GameState &state, size_t index, double time) const {
     const double start = state.platform_armed_at[index];
@@ -367,7 +368,7 @@ struct MovingPlatform {
   }
   double offset(double t) const {
     const double cycle=t/period+phase;
-    if(!tram&&!archive_trolley)return std::sin(cycle*6.283185307179586);
+    if(!tram&&!archive_trolley&&!cargo_hoist)return std::sin(cycle*6.283185307179586);
     const double half_cycle=std::fmod(cycle,1.)*2;
     const double travel=std::clamp((std::fmod(half_cycle,1.)-.22)/.78,0.,1.);
     const double eased=travel*travel*(3-2*travel);

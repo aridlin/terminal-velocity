@@ -249,6 +249,7 @@ public:
   }
   static void apply_expedition_mechanics(EngineGrid &room) {
     add_expedition_steam(room);
+    add_heatworks_cargo_hoists(room);
     add_expedition_trams(room);
     add_expedition_stairwells(room);
     add_estate_clotheslines(room);

@@ -392,6 +392,22 @@ inline void add_expedition_trams(EngineGrid &room) {
   else room.platforms=std::move(original);
 }
 
+inline void add_heatworks_cargo_hoists(EngineGrid &room) {
+  if(room.district!=1||room.template_id!=13||room.platforms.size()!=4)return;
+  auto original=room.platforms;
+  for(size_t i=0;i<room.platforms.size();++i) {
+    auto &hoist=room.platforms[i];
+    hoist.dx=0;
+    hoist.dy=2.5;
+    hoist.period=5.2;
+    hoist.phase=i*.25+.5;
+    hoist.cargo_hoist=true;
+  }
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms=std::move(original);
+}
+
 inline void add_expedition_steam(EngineGrid &room) {
   if(room.district!=1||(room.template_id!=18&&room.template_id!=22))return;
   if(room.template_id==18)room.air_fields.push_back({{59.2,29.,2.6,19.},0.,-165.,4.8,0.});
