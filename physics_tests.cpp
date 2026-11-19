@@ -152,7 +152,7 @@ int main() {
     };
     auto buffered_combo=new_state(adventure);
     buffered_combo.player.y=38.-kPlayerHeight;
-    world_step(buffered_combo,adventure,{.aim_y=1,.dash_pressed=true},1./120);
+    world_step(buffered_combo,adventure,{.dash_pressed=true,.aim_y=1},1./120);
     for(int i=0;i<12&&!buffered_combo.player.grounded;++i)
       world_step(buffered_combo,adventure,{},1./120);
     check(buffered_combo.player.grounded&&buffered_combo.player.landing_dash_left>0&&
