@@ -283,19 +283,27 @@ int main() {
       std::abs(corridor.state.player.rect().bottom()-30)<.01,
       "the internal line returns to the upper lesson entrance");
 
-    corridor.stage=7;corridor.load_room();corridor.state.elapsed=1.5;
-    const auto lift=corridor.grid.platforms.front().at(corridor.state.elapsed);
-    corridor.state.player.x=83;corridor.state.player.y=lift.y-kPlayerHeight;
-    Controls enter;enter.interact=true;corridor.tick(enter,1./120);
-    check_harbor(corridor.profile.hidden_room==2,"the lift entrance opens the reservoir");
+    corridor.stage=7;corridor.load_room();
+    Controls enter;enter.interact=true;
     Controls leave;leave.interact=true;leave.move=1;leave.dash_pressed=true;
-    corridor.tick(leave,.1);
-    check_harbor(corridor.profile.hidden_room<0&&corridor.state.player.support==0&&corridor.state.player.dash_available&&
-      corridor.state.elapsed==1.5&&std::abs(corridor.state.player.rect().bottom()-lift.y)<.01,
-      "the reservoir returns onto the lift at the saved phase without carrying a queued dash outside");
-    corridor.tick({},.1);
-    check_harbor(corridor.state.player.support==0&&std::abs(corridor.state.player.rect().bottom()-
-      corridor.grid.platforms.front().at(corridor.state.elapsed).y)<.01,"the courier rides the lift after returning");
+    const auto period=corridor.grid.platforms.front().period;
+    for(double phase:{period*.25,period*.75}) {
+      AdventureSession entrance(options,file);entrance.begin_campaign(false);
+      entrance.stage=7;entrance.load_room();entrance.state.elapsed=phase;
+      const auto lift=entrance.grid.platforms.front().at(phase);
+      entrance.state.player.x=83;entrance.state.player.y=lift.y-kPlayerHeight;
+      entrance.tick(enter,1./120);
+      check_harbor(entrance.profile.hidden_room==2,"the reservoir entrance opens at either end of the lift's travel");
+      AdventureSession reservoir(options,file);reservoir.begin_campaign(false);
+      check_harbor(reservoir.profile.hidden_room==2,"the reservoir detour can be resumed from disk");
+      reservoir.tick(leave,.1);
+      check_harbor(reservoir.profile.hidden_room<0&&reservoir.state.player.support==0&&reservoir.state.player.dash_available&&
+        reservoir.state.elapsed==phase&&std::abs(reservoir.state.player.rect().bottom()-lift.y)<.01,
+        "the reservoir returns onto the lift at the saved phase without carrying a queued dash outside");
+      reservoir.tick({},.1);
+      check_harbor(reservoir.state.player.support==0&&std::abs(reservoir.state.player.rect().bottom()-
+        reservoir.grid.platforms.front().at(reservoir.state.elapsed).y)<.01,"the courier rides the lift after returning");
+    }
 
     std::filesystem::remove(file);std::filesystem::remove(file.string()+".bak");
     return 0;

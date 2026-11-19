@@ -325,9 +325,10 @@ inline EngineGrid build_authored(int district, bool finale) {
     g.interactions.push_back({{58,42,3,4},InteractionKind::Valve,0,{"Otwórz obieg","Open circuit"}});
     g.gates.push_back({{134,29,1,5},1});
     if(district==0||district==4)g.enemies.push_back({60,64,45,1.4});
+    const int lift=int(g.platforms.size());
     g.platforms.push_back({{80,31,7,.5},0,3,3.4,0});
     g.refills.push_back({84,26});
-    if(district==0)g.interactions.push_back({{80,26,7,5},InteractionKind::Secret,2,{"",""}});
+    if(district==0)g.interactions.push_back({{80,26,7,5},InteractionKind::Secret,2,{"",""},0,lift});
   } else {
     g.interactions.push_back({{7,51,4,4},InteractionKind::Note,0,{"Przeczytaj tabliczkę","Read sign"}});
     g.interactions.push_back({{36,48,4,4},InteractionKind::Note,1,{"Przeczytaj tabliczkę","Read sign"}});
