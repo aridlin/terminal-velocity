@@ -1303,8 +1303,15 @@ public:
       sync_view();
       return;
     }
+    const bool view_too_small=columns<34||rows<(columns>=56?20:24);
+    const bool retry_from_pause=!view_too_small&&state.paused&&!state.journal&&!v.map&&(c.restart||c.new_run);
     if(state.paused&&!state.journal&&!v.map) {
-      if(c.confirm)state.paused=false;
+      if(retry_from_pause) {
+        state.paused=false;
+        // Retry uses the normal checkpoint path without passing Pause input to the world.
+        c={};
+        c.restart=true;
+      } else if(c.confirm)state.paused=false;
       else if(tour_scene>=0&&c.navigate) {
         const int count=int(iceberg::DebugTour.size());
         load_tour_scene((tour_scene+c.navigate+count)%count);
@@ -1352,11 +1359,11 @@ public:
         notice((profile.visit_district<0?t("POWRÓT NA TRASĘ — ","BACK ON YOUR ROUTE — "):t("PRZYJAZD — ","ARRIVED — "))+iceberg::Districts[size_t(destination)].name.get(profile.language),6);
       }
     }
-    bool blocked=state.paused||state.journal||v.map||columns<34||rows<(columns>=56?20:24);
+    const bool blocked=state.paused||state.journal||v.map||view_too_small;
     audio.update(blocked?AudioScene::Paused:AudioScene::Play,music_track(),dt,focused);
     // Closing an overlay consumes this input frame. Its confirm or direction
     // may also be a doorway interaction or a movement action in the world.
-    if(blocked||was_in_overlay){sync_view();return;}
+    if(blocked||(was_in_overlay&&!retry_from_pause)){sync_view();return;}
     v.pickup_left=std::max(0.,v.pickup_left-dt);
     v.door_left=std::max(0.,v.door_left-dt);
     const bool at_door=state.won;
