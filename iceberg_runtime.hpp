@@ -1441,7 +1441,8 @@ public:
       }
     } else {run_seconds+=active;run_deaths+=deaths;run_treasures+=pickups;}
     if(state.player.wall_bounce_left>before.wall_bounce_left)audio.play(AudioCue::Bounce);
-    if(state.player.dash_jump_left>before.dash_jump_left && profile.quest_counts[6]<3) {
+    const bool mastery_progress=state.player.dash_jump_left>before.dash_jump_left&&profile.quest_counts[6]<3;
+    if(mastery_progress) {
       ++profile.quest_counts[6];
       if(profile.quest_counts[6]>=3 && profile.quests[6]==1)profile.quests[6]=2;
     }
@@ -1466,7 +1467,7 @@ public:
     const bool crown_victory=crown_advanced&&state.crown.hits==3;
     if(crown_victory&&tour_scene<0)profile.story|=iceberg::CrownSentinelDefeated;
     if(crown_advanced||old_cp!=state.checkpoint||(state.won&&!at_door)||at_route_fork()!=at_fork||
-       deaths>0||pickups>0||autosave_left<=0)persist();
+       deaths>0||pickups>0||mastery_progress||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,
       profile.smooth_camera&&deaths>0?10.:dt,profile.smooth_camera);
     if(crown_advanced) {
