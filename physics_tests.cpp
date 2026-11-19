@@ -221,6 +221,13 @@ int main() {
     const double remaining=rider.player.dash_time_left;
     check(remaining>0.&&rider.player.support==0&&!rider.player.can_dash(),
           "a horizontal dash keeps ferry contact without recharging");
+    auto followup=rider;
+    world_step(followup,ferry_room,{},1./120);
+    const Controls jump_after_dash{.move=1,.jump_held=true,.jump_pressed=true};
+    world_step(followup,ferry_room,jump_after_dash,1./120);
+    check(followup.player.dash_jump_left>0.&&followup.player.vy<0.&&
+          followup.player.support<0&&!followup.player.can_dash(),
+          "jumping during a horizontal ferry dash launches a dash jump");
     const double local_x=rider.player.x-ferry.at(rider.elapsed).x;
     world_step(rider,ferry_room,along_deck,1./120);
     check(rider.player.dash_time_left<remaining&&!rider.player.can_dash()&&
@@ -237,6 +244,9 @@ int main() {
     for(int i=0;i<8;++i)world_step(off_deck,ferry_room,{},1./120);
     check(off_deck.player.support<0&&!off_deck.player.can_dash()&&off_deck.player.dash_time_left>0.,
           "dashing off the ferry crosses the edge and spends the dash");
+    world_step(off_deck,ferry_room,jump_after_dash,1./120);
+    check(off_deck.player.dash_jump_left==0.&&off_deck.player.dash_time_left>0.,
+          "the ferry cannot launch a dash jump after the courier leaves its edge");
     adventure.add_solid_rect(10, 24, 4, 8);
     for(int side:{1,-1}) {
       auto approach = new_state(adventure);

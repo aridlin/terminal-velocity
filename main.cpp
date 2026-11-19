@@ -1048,6 +1048,11 @@ void update_step(GameState &state, const EngineGrid &grid,
       bool floor = player.grounded || dash_jump_on_launch;
       auto probe = player.rect(); probe.y += .14;
       for (auto r : grid.solid_rects_near(probe)) floor |= probe.intersects(r);
+      if (!state.reference_movement && player.support >= 0 &&
+          size_t(player.support) < grid.platforms.size()) {
+        const auto deck = grid.platforms[size_t(player.support)].at(state.elapsed);
+        floor |= probe.intersects(deck);
+      }
       int wall = wall_dir(grid, player);
       if (floor && std::abs(player.vx) > 12 && player.vy >= -2) {
         player.vx = std::copysign(26., player.vx);
