@@ -494,6 +494,19 @@ int main(){try {
       }
     }
   }
+  vent_view.adventure.map=false;
+  vent_view.camera_y=vent.area.y-3.3;
+  vent_view.elapsed=(1.+.90-vent.phase)*vent.period;
+  for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+    for(int edge:{0,cols-1}) {
+      vent_view.camera_x=edge==0?vent.area.right()-.2:vent.area.x-.4*edge-.05;
+      RenderGrid(pressure_lifts,vent_view,rows,cols,2).draw();
+      ui_check(std::any_of(frame.begin()+4,frame.end()-3,[&](const auto &row){
+        const auto &cell=row[size_t(edge)];
+        return cell.glyph=="▴"&&cell.rgb==0xf1c66f;
+      }),"steam buildup remains visible at either clipped viewport edge");
+    }
+  }
   auto seam_room=verified_room(61,73,5);
   add_crown_seam_shortcut(seam_room);
   auto seam_view=new_state(seam_room);
