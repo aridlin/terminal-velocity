@@ -519,6 +519,29 @@ int main(){try {
     const auto &hoist=lifts.grid.platforms.front();
     ui_check(hoist.at(0).y==hoist.at(.4).y&&hoist.at(2.6).y==hoist.at(3.).y&&
       hoist.at(0).y-hoist.at(2.6).y==5.,"the cargo hoist waits at both ends of its five-unit travel");
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      lifts.state.elapsed=0;
+      lifts.tick({},0,true,cols,rows);
+      RenderGrid(lifts.grid,lifts.state,rows,cols,2).draw();
+      int courier_cap=-1,mechanic_cap=cols;
+      for(int y=4;y<rows-3;++y)for(int x=0;x<cols;++x) {
+        const auto &cell=frame[size_t(y)][size_t(x)];
+        if(cell.glyph!="▀")continue;
+        if(cell.rgb==0xe4ad68)courier_cap=std::max(courier_cap,x);
+        if(cell.rgb==0xd79743)mechanic_cap=std::min(mechanic_cap,x);
+      }
+      ui_check(courier_cap>=0&&mechanic_cap<cols&&courier_cap+3<=mechanic_cap,
+        "entering Salvaged lifts leaves the Courier and Witek visibly apart");
+      ui_check(count_marker("●",0xb5d599)>0,"the relay shows green when the first hoist is stopped");
+      lifts.state.elapsed=.8;
+      RenderGrid(lifts.grid,lifts.state,rows,cols,2).draw();
+      ui_check(count_marker("○",0xb58952)>0,"the relay shows amber when the first hoist is moving");
+    }
+    lifts.state.elapsed=0;
+    lifts.interact();
+    ui_check(lifts.state.adventure.dialogue.reply_scene==iceberg::HoistCrewReplyScene,
+      "Witek remains within talking distance when the sample opens");
+    lifts.state.adventure.dialogue={};
     lifts.state.player.x=hoist.base.x+2;
     lifts.state.player.y=hoist.at(0).y-kPlayerHeight;
     for(int tick=0;tick<26;++tick)lifts.tick({},.1);
