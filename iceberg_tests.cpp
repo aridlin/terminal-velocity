@@ -339,6 +339,10 @@ int main(int argc,char **argv) {
         check(session.state.player.x==stop.entry_x&&
           std::abs(session.state.player.rect().bottom()-stop.entry_floor)<.01,
           "debug tour starts beside the featured room mechanic");
+        if(stop.room==33) {
+          check(i+2==iceberg::DebugTour.size()&&iceworld::has_estate_gutter(session.grid),
+            "the Estate gutter sample starts at the live wall-kick route before the Crown");
+        }
         session.state.player.x+=2;
         press({.restart=true});
         check(session.state.player.x==stop.entry_x&&
