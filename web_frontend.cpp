@@ -160,6 +160,10 @@ EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
   if(web_game->state.adventure.dialogue.active()){web_game->state.adventure.dialogue.segment=0;web_game->state.adventure.dialogue.reset_reveal();web_game->frame_dialogue();}
   web_game->persist();web_game->sync_view();send_web_ui();
 }
+EMSCRIPTEN_KEEPALIVE int web_validate_import_save() {
+  iceberg::Profile imported;
+  return iceberg::SaveStore::validate_file("/tmp/terminal-velocity-import-check.iceberg",imported);
+}
 EMSCRIPTEN_KEEPALIVE int web_import_save() {
   iceberg::Profile imported;
   const auto directory=std::filesystem::path(web_save_base).parent_path();

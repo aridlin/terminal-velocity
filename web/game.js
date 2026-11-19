@@ -757,6 +757,13 @@ async function readImportFile(file){
   })]);
  }finally{clearTimeout(deadline);}
 }
+function validateImportSave(fs,bytes){
+ const probe='/tmp/terminal-velocity-import-check.iceberg';
+ try {
+  fs.writeFile(probe,bytes);
+  return Module._web_validate_import_save();
+ } finally {if(fs.analyzePath(probe).exists)fs.unlink(probe);}
+}
 function applyManualImport(fs,previous){
  const backup=previousImportPath(),retained=backup+'.previous';
  const hadBackup=fs.analyzePath(backup).exists;
@@ -822,11 +829,15 @@ saveFile.onchange=async()=>{
    setSaveActionError(['Zakończ obsługę konta przed wczytaniem zapisu','Finish the account action before importing a save']);
    return;
   }
+  const fs=Module.FS;
+  if(!validateImportSave(fs,bytes)){
+   setSaveActionError(['Nieprawidłowy plik zapisu','Invalid save file']);
+   return;
+  }
   const question=accountSlot()&&accounts?.user
    ?tr('Zastąpić obecny zapis? Nowy zapis będzie synchronizowany z kontem.','Replace your current save? The imported save will sync to your account.')
    :tr('Zastąpić obecny zapis w tej przeglądarce?','Replace the current save in this browser?');
   if(!window.confirm(question))return;
-  const fs=Module.FS;
   if(!Module._web_save()){
    setSaveActionError(['Błąd zapisu — pobierz kopię','Save failed — download a copy']);
    return;

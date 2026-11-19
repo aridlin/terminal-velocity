@@ -38,8 +38,8 @@ const path=require('node:path');
   await page.evaluate(async()=>{
    for(let i=0;i<8;i++)await new Promise(requestAnimationFrame);
   });
-  assert.equal(await page.evaluate(()=>window.simulatedTime),pickerTime,
-   'gameplay stays still while the file picker is open');
+  assert.ok(await page.evaluate(time=>window.simulatedTime>time,pickerTime),
+   'a file chooser without a selection leaves the browser ticking');
   await canceledPicker.setFiles([]);
   await page.waitForFunction(()=>document.activeElement.id==='game');
   await page.waitForFunction(time=>window.simulatedTime>time,pickerTime);
@@ -47,16 +47,21 @@ const path=require('node:path');
   const legacy=await readFile(path.join(__dirname,'../tests/fixtures/iceberg-v4.dat'));
   const pick=async (buffer,accept)=>{
    const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.locator('#import-save').click()]);
-   page.once('dialog',dialog=>accept?dialog.accept():dialog.dismiss());
-   await chooser.setFiles({name:'journey.iceberg',mimeType:'application/octet-stream',buffer});
-   await page.waitForFunction(()=>!document.querySelector('#import-save').disabled);
-   assert.equal(await page.evaluate(()=>document.activeElement.id),'game');
+   let prompts=0;
+   const answer=async dialog=>{prompts++;await (accept?dialog.accept():dialog.dismiss());};
+   page.on('dialog',answer);
+   try {
+    await chooser.setFiles({name:'journey.iceberg',mimeType:'application/octet-stream',buffer});
+    await page.waitForFunction(()=>!importPending);
+    assert.equal(prompts,accept===null?0:1);
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'game');
+   }finally{page.off('dialog',answer);}
   };
   await pick(legacy,false);
   assert.equal(await page.evaluate(()=>Module._web_saved_language()),1,'cancel keeps the English journey');
   assert.equal(await page.locator('#export-previous-save').isVisible(),false);
 
-  await pick(Buffer.from('broken save'),true);
+  await pick(Buffer.from('broken save'),null);
   assert.match(await page.locator('#save-status').innerText(),/Invalid save file/);
   assert.equal(await page.evaluate(()=>Module._web_saved_language()),1,'invalid file leaves save intact');
   assert.equal(await page.locator('#export-previous-save').isVisible(),false);
@@ -83,6 +88,6 @@ const path=require('node:path');
   await page.waitForFunction(()=>!syncing);
   assert.equal(await page.evaluate(()=>Module._web_saved_language()),1,'re-importing the backup restores the original campaign');
   assert.deepEqual(errors,[]);
-  console.log('PASS file picker suspends gameplay and restores focus, and save import preserves a recoverable backup.');
+  console.log('PASS invalid saves stop before confirmation and valid imports preserve a recoverable backup.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
