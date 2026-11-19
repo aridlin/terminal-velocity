@@ -224,6 +224,14 @@ public:
       e.switches=grid.switch_flags;e.room_seconds=state.elapsed;e.room_deaths=state.deaths;
       e.seconds=run_seconds;e.deaths=run_deaths;e.treasures=run_treasures;
     }
+    if(!(profile.cosmetics&iceberg::MasteryTransitPass)&&
+       iceberg::mastery_token_progress(profile)==iceberg::MasteryTokenFare) {
+      profile.cosmetics|=iceberg::MasteryTransitPass;
+      if(!trial_unlocked_without_pass()) {
+        notice(t("Zebrano żetony na wstęp do próby mistrzowskiej.","Transit tokens paid your entry to the Mastery Trial."),6);
+        audio.play(AudioCue::Win);
+      }
+    }
     if(options.no_save){autosave_left=15;return;}
     state.adventure.save_error=!saves.save(profile);
     if(!state.adventure.save_error)++save_revision;
@@ -450,7 +458,7 @@ public:
       if(profile.story&iceberg::reply_recorded(6)) {
         state.crown.airlock_open=true;
         reply_dialogue(6,(profile.story&iceberg::reply_value(6))!=0,2);
-      } else talk(iceberg::crown_cutscene(profile.story),2,6);
+      } else show_crown_film(2);
     } else if(resume&&mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Interlude&&
               grid.district==0&&profile.interlude&&!grid.switch_flags) {
       const int leg=harbor_mission_leg();
@@ -483,6 +491,11 @@ public:
     state.adventure.dialogue={std::move(lines),0,action};discard_pending_movement();
     state.adventure.dialogue.reply_scene=reply_scene;
     state.player.vx=0;frame_dialogue();
+  }
+  void show_crown_film(int action) {
+    talk(iceberg::crown_cutscene(profile.story),action,6);
+    state.adventure.dialogue.cinematic=true;
+    state.adventure.dialogue.lines.back().shot=iceberg::CrownShot::Daybreak;
   }
   void talk_arrival(std::vector<iceberg::DialogueLine> lines,int scene) {
     start_arrival(scene);
@@ -538,11 +551,18 @@ public:
   void reply_dialogue(int scene,int option,int action) {
     const auto &reply=iceberg::civic_reply(scene,option);
     talk({{iceberg::CourierSpeaker,reply.said},reply.answer},action);
+    if(scene==6&&grid.template_id==iceberg::CrownSentinel) {
+      state.adventure.dialogue.cinematic=true;
+      for(auto &line:state.adventure.dialogue.lines)line.shot=iceberg::CrownShot::Daybreak;
+    }
   }
   void frame_dialogue() {
     const auto &dialogue=state.adventure.dialogue;if(!dialogue.active())return;
-    if(dialogue.lines[dialogue.page].cue==iceberg::DialogueCue::CrownAirlock)
+    if(dialogue.lines[dialogue.page].cue==iceberg::DialogueCue::CrownAirlock) {
       state.crown.airlock_open=true;
+      audio.play(AudioCue::Valve);
+    }
+    if(dialogue.cinematic)return;
     int courier=4+int(std::floor((state.player.y-state.camera_y)/(last_aspect*.4)));
     auto box=dialogue.choosing()?iceberg::reply_layout(last_rows,courier):
       iceberg::dialogue_layout(dialogue.lines[dialogue.page].text.get(profile.language),last_columns,last_rows,courier,dialogue.segment);
@@ -615,6 +635,16 @@ public:
     }
     if(dialogue.byte_cursor>=text.size())dialogue.revealing=false;
   }
+  void tick_crown_film(double dt) {
+    auto &dialogue=state.adventure.dialogue;
+    dialogue.shot_seconds+=dt;
+    if(dialogue.revealing){tick_dialogue(dt);return;}
+    const auto subtitle=iceberg::dialogue_segment(dialogue.lines[dialogue.page],profile.language,
+      last_columns,last_rows,dialogue.segment);
+    dialogue.subtitle_hold+=dt;
+    if(dialogue.subtitle_hold>=std::clamp(iceberg::dialogue_character_count(subtitle)/19.,1.8,9.))
+      dialogue_next();
+  }
   void dialogue_next() {
     auto &dialogue=state.adventure.dialogue;
     if(!dialogue.active())return;
@@ -637,11 +667,19 @@ public:
       reply_dialogue(scene,option,action);
       return;
     }
-    if(dialogue.revealing){dialogue.reveal_all();dialogue.instant=true;return;}
+    if(dialogue.revealing&&!dialogue.cinematic){
+      dialogue.reveal_all();
+      dialogue.instant=true;
+      return;
+    }
+    const auto shot=dialogue.lines[dialogue.page].shot;
     auto layout=iceberg::dialogue_layout(dialogue.lines[dialogue.page].text.get(profile.language),last_columns,last_rows,1000,dialogue.segment);
     if(dialogue.segment+1<layout.pages)++dialogue.segment;
     else {++dialogue.page;dialogue.segment=0;}
     if(dialogue.active()){
+      dialogue.subtitle_hold=0.;
+      if(dialogue.cinematic)dialogue.instant=false;
+      if(shot!=dialogue.lines[dialogue.page].shot)dialogue.shot_seconds=0.;
       dialogue.reset_reveal();if(dialogue.instant)dialogue.reveal_all();
       if(dialogue.choosing()&&!iceberg::expedition_reply_scene(dialogue.reply_scene)) {
         if(dialogue.reply_scene>=iceberg::HarborMissionReplyBase) {
@@ -726,8 +764,12 @@ public:
     }
     load_room(true);state.menu=false;persist();
   }
-  bool trial_unlocked() const {
+  bool trial_unlocked_without_pass() const {
     return profile.quests[6]==3||(profile.cosmetics&(1u<<7))||profile.finished||profile.at_content_boundary;
+  }
+  bool trial_unlocked() const {
+    return trial_unlocked_without_pass()||(profile.cosmetics&iceberg::MasteryTransitPass)||
+      iceberg::mastery_token_progress(profile)==iceberg::MasteryTokenFare;
   }
   void request_run(iceberg::Mode next,bool fresh=false) {
     const bool trial=next==iceberg::Mode::Trial;
@@ -748,7 +790,11 @@ public:
     const bool resume=!fresh&&can_resume_run(next,area);
     const bool replay=trial&&!fresh&&can_retry_trial(area);
     if(trial&&!resume&&!replay&&!trial_unlocked()) {
-      notice(t("Porozmawiaj z Kubą i pokaż trzy skoki ze zrywu.","Talk to Kuba and demonstrate three dash jumps."),6);return;
+      const auto tokens=std::to_string(iceberg::mastery_token_progress(profile))+"/"+
+        std::to_string(iceberg::MasteryTokenFare);
+      notice(t("Wstęp: pokaż Kubie trzy skoki ze zrywu albo zbierz żetony (",
+               "Entry: show Kuba three dash jumps or collect transit tokens (")+tokens+").",8);
+      return;
     }
     persist();mode=next;run_district=area;
     if(resume) {
@@ -956,7 +1002,14 @@ public:
     if(at<0) {
       auto close=[&](double x,double y){return std::hypot(state.player.x+.45-x,state.player.y+.6-y)<2.8;};
       for(size_t i=0;i<grid.sweets.size();++i)if(!state.collected[i]&&close(grid.sweets[i].first,grid.sweets[i].second)) {
-        describe(t("Żeton transportowy","Transit token"),t("Mosiężny krążek z pieczęcią poczty. Znajdźki liczą się osobno od czasu i powrotów — możesz szukać ich spokojnie albo zbierać podczas próby.","A brass token stamped by the postal service. Collection records are separate from time and retries — explore for them at your own pace or collect them during a trial."),"◉",Art::Coin);return;
+        const auto tokens=std::to_string(iceberg::mastery_token_progress(profile))+"/"+
+          std::to_string(iceberg::MasteryTokenFare);
+        const auto body=trial_unlocked()?
+          t("Pocztowy żeton przywraca zryw. Wstęp do próby mistrzowskiej jest już otwarty.",
+            "A postal token restores your dash. The Mastery Trial is already open."):
+          t("Żeton przywraca zryw. Zbierz komplet w podróży lub podczas jednej wyprawy, by opłacić stały wstęp do próby mistrzowskiej. Stan: ",
+            "A token restores your dash. Collect a set in the campaign or in one expedition to pay for permanent access to the Mastery Trial. Collected: ")+tokens+".";
+        describe(t("Żeton transportowy","Transit token"),body,"◉",Art::Coin);return;
       }
       for(size_t i=0;i<grid.refills.size();++i)if(close(grid.refills[i].first,grid.refills[i].second)) {
         describe(t("Ogniwo zrywu","Dash cell"),t("Szklana osłona chroni naładowany rdzeń. Dotknij go, żeby odzyskać zryw w powietrzu. Puste ogniwo odnowi się po chwili.","A glass casing protects a charged core. Touch it to restore an airborne dash. An empty cell recharges after a moment."),"▥",Art::Refill);return;
@@ -1313,12 +1366,17 @@ public:
       }
       if(v.dialogue.active()&&(!state.paused||reading_journal)) {
         if(v.dialogue.choosing()) {
+          if(v.dialogue.cinematic&&(focused||!profile.pause_on_focus_loss))v.dialogue.shot_seconds+=dt;
           if(c.navigate)v.dialogue.reply_option=(v.dialogue.reply_option+1)%2;
           if(c.confirm||c.interact)dialogue_next();
         } else if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
-        else if(focused||!profile.pause_on_focus_loss)tick_dialogue(dt);
+        else if(focused||!profile.pause_on_focus_loss) {
+          if(v.dialogue.cinematic)tick_crown_film(dt);
+          else tick_dialogue(dt);
+        }
       }
-      audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
+      audio.update(v.dialogue.cinematic&&!state.paused?AudioScene::Play:AudioScene::Paused,
+                   v.dialogue.cinematic?2:music_track(),dt,focused);sync_view();return;
     }
     const bool was_in_overlay=state.paused||state.journal||v.map;
     if(toggle_overlay) {
@@ -1440,7 +1498,7 @@ public:
     Player before=state.player;
     int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
     int old_crown_hits=state.crown.hits;
-    double old_crown_time=state.crown.time;
+    const auto old_crown_beat=crown_beat(state.crown);
     double old_elapsed=state.elapsed;
     stepper.advance(state,grid,c,dt);
     update_water_splash(before,old_deaths,dt);
@@ -1490,14 +1548,16 @@ public:
     if(at<0&&state.player.support>=0&&grid.platforms[size_t(state.player.support)].clothesline)
       v.prompt=t("↓ / S — zeskocz z liny","↓ / S — drop through the line");
     if(grid.template_id==iceberg::CrownSentinel&&state.crown.hits<3) {
-      const double phase=state.crown.time;
+      const auto beat=crown_beat(state.crown);
       const std::string shield=std::to_string(3-state.crown.hits)+"/3 · ";
-      v.prompt=shield+(phase>=crown_open_time?t("Zryw w odsłonięty rdzeń","Dash through the core"):
-        phase>=crown_warning_time?t("Unikaj stref uderzenia","Dodge the marked zones"):
+      v.prompt=shield+(beat==CrownBeat::Exposed?t("Zryw w odsłonięty rdzeń","Dash through the core"):
+        beat==CrownBeat::Warning||beat==CrownBeat::Strike?t("Unikaj stref uderzenia","Dodge the marked zones"):
         t("Rdzeń osłonięty","Core shielded"));
-      if(old_crown_time<crown_warning_time&&phase>=crown_warning_time)audio.play(AudioCue::Motor,.45f);
-      if(old_crown_time<crown_strike_time&&phase>=crown_strike_time)audio.play(AudioCue::Spark);
-      if(old_crown_time<crown_open_time&&phase>=crown_open_time)audio.play(AudioCue::Valve,.6f);
+      if(old_crown_beat!=beat) {
+        if(beat==CrownBeat::Warning)audio.play(AudioCue::Motor,.55f);
+        if(beat==CrownBeat::Strike)audio.play(AudioCue::Spark);
+        if(beat==CrownBeat::Exposed)audio.play(AudioCue::Valve,.6f);
+      }
     }
     autosave_left-=dt;
     const bool crown_advanced=state.crown.hits>old_crown_hits;
@@ -1511,7 +1571,7 @@ public:
       audio.play(AudioCue::Metal1);
       if(crown_victory) {
         audio.play(AudioCue::Win);
-        talk(iceberg::crown_cutscene(profile.story),tour_scene>=0?0:2,6);
+        show_crown_film(tour_scene>=0?0:2);
       }
     }
     sync_view();

@@ -21,30 +21,53 @@ inline EngineGrid build_crown_sentinel() {
 }
 
 inline constexpr Rect crown_core{25.75,45.15,2.5,2.55};
-inline constexpr double crown_warning_time = .92;
-inline constexpr double crown_strike_time = 1.62;
-inline constexpr double crown_open_time = 2.10;
-inline constexpr double crown_cycle_time = 4.45;
+enum class CrownBeat { Guard, Warning, Strike, Exposed };
+
+inline constexpr double crown_warning_time = .72;
+inline constexpr double crown_strike_time = 1.38;
+inline constexpr double crown_follow_warning = 1.78;
+inline constexpr double crown_follow_strike = 2.32;
+inline constexpr double crown_cooldown = .52;
+
+inline double crown_open_time(int hits) { return hits==0?1.85:2.80; }
+inline double crown_close_time(int hits) { return crown_open_time(hits)+(hits==0?1.27:hits==1?1.03:.84); }
+
+inline CrownBeat crown_beat(const CrownEncounter &boss) {
+  const double t=boss.time;
+  if(boss.hits>=3)return CrownBeat::Guard;
+  if(t>=crown_open_time(boss.hits)&&t<crown_close_time(boss.hits))return CrownBeat::Exposed;
+  if((t>=crown_strike_time&&t<1.66)||(boss.hits>0&&t>=crown_follow_strike&&t<2.62))
+    return CrownBeat::Strike;
+  if((t>=crown_warning_time&&t<crown_strike_time)||
+     (boss.hits>0&&t>=crown_follow_warning&&t<crown_follow_strike))return CrownBeat::Warning;
+  return CrownBeat::Guard;
+}
 
 inline std::array<Rect,2> crown_attack_areas(const CrownEncounter &boss) {
-  const Rect beam{boss.target-1.35,33,2.7,15};
-  if(boss.hits==0)return {{{11,46.15,32,1.85},{}}};
+  if(boss.hits==0)return {{{0,46.15,54,1.85},{}}};
+  const bool follow=boss.time>=crown_follow_warning;
+  const double width=follow?4.8:4.0;
+  const Rect beam{boss.target-width*.5,33,width,15};
   if(boss.hits==1)return {{beam,{}}};
-  return {{beam,boss.cycle%2==0?Rect{9,46.15,18,1.85}:Rect{27,46.15,18,1.85}}};
+  const bool right=(boss.cycle%2!=0)!=follow;
+  return {{beam,right?Rect{27,46.15,27,1.85}:Rect{0,46.15,27,1.85}}};
 }
 
 inline void step_crown_sentinel(GameState &state,double dt,bool dashing) {
   auto &boss=state.crown;
   if(boss.hits>=3)return;
-  const double before=boss.time;
+  const auto before=crown_beat(boss);
   boss.time+=dt;
-  if(boss.time>=crown_cycle_time) {
-    boss.time-=crown_cycle_time;
+  if(boss.time>=crown_close_time(boss.hits)+crown_cooldown) {
+    boss.time=0.;
     ++boss.cycle;
   }
-  if(before<crown_warning_time&&boss.time>=crown_warning_time)
-    boss.target=clamp(state.player.x+kPlayerWidth*.5,4.,50.);
-  if(boss.time>=crown_strike_time&&boss.time<crown_open_time) {
+  const auto beat=crown_beat(boss);
+  if(beat==CrownBeat::Warning&&before!=beat) {
+    const double margin=boss.time>=crown_follow_warning?2.4:2.;
+    boss.target=clamp(state.player.x+kPlayerWidth*.5,margin,54.-margin);
+  }
+  if(beat==CrownBeat::Strike) {
     for(const auto &attack:crown_attack_areas(boss))
       if(attack.w>0.&&state.player.rect().intersects(attack)) {
         ++state.deaths;
@@ -52,10 +75,10 @@ inline void step_crown_sentinel(GameState &state,double dt,bool dashing) {
         return;
       }
   }
-  if(boss.time>=crown_open_time&&dashing&&state.player.rect().intersects(crown_core)) {
+  if(beat==CrownBeat::Exposed&&dashing&&state.player.rect().intersects(crown_core)) {
     ++boss.hits;
     boss.time=0.;
-    ++boss.cycle;
+    boss.cycle=boss.hits;
     state.player.dash_available=true;
   }
 }
