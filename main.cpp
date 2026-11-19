@@ -992,6 +992,7 @@ void update_step(GameState &state, const EngineGrid &grid,
     player.dash_available = true;
   }
 
+  bool dash_jump_on_launch = false;
   if (player.dash_buffer_left > 0.0 && player.can_dash()) {
     const bool remember_direction=grid.adventure_level&&!state.reference_movement;
     double dx=remember_direction?player.dash_buffer_direction.first:controls.move;
@@ -999,6 +1000,9 @@ void update_step(GameState &state, const EngineGrid &grid,
     if (dx == 0.0 && dy == 0.0) {
       dx = static_cast<double>(player.facing);
     }
+    // Dash and Jump can arrive together when the frontend samples its input.
+    dash_jump_on_launch = remember_direction && player.grounded &&
+                          controls.jump_pressed && dy == 0.0;
     const double len = std::hypot(dx, dy);
     dx /= len;
     dy /= len;
@@ -1009,7 +1013,7 @@ void update_step(GameState &state, const EngineGrid &grid,
     player.grounded = false;
     player.coyote_left = 0.0;
     player.wall_coyote_left = 0;
-    player.jump_buffer_left = 0.0;
+    if (!dash_jump_on_launch) player.jump_buffer_left = 0.0;
     player.dash_buffer_left = 0.0;
     player.ledge.reset();
     player.ledge_climb_left = 0.0;
@@ -1025,7 +1029,7 @@ void update_step(GameState &state, const EngineGrid &grid,
     // These techniques apply to adventure physics, leaving legacy time records
     // comparable. The input window is forgiving; the route decides difficulty.
     if (grid.adventure_level && player.jump_buffer_left > 0) {
-      bool floor = player.grounded;
+      bool floor = player.grounded || dash_jump_on_launch;
       auto probe = player.rect(); probe.y += .14;
       for (auto r : grid.solid_rects_near(probe)) floor |= probe.intersects(r);
       int wall = wall_dir(grid, player);
