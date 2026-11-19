@@ -182,6 +182,21 @@ int main(){try {
   ui_check(std::abs(camera_settings.state.camera_x-(camera_player.x-39*.4*.42+camera_player.vx*.15))<.001&&
     std::abs(camera_settings.state.camera_y-(camera_player.y-21*.8*.68+camera_player.vy*.065))<.001,
     "resizing retains the standard camera's velocity lookahead");
+  camera_settings.state.paused=false;
+  for(bool smooth:{false,true}) {
+    camera_settings.profile.smooth_camera=smooth;
+    camera_settings.state.camera_x=camera_settings.grid.width()*.5;
+    camera_settings.state.camera_y=camera_settings.grid.height()*.5;
+    camera_player.y=camera_settings.grid.height()+2.;
+    camera_settings.tick({},1./120,true,39,28,2);
+    const auto &view=camera_settings.state;
+    const double width=39*.4,height=21*.8;
+    const double expected_x=std::clamp(view.spawn_x-width*.42,0.,camera_settings.grid.width()-width);
+    const double expected_y=std::clamp(view.spawn_y-height*.68,0.,camera_settings.grid.height()-height);
+    ui_check(camera_player.x==view.spawn_x&&camera_player.y==view.spawn_y&&
+      std::abs(view.camera_x-expected_x)<.001&&std::abs(view.camera_y-expected_y)<.001,
+      "the camera immediately frames the checkpoint after a fall with either camera setting");
+  }
   camera_settings.profile.smooth_camera=true;
   camera_settings.start_tour(0);
   ui_check(camera_settings.profile.smooth_camera,"debug tour uses the selected camera preference");
