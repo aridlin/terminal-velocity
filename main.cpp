@@ -494,30 +494,44 @@ public:
   void protect_exit() {
     if (!adventure_level || goal.x < 0) return;
     const int floor = int(std::lround(goal.bottom()));
-    const int edge = int(std::ceil(goal.right()));
-    const int wall = edge + 1;
-    if (floor < 5 || floor >= height_ || wall >= width_ ||
+    const bool traversal_landing = room_role == iceberg::RoomRole::Traverse &&
+      route_points.size() >= 2 && route_points.back().second == floor;
+    const double approach = traversal_landing ? route_points[route_points.size()-2].first : goal.left();
+    const int direction = traversal_landing && approach > goal.right() ? -1 : 1;
+    const int edge = direction < 0
+      ? int(std::floor(std::min(goal.left(), route_points.back().first))) - 1
+      : int(std::ceil(goal.right()));
+    const int wall = edge + direction;
+    if (floor < 5 || floor >= height_ || wall < 0 || wall >= width_ ||
         !solid_at(int(std::floor(goal.x + goal.w * .5)), floor)) return;
-    // A route can end on an interior shelf well before the room boundary.
-    // On those shelves the right edge is safe to close only for a west approach.
-    if (width_ - edge > 16 &&
-        (room_role != iceberg::RoomRole::Traverse || route_points.size() < 2 ||
-         route_points.back().second != floor || route_points[route_points.size()-2].first >= goal.left())) return;
+    // The fixed courses can continue beyond an interior door. Traversal
+    // rooms describe the actual approach with their last two landings.
+    if (direction > 0 && width_ - edge > 16 &&
+        (!traversal_landing || approach >= goal.left())) return;
+    // Keep the westbound landing point between the wall and the approach.
+    // The fall can be farther away when the doorway occupies the east end.
+    const int lookahead = direction < 0 ? 16 : 8;
     bool drop = false;
-    for (int x = edge; x < std::min(width_, edge + 8); ++x)
+    for (int i = 0, x = edge; i < lookahead && x >= 0 && x < width_; ++i, x += direction)
       drop = drop || !solid_at(x, floor);
     if (!drop) return;
     for (int y = floor - 5; y <= floor; ++y)
       if (hazard_at(wall, y) || hazard_at(edge, y)) return;
-    add_solid_rect(edge, floor, 2, 1);
-    add_solid_rect(wall, floor - 5, 1, 5);
+    add_solid_rect(std::min(edge, wall), floor, 2, 1);
+    const int height = direction < 0 ? 2 : 5;
+    add_solid_rect(wall, floor - height, 1, height);
     exit_wall_x_ = wall;
   }
 
   bool touches_exit(const Rect &rect) const {
     if (!event_level && !adventure_level) return rect.right() >= goal.x;
     Rect entrance = goal;
-    if (exit_wall_x_ >= 0) entrance.w = exit_wall_x_ - entrance.x;
+    if (exit_wall_x_ >= 0) {
+      if (exit_wall_x_ < goal.left()) {
+        entrance.x = exit_wall_x_ + 1;
+        entrance.w = goal.right() - entrance.x;
+      } else entrance.w = exit_wall_x_ - entrance.x;
+    }
     return rect.intersects(entrance);
   }
 
