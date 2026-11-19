@@ -305,6 +305,34 @@ int main() {
         reservoir.grid.platforms.front().at(reservoir.state.elapsed).y)<.01,"the courier rides the lift after returning");
     }
 
+    AdventureSession chamber(options,file);chamber.begin_campaign(false);
+    chamber.profile.hidden_room=2;chamber.profile.discoveries&=~4u;chamber.load_room();
+    auto no_dash=chamber.grid;
+    no_dash.dash_lock=no_dash.switch_flags=1;
+    auto cross=[&](Rect target,bool lift) {
+      auto path=find_motion_path(no_dash,chamber.state,target,[&](const GameState &state) {
+        return state.player.grounded&&(!lift||state.player.support==0);
+      });
+      if(!path.reached)throw std::runtime_error("No no-dash route in the reservoir");
+      for(auto step:path.actions)chamber.tick(step,.1);
+      return chamber.state.player.grounded&&(!lift||chamber.state.player.support==0)&&
+        chamber.state.player.rect().intersects(target)&&chamber.state.deaths==0;
+    };
+    const Rect lift_route{32,39,6,11};
+    check_harbor(cross(lift_route,true),"the flooded reservoir has a no-dash route onto its service lift");
+    for(int i=0;i<45;++i)chamber.tick({},1./120);
+    check_harbor(chamber.state.player.support==0&&cross({56,37,4,5},false),
+      "the reservoir lift carries a rider to the log's raised landing");
+    chamber.tick(enter,1./120);
+    check_harbor((chamber.profile.discoveries&4)&&chamber.state.adventure.dialogue.active(),
+      "the raised reservoir log records the original discovery");
+    read_harbor(chamber);
+    check_harbor(cross(lift_route,true)&&cross({4,44,4,4},false),
+      "normal jumps and the lift lead back from the reservoir log to its return door");
+    chamber.tick(leave,.1);
+    check_harbor(chamber.profile.hidden_room<0&&chamber.state.player.support==0,
+      "the chamber returns to the original pumping station lift");
+
     std::filesystem::remove(file);std::filesystem::remove(file.string()+".bak");
     return 0;
   }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}

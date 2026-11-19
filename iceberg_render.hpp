@@ -174,7 +174,23 @@
         world_art(46,37,{"┌──────────────┐","│ ▤▤▤▤▤▤▤▤▤▤▤▤ │","│ ▤▤▤▤▤▤▤▤▤▤▤▤ │","│              │",(state_.adventure.discoveries&4)?"│  41  /  41   │":"│  41  /  40   │","│              │","│    ○    ▣    │","└──────┬───────┘","       │"},0x7e939b);
         world_art(8,32,{"┌─────────────────────────────────────────────────────────────────┐","│                                                                 │"},0x28363c);
       } else {
-        world_art(35,30,{"       ╭─────────────────────────╮","   ╭───┤   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   ├───╮","   │   │   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   │   │","═══╡   │          00:07          │   ╞═══","   │   │                         │   │","   ╰───┤     ┌─────────────┐     ├───╯","       ╰─────┴─────────────┴─────╯"},0x55646b);
+        const auto &lift=grid_.platforms.front();
+        const auto deck=lift.at(state_.elapsed);
+        const double center=deck.x+deck.w*.5,weight_x=deck.right()+2.5;
+        const double weight_y=2*lift.base.y-deck.y;
+        draw_scenery_pipe({{31,50},{31,34},{43,34},{43,50}},0x537485);
+        draw_scenery_pipe({{center,deck.y},{center,34},{weight_x,34},{weight_x,weight_y}},0x849fad);
+        prop_art(center,35,{"╭───╮","│ ◉ │","╰─┬─╯"},0xabc6ce);
+        prop_art(weight_x,weight_y+1.1,{"┌─┐","│▓│","└─┘"},0x8ca6b5);
+        draw_scenery_pipe({{1,35},{14,35},{14,40},{26.5,40},{26.5,44}},0x688895);
+        prop_art(14,41.2,{"┌───┐","│ ◴ │","└─┬─┘"},0xa5c2c7);
+        const double drip=std::fmod(state_.elapsed,1.6);
+        if(drip<1)world_text(26.5,44.+6.*drip*drip,drip<.84?"╵":"∿",0x91cddb);
+        draw_scenery_pipe({{76,31},{63,31},{63,38},{60,38}},0x688895);
+        prop_art(58.5,42,{"╔═══════╗","║ 00:07 ║","╠═══════╣","║ ▤ ▪ ▪ ║","╚══╤═╤══╝"},0xa5c2c7);
+        const bool near_west=deck.y>=45,near_east=deck.y<=43;
+        prop_art(22.8,48,{"┌─┐",near_west?"│→│":"│○│","└┬┘"," │ "},near_west?0xa8dea1:0x668493);
+        prop_art(49.3,42,{"┌─┐",near_east?"│←│":"│○│","└┬┘"," │ "},near_east?0xa8dea1:0x668493);
       }
       if(grid_.template_id==202&&(state_.adventure.discoveries&4)&&std::abs(state_.player.x-18)>3)
         world_art(18,42,{" ▄██▄ "," █  █ "," ▐██▌ "," ▐  ▌ "," ╱  ╲ "},0x3b4a51);
@@ -452,7 +468,9 @@
           prop_art(x+node.area.w*.5,y,{"╔═╗",right?"║→║":"║←║","╚╤╝"," ╵ "},0xa0d6df);
         } else valve_art(x+node.area.w*.5,y,bool(grid_.switch_flags&flag));
       }
-      else if(node.kind==InteractionKind::Note)sign_art(x+node.area.w*.5,y,node.id,d.light);
+      else if(node.kind==InteractionKind::Note) {
+        if(node.id!=12||grid_.template_id!=202)sign_art(x+node.area.w*.5,y,node.id,d.light);
+      }
       else if(node.kind==InteractionKind::Task) {
         bool done=(state_.adventure.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))||
           (node.id==0&&iceworld::harbor_v4_room(grid_.template_id)&&(grid_.switch_flags&(uint64_t(1)<<20)));
