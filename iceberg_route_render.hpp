@@ -10,6 +10,8 @@
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy&&!platform.fragile;});
     const bool has_fragile=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.fragile;});
+    const bool has_brittle_ice=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.fragile&&platform.icy;});
     const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_rack;});
     const bool has_seam=grid_.crown_seam.has_value();
@@ -101,7 +103,7 @@
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const bool has_vents=!grid_.pulses.empty();
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
-    constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f;
+    constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f,gap_color=0x85c0cd;
     struct FieldLandmark {const char *symbol;iceberg::Text legend;uint32_t color;};
     static constexpr std::array<FieldLandmark,3> field_landmarks{{
       {"▤",{"▤ Tabliczka","▤ Route sign"},0xe7d8b4},
@@ -205,6 +207,7 @@
       if(cell==' ')cell='s';
     }
     std::vector<std::array<int,3>> cracking_spans;
+    std::vector<std::pair<int,int>> broken_floes;
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       if(platform.archive_rack||platform.service_lift||platform.cargo_hoist) {
@@ -234,8 +237,11 @@
         for(int x=column(center-range);x<=column(center+range);++x)
           if(lane[size_t(x)]==' ')lane[size_t(x)]='s';
       }
-      if(!platform.available(state_,i,state_.elapsed))continue;
       const auto deck=platform.at(state_.elapsed);
+      if(!platform.available(state_,i,state_.elapsed)) {
+        if(platform.icy)broken_floes.emplace_back(column(deck.x+deck.w*.5),row(deck.y));
+        continue;
+      }
       char tile=platform.icy?'i':'=';
       if(platform.fragile) {
         const bool cracking=platform.crack_age(state_,i,state_.elapsed)<MovingPlatform::CrackTime;
@@ -395,6 +401,15 @@
       if(!place(warning,0,-1))
         for(const auto &[dx,dy]:nearby)if(place(warning,dx,dy))break;
     }
+    for(const auto &[x,y]:broken_floes) {
+      const Marker gap{x,y,1,"×",gap_color};
+      if(map[size_t(y)][size_t(x)]=='~')place(gap,0,0);
+      // On compact maps an intact neighbor may share the gap's surface cell.
+      // Place the mark just below the edge without covering usable ice.
+      else if(y+1<map_rows&&map[size_t(y+1)][size_t(x)]==' '&&
+              buffer_[first+y+1][left+x].background==water_depth_background)
+        place(gap,0,1);
+    }
     int legend=top+height-legend_rows;
     if(fork) {
       paint_text(legend++,2,tr("@ Ty · ◆ Lampa","@ You · ◆ Lamp"),0xc7d9df);
@@ -488,7 +503,14 @@
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,2,name,fragile_color);
       paint_text(legend,separator," · ",0xc7d9df);
-      paint_text(legend++,separator+3,tr("╍ Pękają","╍ Cracking"),cracking_color);
+      const auto cracking=has_brittle_ice?tr("╍ Pęka","╍ Cracks"):tr("╍ Pękają","╍ Cracking");
+      paint_text(legend,separator+3,cracking,cracking_color);
+      if(has_brittle_ice) {
+        const int end=separator+3+int(glyphs(cracking).size());
+        paint_text(legend,end," · ",0xc7d9df);
+        paint_text(legend,end+3,tr("× Przerwa","× Gap"),gap_color);
+      }
+      ++legend;
     }
     for(const auto &line:feature_legend) {
       int x=2;
