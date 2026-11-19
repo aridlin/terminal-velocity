@@ -512,6 +512,11 @@
       if(shortened&&width>0)part+="…";
       paint_text(row,col,part,color);
     };
+    const int detail_width=cols_-9;
+    auto paragraph=[&](int row,const std::string &text,uint32_t color) {
+      for(const auto &line:wrap(text,detail_width))clipped(row++,5,line,color);
+      return row;
+    };
     const bool campaign=v.mode==iceberg::Mode::Campaign;
     center(top,campaign?tr("TRASA: POKÓJ PO POKOJU","ROUTE: ROOM BY ROOM"):
       v.mode==iceberg::Mode::Endless?tr("WYPRAWA BEZ KOŃCA","ENDLESS EXPEDITION"):tr("PRÓBA MISTRZOWSKA","MASTERY TRIAL"),Color::Gold);
@@ -536,7 +541,7 @@
     else if(v.mode==iceberg::Mode::Endless)progress=tr("Odcinek ","Leg ")+std::to_string(endless_leg)+
       tr(" · Głębokość "," · Depth ")+std::to_string(v.depth);
     else progress=tr("Pokój ","Room ")+std::to_string(r.current+1)+" / "+std::to_string(r.rooms.size());
-    clipped(top+1,5,progress,0xc7d9df);
+    paragraph(top+1,progress,0xc7d9df);
     if(rooms.empty()) {
       auto lines=wrap(tr("Trasa zaczyna się za bramą szkoleniową. Tablica wypraw prowadzi dalej.","The route begins beyond the training gate. The expedition board leads onward."),cols_-10);
       int y=top+4;for(const auto &line:lines)clipped(y++,5,line,0xc7d9df);
@@ -558,6 +563,7 @@
           clipped(y+1,left+n*stride+(wide?1:0),"╰╯",0xc7d9df);
         if(n+1<room_count&&idx+1<int(rooms.size()))clipped(y,left+n*stride+node_width,wide?"──":"─",0x607887);
       }
+      int legend=y+2;
       if(r.branching) {
         const int x=left+stride+node_width-1;
         clipped(y+1,x,"╲",0x607887);
@@ -565,15 +571,16 @@
         const bool alt=r.choices&(1u<<leg),current=alt&&r.current==offset+2;
         const bool visited=alt&&(r.visited&(1u<<(offset+2)));
         clipped(y+2,left+2*stride,(wide?(current?"<B>":visited?"[B]":"(B)"):(current?"▶B":visited?"●B":"○B")),current?0xffd68a:visited?0x91d4ce:0x607887);
-        clipped(y+3,5,tr("B: ","B: ")+r.alternatives[size_t(leg)].get(v.language),0x91d4ce);
+        legend=paragraph(y+3,"B: "+r.alternatives[size_t(leg)].get(v.language),0x91d4ce);
       }
-      const int legend=y+(r.branching?4:2);
       clipped(legend,5,(wide?tr("< > tutaj   [ ] odwiedzone","< > here   [ ] visited"):tr("▶ tutaj   ● odwiedzone","▶ here   ● visited")),0xc7d9df);
       if(legend+1<bottom-1)clipped(legend+1,5,(wide?tr("( ) nieodwiedzone","( ) not recorded as visited"):tr("○ nieodwiedzone","○ no visit recorded")),0x607887);
     }
     const auto current=tr("Teraz: ","Now: ")+r.place.get(v.language);
     if(campaign) {
-      if(bottom-1>top+4)clipped(bottom-1,5,current,0xffd68a);
+      const auto lines=wrap(current,detail_width);
+      int row=bottom-int(lines.size());
+      if(row>top+4)for(const auto &line:lines)clipped(row++,5,line,0xffd68a);
       return;
     }
     // Put the room details just below the route and wrap at terminal-cell width.
@@ -581,23 +588,23 @@
     if(browsing_other_leg) {
       const auto location=tr("Teraz: odc. ","Now: leg ")+std::to_string(endless_leg)+
         tr(", pok. ",", room ")+std::to_string(r.current+1);
-      for(const auto &line:wrap(location,cols_-9))clipped(row++,5,line,0xffd68a);
+      row=paragraph(row,location,0xffd68a);
     }
     const auto place=browsing_other_leg?r.place.get(v.language):current;
-    for(const auto &line:wrap(place,cols_-9))clipped(row++,5,line,0xffd68a);
+    row=paragraph(row,place,0xffd68a);
     const int count=int(rooms.size());
     const bool browsing=selected>=0&&selected<count&&selected!=current_room;
     if(browsing) {
       const auto detail=tr("Pokój ","Room ")+std::to_string(selected+1)+": "+rooms[size_t(selected)].get(v.language);
-      for(const auto &line:wrap(detail,cols_-9))clipped(row++,5,line,0xc7d9df);
+      row=paragraph(row,detail,0xc7d9df);
     }
     if(count>0&&(browsing?selected:current_room)==count-1) {
       const auto exit=v.mode==iceberg::Mode::Endless
         ?tr("Wyjście do odcinka ","Exit starts leg ")+std::to_string(endless_leg+r.browsed_leg+1)
         :tr("Wyjście kończy próbę","Exit completes the trial");
-      for(const auto &line:wrap(exit,cols_-9))clipped(row++,5,line,0xc7d9df);
+      paragraph(row,exit,0xc7d9df);
     } else if(!browsing&&current_room>=0&&current_room+1<count) {
       const auto next=tr("Plan: ","Planned: ")+rooms[size_t(current_room+1)].get(v.language);
-      for(const auto &line:wrap(next,cols_-9))clipped(row++,5,line,0xc7d9df);
+      paragraph(row,next,0xc7d9df);
     }
   }
