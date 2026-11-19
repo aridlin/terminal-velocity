@@ -280,12 +280,15 @@
     }
     if(stopped||(!warning&&!strike))return;
     const uint32_t hazard=strike?0xf78677:0xe4b872;
-    for(const auto &area:crown_attack_areas(boss)) {
+    const auto attacks=crown_attack_areas(boss);
+    // Keep the beam legible where the two attacks overlap.
+    for(auto attack=attacks.rbegin();attack!=attacks.rend();++attack) {
+      const auto &area=*attack;
       if(area.w<=0.)continue;
+      const auto [left,top]=screen(area.left(),area.top());
+      const auto [right,bottom]=screen(std::nextafter(area.right(),area.left()),
+                                       std::nextafter(area.bottom(),area.top()));
       if(area.h>2.) {
-        const auto [left,top]=screen(area.left(),area.top());
-        const auto [right,bottom]=screen(std::nextafter(area.right(),area.left()),
-                                         std::nextafter(area.bottom(),area.top()));
         const int center=(left+right)/2;
         if(top>4&&top<rows_-2&&center>=0&&center<cols_)
           paint_text(top-1,center,warning?"▼":"┬",hazard);
@@ -297,10 +300,22 @@
             else if(edge||x==center)paint_text(y,x,"┆",hazard);
           }
       } else {
-        auto [start,y]=screen(area.x,area.y+.8);
-        auto [end,unused]=screen(area.right(),area.y+.8);
-        if(y>=4&&y<rows_-3)for(int x=std::max(0,start);x<std::min(cols_,end);++x)
-          paint_text(y,x,strike?(x%3==0?"╱":"≈"):(x%3==0?"▴":"·"),hazard);
+        const uint32_t ground_glow=strike?0x652e31:0x443522;
+        const auto [emitter,unused]=screen(27.,area.top());
+        const int pulse=int(boss.time*36.);
+        for(int y=std::max(4,top);y<=std::min(rows_-4,bottom);++y)
+          for(int x=std::max(0,left);x<=std::min(cols_-1,right);++x) {
+            buffer_[y][x].background=ground_glow;
+            const int wave=std::abs(x-emitter)-pulse;
+            if(y==top) {
+              const char *crest=strike?(wave%5==0?"╱":"≈"):(wave%7==0?"▴":"╌");
+              paint_text(y,x,x==left?"┌":x==right?"┐":crest,hazard);
+            } else if(x==left||x==right) {
+              paint_text(y,x,"│",hazard);
+            } else if(strike&&wave%5==0) {
+              paint_text(y,x,"░",hazard);
+            }
+          }
       }
     }
   }
