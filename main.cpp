@@ -1329,8 +1329,11 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
     if (s.crown.hits < 3) s.won = false;
   }
   if (g.adventure_level && !s.reference_movement && !was_grounded && p.grounded &&
-      (spent_dash || p.dash_time_left > 0.))
+      (spent_dash || p.dash_time_left > 0.)) {
     p.landing_dash_left = kLandingDashCooldown;
+    // Ending the dash keeps the next step grounded, with gravity maintaining contact.
+    p.dash_time_left = 0.0;
+  }
   // A carried player must never remain embedded in static terrain.
   for (auto solid : g.solid_rects_near(p.rect()))
     if (p.rect().intersects(solid)) {
