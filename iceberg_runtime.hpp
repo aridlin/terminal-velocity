@@ -977,6 +977,9 @@ public:
         t("Witek pilnuje przekaźników. Zielona lampka oznacza, że winda stoi na tym poziomie. E — porozmawiaj.",
           "Witek watches the relays. A green light on his panel means the lift is at this landing. Press E to talk."):
         iceberg::Npcs[size_t(node.id)].title.get(profile.language)+t(". E — rozmowa. Zlecenia i odebrane wiadomości znajdziesz w dzienniku.",". E — talk. Tasks and received messages are kept in your journal.");
+      if(grid.template_id==24&&node.id==2)
+        v.inspect_body=t("Bogdan liczy nawroty wagonu. Złota lampka wskazuje, po której stronie tramwaj stoi. E — porozmawiaj.",
+          "Bogdan counts the tram's trips. The gold lamp marks the side where the tram is stopped. Press E to talk.");
       v.inspect_icon="◉";break;
     case InteractionKind::DockWorker:
       v.inspect_title=t("Doker","Dockworker");
@@ -1066,6 +1069,10 @@ public:
       state.adventure.reacting_npc=node.id;state.adventure.npc_reaction_left=1.2;
       if(grid.template_id==13&&node.id==1) {
         talk({iceberg::HoistCrewOpening},0,iceberg::HoistCrewReplyScene);
+        return;
+      }
+      if(grid.template_id==24&&node.id==2) {
+        talk({iceberg::EstateTramOpening},0,iceberg::EstateTramReplyScene);
         return;
       }
       if(grid.template_id==330) {

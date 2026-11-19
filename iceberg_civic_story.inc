@@ -185,6 +185,19 @@ inline const CivicReply &civic_reply(int scene,int option) {
     }};
     return replies[size_t(option)];
   }
+  if(scene==EstateTramReplyScene) {
+    static const std::array<CivicReply,2> replies{{
+      {{"Jak wsiąść?","How do I get on?"},
+       {"Wagon dojeżdża pod sam balkon? Mam skoczyć na dach?","Does it come right up to the balcony? Should I jump onto the roof?"},
+       {2,{"Tak. Gdy przy tobie zapali się lampka, wskocz na dach. Poczekaj na światło po drugiej stronie i zeskocz w prawo.",
+           "Yes. When the lamp on your side lights up, jump onto the roof. Wait for the light across the gap, then jump off to the right."}}},
+      {{"Po co pusty przystanek?","Why stop at an empty flat?"},
+       {"Ktoś tam jeszcze na ciebie czeka?","Is someone still waiting for you there?"},
+       {2,{"Róża widzi lampę z okna córki. Od pęknięcia rury tam nocuje. Obiecałem, że będę stawał, aż znów będzie mogła wrócić do siebie.",
+           "Róża can see the lamp from her daughter's window. She's been staying there since the pipe burst. I promised to keep stopping until she can come home."}}},
+    }};
+    return replies[size_t(option)];
+  }
   if(scene==EpilogueReplyScene)return epilogue_reply(option);
   if(scene>=HarborMissionReplyBase)return harbor_mission_reply(scene-HarborMissionReplyBase,option);
   if(scene>=BriefingReplyBase)return briefing_reply(scene-BriefingReplyBase,option);

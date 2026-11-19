@@ -168,8 +168,9 @@ inline constexpr int HarborMissionReplyBase = BriefingReplyBase + DistrictCount;
 inline constexpr int EpilogueReplyScene = HarborMissionReplyBase + 3;
 inline constexpr int IrrigationReplyScene = EpilogueReplyScene + 1;
 inline constexpr int HoistCrewReplyScene = IrrigationReplyScene + 1;
+inline constexpr int EstateTramReplyScene = HoistCrewReplyScene + 1;
 inline constexpr bool expedition_reply_scene(int scene) {
-  return scene==IrrigationReplyScene||scene==HoistCrewReplyScene;
+  return scene==IrrigationReplyScene||scene==HoistCrewReplyScene||scene==EstateTramReplyScene;
 }
 // Only meaningful while ArrivalMask names the current interactive arrival.
 inline constexpr int ArrivalExchangeShift = 34;

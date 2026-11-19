@@ -150,7 +150,8 @@ int main(){try {
  struct ExpeditionScene {int district,room,scene,speaker;double x,floor;};
  for(const auto &scene:std::array{
      ExpeditionScene{4,57,iceberg::IrrigationReplyScene,5,52,50},
-     ExpeditionScene{1,13,iceberg::HoistCrewReplyScene,1,12,56}}) {
+     ExpeditionScene{1,13,iceberg::HoistCrewReplyScene,1,12,56},
+     ExpeditionScene{2,24,iceberg::EstateTramReplyScene,2,12,54}}) {
   AdventureSession expedition(options,{});
   expedition.begin_campaign(true);
   expedition.profile.unlocked=expedition.run_district=scene.district;

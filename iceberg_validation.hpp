@@ -388,8 +388,12 @@ inline void add_expedition_trams(EngineGrid &room) {
     tram.dx=7.5;tram.period=6.;tram.phase=i*.17;tram.tram=true;
   }
   const auto route=verify_route(room);
-  if(route.complete)room.verification_policy=route.policy;
-  else room.platforms=std::move(original);
+  if(!route.complete) {
+    room.platforms=std::move(original);
+    return;
+  }
+  room.verification_policy=route.policy;
+  room.interactions.push_back({{13,51,2,3},InteractionKind::Npc,2,{"Porozmawiaj","Talk"}});
 }
 
 inline void add_heatworks_cargo_hoists(EngineGrid &room) {
