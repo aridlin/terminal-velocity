@@ -34,6 +34,24 @@ int main(){try {
       at_door.player.x+=2.;
     }
   }
+  {
+    auto room=game.grid;
+    auto state=game.state;
+    room.sweets={{8,20},{12,20}};
+    state.collected={true,false};
+    state.deaths=7;
+    state.adventure.mode=iceberg::Mode::Endless;
+    state.adventure.depth=12;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      state.adventure.language=language;
+      const bool english=language==iceberg::Language::English;
+      RenderGrid(room,state,32,56,2).draw();
+      const auto text=ui_text(frame);
+      ui_check(text.find(english?"Tokens 1/2   Retries 7   Depth 12":
+                                "Żetony 1/2   Powroty 7   Głębokość 12")!=std::string::npos,
+               "compact gameplay keeps token, retry and expedition depth readouts");
+    }
+  }
   Controls enter;enter.confirm=true;Controls book;book.journal=true;Controls map;map.map=true;Controls tab;tab.inspect=true;Controls use;use.interact=true;
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
     game.profile.language=language;game.sync_view();game.state.adventure.map=true;game.state.adventure.selected=1;

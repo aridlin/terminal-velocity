@@ -592,8 +592,15 @@ function resize(){
  stageWidth=width;stageHeight=height;
  const landscape=matchMedia('(orientation:landscape) and (max-height:500px)').matches;
  const compact=mobile()&&(!!(uiFlags&255)||(landscape&&expanded()));
- cols=compact?(landscape?60:38):Math.max(76,Math.min(160,Math.floor(stageWidth/10)));
- rows=compact?(landscape?20:28):Math.max(24,Math.min(48,Math.floor(stageHeight/(stageWidth/cols*2))));
+ const portraitPhone=matchMedia('(pointer:coarse) and (orientation:portrait) and (max-width:480px)').matches;
+ if(compact){
+  cols=landscape?60:38;
+  rows=landscape?20:28;
+ }else{
+  // Keep a 56-column horizon and grow it with the screen width.
+  cols=portraitPhone?Math.max(56,Math.ceil(width/6.5)):Math.max(76,Math.min(160,Math.floor(width/10)));
+  rows=Math.max(portraitPhone?20:24,Math.min(48,Math.floor(height/(width/cols*2))));
+ }
  previous=new Uint32Array(0);if(!started)drawBoot();
 }addEventListener('resize',resize);
 function drawBoot(){

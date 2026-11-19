@@ -1006,7 +1006,12 @@ const server=http.createServer((req,res)=>{
   const retry=page.locator('#toolbar [data-tap="13"]');
   assert.equal(await retry.isDisabled(),true,'Retry is disabled before starting');
   await page.locator('[data-language="en"]').click();await page.locator('#start').click();await page.waitForTimeout(150);
-  await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);await page.screenshot({path:path.join(out,'web-mobile-opening.png')});
+  await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));
+  await page.waitForFunction(()=>cols===60&&canvas.getBoundingClientRect().height/rows>=12);
+  assert.match(await page.evaluate(()=>Array.from({length:cols},(_,x)=>
+   String.fromCodePoint(previous[(2*cols+x)*4])).join('')),/Retries 0/);
+  console.log('PASS portrait phone shows larger game cells and retains the gameplay HUD');
+  await page.waitForTimeout(650);await page.screenshot({path:path.join(out,'web-mobile-opening.png')});
   const inspectControl=page.locator('#touch-inspect');
   const touchDirectionNames=()=>Promise.all([2,3].map(key=>
    page.locator('#touch [data-key="'+key+'"]').getAttribute('aria-label')));
