@@ -8,7 +8,7 @@ int main(){try {
   game.begin_campaign(true);game.state.menu=false;CellFrame frame;
   cell_frame_sink=[&](const CellFrame &f){frame=f;};
   int studies=0,pages=0;
-  for(int kind=0;kind<=int(iceberg::InspectionArt::Delivery);++kind) {
+  for(int kind=0;kind<=int(iceberg::InspectionArt::Chart);++kind) {
     auto art=iceberg::inspection_art(iceberg::InspectionArt(kind),0);
     require_inspect(art.size()==12,"inspection study must be independently drawn at twelve rows");
     for(const auto &line:art)require_inspect(iceberg::cell_length(line)<=28,"inspection study overflows its art column");

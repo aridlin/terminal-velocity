@@ -210,6 +210,14 @@ inline std::vector<std::string> inspection_art(InspectionArt kind,int detail=0) 
    │○    ╭──────╮      ○│
    ╰─────┴──────┴────────╯
        ╧╧          ╧╧)ART";break;
+  case InspectionArt::Chart:
+    return {"  ╭──────┬──────────────╮", "  │ ▥ ▥  ├─╮     ≈≈     │",
+      "  │ ▥ ▥  │ ╰──╮    ≈≈  │", "  ├──────╯ ╭──╯        │",
+      "  │    ╭───╯     01     │", "  │ ═══╯ ······· ◆     │",
+      "  │              ·      │", "  │      02 ·····┘    ≈│",
+      "  │      ◆ ·······╮    │", "  │   ≈≈          03   │",
+      detail?"  │               ⚑    │":"  │               ◇    │",
+      "  ╰─────────────────────╯"};
   case InspectionArt::Character: {
     static const char *heads[]={
       "      ▄██▀▀▀▀▀▀▀██▄", "       ▄████████▄", "      ▄████▣█████▄", "      ▄███▀▀▀████▄",

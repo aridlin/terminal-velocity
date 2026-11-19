@@ -67,13 +67,15 @@ int main() {
       resumed.profile.language=iceberg::Language::English;
       resumed.inspect_nearby();
       if(resumed.state.adventure.inspect_title!="Harbor chart"||
-          resumed.state.adventure.inspect_body.find("Press E to record the dark third buoy")==std::string::npos)
+          resumed.state.adventure.inspect_art!=iceberg::InspectionArt::Chart||
+          resumed.state.adventure.inspect_body.find("press E at the chart")==std::string::npos)
         throw std::runtime_error("the chart should explain how to record the dark buoy");
       resumed.state.adventure.inspecting=false;
       resumed.interact();
       if(resumed.grid.switch_flags!=1)throw std::runtime_error("the dark buoy must be marked before leaving");
       resumed.inspect_nearby();
-      if(resumed.state.adventure.inspect_body.find("already marked")==std::string::npos)
+      if(resumed.state.adventure.inspect_body.find("already marked")==std::string::npos||
+          resumed.state.adventure.inspect_detail!=1)
         throw std::runtime_error("the chart should show that the buoy has been recorded");
       resumed.state.adventure.inspecting=false;
       const auto exit=find_motion_path(resumed.grid,resumed.state,resumed.grid.goal);

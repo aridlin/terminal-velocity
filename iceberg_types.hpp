@@ -16,7 +16,7 @@ enum class Mode { Campaign, Endless, Trial };
 enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret, Interlude };
 enum class Rhythm { Flow, Precision, Vertical, Timing, Explore, Recovery };
 enum class Mechanic { None, Current, Steam, Conveyor, Echo, Growth, Wind };
-enum class InspectionArt { Parcel, Valve, Signal, Address, File, Seeds, Speaker, Thermometer, Sign, Dedication, Board, Door, Coin, Refill, Lamp, Character, Delivery };
+enum class InspectionArt { Parcel, Valve, Signal, Address, File, Seeds, Speaker, Thermometer, Sign, Dedication, Board, Door, Coin, Refill, Lamp, Character, Delivery, Chart };
 struct Text {
   const char *pl = "";
   const char *en = "";

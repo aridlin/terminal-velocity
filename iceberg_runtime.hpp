@@ -1113,12 +1113,12 @@ public:
       if(profile.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))v.inspect_body+=t("\nJuż załatwione.","\nAlready handled.");
       break;
     case InteractionKind::SurveyChart:
-      v.inspect_title=t("Mapa portu","Harbor chart");v.inspect_art=Art::File;
+      v.inspect_title=t("Mapa portu","Harbor chart");v.inspect_art=Art::Chart;v.inspect_detail=bool(grid.switch_flags&1);
       v.inspect_body=grid.switch_flags&1?
         t("Pozycja trzeciej boi jest już zaznaczona. Drzwi na końcu pomostu prowadzą z powrotem do przystani.",
           "The third buoy is already marked. The door at the end of the platform leads back to the harbor."):
-        t("Oznacz pozycję boi na mapie portu. Naciśnij E, żeby zaznaczyć zgaszoną trzecią boję i otworzyć drogę powrotną.",
-          "Mark the buoy on the harbor chart. Press E to record the dark third buoy and open the way back.");
+        t("Trzecia boja zgasła. Zamknij oględziny, a potem naciśnij E przy mapie, żeby oznaczyć boję i otworzyć drogę powrotną.",
+          "Buoy 3 is dark. Close this panel, then press E at the chart to mark it and open the way back.");
       break;
     case InteractionKind::Valve:
       v.inspect_art=Art::Valve;v.inspect_icon="⊗";
