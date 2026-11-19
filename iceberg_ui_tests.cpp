@@ -1123,6 +1123,34 @@ int main(){try {
       game.tick(next_leg,0);game.tick(next_leg,0);
       ui_check(v.route_room_selection==25&&v.route.browsed_leg==1&&v.route.current==0&&game.depth==16,
         "future preview clamps leg navigation without moving the courier");
+      const auto route_details=[&]{
+        std::string details;
+        for(const auto &row:frame) {
+          for(const auto &cell:row)if(cell.rgb==0xffd68a||cell.rgb==0xc7d9df)details+=cell.glyph;
+          details+=' ';
+        }
+        return normalize_ui(details);
+      };
+      for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+        const bool en=language==iceberg::Language::English;
+        game.profile.language=language;game.sync_view();
+        const auto location=std::string(en?"Now: leg 3, room 1":"Teraz: odc. 3, pok. 1");
+        const auto selected=std::string(en?"Room 2: ":"Pokój 2: ");
+        for(auto dimensions:{std::pair{34,24},std::pair{56,20},std::pair{110,34}}) {
+          RenderGrid(game.grid,game.state,dimensions.second,dimensions.first,2).draw();
+          const auto text=route_details();
+          ui_check(text.find(location+" "+v.route.place.get(language)+" "+selected+
+                           v.route.browsed_rooms[1].get(language))!=std::string::npos,
+                   "future preview distinguishes the physical and selected locations at each viewport size");
+        }
+        game.tick(previous_leg,0);game.tick(previous_leg,0);
+        RenderGrid(game.grid,game.state,24,34,2).draw();
+        ui_check(ui_text(frame).find(en?"Completed leg 2":"Ukończony odcinek 2")!=std::string::npos&&
+                 route_details().find(location+" "+v.route.place.get(language)+" "+selected+
+                           v.route.browsed_rooms[1].get(language))!=std::string::npos,
+                 "history displays the courier's active leg and room separately from the historical selection");
+        game.tick(next_leg,0);game.tick(next_leg,0);
+      }
       game.tick(previous_leg,0);game.tick(previous_room,0);
       ui_check(v.route_room_selection==16&&v.route.current==0,"room arrows still move one room after a leg step");
       game.tick(open_menu,0);game.tick(enter,0);game.tick(map,0);

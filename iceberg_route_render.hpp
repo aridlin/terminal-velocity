@@ -484,7 +484,13 @@
     }
     // Put the room details just below the route and wrap at terminal-cell width.
     int row=top+7;
-    for(const auto &line:wrap(current,cols_-9))clipped(row++,5,line,0xffd68a);
+    if(browsing_other_leg) {
+      const auto location=tr("Teraz: odc. ","Now: leg ")+std::to_string(endless_leg)+
+        tr(", pok. ",", room ")+std::to_string(r.current+1);
+      for(const auto &line:wrap(location,cols_-9))clipped(row++,5,line,0xffd68a);
+    }
+    const auto place=browsing_other_leg?r.place.get(v.language):current;
+    for(const auto &line:wrap(place,cols_-9))clipped(row++,5,line,0xffd68a);
     const int count=int(rooms.size());
     const bool browsing=selected>=0&&selected<count&&selected!=current_room;
     if(browsing) {
