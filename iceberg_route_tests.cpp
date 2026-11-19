@@ -163,6 +163,26 @@ int main() {
     westbound.protect_exit();
     require(!westbound.solid_at(entry_edge,landing_y-1)&&verify_route(westbound).complete,
       "the westbound stairwell keeps its right-hand approach open");
+    AdventureSession west_exit(options,{});
+    west_exit.profile.unlocked=west_exit.run_district=2;
+    auto &saved_stairs=west_exit.profile.expeditions[0];
+    saved_stairs.active=true;saved_stairs.district=2;saved_stairs.seed=saved_stairs.origin_seed=73;
+    saved_stairs.itinerary=iceworld::make_itinerary(saved_stairs.seed,2,iceberg::RoomsPerLeg);
+    saved_stairs.itinerary.front()=25;
+    west_exit.begin_run(iceberg::Mode::Endless);
+    const auto stair_door=west_exit.grid.goal;
+    require(west_exit.grid.template_id==25,"the saved Estate run opens the west-facing stairwell door");
+    west_exit.state.player.x=stair_door.right()+.4;
+    west_exit.state.player.y=stair_door.bottom()-kPlayerHeight;
+    west_exit.state.player.grounded=true;
+    Controls west_dash;west_dash.move=-1;west_dash.dash_pressed=true;
+    west_exit.tick(west_dash,.1);west_dash.dash_pressed=false;
+    for(int i=0;i<8;++i)west_exit.tick(west_dash,.1);
+    require(west_exit.state.won&&west_exit.state.player.grounded&&west_exit.state.deaths==0&&
+      west_exit.state.player.x>=std::floor(west_exit.grid.route_points.back().first)-1.001,
+      "a westward dash stays at the door and never falls off the far side");
+    west_exit.tick(confirm,1./120);
+    require(west_exit.room==1,"the west-facing door still advances on a separate confirmation");
     AdventureSession archive(options,{});
     archive.begin_campaign(true);archive.profile.unlocked=3;archive.run_district=3;
     auto &copies=archive.profile.expeditions[0];
