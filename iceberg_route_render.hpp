@@ -10,6 +10,8 @@
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy&&!platform.fragile;});
     const bool has_fragile=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.fragile;});
+    const bool has_brittle_ice=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.fragile&&platform.icy;});
     const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_rack;});
     const bool has_seam=grid_.crown_seam.has_value();
@@ -101,7 +103,7 @@
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const bool has_vents=!grid_.pulses.empty();
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
-    constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f;
+    constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f,gap_color=0x85c0cd;
     struct FieldLandmark {const char *symbol;iceberg::Text legend;uint32_t color;};
     static constexpr std::array<FieldLandmark,3> field_landmarks{{
       {"▤",{"▤ Tabliczka","▤ Route sign"},0xe7d8b4},
@@ -234,8 +236,14 @@
         for(int x=column(center-range);x<=column(center+range);++x)
           if(lane[size_t(x)]==' ')lane[size_t(x)]='s';
       }
-      if(!platform.available(state_,i,state_.elapsed))continue;
       const auto deck=platform.at(state_.elapsed);
+      if(!platform.available(state_,i,state_.elapsed)) {
+        if(platform.icy) {
+          auto &tile=map[size_t(row(deck.y))][size_t(column(deck.x+deck.w*.5))];
+          if(tile=='~')tile='x';
+        }
+        continue;
+      }
       char tile=platform.icy?'i':'=';
       if(platform.fragile) {
         const bool cracking=platform.crack_age(state_,i,state_.elapsed)<MovingPlatform::CrackTime;
@@ -270,6 +278,7 @@
       case 'f':paint_text(first+y,left+x,"┅",fragile_color);break;
       case 'j':paint_text(first+y,left+x,"┅",0xa6e9ea);break;
       case 'c':paint_text(first+y,left+x,"╍",cracking_color);break;
+      case 'x':paint_text(first+y,left+x,"×",gap_color);break;
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
     }
@@ -488,7 +497,14 @@
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,2,name,fragile_color);
       paint_text(legend,separator," · ",0xc7d9df);
-      paint_text(legend++,separator+3,tr("╍ Pękają","╍ Cracking"),cracking_color);
+      const auto cracking=has_brittle_ice?tr("╍ Pęka","╍ Cracks"):tr("╍ Pękają","╍ Cracking");
+      paint_text(legend,separator+3,cracking,cracking_color);
+      if(has_brittle_ice) {
+        const int end=separator+3+int(glyphs(cracking).size());
+        paint_text(legend,end," · ",0xc7d9df);
+        paint_text(legend,end+3,tr("× Przerwa","× Gap"),gap_color);
+      }
+      ++legend;
     }
     for(const auto &line:feature_legend) {
       int x=2;
