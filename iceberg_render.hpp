@@ -318,6 +318,7 @@
       if(platform.tram){draw_estate_tram(platform,r);continue;}
       if(platform.clothesline){draw_estate_clothesline(r,i);continue;}
       if(platform.archive_rack){draw_archive_rack(platform,r);continue;}
+      if(platform.archive_trolley){draw_archive_trolley(r);continue;}
       if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}
       if(grid_.template_id==50){draw_leaf_ferry(platform,r);continue;}
       if(grid_.template_id==57){draw_irrigation_bucket(platform,r);continue;}
