@@ -187,13 +187,14 @@ int main(){try {
     camera_settings.profile.smooth_camera=smooth;
     camera_settings.state.camera_x=camera_settings.grid.width()*.5;
     camera_settings.state.camera_y=camera_settings.grid.height()*.5;
-    camera_player.y=camera_settings.grid.height()+2.;
+    camera_player.y=camera_settings.grid.height()+6.;
+    const int previous_deaths=camera_settings.state.deaths;
     camera_settings.tick({},1./120,true,39,28,2);
     const auto &view=camera_settings.state;
     const double width=39*.4,height=21*.8;
     const double expected_x=std::clamp(view.spawn_x-width*.42,0.,camera_settings.grid.width()-width);
     const double expected_y=std::clamp(view.spawn_y-height*.68,0.,camera_settings.grid.height()-height);
-    ui_check(camera_player.x==view.spawn_x&&camera_player.y==view.spawn_y&&
+    ui_check(view.deaths==previous_deaths+1&&camera_player.x==view.spawn_x&&camera_player.y==view.spawn_y&&
       std::abs(view.camera_x-expected_x)<.001&&std::abs(view.camera_y-expected_y)<.001,
       "the camera immediately frames the checkpoint after a fall with either camera setting");
   }
