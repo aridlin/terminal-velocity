@@ -793,10 +793,16 @@
       draw_crown_film();
       return;
     }
+    const auto &v=state_.adventure;
     draw_iceberg_world();
     draw_room_shutter();
+    if(v.death_left>0&&!state_.menu&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!dialogue.active()) {
+      const auto label=tr("ŚMIERĆ · POWRÓT DO LAMPY","DIED · BACK AT CHECKPOINT");
+      const int width=iceberg::cell_length(label),left=(cols_-width)/2;
+      fill(4,left-1,width+2,1,Color::Default);
+      paint_text(4,left,label,0xffa093,true);
+    }
     if(cols_<76||rows_<24){draw_iceberg_compact();return;}
-    const auto &v=state_.adventure;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     fill(0,0,cols_,4,Color::Default);
     paint_text(0,2,d.name.get(v.language),d.accent,true);
