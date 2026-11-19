@@ -49,6 +49,40 @@ int main(){try {
       require_inspect(!v.inspecting&&game.state.elapsed==elapsed&&game.profile.task_items==original_items,"reading inspection changes the world or does not close");
     }
   }
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    game.profile.language=language;
+    game.grid=iceworld::build_settlement(0);
+    game.grid.interactions={{{5,40,3,4},InteractionKind::Note,0,{"Tablica","Sign"}}};
+    game.state=new_state(game.grid);game.state.menu=false;
+    game.state.player.x=5;game.state.player.y=41;
+    Controls inspect;inspect.inspect=true;
+    game.tick(inspect,0,true,34,24);
+    auto &v=game.state.adventure;
+    require_inspect(v.inspecting,"open the training sign at a compact width");
+    const auto narrow=iceberg::inspection_layout(v.inspect_title,v.inspect_body,34,24);
+    require_inspect(narrow.pages>1,"reflow fixture must have multiple compact pages");
+    Controls next;next.navigate=1;
+    game.tick(next,0,true,34,24);
+    const auto anchor=v.inspect_offset;
+    require_inspect(narrow.page_at(anchor)==1,"select the second page");
+    const auto wide=iceberg::inspection_layout(v.inspect_title,v.inspect_body,110,34);
+    require_inspect(wide.pages==1,"the wide version must fit on one page");
+    game.tick({},0,true,110,34);
+    require_inspect(wide.page_at(v.inspect_offset)==0&&v.inspect_offset==anchor,
+      "a one-page view keeps the original reading position");
+    game.tick({},0,true,34,24);
+    RenderGrid(game.grid,game.state,24,34,2).draw();
+    const std::string expected=narrow.body[size_t(narrow.text_rows)];
+    std::string rendered;
+    for(const auto &cell:frame[size_t(narrow.text_y)])rendered+=cell.glyph;
+    require_inspect(rendered.find(expected)!=std::string::npos&&narrow.page_at(v.inspect_offset)==1,
+      "shrinking restores the second page and the actual text");
+    Controls previous;previous.navigate=-1;
+    game.tick(previous,0,true,34,24);
+    require_inspect(v.inspect_offset==0,"paging deliberately moves the reading position");
+    game.tick(inspect,0,true,34,24);
+  }
+  std::cout<<"PASS inspection reflow keeps the active passage in both languages\n";
   game.grid.interactions={{{5,40,3,4},InteractionKind::Note,0,{"Tablica","Sign"}}};
   game.state.player.x=5;game.state.player.y=41;
   Controls inspect;inspect.inspect=true;

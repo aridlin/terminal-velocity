@@ -44,7 +44,7 @@ void send_web_ui() {
     (int(!s.menu&&v.dialogue.choosing())<<26);
   if(v.inspecting) {
     const auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,web_game->last_columns,web_game->last_rows);
-    const int page=std::clamp(v.inspect_page,0,layout.pages-1);
+    const int page=layout.page_at(v.inspect_offset);
     flags|=(int(page>0)<<27)|(int(page+1<layout.pages)<<28);
   }
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());

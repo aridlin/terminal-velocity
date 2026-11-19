@@ -446,7 +446,7 @@
         paint_text(layout.art_y+int(y),layout.art_x+int(x),line[x],color);
       }
     }
-    int page=std::clamp(v.inspect_page,0,layout.pages-1);
+    int page=layout.page_at(v.inspect_offset);
     for(int i=0;i<layout.text_rows;++i) {
       int at=page*layout.text_rows+i;if(at>=int(layout.body.size()))break;
       paint_text(layout.text_y+i,layout.text_x,layout.body[size_t(at)],0xeee7d6);
