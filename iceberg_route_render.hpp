@@ -399,14 +399,15 @@
     const int leg=campaign?std::clamp(v.route_page<0?r.leg:v.route_page,0,2):0;
     const int offset=leg*room_count;
     const int endless_leg=v.depth/room_count+1;
-    const bool preview=!r.next_rooms.empty();
-    const auto &rooms=preview?r.next_rooms:r.rooms;
-    const int selected=v.route_room_selection-(preview?room_count:0);
-    const int current_room=preview?-1:r.current;
+    const bool browsing_other_leg=!r.browsed_rooms.empty();
+    const auto &rooms=browsing_other_leg?r.browsed_rooms:r.rooms;
+    const int selected=v.route_room_selection<0?-1:v.route_room_selection%room_count;
+    const int current_room=browsing_other_leg?-1:r.current;
     std::string progress;
     if(campaign)progress=tr("Odcinek ","Leg ")+std::to_string(leg+1)+" / 3  ·  "+
       iceberg::route_title(v.district,2+2*leg).get(v.language);
-    else if(preview)progress=tr("Następny odcinek ","Next leg ")+std::to_string(endless_leg+1);
+    else if(r.browsed_leg<0)progress=tr("Ukończony odcinek ","Completed leg ")+std::to_string(endless_leg+r.browsed_leg);
+    else if(r.browsed_leg>0)progress=tr("Następny odcinek ","Next leg ")+std::to_string(endless_leg+1);
     else if(v.mode==iceberg::Mode::Endless)progress=tr("Odcinek ","Leg ")+std::to_string(endless_leg)+
       tr(" · Głębokość "," · Depth ")+std::to_string(v.depth);
     else progress=tr("Pokój ","Room ")+std::to_string(r.current+1)+" / "+std::to_string(r.rooms.size());
@@ -423,7 +424,7 @@
         const bool branch=r.branching&&n==2;
         const bool alt=branch&&(r.choices&(1u<<leg));
         const bool current=current_room==idx&&!alt;
-        const bool visited=!preview&&(r.visited&(1u<<idx))&&!alt;
+        const bool visited=(r.browsed_leg<0||(!browsing_other_leg&&(r.visited&(1u<<idx))))&&!alt;
         std::string number=wide?(idx+1<10?"0":"")+std::to_string(idx+1):std::to_string(n+1);
         const auto label=wide?(current?"<":visited?"[":"(")+number+(current?">":visited?"]":")"):
           (current?"▶":visited?"●":"○")+number;
@@ -461,7 +462,7 @@
     }
     if(count>0&&(browsing?selected:current_room)==count-1) {
       const auto exit=v.mode==iceberg::Mode::Endless
-        ?tr("Wyjście do odcinka ","Exit starts leg ")+std::to_string(endless_leg+(preview?2:1))
+        ?tr("Wyjście do odcinka ","Exit starts leg ")+std::to_string(endless_leg+r.browsed_leg+1)
         :tr("Wyjście kończy próbę","Exit completes the trial");
       for(const auto &line:wrap(exit,cols_-9))clipped(row++,5,line,0xc7d9df);
     } else if(!browsing&&current_room>=0&&current_room+1<count) {

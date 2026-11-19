@@ -70,9 +70,18 @@
       r.available=!e.itinerary.empty();r.current=room;r.place=grid.room_name;
       r.visited=(1u<<unsigned(room+1))-1;
       for(int id:e.itinerary)r.rooms.push_back(iceworld::pattern(id).name);
-      if(mode==iceberg::Mode::Endless&&v.map&&!v.map_room&&
-         v.route_room_selection>=iceberg::RoomsPerLeg)
-        for(int id:expedition_itinerary(next_expedition_seed()))r.next_rooms.push_back(iceworld::pattern(id).name);
+      if(mode==iceberg::Mode::Endless&&run_active) {
+        r.completed_legs=int(completed_expedition_legs.size());
+        if(v.map&&!v.map_room&&v.route_room_selection>=0) {
+          const int page=v.route_room_selection/iceberg::RoomsPerLeg;
+          r.browsed_leg=page-r.completed_legs;
+          if(r.browsed_leg<0) {
+            for(int id:completed_expedition_legs[size_t(page)])r.browsed_rooms.push_back(iceworld::pattern(id).name);
+          } else if(r.browsed_leg>0) {
+            for(int id:expedition_itinerary(next_expedition_seed()))r.browsed_rooms.push_back(iceworld::pattern(id).name);
+          }
+        }
+      }
       if(mode==iceberg::Mode::Trial&&!r.rooms.empty())r.rooms.back()=iceworld::MasteryCourseName;
     }
   }
