@@ -148,7 +148,20 @@ inline const CivicReply &harbor_mission_reply(int mission,int option) {
   return replies[size_t(mission)][size_t(option)];
 }
 
+inline const CivicReply &epilogue_reply(int option) {
+  static const std::array<CivicReply,2> replies{{
+    {{"Kto powie Mariannie?","Who’ll tell Marianna?"},
+     {"Czy ktoś powie Mariannie, że może sprawdzić swój adres w nowym odpisie?","Will someone tell Marianna she can look up her address in the new copy?"},
+     {0,{"Ja jej powiem. Pójdę po ostatnim promie do piekarni. Jeśli będzie chciała przeczytać, co wtedy podpisałam, usiądę z nią i przejdziemy przez to razem.","I will. I’ll go to the bakery after the last ferry. If she wants to read what I signed that day, I’ll sit with her and go through it together."}}},
+    {{"Otworzysz nowe okienko?","Will you open the new counter?"},
+     {"Heleno, ty otworzysz dziś nowe okienko?","Helena, will you open the new counter today?"},
+     {0,{"Tak. Kiedy ostatnio przyszła tu kobieta z jedenastej, podałam jej formularz i zamknęłam szybę. Dziś wyniosę krzesło przed ladę. Jak ktoś przyniesie mi ten stary formularz, usiądę i go przeczytam.","Yes. The last time a woman from stairwell eleven came in, I gave her a form and closed the window. Today I’ll put a chair out in front. If anybody brings back that old form, I’ll sit down and read it."}}},
+  }};
+  return replies[size_t(option)];
+}
+
 inline const CivicReply &civic_reply(int scene,int option) {
+  if(scene==EpilogueReplyScene)return epilogue_reply(option);
   if(scene>=HarborMissionReplyBase)return harbor_mission_reply(scene-HarborMissionReplyBase,option);
   if(scene>=BriefingReplyBase)return briefing_reply(scene-BriefingReplyBase,option);
   static const std::array<std::array<CivicReply,2>,7> replies{{
