@@ -106,6 +106,18 @@ int main() {
         saved_events.expeditions[0].deaths==1&&saved_events.expeditions[0].room_deaths==1&&
         saved_events.expeditions[0].collected==1&&saved_events.expeditions[0].treasures==1,
         "an ordinary fall saves both retry counts and keeps the collected token");
+      events.profile.quests[6]=1;events.profile.quest_counts[6]=2;
+      events.persist();
+      for(int i=0;i<24;++i)events.tick({},1./120);
+      Controls launch;launch.move=1;launch.dash_pressed=true;
+      events.tick(launch,1./120);
+      launch.dash_pressed=false;launch.jump_pressed=launch.jump_held=true;
+      events.tick(launch,1./120);
+      require(events.state.player.dash_jump_left>0&&events.state.checkpoint==0&&!events.state.won&&
+        events.state.sweets_count()==1&&events.state.deaths==1&&
+        iceberg::SaveStore::validate_file(events_path,saved_events)&&
+        saved_events.quest_counts[6]==3&&saved_events.quests[6]==2,
+        "Kuba's third dash jump saves both the count and the ready-to-return quest state");
       const auto clock=events.state.elapsed;
       const auto switches=events.grid.switch_flags;
       Controls retry_frame;
@@ -121,18 +133,6 @@ int main() {
         saved_events.expeditions[0].collected==1&&saved_events.expeditions[0].treasures==1&&
         saved_events.expeditions[0].switches==switches,
         "a slow retry records one attempt while preserving its token and room switches");
-      events.profile.quests[6]=1;events.profile.quest_counts[6]=2;
-      events.persist();
-      for(int i=0;i<24;++i)events.tick({},1./120);
-      Controls launch;launch.move=1;launch.dash_pressed=true;
-      events.tick(launch,1./120);
-      launch.dash_pressed=false;launch.jump_pressed=launch.jump_held=true;
-      events.tick(launch,1./120);
-      require(events.state.player.dash_jump_left>0&&events.state.checkpoint==0&&!events.state.won&&
-        events.state.sweets_count()==1&&events.state.deaths==1&&
-        iceberg::SaveStore::validate_file(events_path,saved_events)&&
-        saved_events.quest_counts[6]==3&&saved_events.quests[6]==2,
-        "Kuba's third dash jump saves both the count and the ready-to-return quest state");
       std::filesystem::remove(events_path);std::filesystem::remove(events_path.string()+".bak");
     }
     options.no_save=true;
