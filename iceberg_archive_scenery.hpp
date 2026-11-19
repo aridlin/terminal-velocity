@@ -18,6 +18,54 @@
     world_text(center,deck.y-row*1.1,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);
   }
 
+  void draw_archive_trolley(const Rect &deck) {
+    const int width=std::max(3,int(std::round(deck.w/scale_)));
+    std::string surface="╞",tray="╰";
+    for(int i=1;i<width-1;++i){surface+="═";tray+=i%2?"▤":"─";}
+    world_text(deck.x,deck.y,surface+"╡",0xaee1df);
+    world_text(deck.x,deck.y+aspect_*scale_,tray+"╯",0x749da5);
+  }
+
+  void draw_envelope_canopy() {
+    const double row=aspect_*scale_;
+    // Paper hangs from steel ribs and runoff splashes on the lower walkways.
+    world_art(44,24,{"╔══════════════════════════════════╗",
+                     "╚══╤══════╤══════╤══════╤══════╤═══╝"},0x64798a);
+    for(int i=0;i<5;++i)
+      world_art(45+(2+7*i)*scale_,24+2*row,
+        {"  │  ","┌─┴─┐","│╲ ╱│","└─V─┘"},0x64798a);
+    draw_scenery_pipe({{48,25},{48,33},{63,33},{63,34},{70,34}},0x687e8b);
+    draw_pipe_drip(70,34,42,.35);
+    draw_scenery_pipe({{108,18},{113,18},{113,38},{116,38}},0x687e8b);
+    draw_pipe_drip(116,38,50,1.1);
+    for(const auto &platform:grid_.platforms)if(platform.archive_trolley) {
+      const double center=platform.base.x+platform.base.w*.5;
+      const double rail_y=platform.base.y-5.2;
+      const auto [left,bottom]=screen(center-platform.dx,rail_y-platform.dy);
+      const auto [right,top]=screen(center+platform.dx,rail_y+platform.dy);
+      auto rail_cell=[&](int x,int y,const char *glyph) {
+        world_art(state_.camera_x+(x+.1)*scale_,state_.camera_y+(y-4+.1)*row,{glyph},0x6d8892);
+      };
+      int y=bottom;
+      rail_cell(left,y,"╞");
+      for(int x=left+1;x<right;++x) {
+        const int next=bottom-int(std::round(double(x-left)*(bottom-top)/(right-left)));
+        if(next<y) {
+          rail_cell(x,y,"╝");
+          for(int bridge=y-1;bridge>next;--bridge)rail_cell(x,bridge,"║");
+          rail_cell(x,next,"╔");
+        } else rail_cell(x,y,"═");
+        y=next;
+      }
+      rail_cell(right,y,"╡");
+      const auto deck=platform.at(state_.elapsed);
+      const double rider=deck.x+deck.w*.5;
+      world_art(rider,deck.y-5.2,{"◉"},0x96b3b8);
+      for(double y=deck.y-5.2+row;y<deck.y;y+=row)
+        world_art(rider,y,{"│"},0x82a0ab);
+    }
+  }
+
 // RenderGrid members. Shelves and catalogue rails belong to the room's
 // architecture; moving carriages stay attached to their collision platform.
   void draw_archive_landmarks() {
@@ -54,7 +102,7 @@
         case 3:case 10:world_art(p.x-4,p.y-8,{"╭───────────────╮","│ ╭──────────╮  │","│ │    ▰     │  │","│ ╰──────────╯  │","│ ╭───────────────────╮","│ │         ▰         │","│ ╰───────────────────╯","╰───────────────╯"},d.accent);break;
         case 4:case 8:world_art(p.x-4,p.y-7,{"   ╭─────────────╮","   │ ═════  ═══  │","   │ ═════  ═══  │","   │ ═════       │","╭──┴─────────────┴──╮","╰─◉───────────────◉─╯"},d.stone);break;
         case 7:world_art(p.x-5,p.y-5,{"      ╭────╮","      │ ░░ │       ╱╲","╭─────┴────┴──────╱──╲──╮","│ ═══════   ═══════     │","╰──┬────────────────┬───╯","   │                │"},d.light);break;
-        case 9:world_art(p.x-6,p.y-10,{"╥────────────────────────────╥","║  ╭───╮   ╭───╮   ╭───╮     ║","║  │╲ ╱│   │╲ ╱│   │╲ ╱│     ║","║  ╰─V─╯   ╰─V─╯   ╰─V─╯     ║","    ┆       ┆       ┆"},d.stone);break;
+        case 9:draw_envelope_canopy();break;
         default:world_art(p.x-4,p.y-10,{" ╥                     ╥"," ║  ╭───────────────╮  ║"," ║  │ ▥▥▥▥▥▥▥▥▥▥▥▥▥ │  ║"," ║  ├───────────────┤  ║"," ║  │ ▥▥▥▥▥▥▥▥▥▥▥▥▥ │  ║"," ║  ╰───────────────╯  ║"," ║                     ║"},d.stone);break;
         }
       }
@@ -70,6 +118,7 @@
     const double row_height=aspect_*scale_;
     const MovingPlatform *first_rack=nullptr;
     for(const auto &platform:grid_.platforms) {
+      if(platform.archive_trolley)continue;
       if(platform.archive_rack) {
         const double center=platform.base.x+platform.base.w*.5;
         if(first_rack) {

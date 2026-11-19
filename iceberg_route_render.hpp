@@ -14,6 +14,8 @@
       [](const auto &platform){return platform.fragile;});
     const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_rack;});
+    const bool has_trolley=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.archive_trolley;});
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.tram;});
     const auto ferry=[&](size_t i){return quay_ferry(i)||grid_.template_id==50;};
@@ -52,7 +54,7 @@
     constexpr uint32_t valve_color=0xf0a277,bridge_color=0xabc9e4;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
     constexpr uint32_t ferry_color=0xe4ad68,ferry_route_color=0x6f9eaa;
-    constexpr uint32_t belt_color=0xa0d6df;
+    constexpr uint32_t belt_color=0xa0d6df,trolley_color=0xaee1df;
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const bool has_vents=!grid_.pulses.empty();
@@ -60,7 +62,7 @@
     constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f;
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
-      +int(has_fragile)+int(has_ferries);
+      +int(has_fragile)+int(has_ferries)+int(has_trolley);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=has_ferries&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
@@ -139,6 +141,15 @@
         const double range=std::abs(platform.dy);
         for(int y=row(platform.base.y-range);y<=row(platform.base.y+range);++y)
           if(map[size_t(y)][size_t(x)]==' ')map[size_t(y)][size_t(x)]=':';
+      }
+      if(platform.archive_trolley) {
+        const double center=platform.base.x+platform.base.w*.5;
+        for(int n=0;n<=16;++n) {
+          const double fraction=n/8.-1;
+          auto &cell=map[size_t(row(platform.base.y+platform.dy*fraction))]
+                        [size_t(column(center+platform.dx*fraction))];
+          if(cell==' ')cell='s';
+        }
       }
       if(platform.tram) {
         const double center=platform.base.x+platform.base.w*.5,range=std::abs(platform.dx);
@@ -233,6 +244,10 @@
       mark(center+range,platform.base.y,"○",stop_color);
       // The car sits above the track so a docked car leaves both stops visible.
       mark_cell({column(car.x+car.w*.5),std::max(0,row(car.y)-1),1,"▰",tram_color});
+    }
+    for(const auto &platform:grid_.platforms)if(platform.archive_trolley) {
+      const auto deck=platform.at(state_.elapsed);
+      mark(deck.x+deck.w*.5,deck.y,"▱",trolley_color);
     }
     if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
       const auto deck=grid_.platforms[i].at(state_.elapsed);
@@ -334,6 +349,7 @@
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);
+    if(has_trolley)paint_text(legend++,2,tr("▱ Wózek","▱ Trolley"),trolley_color);
     if(has_refills) {
       const auto name=tr("▥ Zapas zrywu","▥ Dash refill");
       paint_text(legend,2,name,refill_color);

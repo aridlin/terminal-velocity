@@ -501,6 +501,65 @@ int main(){try {
       }
     }
   }
+  for(unsigned layout:{3,4}) {
+    AdventureSession archive(options,{});
+    archive.begin_campaign(true);
+    archive.profile.unlocked=archive.run_district=3;
+    auto &expedition=archive.profile.expeditions[0];
+    expedition.active=true;
+    expedition.district=3;
+    expedition.seed=expedition.origin_seed=73;
+    expedition.layout_version=layout;
+    expedition.itinerary={45,36,37,38,39,40,41,42};
+    archive.begin_run(iceberg::Mode::Endless);
+    const bool installed=std::any_of(archive.grid.platforms.begin(),archive.grid.platforms.end(),
+      [](const auto &platform){return platform.archive_trolley;});
+    ui_check(archive.grid.template_id==45&&installed==(layout>=4),
+      "Endless applies the trolley only to current Archive itineraries");
+  }
+  auto envelope_room=verified_room(45,73,3);
+  ui_check(std::none_of(envelope_room.platforms.begin(),envelope_room.platforms.end(),
+    [](const auto &platform){return platform.archive_trolley;}),
+    "the reference Envelope Ceiling route keeps its original platforms");
+  add_expedition_archive_trolley(envelope_room);
+  ui_check(envelope_room.platforms.size()==1&&envelope_room.platforms.front().archive_trolley,
+    "the current Envelope Ceiling expedition has a single diagonal trolley");
+  auto wet_ceiling=new_state(envelope_room);
+  wet_ceiling.camera_x=56;
+  wet_ceiling.camera_y=22;
+  wet_ceiling.adventure.presentation_time=.65;
+  RenderGrid(envelope_room,wet_ceiling,34,110,2).draw();
+  auto drip_row=[&]() {
+    for(int y=0;y<int(frame.size());++y)for(const auto &cell:frame[size_t(y)])
+      if(cell.glyph=="╵"&&cell.rgb==0xa0c4d0)return y;
+    return -1;
+  };
+  const int first_drip=drip_row();
+  wet_ceiling.adventure.presentation_time=1.04;
+  RenderGrid(envelope_room,wet_ceiling,34,110,2).draw();
+  ui_check(first_drip>0&&drip_row()>first_drip,"the canopy drain visibly falls toward the walkway");
+  const auto &trolley=envelope_room.platforms.front();
+  auto trolley_view=new_state(envelope_room);
+  const auto start_deck=trolley.at(0);
+  trolley_view.player.x=start_deck.x+(start_deck.w-kPlayerWidth)*.5;
+  trolley_view.player.y=start_deck.y-kPlayerHeight;
+  trolley_view.player.grounded=true;
+  trolley_view.player.support=0;
+  for(int tick=0;tick<432;++tick)world_step(trolley_view,envelope_room,{},1./120);
+  ui_check(trolley_view.player.support==0&&trolley_view.deaths==0&&
+           trolley_view.player.x>start_deck.x+15&&trolley_view.player.y<start_deck.y-15,
+    "the trolley carries a rider across and up to the envelope shelf");
+  trolley_view.adventure.map=trolley_view.adventure.map_room=true;
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    trolley_view.adventure.language=language;
+    const auto label=language==iceberg::Language::English?"▱ Trolley":"▱ Wózek";
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(envelope_room,trolley_view,rows,cols,2).draw();
+      ui_check(count_map("▱",0xaee1df)>=1&&count_map("@",0xffd68a)==1&&
+        count_map("┄",0x6f9eaa)>0&&ui_text(frame).find(label)!=std::string::npos,
+        "the room map fits the trolley, route, rider and localized legend");
+    }
+  }
   AdventureSession winter(options,"/tmp/tv-ui-ice-map-unused");
   winter.begin_campaign(true);winter.profile.unlocked=4;winter.run_district=4;
   auto &garden=winter.profile.expeditions[0];
