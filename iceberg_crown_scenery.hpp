@@ -183,9 +183,12 @@
     prop_art(71.,48.,{"┌─┐","│↑│","└┬┘"," │ "},0xb5d4de);
     const auto x=iceworld::RidgeLaunchX,y=iceworld::RidgeLaunchFloor;
     const bool ready=iceworld::ridge_launch_ready(wind,state_.elapsed);
-    prop_art(x+2.,y,{"┌───┐",ready?"│ ↗ │":"│ ○ │","└─┬─┘","  │  "},
+    const double signal_x=x+2.;
+    draw_scenery_pipe({{signal_x,y},{signal_x,y-2.8}},steel);
+    // Mount the light above the token so it can be read before collecting it.
+    prop_art(signal_x,y-2.6,{"┌───┐",ready?"│ ↗ │":"│ ○ │","└─┬─┘"},
       ready?iceworld::RidgeLaunchReady:iceworld::RidgeLaunchWaiting);
-    world_text(x,y+row*.3,"╧",0xb5d4de);
+    world_text(x,y-row*.3,"╧",0xb5d4de);
   }
 
   void draw_ridge_sensors(double amount,bool right) {
