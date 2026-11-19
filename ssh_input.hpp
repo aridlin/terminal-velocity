@@ -179,7 +179,10 @@ private:
     if (k == 'b') edges_.inspect = true;
     if (k == 'j') edges_.map = true;
     if (k == 'l') edges_.language = true;
-    if (k == 's') edges_.navigate = 1;
+    if (k == 's') {
+      edges_.navigate = 1;
+      edges_.fast_fall_pressed |= protocol;
+    }
     if (k == 'w') edges_.navigate = -1;
     if (k == 'a' || k == 'd') edges_.browse_leg = k == 'a' ? -1 : 1;
     if (k == 13 || k == 10)

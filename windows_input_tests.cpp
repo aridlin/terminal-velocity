@@ -35,6 +35,10 @@ int main() {
     check(input.consume().dash_pressed,
           "short native tap survives release before tick");
     check(!input.consume().dash_pressed, "tap edge consumed only once");
+    key(VK_DOWN, true);
+    key(VK_DOWN, false);
+    c = input.consume();
+    check(c.fast_fall_pressed && !c.fast_fall, "short Down tap survives the native release");
     key('W', true);
     key('D', true);
     key(VK_SHIFT, true);

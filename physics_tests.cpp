@@ -171,6 +171,15 @@ int main() {
           "landing on a moving platform also starts the cooldown");
     for (int i = 0; i < 15; ++i) world_step(on_lift, lift, {}, 1./120);
     check(on_lift.player.support == 0 && on_lift.player.can_dash(), "the lift rider can dash after the cooldown");
+    auto dropping = on_lift;
+    FixedStepper drop_step;
+    Controls quick_down;
+    quick_down.fast_fall_pressed = true;
+    drop_step.advance(dropping, lift, quick_down, .001);
+    check(dropping.player.support == 0, "a short Down tap waits for the next physics step");
+    drop_step.advance(dropping, lift, {}, 1./120);
+    check(dropping.player.support == -1 && !dropping.player.grounded && dropping.player.drop_left > 0,
+          "a short Down tap drops through a moving platform even after release");
     world_step(on_lift, lift, combo, 1./120);
     check(on_lift.player.dash_jump_left > 0 && on_lift.player.vy < 0,
           "same-tick dash jumps work off moving platforms");
@@ -186,6 +195,14 @@ int main() {
       check(approach.player.ledge && approach.player.ledge->side == side,
             "falling toward a clear ledge catches it from either side");
       const auto hanging = approach;
+      auto tapped = hanging;
+      Controls down_tap = toward;
+      down_tap.fast_fall_pressed = true;
+      FixedStepper tap_step;
+      tap_step.advance(tapped, adventure, down_tap, .001);
+      tap_step.advance(tapped, adventure, toward, 1./120);
+      check(!tapped.player.ledge && tapped.player.y > hanging.player.y,
+            "a Down tap drops from either ledge even while holding toward it");
       world_step(approach, adventure, {}, 1./120);
       check(!approach.player.ledge && approach.player.y > hanging.player.y,
             "releasing the direction drops from a ledge");

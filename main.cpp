@@ -147,6 +147,7 @@ struct Controls {
   bool jump_pressed = false;
   bool dash_pressed = false;
   bool fast_fall = false;
+  bool fast_fall_pressed = false;
   bool restart = false;
   bool quit = false;
   int aim_y = 0;
@@ -1335,10 +1336,12 @@ public:
                double elapsed) {
     pending.jump_pressed |= input.jump_pressed;
     pending.dash_pressed |= input.dash_pressed;
+    pending.fast_fall_pressed |= input.fast_fall_pressed;
     pending.restart |= input.restart;
     if(input.move_pressed)pending.move_pressed=input.move_pressed;
     if(input.aim_pressed)pending.aim_pressed=input.aim_pressed;
     const int held_move=input.move, held_aim=input.aim_y;
+    const bool held_fast_fall = input.fast_fall;
     accumulator += clamp(elapsed, 0.0, 0.1);
     while (accumulator + 1e-10 >= 1.0 / 120.0) {
       // A released direction can still aim a queued dash, then expires.
@@ -1346,6 +1349,8 @@ public:
       input.aim_y=held_aim?held_aim:pending.aim_pressed.value_or(0);
       input.jump_pressed = pending.jump_pressed;
       input.dash_pressed = pending.dash_pressed;
+      input.fast_fall = held_fast_fall ||
+                        (grid.adventure_level && pending.fast_fall_pressed);
       input.restart = pending.restart;
       pending = Controls{};
       // Adventure goals indicate current doorway contact, while classic

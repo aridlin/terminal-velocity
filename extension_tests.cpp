@@ -140,6 +140,10 @@ int main() {
     keys.feed("\x1b[32;1:1u\x1b[32;1:3u");
     require(keys.consume(.01).jump_pressed,
             "SSH short tap survives same packet release");
+    keys.feed("\x1b[115;1:1u\x1b[115;1:3u");
+    auto short_down = keys.consume(.01);
+    require(short_down.fast_fall_pressed && !short_down.fast_fall,
+            "enhanced SSH short Down tap survives the release packet");
     keys.feed("\x1b[100;1:1u\x1b[O");
     require(!keys.focused && keys.consume(.01).move == 0,
             "SSH focus loss clears controls");
