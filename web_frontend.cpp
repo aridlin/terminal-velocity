@@ -11,8 +11,8 @@ int web_slot=1;
 EM_JS(void, browser_frame, (const uint32_t *cells,int cols,int rows), {
   if(window.tvFrame)window.tvFrame(HEAPU32.subarray(cells>>>2,(cells>>>2)+cols*rows*4),cols,rows);
 });
-EM_JS(void, browser_ui, (int flags,int route_legs,int audio_ready,int clips,const char *error), {
-  if(window.tvUI)window.tvUI({flags,routeLegs:route_legs,audioReady:audio_ready,clips,error:UTF8ToString(error)});
+EM_JS(void, browser_ui, (int flags,int route_legs,int tour_picker,int audio_ready,int clips,const char *error), {
+  if(window.tvUI)window.tvUI({flags,routeLegs:route_legs,tourPicker:!!tour_picker,audioReady:audio_ready,clips,error:UTF8ToString(error)});
 });
 EM_JS(void, browser_save_ready, (), {
   if(window.tvSaveReady)window.tvSaveReady();
@@ -56,7 +56,7 @@ void send_web_ui() {
       route_legs=int(leg>0)|(int((leg+1)*iceberg::RoomsPerLeg<count)<<1);
     }
   }
-  browser_ui(flags,route_legs,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
+  browser_ui(flags,route_legs,s.menu&&v.tour_picker,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }
 extern "C" {
@@ -110,6 +110,10 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   c.menu_request=p(12);c.restart=p(13);c.new_run=p(14);c.language=p(15);c.mute_audio=p(16);
   c.navigate=int(p(3))-int(p(2));
   c.browse_leg=int(p(1))-int(p(0));
+  if(p(27)&&web_game->state.menu&&web_game->state.adventure.tour_picker) {
+    c.browse_leg=1;
+    c.confirm=true;
+  }
   const auto &dialogue=web_game->state.adventure.dialogue;
   if(dialogue.choosing()&&!web_game->state.paused&&!web_game->state.menu&&(p(17)||p(18))) {
     const int choice=p(18)?1:0;

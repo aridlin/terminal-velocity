@@ -27,6 +27,7 @@ const inTour=()=>!!(uiFlags&tourFlag);
 const persistentSaveDirectory='/persist';
 let saveDirectory=persistentSaveDirectory;
 let routeLegs=0;
+let tourPicker=false;
 const accountSlot=()=>started&&selectedSlot===1&&!inTour()&&saveDirectory===persistentSaveDirectory;
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
 let browserSaveStatus=['Gotowe','Ready'],saveActionError=null;
@@ -219,6 +220,7 @@ function translateUI(){
  }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  const menuSelection=document.querySelector('#menu-selection-actions');
+ document.querySelector('#tour-finale').hidden=!tourPicker;
  menuSelection.hidden=!inMenu||inSettings||replacingSave;
  menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile;
  if(replacingSave){
@@ -345,7 +347,9 @@ window.tvUI=u=>{
  const nextEnglish=!!(u.flags&512);
  const nextRouteLegs=u.routeLegs??0;
  // The game sends UI state every frame. Only a transition changes the controls.
- if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs)return;
+ if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&tourPicker===!!u.tourPicker)return;
+ if(tourPicker!==!!u.tourPicker)clearInput();
+ tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
  routeLegs=nextRouteLegs;
  const previousSlot=selectedSlot;
