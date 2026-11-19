@@ -864,6 +864,25 @@ const server=http.createServer((req,res)=>{
   const previousRoom=desktopBrowse.getByRole('button',{name:'Previous room'});
   await nextRoom.click();
   await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 2:'));
+  await nextRoom.focus();
+  await expedition.keyboard.press('Space');
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 3:'));
+  assert.equal(await nextRoom.evaluate(button=>document.activeElement===button),true);
+  await expedition.keyboard.press('Space');
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 4:'));
+  await expedition.keyboard.press('ArrowUp');
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 3:'));
+  const nextLeg=desktopBrowse.getByRole('button',{name:'Next leg'});
+  const previousLeg=desktopBrowse.getByRole('button',{name:'Previous leg'});
+  await nextLeg.focus();
+  await expedition.keyboard.press('Enter');
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 3:'));
+  assert.equal(await nextLeg.isDisabled(),true);
+  assert.equal(await previousLeg.evaluate(button=>document.activeElement===button),true);
+  await expedition.keyboard.press('Space');
+  await expedition.waitForFunction(()=>!window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 3:'));
+  assert.equal(await nextLeg.evaluate(button=>document.activeElement===button),true);
+  console.log('PASS Expedition timeline keeps keyboard focus and reverses it at leg boundaries');
   await nextRoom.hover();
   await expedition.mouse.down();
   try {
