@@ -133,6 +133,8 @@ const districtTravelFlag=1<<25;
 const replyChoiceFlag=1<<26;
 const previousInspectionPageFlag=1<<27,nextInspectionPageFlag=1<<28;
 const previousRouteRoomFlag=1<<29,nextRouteRoomFlag=1<<30;
+const routeDirectionSelector='.route-browse [data-key],#touch .directions [data-key]';
+const expeditionTimelineOpen=()=>(overlayFlags()&(128|expeditionFlag|roomMapFlag|tourFlag))===(128|expeditionFlag);
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function nameTouchDirections(overlay){
@@ -181,8 +183,9 @@ function translateUI(){
  const hasNextPage=!!(overlay&nextInspectionPageFlag);
  const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
  const showRoute=!!(overlay&roomMapFlag);
- const timeline=expeditionMap&&!showRoute;
+ const timeline=expeditionTimelineOpen();
  const legControls=timeline&&routeLegs!==0;
+ const focusedDirection=timeline&&document.activeElement?.matches(routeDirectionSelector)?document.activeElement:null;
  document.querySelector('#touch').toggleAttribute('data-leg-browse',legControls);
  for(const button of document.querySelectorAll('.route-browse [data-leg-control]'))button.hidden=!legControls;
  if(legControls){
@@ -200,6 +203,11 @@ function translateUI(){
    if(!available)for(const [id,pointer] of pointers)if(pointer.button===button)finishPointer(id,false);
    button.disabled=!available;
   }
+ }
+ if(focusedDirection?.disabled){
+  const reverseKey=Number(focusedDirection.dataset.key)^1;
+  const reverse=focusedDirection.parentElement.querySelector('[data-key="'+reverseKey+'"]');
+  (reverse&&!reverse.disabled&&!reverse.hidden?reverse:canvas).focus({preventScroll:true});
  }
  const browsingQuests=!!(overlay&64)&&!reading;
  touchUse.hidden=inspecting;
@@ -375,7 +383,8 @@ addEventListener('keydown',e=>{
  }
  const pauseScreen=(uiFlags&(2|64|128))===2;
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
- if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]'))return;
+ if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]')&&
+    !(expeditionTimelineOpen()&&e.target.matches(routeDirectionSelector)&&e.code.startsWith('Arrow')))return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
@@ -437,7 +446,7 @@ for(const button of document.querySelectorAll('[data-key]')){
  button.addEventListener('click',e=>{
   // Pointer clicks already sent their input on pointerdown.
   if(e.detail!==0||button.disabled||accounts?.active||!started)return;
-  canvas.focus();
+  if(!expeditionTimelineOpen()||!button.matches(routeDirectionSelector))canvas.focus();
   tap(action());
  });
  button.addEventListener('pointerdown',e=>{
