@@ -452,6 +452,19 @@ int main(){try {
           "the room map names the extended mechanism and draws only its usable surface");
       }
     }
+    if(!drawers) {
+      view.adventure.map=false;
+      auto &vine=room.growth.front();
+      view.camera_y=vine.area.y-8.2;
+      for(auto [amount,glyph,color]:{std::tuple{.5,"❧",0xa6c780u},std::tuple{1.,"✿",0xe5d48fu}}) {
+        vine.amount=amount;
+        const double tip=vine.area.x+vine.extended_width(room.switch_flags);
+        view.camera_x=tip-5.;
+        RenderGrid(room,view,24,34,2).draw();
+        ui_check(frame[12][11].glyph==glyph&&frame[12][11].rgb==color,
+          "the vine readiness cue stays at the walkable edge in the compact view");
+      }
+    }
   }
   auto examination=iceworld::build_mastery_course(0);
   auto refill_view=new_state(examination);
