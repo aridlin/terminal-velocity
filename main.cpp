@@ -932,8 +932,10 @@ void catch_ledge(Player &player, const EngineGrid &grid, const Controls &control
 
 bool step_ledge(Player &player, const EngineGrid &grid, const Controls &controls, double dt) {
   const auto ledge = *player.ledge;
+  const bool jump_on_release=controls.move==0&&controls.jump_pressed;
   if (!climbable_ledge(grid,ledge) ||
-      (player.ledge_climb_left <= 0. && (controls.move != ledge.side || controls.fast_fall))) {
+      (player.ledge_climb_left <= 0. && (controls.fast_fall ||
+        (controls.move != ledge.side&&!jump_on_release)))) {
     player.ledge.reset();
     player.ledge_climb_left = 0.;
     player.ledge_lock_left = .24;
