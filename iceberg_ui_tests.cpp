@@ -510,6 +510,33 @@ int main(){try {
     }
   }
   {
+    AdventureSession lifts(options,{});
+    lifts.start_tour(20);
+    ui_check(lifts.grid.template_id==13&&lifts.grid.platforms.size()==4&&
+      std::all_of(lifts.grid.platforms.begin(),lifts.grid.platforms.end(),
+        [](const auto &platform){return platform.cargo_hoist&&platform.dx==0;}),
+      "the Heatworks sample has four vertical cargo hoists");
+    const auto &hoist=lifts.grid.platforms.front();
+    ui_check(hoist.at(0).y==hoist.at(.4).y&&hoist.at(2.6).y==hoist.at(3.).y&&
+      hoist.at(0).y-hoist.at(2.6).y==5.,"the cargo hoist waits at both ends of its five-unit travel");
+    lifts.state.player.x=hoist.base.x+2;
+    lifts.state.player.y=hoist.at(0).y-kPlayerHeight;
+    for(int tick=0;tick<26;++tick)lifts.tick({},.1);
+    ui_check(lifts.state.player.support==0&&lifts.state.deaths==0&&
+      std::abs(lifts.state.player.rect().bottom()-hoist.at(2.6).y)<.02,
+      "a standing courier rides the cargo hoist to its upper landing");
+    lifts.state.adventure.map=lifts.state.adventure.map_room=true;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      lifts.state.adventure.language=language;
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(lifts.grid,lifts.state,rows,cols,2).draw();
+        ui_check(count_marker("↕",0xe4ad68)==5&&count_map("@",0xffd68a)==1&&
+          ui_text(frame).find(language==iceberg::Language::English?"↕ Cargo hoist":"↕ Winda towarowa")!=std::string::npos,
+          "the room map shows all four hoists and their localized legend");
+      }
+    }
+  }
+  {
     AdventureSession wheel(options,{});
     const auto sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
       [](const auto &stop){return stop.room==57;});

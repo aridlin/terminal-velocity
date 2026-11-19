@@ -21,6 +21,32 @@
     world_art(tram.x,tram.y+row,{windows+"│",sill+"╯"},0xc0a487,true);
   }
 
+  void draw_heatworks_hoist(const MovingPlatform &hoist,const Rect &deck) {
+    constexpr uint32_t rail_color=0x6f7776,cable_color=0xa5ada9,deck_color=0xefc37f;
+    const double row=aspect_*scale_, top=hoist.base.y-hoist.dy-5.0;
+    const int cells=std::max(4,int(deck.w/scale_));
+    const double left=deck.x,right=left+(cells-1)*scale_;
+    const double center=left+(cells/2)*scale_;
+    std::string beam="╔",lip="╞",frame="╚";
+    for(int i=1;i<cells-1;++i) {
+      beam+="═";
+      lip+=i%3==0?"╪":"━";
+      frame+=i%2==0?"╲":"╱";
+    }
+    world_art(left,top,{beam+"╗"},rail_color);
+    const double bottom=hoist.base.y+hoist.dy;
+    for(double y=top+row;y<=bottom+row*.5;y+=row) {
+      world_art(left,y,{"│"},rail_color);
+      world_art(right,y,{"│"},rail_color);
+    }
+    for(double y=top+2*row;y<deck.y-row*.5;y+=row)
+      world_art(center,y,{"║"},cable_color);
+    const bool docked=hoist.offset(state_.elapsed)==hoist.offset(state_.elapsed+.08);
+    world_art(center,top+row,{docked?"●":"○"},docked?0xb5d599:0xb58952);
+    world_text(left,deck.y,lip+"╡",deck_color);
+    world_art(left,deck.y+row,{frame+"╝"},0xa08770);
+  }
+
   void draw_archive_drawers() {
     const double row=aspect_*scale_;
     for(const auto &drawer:grid_.growth) {
