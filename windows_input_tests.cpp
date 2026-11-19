@@ -39,6 +39,33 @@ int main() {
     key(VK_DOWN, false);
     c = input.consume();
     check(c.fast_fall_pressed && !c.fast_fall, "short Down tap survives the native release");
+    key(VK_LEFT, true);
+    key(VK_DOWN, true);
+    key('X', true);
+    key('X', false);
+    key(VK_DOWN, false);
+    key(VK_LEFT, false);
+    c = input.consume();
+    check(c.move==0&&c.aim_y==0&&c.move_pressed==-1&&c.aim_pressed==1&&c.dash_pressed,
+          "released Windows console directions keep the diagonal aim");
+    EngineGrid open(80,60);
+    open.spawn_x=20;open.spawn_y=24;
+    auto dash=new_state(open);
+    dash.player.facing=1;
+    FixedStepper step;
+    step.advance(dash,open,c,.001);
+    c=input.consume();
+    check(!c.move_pressed&&!c.aim_pressed,"Windows console direction edges are consumed once");
+    step.advance(dash,open,c,.009);
+    check(dash.player.vx<-20&&dash.player.vy>20,"the released keys launch a downward left dash");
+    key(VK_LEFT, true);
+    key('D', true);
+    key(VK_UP, true);
+    key('S', true);
+    c=input.consume();
+    check(c.move==0&&c.aim_y==0&&c.move_pressed==0&&c.aim_pressed==0,
+          "opposing direction aliases cancel in the Windows console");
+    input.clear();
     key(VK_NEXT, true);
     key(VK_NEXT, false);
     check(input.consume().tour_page==1,"native Page Down reaches Tour navigation");
@@ -101,7 +128,7 @@ int main() {
       UINT before_cp = GetConsoleCP(), before_output_cp = GetConsoleOutputCP();
       std::ostringstream captured;
       auto old_buffer = std::cout.rdbuf(captured.rdbuf());
-      bool guard_ready = false, native_poll = false;
+      bool guard_ready = false, native_poll = false, native_dash = false;
       {
         TerminalGuard terminal;
         guard_ready = terminal.active() && GetConsoleOutputCP() == CP_UTF8;
@@ -121,6 +148,19 @@ int main() {
         auto from_console = native.poll(.01);
         native_poll = written == 3 && from_console.move == 1 &&
                       from_console.jump_pressed && !from_console.jump_held;
+        native.clear();
+        const WORD chord[]={VK_LEFT,VK_DOWN,'X'};
+        INPUT_RECORD taps[6]{};
+        for(size_t i=0;i<std::size(taps);++i) {
+          taps[i].EventType=KEY_EVENT;
+          taps[i].Event.KeyEvent.wVirtualKeyCode=chord[i%3];
+          taps[i].Event.KeyEvent.bKeyDown=i<3;
+        }
+        const bool queued=WriteConsoleInputW(console_input,taps,6,&written)!=FALSE;
+        from_console=native.poll(.01);
+        native_dash=queued&&written==6&&from_console.dash_pressed&&
+          from_console.move==0&&from_console.aim_y==0&&
+          from_console.move_pressed==-1&&from_console.aim_pressed==1;
       }
       std::cout.rdbuf(old_buffer);
       DWORD after_input = 0, after_output = 0;
@@ -139,6 +179,7 @@ int main() {
       check(guard_ready, "native console enables VT output and UTF-8");
       check(native_poll,
             "ReadConsoleInput preserves simultaneous keys and short taps");
+      check(native_dash, "WriteConsoleInput preserves quick diagonal dash aim");
       check(restored, "native console modes and code pages restored");
     }
     return 0;
