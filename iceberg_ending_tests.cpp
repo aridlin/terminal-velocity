@@ -193,6 +193,43 @@ int main(){try{
   cell_frame_sink={};
  }
  {
+  auto sweep=game.state;
+  sweep.adventure.door_left=0.;
+  sweep.crown.hits=2;
+  sweep.crown.cycle=2;
+  sweep.crown.target=6.;
+  CellFrame frame;
+  cell_frame_sink=[&](const CellFrame &cells){frame=cells;};
+  for(double aspect:{1.5,2.,2.5}) {
+   // The left edge of the sweep is cropped in the phone-size view.
+   sweep.camera_x=20.;
+   sweep.camera_y=38.;
+   sweep.crown.time=crown_warning_time;
+   const auto area=crown_attack_areas(sweep.crown)[1];
+   const int edge=int(std::floor((std::nextafter(area.right(),area.left())-sweep.camera_x)/.4));
+   const int top=4+int(std::floor((area.top()-sweep.camera_y)/(.4*aspect)));
+   const int bottom=4+int(std::floor((std::nextafter(area.bottom(),area.top())-sweep.camera_y)/(.4*aspect)));
+   RenderGrid(game.grid,sweep,34,34,aspect).draw();
+   require_end(frame.at(top).at(0).background==0x443522&&frame.at(bottom).at(edge).background==0x443522&&
+               frame.at(top).at(edge).glyph=="┐"&&frame.at(top).at(edge+1).background!=0x443522&&
+               frame.at(top-1).at(0).background!=0x443522,
+               "the cropped warning marks the full height of only the threatened half");
+   sweep.crown.time=crown_strike_time;
+   RenderGrid(game.grid,sweep,34,34,aspect).draw();
+   require_end(frame.at(top).at(0).background==0x652e31&&frame.at(bottom).at(edge).background==0x652e31&&
+               frame.at(top).at(edge+1).background!=0x652e31&&frame.at(bottom+1).at(0).background!=0x652e31,
+               "the active floor sweep fills the collision band up to its safe edge");
+   sweep.crown.time=crown_follow_warning;
+   const auto follow=crown_attack_areas(sweep.crown)[1];
+   const int start=int(std::floor((follow.left()-sweep.camera_x)/.4));
+   RenderGrid(game.grid,sweep,34,34,aspect).draw();
+   require_end(frame.at(top).at(start).background==0x443522&&frame.at(top).at(start).glyph=="┌"&&
+               frame.at(bottom).at(33).background==0x443522&&frame.at(top).at(start-1).background!=0x443522,
+               "the follow-up warning moves the whole band to the other half");
+  }
+  cell_frame_sink={};
+ }
+ {
   auto core=game.state;
   core.adventure.door_left=0.;
   core.camera_x=20.2;core.camera_y=41.2;
