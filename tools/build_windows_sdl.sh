@@ -27,7 +27,10 @@ if [ ! -f "$build_dir/prefix/lib/libfreetype.a" ]; then
     tar -xf "$build_dir/sources/freetype-2.14.1.tar.xz" -C "$build_dir"
     (
         cd "$build_dir/freetype-2.14.1"
-        ./configure --host=x86_64-w64-mingw32 --prefix="$build_dir/prefix" \
+        # The explicit build triplet keeps configure from running a Windows
+        # compiler probe through Wine on hosts with a PE binfmt handler.
+        ./configure --build="$(sh builds/unix/config.guess)" \
+            --host=x86_64-w64-mingw32 --prefix="$build_dir/prefix" \
             --disable-shared --enable-static --without-zlib --without-bzip2 \
             --without-png --without-harfbuzz --without-brotli
         make -j"${JOBS:-2}"
