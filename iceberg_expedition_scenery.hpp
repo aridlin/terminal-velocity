@@ -192,8 +192,34 @@
     const auto &area=jet.area;
     const double row=aspect_*scale_,bottom=area.bottom(),center=area.x+area.w*.5;
     const double time=state_.elapsed;
-    const double pressure=jet.active(grid_.switch_flags)?jet.strength(time):0.;
+    const bool powered=jet.active(grid_.switch_flags);
+    const double pressure=powered?jet.strength(time):0.;
     constexpr uint32_t guide=0x4d7881,metal=0x739da3,steam=0xb4e3e3;
+    if(jet.enabled_by) {
+      const auto supply=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[&](const auto &node){
+        return node.kind==InteractionKind::Valve&&(jet.enabled_by&(uint64_t(1)<<node.id));
+      });
+      if(supply!=grid_.interactions.end()) {
+        const double valve_x=supply->area.x+supply->area.w*.5;
+        const double pipe_y=std::max(bottom+5.,supply->area.bottom()+3.);
+        draw_scenery_pipe({{valve_x,supply->area.bottom()},{valve_x,pipe_y},{center,pipe_y},{center,bottom}},
+          powered?0x789da1:0x576f78);
+        constexpr uint32_t idle=0xaba28b,live=0xbce3a5;
+        const double gauge_y=bottom+row;
+        world_art(center-2*scale_,gauge_y,{"╭─┴─╮","│   │","╰─┬─╯"},metal);
+        const auto &view=state_.adventure;
+        const bool charging=powered&&view.machinery_left>0&&(view.machinery_changed&jet.enabled_by);
+        const double age=view.machinery_duration-view.machinery_left;
+        const char *needle=!powered?"╲":charging&&age<.14?"│":"╱";
+        world_art(center,gauge_y+row,{needle},powered?live:idle);
+        if(charging)for(int i=0;i<16;++i) {
+          const double puff=age-i*.018;
+          if(puff<0||puff>.41)continue;
+          const double x=center+(i%5-2)*(.22+puff*.94);
+          world_art(x,bottom-row-17.*puff,{i%4?"⠤":"≈"},puff<.26?steam:metal);
+        }
+      }
+    }
 
     // The fixed guides show the full width even at low pressure.
     for(double y=area.y+row;y<bottom-row;y+=3*row) {
