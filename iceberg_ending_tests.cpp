@@ -238,13 +238,37 @@ int main(){try{
   std::array<bool,5> shots{};
   for(int frame=0;frame<5000&&!film.choosing();++frame) {
     if(!film.active())throw std::runtime_error("the film must stop at the interactive reply");
-    shots[size_t(film.lines[film.page].shot)]=true;
+    const auto shot=film.lines[film.page].shot;
+    if(!shots[size_t(shot)]) {
+      shots[size_t(shot)]=true;
+      AdventureSession resumed(options,file);resumed.begin_campaign(false);
+      const auto &restored=resumed.state.adventure.dialogue;
+      require_end(restored.cinematic&&restored.active()&&!restored.choosing()&&
+                  restored.lines[restored.page].shot==shot,
+                  "reloading resumes the current Crown shot");
+      require_end(resumed.state.crown.airlock_open==(shot==iceberg::CrownShot::Daybreak),
+                  "the restored shot has the correct airlock state");
+    }
     game.tick({},.1,true,34,24);
   }
   require_end(film.choosing()&&std::all_of(shots.begin(),shots.end(),[](bool seen){return seen;}),
               "five shots advance on their own at the smallest viewport and wait for the courier reply");
  }
- read_to_reply(game);
+ {
+  AdventureSession resumed(options,file);resumed.begin_campaign(false);
+  require_end(resumed.state.crown.hits==3&&resumed.state.crown.airlock_open&&
+              resumed.state.adventure.dialogue.cinematic&&resumed.state.adventure.dialogue.choosing()&&
+              resumed.state.adventure.dialogue.shot_seconds>=iceberg::CrownAirlockOpeningSeconds&&
+              !(resumed.profile.story&iceberg::reply_recorded(6)),
+              "reloading the unconfirmed Crown reply returns directly to the prompt");
+  Controls menu;menu.menu_request=true;resumed.tick(menu,1./60);
+  require_end(resumed.state.menu&&!resumed.state.adventure.dialogue.active(),
+              "the main menu closes the Crown film");
+  resumed.persist();
+  resumed.begin_campaign(false);
+  require_end(resumed.state.adventure.dialogue.choosing(),
+              "saving in the main menu and continuing keeps the pending Crown reply");
+ }
  require_end(game.state.crown.airlock_open,"the upper airlock opens at the cutscene cue");
  Controls next;next.navigate=1;game.tick(next,1./60);
  game.dialogue_next();

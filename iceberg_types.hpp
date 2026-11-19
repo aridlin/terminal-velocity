@@ -150,6 +150,9 @@ inline int mastery_token_progress(const Profile &profile) {
 
 enum class DialogueCue { None, CrownAirlock };
 enum class CrownShot { Chamber, Stairwell, Hearing, Quay, Daybreak };
+inline constexpr uint64_t CrownReplyCheckpoint=uint64_t(CrownShot::Daybreak)+1;
+inline constexpr int CrownFilmShift=2;
+inline constexpr double CrownAirlockOpeningSeconds=2.;
 struct DialogueLine { int speaker = 0; Text text; DialogueCue cue = DialogueCue::None; CrownShot shot = CrownShot::Chamber; };
 inline constexpr int CourierSpeaker = -2;
 inline constexpr int ReplyPrompt = -3;

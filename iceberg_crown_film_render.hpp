@@ -147,7 +147,7 @@
       case CrownShot::Daybreak: {
         film_skyline(top,end,time,true);
         const int gate=2;
-        const int lift=int(std::min(5.,time*2.5));
+        const int lift=int(5.*std::min(1.,time/iceberg::CrownAirlockOpeningSeconds));
         film_art(top+1,gate,{"╔══╤════════╤══╗","║  ┃        ┃  ║",
           "║  ┃        ┃  ║","║  ┃        ┃  ║","╨──╨────────╨──╨"},0xf1cf92);
         for(int y=top+2;y<top+6-lift;++y)paint_text(y,gate+4,"▓▓▓▓▓▓▓▓",0xa0aeb9);
