@@ -426,11 +426,16 @@ function recomputePresses(){
  pressed=completedPresses;
  for(const pointer of pointers.values())pressed|=pointer.pending;
 }
-function finishPointer(id,completed){
+function finishPointer(id,completed,event){
  const pointer=pointers.get(id);
  if(!pointer)return;
  pointers.delete(id);
- if(completed)completedPresses|=pointer.pending;
+ if(completed){
+  completedPresses|=pointer.pending;
+  if(pointer.releaseKey!==null&&!accounts?.active&&!importPending&&!pointer.button.disabled&&
+     pointer.button.contains(document.elementFromPoint(event.clientX,event.clientY)))
+   completedPresses|=1<<pointer.releaseKey;
+ }
  // A cancelled contact must not erase other inputs of the same action.
  recomputePresses();
  releaseHighlight(pointer.button);
@@ -452,7 +457,7 @@ for(const button of document.querySelectorAll('[data-key]')){
   return (overlayFlags()&64)||(uiFlags&replaceRunFlag)?6:8;
  };
  button.addEventListener('click',e=>{
-  // Pointer clicks already sent their input on pointerdown.
+  // Pointer input is handled by the contact; this also serves keyboard clicks.
   if(e.detail!==0||button.disabled||accounts?.active||!started)return;
   if(!isTimelineDirection(button))canvas.focus();
   tap(action());
@@ -465,16 +470,19 @@ for(const button of document.querySelectorAll('[data-key]')){
   button.setPointerCapture(e.pointerId);
   const touch=e.pointerType==='touch';
   const canSlide=touch&&(button.matches(horizontalTouchControls)||(!lastBlocked&&button.closest('#touch .directions')));
-  const pointer={key,button,touch,canSlide,pending:0};
+  const confirmReply=button.id==='touch-use'&&(overlayFlags()&(replyChoiceFlag|2))===replyChoiceFlag;
+  const pointer={key:confirmReply?null:key,releaseKey:confirmReply?key:null,button,touch,canSlide,pending:0};
   pointers.set(e.pointerId,pointer);
-  button.classList.add('held');pointerPress(pointer);recompute();
+  button.classList.add('held');
+  if(!confirmReply)pointerPress(pointer);
+  recompute();
  });
  button.addEventListener('pointermove',e=>{
   const pointer=pointers.get(e.pointerId);
   if(!pointer)return;
   // Mouse chords report the primary release as a move until every button is up.
   if(e.pointerType==='mouse'&&!(e.buttons&1)){
-   finishPointer(e.pointerId,true);
+   finishPointer(e.pointerId,true,e);
    if(button.hasPointerCapture(e.pointerId))button.releasePointerCapture(e.pointerId);
    return;
   }
@@ -496,7 +504,7 @@ for(const button of document.querySelectorAll('[data-key]')){
   recompute();
  });
  for(const type of ['pointerup','pointercancel','lostpointercapture'])
-  button.addEventListener(type,e=>finishPointer(e.pointerId,type==='pointerup'));
+  button.addEventListener(type,e=>finishPointer(e.pointerId,type==='pointerup',e));
 }
 for(const b of document.querySelectorAll('[data-tap]'))b.onclick=event=>{
  if(!started||accounts?.active||importPending)return;
