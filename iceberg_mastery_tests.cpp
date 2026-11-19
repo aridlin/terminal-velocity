@@ -65,6 +65,18 @@ int main() {
         for(const auto &input:path.actions)resumed.tick(input,.1);
       }
       resumed.profile.language=iceberg::Language::English;
+      const auto surveyor=resumed.state.player;
+      resumed.state.player.x=resumed.grid.goal.x;
+      resumed.state.player.y=resumed.grid.goal.bottom()-kPlayerHeight;
+      resumed.tick({},0.);
+      if(resumed.state.won||resumed.state.adventure.prompt!="Mark buoy 3 at the chart.")
+        throw std::runtime_error("the locked return door should point the player to the buoy chart");
+      resumed.inspect_nearby();
+      if(!resumed.state.adventure.inspecting||resumed.state.adventure.inspect_title!="Return to harbor"||
+          resumed.state.adventure.inspect_body.find("chart to your left")==std::string::npos)
+        throw std::runtime_error("inspecting the locked return door should explain how to open it");
+      resumed.state.adventure.inspecting=false;
+      resumed.state.player=surveyor;
       resumed.inspect_nearby();
       if(resumed.state.adventure.inspect_title!="Harbor chart"||
           resumed.state.adventure.inspect_art!=iceberg::InspectionArt::Chart||
