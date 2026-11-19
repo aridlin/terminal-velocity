@@ -652,6 +652,25 @@ int main(int argc,char **argv) {
     gardens.tick(water_vines,1./120);
     check((channel.switch_flags&1)&&!channel.solid_at(101,41),
       "using the valve starts the bridge growing from the overlook");
+    const double bridge_width=channel.growth.front().extended_width(channel.switch_flags);
+    const double bridge_time=gardens.state.elapsed;
+    Controls read_map;read_map.map=true;
+    gardens.tick(read_map,.1);
+    check(gardens.state.adventure.map&&gardens.state.elapsed==bridge_time&&
+          channel.growth.front().extended_width(channel.switch_flags)==bridge_width,
+      "opening the room map freezes the growing vine bridge immediately");
+    gardens.tick({},.1);
+    gardens.tick(read_map,.1);
+    gardens.tick({},.1,true,33,24);
+    check(!gardens.state.adventure.map&&gardens.state.elapsed==bridge_time&&
+          channel.growth.front().extended_width(channel.switch_flags)==bridge_width,
+      "closing the map and a too-small viewport consume no bridge growth");
+    gardens.talk({{0,{"Chwila.","One moment."}}});
+    gardens.tick({},.1);
+    check(gardens.state.adventure.dialogue.active()&&gardens.state.elapsed==bridge_time&&
+          channel.growth.front().extended_width(channel.switch_flags)==bridge_width,
+      "dialogue freezes the bridge with the rest of the room");
+    gardens.state.adventure.dialogue={};
     for(int tick=0;tick<150;++tick)gardens.tick({},1./120);
     check(channel.solid_at(86,41)&&channel.solid_at(112,41)&&!channel.solid_at(113,41),
       "the grown trellis stops before the drop onto the next landing");
