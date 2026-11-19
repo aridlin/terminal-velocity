@@ -21,7 +21,8 @@ struct GameAudio::Impl {
   };
   std::array<Clip, 4> music;
   std::array<Clip, 6> ambience;
-  Clip film_take;
+  Clip film_take, boss_echo;
+  bool boss_echo_active=false;
   int take_id=-1;
   bool take_polish=false;
   std::array<Clip, 2> climax;
@@ -54,6 +55,7 @@ struct GameAudio::Impl {
         if (clip.loaded)
           ma_sound_uninit(&clip.sound);
     if (film_take.loaded) ma_sound_uninit(&film_take.sound);
+    if (boss_echo.loaded) ma_sound_uninit(&boss_echo.sound);
     ma_engine_uninit(&engine);
     if (context_initialized)
       ma_context_uninit(&context);
@@ -122,20 +124,20 @@ bool GameAudio::ensure_ready() {
   ma_engine_set_volume(&impl_->engine, .60f);
   auto flags = MA_SOUND_FLAG_NO_SPATIALIZATION | MA_SOUND_FLAG_WAIT_INIT;
   const char *tracks[] = {"dreams.mp3", "ascent.mp3", "snow.mp3", "crown-sentinel.mp3"};
-  for (size_t i = 0; i < impl_->music.size(); ++i) {
-    if (impl_->load(
-            impl_->music[i], directory_ / tracks[i],
-            flags |
-#ifdef __EMSCRIPTEN__
-            0 // Keep encoded music in memory; Web builds have no streaming worker.
-#else
-            (offline_ ? MA_SOUND_FLAG_DECODE : MA_SOUND_FLAG_STREAM)
+  auto music_flags=flags;
+#ifndef __EMSCRIPTEN__
+  music_flags|=offline_ ? MA_SOUND_FLAG_DECODE : MA_SOUND_FLAG_STREAM;
 #endif
-      )) {
+  for (size_t i = 0; i < impl_->music.size(); ++i) {
+    if (impl_->load(impl_->music[i],directory_/tracks[i],music_flags)) {
       ma_sound_set_looping(&impl_->music[i].sound, MA_TRUE);
       ma_sound_set_volume(&impl_->music[i].sound, .55f);
       ma_sound_set_fade_in_milliseconds(&impl_->music[i].sound, 0, 0, 1);
     }
+  }
+  if(impl_->load(impl_->boss_echo,directory_/tracks[3],music_flags)) {
+    ma_sound_set_looping(&impl_->boss_echo.sound,MA_TRUE);
+    ma_sound_set_volume(&impl_->boss_echo.sound,0);
   }
   const char *layers[]={"crown-foundation.wav","crown-tension.wav"};
   for(size_t i=0;i<impl_->climax.size();++i)if(impl_->load(impl_->climax[i],directory_/layers[i],flags|MA_SOUND_FLAG_DECODE)) {
@@ -227,15 +229,37 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
   bool changed = track != impl_->current_track ||
                  scene != impl_->current_scene || muted != impl_->was_muted ||
                  focused != impl_->was_focused;
-  bool layered=climax_&&track==1&&!silence_;
-  bool entering=layered&&(!impl_->climax_active||(!impl_->was_focused&&focused)||(impl_->was_muted&&!muted));
-  if(entering) {
-    // One engine clock starts the score and both atmosphere layers together.
-    auto start=ma_engine_get_time_in_pcm_frames(&impl_->engine)+ma_engine_get_sample_rate(&impl_->engine)/20;
-    auto schedule=[&](Impl::Clip &clip){if(clip.loaded){ma_sound_stop(&clip.sound);ma_sound_seek_to_pcm_frame(&clip.sound,0);ma_sound_set_start_time_in_pcm_frames(&clip.sound,start);ma_sound_start(&clip.sound);}};
-    schedule(impl_->music[1]);for(auto &clip:impl_->climax)schedule(clip);
+  const bool layered=climax_&&track==1&&!silence_;
+  const bool echoing=climax_&&track==3&&!silence_&&impl_->boss_echo.loaded;
+  const bool returning=(!impl_->was_focused&&focused)||(impl_->was_muted&&!muted);
+  const bool entering=layered&&(!impl_->climax_active||returning);
+  const bool starting_echo=echoing&&(!impl_->boss_echo_active||returning);
+  if(entering||starting_echo) {
+    const auto rate=ma_engine_get_sample_rate(&impl_->engine);
+    const auto start=ma_engine_get_time_in_pcm_frames(&impl_->engine)+rate/20;
+    auto schedule=[&](Impl::Clip &clip,ma_uint64 delay=0) {
+      if(!clip.loaded)return;
+      ma_sound_stop(&clip.sound);
+      ma_sound_seek_to_pcm_frame(&clip.sound,0);
+      ma_sound_set_start_time_in_pcm_frames(&clip.sound,start+delay);
+      ma_sound_start(&clip.sound);
+    };
+    if(entering) {
+      schedule(impl_->music[1]);
+      for(auto &clip:impl_->climax)schedule(clip);
+    }
+    if(starting_echo) {
+      schedule(impl_->music[3]);
+      schedule(impl_->boss_echo,rate*3/4);
+    }
     changed=true;
   }
+  if(echoing) {
+    ma_sound_set_volume(&impl_->boss_echo.sound,.36f*music_gain_);
+    if(changed)ma_sound_set_fade_in_milliseconds(&impl_->boss_echo.sound,-1,
+      scene==AudioScene::Paused?.25f:scene==AudioScene::Menu?0.f:1.f,800);
+  } else if(impl_->boss_echo_active)ma_sound_stop(&impl_->boss_echo.sound);
+  impl_->boss_echo_active=echoing;
   // Master mute is immediate and also silences already-playing effects.
   ma_engine_set_volume(&impl_->engine, muted || !focused ? 0.f : .60f);
   for (size_t i = 0; i < impl_->music.size(); ++i) {

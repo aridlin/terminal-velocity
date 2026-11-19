@@ -199,7 +199,16 @@ int main(){try {
     ui_check(view.deaths==previous_deaths+1&&camera_player.x==view.spawn_x&&camera_player.y==view.spawn_y&&
       std::abs(view.camera_x-expected_x)<.001&&std::abs(view.camera_y-expected_y)<.001,
       "the camera immediately frames the checkpoint after a fall with either camera setting");
+    const bool en=!smooth;
+    camera_settings.profile.language=en?iceberg::Language::English:iceberg::Language::Polish;
+    camera_settings.sync_view();
+    RenderGrid(camera_settings.grid,view,en?24:20,en?34:60,2).draw();
+    ui_check(ui_text(frame).find(en?"DIED · BACK AT CHECKPOINT":"ŚMIERĆ · POWRÓT DO LAMPY")!=std::string::npos,
+      "the checkpoint banner visibly distinguishes a death in both languages");
   }
+  Controls voluntary_retry;voluntary_retry.restart=true;
+  camera_settings.tick(voluntary_retry,1./120,true,39,28,2);
+  ui_check(camera_settings.state.adventure.death_left==0,"manual Retry does not show a death banner");
   camera_settings.profile.smooth_camera=true;
   camera_settings.start_tour(0);
   ui_check(camera_settings.profile.smooth_camera,"debug tour uses the selected camera preference");

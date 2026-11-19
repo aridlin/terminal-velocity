@@ -104,7 +104,7 @@ int main() {
 
     GameAudio sound;
     sound.init("assets/audio", false, true);
-    check(sound.ready() && sound.loaded_clips() == 12 + 2 * size_t(AudioCue::Count) && sound.error().empty(),
+    check(sound.ready() && sound.loaded_clips() == 13 + 2 * size_t(AudioCue::Count) && sound.error().empty(),
           "all sourced music and effect voices decode offline");
     sound.update(AudioScene::Play, 0, .02);
     for (int voice = 0; voice < 2; ++voice)
@@ -148,6 +148,31 @@ int main() {
     check(std::all_of(loud.begin(),loud.end(),[](float x){return std::abs(x)<1e-7f;}),"music control silences both climax layers");
     loud_layers.set_mix(1,1,1);loud_layers.update(AudioScene::Play,1,.02,false);loud_layers.render(loud.data(),960);
     check(std::all_of(loud.begin(),loud.end(),[](float x){return std::abs(x)<1e-7f;}),"focus loss silences the entire layered score immediately");
+    {
+      GameAudio dry_score,echo_score;
+      dry_score.init("assets/audio",false,true);
+      echo_score.init("assets/audio",false,true);
+      dry_score.set_mix(1,0,0);echo_score.set_mix(1,0,0);
+      echo_score.set_climax(true,1);
+      constexpr size_t rate=48000,frames_per_score=rate*4,block_frames=960;
+      std::vector<float> dry(frames_per_score*2),echo(frames_per_score*2);
+      for(size_t frame=0;frame<frames_per_score;frame+=block_frames) {
+        dry_score.update(AudioScene::Play,3,.02);echo_score.update(AudioScene::Play,3,.02);
+        if(!dry_score.render(dry.data()+frame*2,block_frames)||!echo_score.render(echo.data()+frame*2,block_frames))
+          throw std::runtime_error("the Crown audio block did not render");
+      }
+      double energy=0,error=0;
+      // Ignore fades. The first voice begins after the clock's 50 ms lead-in.
+      for(size_t i=rate*4;i<echo.size();++i) {
+        const double delayed=dry[i-rate*8/5]*.75;
+        const double measured=echo[i]-dry[i-rate/10];
+        energy+=delayed*delayed;
+        error+=(measured-delayed)*(measured-delayed);
+      }
+      check(energy>1&&error/energy<.001,"the Crown adds a second copy of its score 750 ms behind the first");
+      check(std::all_of(echo.begin(),echo.end(),[](float x){return std::isfinite(x)&&std::abs(x)<.98f;}),
+        "the delayed Crown mix retains headroom");
+    }
     sound.set_climax(false);
     sound.set_mix(0,0,1);sound.set_environment(0);
     sound.update(AudioScene::Play,0,.02);sound.render(frames.data(),48000);

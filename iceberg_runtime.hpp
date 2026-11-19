@@ -1408,7 +1408,7 @@ public:
     } send_frame{*this,dt,focused,columns,rows};
     audio.set_mix(profile.music_volume,profile.effects_volume,profile.ambience_volume);
     audio.set_environment(grid.district,grid.room_role==iceberg::RoomRole::Secret);
-    bool climax=grid.template_id==83&&!state.menu;
+    const bool climax=(grid.template_id==83||grid.template_id==iceberg::CrownSentinel)&&!state.menu;
     int shutters=int(bool(grid.switch_flags&1))+int(bool(grid.switch_flags&2))+int(bool(grid.switch_flags&4));
     audio.set_climax(climax,.28f+float(shutters)*.24f);
     if(c.quit){persist();running=false;return;}
@@ -1434,6 +1434,7 @@ public:
     v.notice_left=std::max(0.,v.notice_left-dt);
     if(!state.paused&&!state.menu&&!v.inspecting&&!state.journal&&!v.map) {
       v.presentation_time+=dt;v.npc_reaction_left=std::max(0.,v.npc_reaction_left-dt);
+      v.death_left=std::max(0.,v.death_left-dt);
       v.machinery_left=std::max(0.,v.machinery_left-dt);v.lamp_left=std::max(0.,v.lamp_left-dt);
       for(auto &bridge:grid.growth)if((grid.switch_flags&bridge.flag)==bridge.flag)bridge.amount=std::min(1.,bridge.amount+dt/1.15);
       if(v.dialogue.active())v.pickup_left=std::max(0.,v.pickup_left-dt);
@@ -1640,6 +1641,7 @@ public:
     }
     double active=state.elapsed-old_elapsed;
     int deaths=state.deaths-old_deaths,pickups=state.sweets_count()-old_pickups;
+    if(deaths>0)v.death_left=retrying?0.:1.6;
     if(mode==iceberg::Mode::Campaign) {
       if(!profile.revisit.active) {
       profile.campaign_seconds+=active;profile.district_seconds+=active;
