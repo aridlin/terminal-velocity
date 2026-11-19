@@ -6,11 +6,13 @@ Platformówka o kurierze w mieście zbudowanym wewnątrz ogromnej góry lodowej.
 
 [English guide](README.md) · [Trasy klasyczne](docs/LEGACY.pl.md) · [Rozwój gry](DEVELOPMENT.md)
 
-Rozmowy pojawiają się litera po literze, z krótkimi nagranymi głosami. **E / Enter** pokazuje od razu całą stronę; kolejne naciśnięcie przechodzi dalej. **P** wstrzymuje rozmowę.
+Zwykłe rozmowy pojawiają się litera po literze, z krótkimi nagranymi głosami. Finał w Koronie ma polskie i angielskie kwestie głosowe z napisami. **E / Enter** pokazuje od razu całą stronę; kolejne naciśnięcie przechodzi dalej. **P** wstrzymuje rozmowę.
 
 ## Co można zagrać
 
 Podróż obejmuje **Dolną Przystań**, **Ciepłownię Łazarz**, **Osiedle Parapet**, **Archiwum Ciszy** **Ogrody Podszronu** i **Koronę**: sześć osad, 84 zaprojektowane szablony tras, naukę ruchu, maszyny, ruchome barki, ratunek dla konduktora i dostawę przesyłki, której lepiej nie przewracać. Osiem zadań mieszkańców daje dostęp do listów, skrótów serwisowych i tramwajowych, przejścia przez dach, ogrodu w przystani, strojów i prób mistrzowskich.
+
+Żetony transportowe odnawiają zryw. Dwanaście otwiera próbę mistrzowską, a dwadzieścia cztery otwierają objazd latarni przyboju w Dolnej Przystani. Liczą się żetony z dzielnic kampanii albo z jednej niekończącej się wyprawy.
 
 Historia prowadzi za oryginalnym planem sieci przez ogrody do pękniętej Korony. Nawadnianie rozwija żywe mosty; podwieszone wózki i przeciwwagi prowadzą do latarni. Po uruchomieniu obiegów wracasz na grywalny poranny obchód w przystani. Automatyczne przejście ze wszystkimi ośmioma zadaniami zajmuje około 35 minut aktywnej symulacji oraz 15 minut szacowanego czytania — **nie jest to zmierzony czas pierwszego gracza**. Zakładany czas 100–140 minut gry człowieka nie został potwierdzony.
 

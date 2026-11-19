@@ -239,6 +239,12 @@ public:
         audio.play(AudioCue::Win);
       }
     }
+    if(!(profile.cosmetics&iceberg::SurveyTransitPass)&&iceberg::survey_pass(profile)) {
+      profile.cosmetics|=iceberg::SurveyTransitPass;
+      notice(t("Żetony otworzyły objazd latarni przyboju w Dolnej Przystani.",
+               "Transit tokens opened the Breakwater Survey in Lower Harbor."),6);
+      audio.play(AudioCue::Win);
+    }
     if(options.no_save){autosave_left=15;return;}
     state.adventure.save_error=!saves.save(profile);
     if(!state.adventure.save_error)++save_revision;
@@ -359,7 +365,9 @@ public:
     if(mode==iceberg::Mode::Campaign && profile.hidden_room>=0) {
       grid=iceworld::build_hidden(profile.hidden_room);
     } else if(mode==iceberg::Mode::Campaign && profile.revisit.active) {
-      grid=profile.revisit.scene==2?iceworld::build_jubilee():campaign_authored(profile.revisit.district,profile.revisit.scene==1);
+      if(profile.revisit.scene==iceberg::SurveyReplay)grid=iceworld::build_survey_course();
+      else if(profile.revisit.scene==2)grid=iceworld::build_jubilee();
+      else grid=campaign_authored(profile.revisit.district,profile.revisit.scene==1);
       if(profile.revisit.scene==2&&(profile.story&(uint64_t(1)<<40)))grid.switch_flags=7;
       grid.interactions.insert(grid.interactions.begin(),{{grid.spawn_x-2,grid.spawn_y-1,1,3},InteractionKind::Return,0,{"Wróć do osady","Return to settlement"}});
     } else if(mode==iceberg::Mode::Campaign && profile.visit_district>=0) {
@@ -412,6 +420,12 @@ public:
     }
     if(grid.room_role==iceberg::RoomRole::Settlement)for(auto &node:grid.interactions)if(node.kind==InteractionKind::Board)
       node.label=profile.visit_district>=0?iceberg::Text{"Wróć na swoją trasę","Return to your route"}:iceberg::route_title(grid.district,stage);
+    if(mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement&&grid.district==0) {
+      const double x=grid.template_id==600?101.:grid.template_id==330?57.:73.;
+      const double floor=grid.template_id==330?49.:48.;
+      grid.interactions.push_back({{x,floor-4.,3,4},InteractionKind::Replay,iceberg::SurveyReplay,
+        {"Objazd latarni przyboju","Breakwater survey"}});
+    }
     grid.protect_exit();
     configure_route_room();
     auto old_view=state.adventure;
@@ -575,6 +589,8 @@ public:
       film.cinematic=true;
       film.shot_seconds=std::max(shot_seconds,iceberg::CrownAirlockOpeningSeconds);
       for(auto &line:film.lines)line.shot=iceberg::CrownShot::Daybreak;
+      film.lines[0].voice=20+option*2;
+      film.lines[1].voice=21+option*2;
     }
   }
   void frame_dialogue() {
@@ -601,6 +617,12 @@ public:
     auto previous=iceberg::dialogue_layout(text,last_columns,last_rows);
     auto next=iceberg::dialogue_layout(text,columns,rows);
     if(previous.text_rows==next.text_rows&&previous.body==next.body)return;
+    if(dialogue.cinematic) {
+      const auto &line=dialogue.lines[dialogue.page];
+      const double duration=line.voice>=0?iceberg::CrownVoiceSeconds[line.voice][profile.language==iceberg::Language::English]+.55:1.;
+      dialogue.segment=std::min(next.pages-1,int(dialogue.line_seconds*next.pages/duration));
+      return;
+    }
 
     // Count non-space characters so a new line break does not move the reading position.
     size_t previous_start=0;
@@ -657,14 +679,17 @@ public:
     if(dialogue.byte_cursor>=text.size())dialogue.revealing=false;
   }
   void tick_crown_film(double dt) {
-    auto &dialogue=state.adventure.dialogue;
-    dialogue.shot_seconds+=dt;
-    if(dialogue.revealing){tick_dialogue(dt);return;}
-    const auto subtitle=iceberg::dialogue_segment(dialogue.lines[dialogue.page],profile.language,
-      last_columns,last_rows,dialogue.segment);
-    dialogue.subtitle_hold+=dt;
-    if(dialogue.subtitle_hold>=std::clamp(iceberg::dialogue_character_count(subtitle)/19.,1.8,9.))
-      dialogue_next();
+    auto &film=state.adventure.dialogue;
+    const auto &line=film.lines[film.page];
+    film.shot_seconds+=dt;
+    film.line_seconds+=dt;
+    const auto layout=iceberg::dialogue_layout(line.text.get(profile.language),last_columns,last_rows);
+    const auto speaker_time=line.voice>=0?iceberg::CrownVoiceSeconds[line.voice][profile.language==iceberg::Language::English]:0.;
+    film.revealing=line.speaker!=-1&&film.line_seconds<speaker_time;
+    const double duration=line.speaker==-1?speaker_time:speaker_time+.55;
+    const int segment=std::min(layout.pages-1,int(film.line_seconds*layout.pages/std::max(1.,duration)));
+    film.segment=std::max(film.segment,segment);
+    if(film.line_seconds>=duration)dialogue_next();
   }
   void dialogue_next() {
     auto &dialogue=state.adventure.dialogue;
@@ -695,10 +720,10 @@ public:
     }
     const auto shot=dialogue.lines[dialogue.page].shot;
     auto layout=iceberg::dialogue_layout(dialogue.lines[dialogue.page].text.get(profile.language),last_columns,last_rows,1000,dialogue.segment);
-    if(dialogue.segment+1<layout.pages)++dialogue.segment;
+    if(!dialogue.cinematic&&dialogue.segment+1<layout.pages)++dialogue.segment;
     else {++dialogue.page;dialogue.segment=0;}
     if(dialogue.active()){
-      dialogue.subtitle_hold=0.;
+      dialogue.line_seconds=0.;
       if(dialogue.cinematic)dialogue.instant=false;
       if(shot!=dialogue.lines[dialogue.page].shot)dialogue.shot_seconds=0.;
       dialogue.reset_reveal();if(dialogue.instant)dialogue.reveal_all();
@@ -914,6 +939,8 @@ public:
     if(profile.revisit.active) {
       const int scene=profile.revisit.scene;
       bool jubilee=profile.revisit.scene==2&&state.won&&!(profile.story&(uint64_t(1)<<40));
+      const bool surveyed=scene==iceberg::SurveyReplay&&state.won&&!(profile.cosmetics&iceberg::SurveyCourseComplete);
+      if(surveyed)profile.cosmetics|=iceberg::SurveyCourseComplete;
       if(jubilee){profile.story|=uint64_t(1)<<40;profile.cosmetics|=1u<<3;}
       profile.revisit={};load_room(true);
       const auto entrance=std::find_if(grid.interactions.begin(),grid.interactions.end(),[scene](const auto &node){
@@ -925,6 +952,11 @@ public:
         update_camera(state,grid,last_columns,last_rows-7,last_aspect,10,profile.smooth_camera);
       }
       if(jubilee){talk(iceberg::jubilee_complete());audio.play(AudioCue::Win);}
+      if(surveyed){
+        talk({{0,{"Z brzegu nie widać, że trzecia boja zgasła. Dobrze, że masz ją zaznaczoną na mapie. Popłynę tam rano.",
+                  "From shore you can't tell the third buoy has gone dark. Good thing you marked it on the chart. I'll sail out in the morning."}}});
+        audio.play(AudioCue::Win);
+      }
       persist();return;
     }
     if(profile.visit_district>=0) {
@@ -1033,7 +1065,10 @@ public:
             "A postal token restores your dash. The Mastery Trial is already open."):
           t("Żeton przywraca zryw. Zbierz komplet w podróży lub podczas jednej wyprawy, by opłacić stały wstęp do próby mistrzowskiej. Stan: ",
             "A token restores your dash. Collect a set in the campaign or in one expedition to pay for permanent access to the Mastery Trial. Collected: ")+tokens+".";
-        describe(t("Żeton transportowy","Transit token"),body,"◉",Art::Coin);return;
+        const auto survey=t(" Objazd latarni przyboju w Dolnej Przystani: "," Breakwater Survey in Lower Harbor: ")+
+          std::to_string(iceberg::survey_pass(profile)?iceberg::SurveyTokenFare:
+            iceberg::transit_token_progress(profile,iceberg::SurveyTokenFare))+"/"+std::to_string(iceberg::SurveyTokenFare)+".";
+        describe(t("Żeton transportowy","Transit token"),body+survey,"◉",Art::Coin);return;
       }
       for(size_t i=0;i<grid.refills.size();++i)if(close(grid.refills[i].first,grid.refills[i].second)) {
         describe(t("Ogniwo zrywu","Dash cell"),t("Szklana osłona chroni naładowany rdzeń. Dotknij go, żeby odzyskać zryw w powietrzu. Puste ogniwo odnowi się po chwili.","A glass casing protects a charged core. Touch it to restore an airborne dash. An empty cell recharges after a moment."),"▥",Art::Refill);return;
@@ -1125,6 +1160,16 @@ public:
     case InteractionKind::RouteChoice:
       v.inspect_art=Art::Door;v.inspect_body=t("Przejście B prowadzi przez: ","Passage B leads through: ")+node.label.get(profile.language)+". "+
         t("Obie drogi łączą się w następnym wspólnym pokoju. E wybiera B; zwykłe oświetlone drzwi prowadzą trasą główną.","Both paths rejoin at the next shared room. E chooses B; the usual lit doorway takes the main path.");break;
+    case InteractionKind::Replay:
+      if(node.id==iceberg::SurveyReplay) {
+        const auto count=iceberg::survey_pass(profile)?iceberg::SurveyTokenFare:
+          iceberg::transit_token_progress(profile,iceberg::SurveyTokenFare);
+        v.inspect_art=Art::Coin;
+        v.inspect_body=t("Na końcu falochronu zgasła boja. Trasa prowadzi przez trzy kołyszące się pomosty. Przepustka: ",
+          "A buoy has gone dark at the end of the breakwater. Three moving platforms lead out to it. Survey pass: ")+
+          std::to_string(count)+"/"+std::to_string(iceberg::SurveyTokenFare)+t(" żetony."," tokens.");
+      }
+      break;
     case InteractionKind::Board:
       v.inspect_art=Art::Board;v.inspect_body=grid.template_id==330?node.label.get(profile.language):iceberg::route_title(district,stage).get(profile.language);break;
     default:v.inspect_body=t("E — użyj. Możesz zamknąć ten widok bez wykonywania działania.","E — use. You can close this view without performing the action.");break;
@@ -1184,6 +1229,12 @@ public:
       if((grid.switch_flags&3)!=3){notice(t("Najpierw otwórz szafę planów.","Open the map cabinet first."));return;}
       if(!(grid.switch_flags&4)){animate_pickup(node,4);grid.switch_flags|=4;profile.story|=uint64_t(1)<<41;talk(iceberg::archive_record());audio.play(AudioCue::Paper);persist();}
     } else if(node.kind==InteractionKind::Replay) {
+      if(node.id==iceberg::SurveyReplay&&!iceberg::survey_pass(profile)) {
+        const auto count=iceberg::transit_token_progress(profile,iceberg::SurveyTokenFare);
+        notice(t("Przepustka na objazd: ","Survey pass: ")+std::to_string(count)+"/"+
+          std::to_string(iceberg::SurveyTokenFare)+t(" żetony"," tokens"),5);
+        return;
+      }
       audio.play(AudioCue::Door);persist();profile.revisit={};profile.revisit.active=true;
       profile.revisit.district=grid.district;profile.revisit.scene=node.id;
       load_room();if(node.id==2&&!(profile.story&(uint64_t(1)<<40)))talk(iceberg::jubilee_arrival());persist();return;
@@ -1333,8 +1384,11 @@ public:
     int shutters=int(bool(grid.switch_flags&1))+int(bool(grid.switch_flags&2))+int(bool(grid.switch_flags&4));
     audio.set_climax(climax,.28f+float(shutters)*.24f);
     if(c.quit){persist();running=false;return;}
+    const auto &film=state.adventure.dialogue;
+    if(!film.cinematic||!film.active()||c.menu_request)
+      audio.film_voice(-1,false,0.,false);
     if(c.mute_audio)audio.muted=!audio.muted;
-    if(c.language&&!state.menu){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;if(state.adventure.dialogue.active()){state.adventure.dialogue.segment=0;state.adventure.dialogue.reset_reveal();frame_dialogue();}persist();}
+    if(c.language&&!state.menu){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;if(state.adventure.dialogue.active()){state.adventure.dialogue.segment=0;state.adventure.dialogue.line_seconds=0;state.adventure.dialogue.reset_reveal();frame_dialogue();}persist();}
     auto &v=state.adventure;
     if(!focused && previous_focus){
       // Maps, the quest book and inspections already stop the world.
@@ -1393,12 +1447,16 @@ public:
           if(v.dialogue.cinematic&&(focused||!profile.pause_on_focus_loss))v.dialogue.shot_seconds+=dt;
           if(c.navigate)v.dialogue.reply_option=(v.dialogue.reply_option+1)%2;
           if(c.confirm||c.interact)dialogue_next();
-        } else if(c.confirm||c.interact||c.jump_pressed)dialogue_next();
+        } else if(c.confirm||c.interact||(c.jump_pressed&&!v.dialogue.cinematic))dialogue_next();
         else if(focused||!profile.pause_on_focus_loss) {
           if(v.dialogue.cinematic)tick_crown_film(dt);
           else tick_dialogue(dt);
         }
       }
+      if(v.dialogue.cinematic&&v.dialogue.active()&&v.dialogue.lines[v.dialogue.page].speaker!=-1)
+        audio.film_voice(v.dialogue.lines[v.dialogue.page].voice,profile.language==iceberg::Language::Polish,
+          v.dialogue.line_seconds,!state.paused&&focused);
+      else audio.film_voice(-1,false,0.,false);
       audio.update(v.dialogue.cinematic&&!state.paused?AudioScene::Play:AudioScene::Paused,
                    v.dialogue.cinematic?2:music_track(),dt,focused);sync_view();return;
     }
@@ -1574,7 +1632,9 @@ public:
     if(grid.template_id==iceberg::CrownSentinel&&state.crown.hits<3) {
       const auto beat=crown_beat(state.crown);
       const std::string shield=std::to_string(3-state.crown.hits)+"/3 · ";
-      v.prompt=shield+(beat==CrownBeat::Exposed?t("Zryw w odsłonięty rdzeń","Dash through the core"):
+      v.prompt=shield+(beat==CrownBeat::Exposed?(state.crown.hits==2?
+        t("Skocz i zrób zryw w rdzeń","Jump and dash through the core"):
+        t("Zryw w odsłonięty rdzeń","Dash through the core")):
         beat==CrownBeat::Warning||beat==CrownBeat::Strike?t("Unikaj stref uderzenia","Dodge the marked zones"):
         t("Rdzeń osłonięty","Core shielded"));
       if(old_crown_beat!=beat) {

@@ -9,20 +9,27 @@ Controls crown_test_input(const GameState &state) {
   const auto &boss=state.crown;
   const auto &p=state.player;
   Controls input;
-  if(crown_beat(boss)==CrownBeat::Exposed&&p.grounded&&p.can_dash()) {
-    input.move=p.x<crown_core.x?1:-1;
+  const auto core=crown_core_area(boss.hits);
+  if(crown_beat(boss)==CrownBeat::Exposed&&p.can_dash()&&
+     p.y<core.bottom()&&p.rect().bottom()>core.top()) {
+    input.move=p.x<core.x?1:-1;
     input.dash_pressed=true;
     return input;
   }
   double mark=23.;
+  const auto jump_at=[&](double time) {
+    input.jump_pressed=boss.time>=time&&boss.time<time+1./120.;
+    input.jump_held=boss.time>=time&&boss.time<time+.46;
+  };
   if(boss.hits==0) {
-    input.jump_pressed=boss.time>=1.16&&boss.time<1.16+1./120;
-    input.jump_held=boss.time>=1.16&&boss.time<1.60;
-  } else if(boss.hits==1) {
-    mark=boss.time<crown_warning_time?31.:boss.target>27.?23.:31.;
+    jump_at(1.16);
   } else {
-    mark=boss.time<crown_warning_time?24.2:
-      boss.time<crown_follow_warning?std::max(30.,boss.target+3.):23.;
+    const bool follow=boss.time>=crown_follow_warning;
+    const bool final_wave=boss.hits==2&&boss.time>=crown_last_warning;
+    mark=boss.time<crown_warning_time?31.:boss.target>27.?23.:31.;
+    if(boss.hits==2&&!follow)jump_at(1.19);
+    if(follow&&!final_wave)jump_at(2.14);
+    if(final_wave)jump_at(3.08);
   }
   if(p.x<mark-.35)input.move=1;
   if(p.x>mark+.35)input.move=-1;

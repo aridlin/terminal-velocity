@@ -12,9 +12,11 @@ Explore the **Lower Harbor**, **Lazarus Heating Works**, **Windowsill Estate**, 
 
 The complete story follows the original network plan through the cultivation chambers to the fractured Crown. Irrigation unfolds living bridges; exposed maintenance cradles and shutter counterweights lead to the beacon. An ordinary-input automated run with all eight tasks takes about 35 minutes of active simulation plus 15 minutes of estimated reading. This is **not a measured first-player duration**, and the planned 100–140 minute human playtime has not been established.
 
+Transit tokens restore a dash when collected. Twelve open the Mastery Trial, and twenty-four open the Breakwater Survey at the Lower Harbor quay. Tokens count across campaign districts or within a single Endless Expedition.
+
 Afterwards, revisit settlements and authored routes, start endless expeditions, or attempt the six district mastery trials. Each trial combines seven expert rooms with a final movement examination. Time, fewest retries and collection records are independent. Explicit seeds have separate records; mastery unlocks a visible badge and outfit.
 
-Dialogue appears character by character, with short recorded voices. **E / Enter** during typing shows the text immediately and keeps the remaining conversation at that pace; each page still waits for your next press. Long passages paginate on smaller screens. **P** pauses the dialogue.
+Ordinary dialogue appears character by character, with short recorded voices. The Crown film plays with spoken Polish or English dialogue and subtitles. **E / Enter** during typing shows the text immediately and keeps the remaining conversation at that pace; each page still waits for your next press. Long passages paginate on smaller screens. **P** pauses the dialogue.
 
 Desktop editions start in Polish. A fresh browser visit follows the browser language (Polish for Polish preferences, English otherwise); saved games and explicit choices take precedence. Use **PL / EN** beside the browser entrance or **L** in the game to change dialogue, objectives and controls. Observation and exploration are rewarded, but optional discoveries never gate the ordinary story.
 

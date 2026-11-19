@@ -1,6 +1,6 @@
 inline std::vector<DialogueLine> crown_cutscene(uint64_t story=0) {
   std::vector<DialogueLine> lines{
-    {-1,{"Światło na pancerzu gaśnie. Pod klapą awaryjną nie ma kabiny. Jest rolka papieru, trzy pieczęcie i przewód prowadzący do głośnika.", "The light on the armor goes out. There is no cockpit under the service hatch. There is a roll of paper, three stamps, and a wire running to a speaker."}},
+    {-1,{"",""}}, // The falling paper reveals what was under the armor.
     {7,{"Strażnik Korony przerwał pracę. Przyczyna: niezgodność wyniku z protokołem. W kolejce pozostaje czterdzieści jeden odpowiedzi.", "Crown Sentinel has stopped. Cause: result differs from approved report. Forty-one replies remain in the queue."}},
     {4,{"To odpowiedzi z klatki jedenastej. Na ich podstawie powinni byli otworzyć śluzę. W kopii dla dyrekcji wpisano, że nikt się nie zgłosił.", "Those are the replies from stairwell eleven. They should have opened the airlock when the replies came in. The copy sent to the directors says nobody answered."}},
     {3,{"Zaczęło się od próby na siedem minut. Zamknęli zawór i odcięli klatkę. Żeby skończyć próbę, trzeba było zebrać potwierdzenia z każdego mieszkania.", "It began as a seven-minute test. They shut a valve and sealed the stairwell. To end the test, they needed an acknowledgement from every apartment."}},
@@ -16,9 +16,10 @@ inline std::vector<DialogueLine> crown_cutscene(uint64_t story=0) {
     {0,{"W okienku położę puste krzesło. Jeśli któraś z tych osób przyjdzie, usiądzie po mojej stronie lady. Nie będę jej prosić o wybaczenie, zanim zdąży powiedzieć, po co przyszła.","I'll put an empty chair by the counter. If one of those people comes, they can sit on my side. I won't ask them to forgive me before they've said why they came."}},
     {7,{"Otrzymano dyspozycję ręcznego otwarcia. Brak pieczęci. Czy potwierdzenie głosowe jest dopuszczalne?", "Manual release requested. Stamp missing. Is a spoken acknowledgement acceptable?"}},
     {0,{"Tu Helena, dolne nabrzeże. Potwierdzam. Słyszę was. Przekaż po linii wszystkie nazwiska, zanim uruchomimy pompę.", "Helena at the lower quay. I acknowledge. I can hear you. Send every name down the line before we start the pump."}},
-    {-1,{"Przekładasz dźwignię. Głośnik czyta pierwszy wiersz, a za szybą otwiera się górna śluza. Przez lód od nabrzeża do Korony widać jedną linię światła.", "You throw the lever. The speaker reads the first line, and the upper airlock opens behind the glass. One line of light runs through the ice from the quay to the Crown."},DialogueCue::CrownAirlock},
+    {-1,{"",""},DialogueCue::CrownAirlock}, // The airlock opening plays without subtitles.
     {5,{"Zróbmy kopie i wywieśmy je na każdym przystanku. A potem przynieś te nasiona. Na górze pada na nie prawdziwe słońce.", "Let's make copies and post them at every stop. Then bring me those seeds. There is real sunlight up there now."}},
   };
+  for(size_t i=0;i<lines.size();++i)lines[i].voice=int(i);
   for(size_t i=2;i<9;++i)lines[i].shot=CrownShot::Stairwell;
   for(size_t i=9;i<15;++i)lines[i].shot=CrownShot::Hearing;
   lines[15].shot=CrownShot::Quay;
@@ -29,6 +30,7 @@ inline std::vector<DialogueLine> crown_cutscene(uint64_t story=0) {
       Text{"Kopie, które wysłaliśmy wcześniej, już wracają z dopiskami. Nie wszystkie się zgadzają. Ułożę je obok siebie, z nazwami przystanków.","The copies we sent ahead are already coming back with notes. They don't all agree. I'll put them side by side, with the names of the stops."}:
       Text{"Oryginał spoczywa w czytelni. Została pod nim luźna kartka z pytaniem: kto siedział przy maszynie? Wrócę i podpiszę odpowiedź.","The original is in the reading room. Somebody left a loose sheet underneath asking who sat at the typewriter. I'll go back and sign my answer."}};
     witness.shot=CrownShot::Hearing;
+    witness.voice=copies?18:19;
     lines.insert(lines.end()-3,witness);
   }
   return lines;

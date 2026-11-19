@@ -16,7 +16,7 @@ Sound effects by Kenney (https://kenney.nl):
 Creative Commons CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
 Effects were decoded from original OGG recordings, low-pass filtered, loudness normalized, and given a 3 ms fade-in.
 
-No music or sound effects were synthesized or procedurally generated for this game.
+The score and environmental sound effects use recordings. The Crown film has synthesized speech.
 The file/source mapping and SHA-256 hashes are in manifest.json.
 
 Original pack notices:
@@ -128,3 +128,8 @@ Reproduction: python tools/prepare_crown_layers.py (NumPy and FFmpeg).
 Crown Sentinel score (crown-sentinel.mp3): Snow Theme by Cleyton Kauffman,
 https://opengameart.org/content/snow-theme, CC0-1.0. Mix uses the original
 recording and two quieter copies delayed 115 and 230 milliseconds.
+
+Crown film dialogue
+-------------------
+Original bilingual script. Voices rendered offline using eSpeak NG stock voices,
+with the speech mix and MP3 encoding reproduced by tools/prepare_crown_voice.py.
