@@ -1676,7 +1676,21 @@ const server=http.createServer((req,res)=>{
   });
   await page.keyboard.press('Digit4');
   await action.tap();
-  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR'));
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 1/'));
+  const nextTourPage=page.locator('#tour-controls [data-tap="29"]');
+  await nextTourPage.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 2/'),null,{timeout:3000});
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 1/'));
+  assert.equal(await nextTourPage.evaluate(button=>document.activeElement===button),true,
+   'Debug Tour navigation keeps focus on the page button');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('SAVE SLOTS'));
+  assert.equal(await page.locator('#game').evaluate(game=>document.activeElement===game),true,
+   'leaving the Debug Tour returns focus to the game');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 1/'));
   await inspectControl.tap();
   await page.waitForFunction(()=>window.tourPickerHeading?.includes('SAVE SLOTS'));
   await action.tap();
