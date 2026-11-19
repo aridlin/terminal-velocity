@@ -440,7 +440,13 @@
         const bool marked=grid_.switch_flags&1;
         prop_art(x+node.area.w*.5,y,{"  ╭─────────╮"," ╱ ≈≈ ≋ "+std::string(marked?"⚑":"◇")+" ╱",
           "╞═════════╡"," ╲│     │╱ ","  ╵     ╵  "},marked?0x88e6dc:0xe4c696);
-      } else if(node.kind==InteractionKind::Valve)valve_art(x+node.area.w*.5,y,bool(grid_.switch_flags&(uint64_t(1)<<node.id)));
+      } else if(node.kind==InteractionKind::Valve) {
+        const uint64_t flag=uint64_t(1)<<node.id;
+        if(const auto *belt=grid_.belt_relay(flag)) {
+          const bool right=belt->speed_at(grid_.switch_flags)>0;
+          prop_art(x+node.area.w*.5,y,{"╔═╗",right?"║→║":"║←║","╚╤╝"," ╵ "},0xa0d6df);
+        } else valve_art(x+node.area.w*.5,y,bool(grid_.switch_flags&flag));
+      }
       else if(node.kind==InteractionKind::Note)sign_art(x+node.area.w*.5,y,node.id,d.light);
       else if(node.kind==InteractionKind::Task) {
         bool done=(state_.adventure.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))||

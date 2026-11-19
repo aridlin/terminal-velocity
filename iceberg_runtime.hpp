@@ -1141,6 +1141,12 @@ public:
       break;
     case InteractionKind::Valve:
       v.inspect_art=Art::Valve;v.inspect_icon="⊗";
+      if(grid.belt_relay(uint64_t(1)<<node.id)) {
+        v.inspect_title=t("Przekaźnik taśmy","Conveyor relay");
+        v.inspect_body=t("Naciśnij E, żeby zmienić kierunek środkowej taśmy. Biegnij z taśmą i odbij się z jej końca.",
+          "Press E to reverse the middle belt. Run with the belt and jump off its end.");
+        break;
+      }
       if(grid.district==1&&grid.template_id==20) {
         v.inspect_body=t("Otwórz dopływ i wskocz w strumień pary. Nad górną półką skręć w lewo.",
           "Open the supply and jump into the steam. Steer left above the upper shelf.");
@@ -1290,6 +1296,14 @@ public:
       }
     } else if(node.kind==InteractionKind::Valve) {
       const auto flag=uint64_t(1)<<node.id;
+      if(const auto *belt=grid.belt_relay(flag)) {
+        grid.switch_flags^=flag;
+        const bool right=belt->speed_at(grid.switch_flags)>0;
+        notice(right?t("Środkowa taśma: →","Middle belt: →"):t("Środkowa taśma: ←","Middle belt: ←"));
+        audio.play(AudioCue::Valve);
+        persist();
+        return;
+      }
       if(grid.template_id==303&&node.id>0&&!(grid.switch_flags&(flag>>1))) {
         notice(t("Najpierw odłącz wcześniejszy obieg. Strzałki prowadzą od fontanny do mieszkań.","Disconnect the preceding circuit first. Follow the arrows from fountain to homes."),5);return;
       }

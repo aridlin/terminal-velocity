@@ -440,6 +440,14 @@ int main(){try {
       ui_check(count_map("▶",0xa0d6df)==2&&count_map("◀",0xa0d6df)==1&&
         ui_text(frame).find(legend)!=std::string::npos,
         "the Archive map marks the two right-moving belts and the left-moving belt");
+      const auto relay_label=language==iceberg::Language::English?"⇄ Belt relay":"⇄ Przekaźnik";
+      ui_check(count_map("⇄",0xa0d6df)==1&&ui_text(frame).find(relay_label)!=std::string::npos,
+        "the relay appears beside the reversible belt on the localized map");
+      belt_room.switch_flags=1;
+      RenderGrid(belt_room,belt_view,rows,cols,2).draw();
+      ui_check(count_map("▶",0xa0d6df)==3&&count_map("◀",0xa0d6df)==0,
+        "the room map shows all three Archive belts running right after reversal");
+      belt_room.switch_flags=0;
     }
   }
   for(const auto &[room_id,district]:{std::pair{39,3},std::pair{52,4}}) {
