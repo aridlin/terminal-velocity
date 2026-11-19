@@ -418,6 +418,7 @@ struct AirField {
   uint64_t disabled_by=0;
   bool reverses=false;
   uint64_t enabled_by=0;
+  bool turbine=false;
   bool active(uint64_t flags) const {
     return (flags&enabled_by)==enabled_by&&(!disabled_by||(flags&disabled_by)!=disabled_by);
   }

@@ -2,10 +2,11 @@
   void draw_room_map(int top,int height) {
     const bool has_water=!grid_.water_basins.empty();
     const auto wind=std::find_if(grid_.air_fields.begin(),grid_.air_fields.end(),[&](const auto &field){
-      return (field.reverses||(grid_.windbreak_roof&&field.ax!=0))&&field.active(grid_.switch_flags);
+      return (field.turbine||field.reverses||(grid_.windbreak_roof&&field.ax!=0))&&field.active(grid_.switch_flags);
     });
     const bool has_wind=wind!=grid_.air_fields.end();
-    const char *wind_symbol=has_wind?(wind->reverses?"↔":wind->ax<0?"←":"→"):"";
+    const bool turbine=has_wind&&wind->turbine;
+    const char *wind_symbol=has_wind?(turbine?"↗":wind->reverses?"↔":wind->ax<0?"←":"→"):"";
     const bool has_ice=!grid_.ice_strips.empty()||
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy&&!platform.fragile;});
     const bool has_fragile=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
@@ -41,7 +42,7 @@
     const auto spring_symbol=[](const SpringPad &spring){
       return spring.push_x>0?"↗":spring.push_x<0?"↖":"↑";
     };
-    const auto lift_field=[&](const AirField &field){return field.ay<0&&field.active(grid_.switch_flags);};
+    const auto lift_field=[&](const AirField &field){return field.ay<0&&!field.turbine&&field.active(grid_.switch_flags);};
     std::string boost_symbols;
     const auto add_boost_symbol=[&](const char *symbol){
       if(boost_symbols.find(symbol)==std::string::npos)boost_symbols+=symbol;
@@ -69,7 +70,7 @@
     if(steam_controls)add_feature(tr("⊗ Dopływ pary","⊗ Steam supply"),0xe9ae83);
     if(has_water)add_feature(tr("≈ Woda","≈ Water"),0x66bfd7);
     if(has_ice)add_feature(tr("━ Lód","━ Ice"),0xa6e9ea);
-    if(has_wind)add_feature(wind_symbol+tr(" Wiatr"," Wind"),0xb4d7e4);
+    if(has_wind)add_feature(wind_symbol+(turbine?tr(" Turbina"," Turbine"):tr(" Wiatr"," Wind")),0xb4d7e4);
     if(has_racks)add_feature(tr("▲▼ Regały","▲▼ Racks"),ArchiveRackMarker);
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
       return node.kind==InteractionKind::RouteChoice;
@@ -419,7 +420,8 @@
     for(const auto &field:grid_.air_fields)if(lift_field(field))
       mark(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑",0x9dd39c);
     if(has_wind)
-      mark(wind->area.x+wind->area.w*.5,wind->area.y+3,wind_symbol,0xb4d7e4);
+      mark(wind->area.x+(turbine?0.:wind->area.w*.5),turbine?wind->area.bottom()-3:wind->area.y+3,
+        wind_symbol,0xb4d7e4);
     for(const auto &platform:grid_.platforms)if(platform.archive_rack) {
       const auto rack=platform.at(state_.elapsed);
       mark(rack.x+rack.w*.5,rack.y,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);

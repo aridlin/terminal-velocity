@@ -283,6 +283,7 @@ inline constexpr std::array DebugTour{
   TourStop{5,63,68,45,{"Skacz po belkach, zanim się załamią","Jump across the beams before they buckle"}},
   TourStop{3,41,19,54,{"Wsiadaj, gdy wagonik zatrzyma się przy pomoście","Board the rail car when it stops at the landing"}},
   TourStop{1,20,54,43,{"Otwórz dopływ i wskocz w strumień pary","Open the supply and jump into the steam"}},
+  TourStop{1,23,61.0,32,{"Gdy turbina zapali strzałkę, skocz wzdłuż podmuchu","Jump with the turbine draft when the arrow lights"}},
   TourStop{2,33,66.3,41,{"Odbijaj się między rynnami, by zebrać górny żeton","Wall-kick between the downspouts to reach the upper token"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
