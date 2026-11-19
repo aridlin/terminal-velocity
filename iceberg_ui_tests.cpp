@@ -560,12 +560,12 @@ int main(){try {
     gap.elapsed=1.8;
     gap.platform_armed_at[0]=1.0;
     RenderGrid(reservoir,gap,rows,cols,2).draw();
-    ui_check(count_background(0x14394e)==water&&count_background(0x214b62,"×")>0&&
+    ui_check(count_background(0x14394e)==water&&count_map("×",0x85c0cd)>0&&
              count_background(0x214b62,"┅")>0&&ui_text(frame).find("× Przerwa")!=std::string::npos,
       "the broken floe is marked as a gap while adjacent ice stays on the map");
     gap.elapsed=4.;
     RenderGrid(reservoir,gap,rows,cols,2).draw();
-    ui_check(count_background(0x214b62,"×")==0&&count_background(0x214b62,"┅")>0,
+    ui_check(count_map("×",0x85c0cd)==0&&count_background(0x214b62,"┅")>0,
       "the gap disappears when the floe recovers");
   }
   for(const auto &[room,sign,letter,tube]:{std::array{45,2,2,0},std::array{57,0,0,2},

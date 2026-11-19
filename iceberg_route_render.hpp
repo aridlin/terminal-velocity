@@ -207,6 +207,7 @@
       if(cell==' ')cell='s';
     }
     std::vector<std::array<int,3>> cracking_spans;
+    std::vector<std::pair<int,int>> broken_floes;
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       if(platform.archive_rack||platform.service_lift||platform.cargo_hoist) {
@@ -238,10 +239,7 @@
       }
       const auto deck=platform.at(state_.elapsed);
       if(!platform.available(state_,i,state_.elapsed)) {
-        if(platform.icy) {
-          auto &tile=map[size_t(row(deck.y))][size_t(column(deck.x+deck.w*.5))];
-          if(tile=='~')tile='x';
-        }
+        if(platform.icy)broken_floes.emplace_back(column(deck.x+deck.w*.5),row(deck.y));
         continue;
       }
       char tile=platform.icy?'i':'=';
@@ -278,7 +276,6 @@
       case 'f':paint_text(first+y,left+x,"┅",fragile_color);break;
       case 'j':paint_text(first+y,left+x,"┅",0xa6e9ea);break;
       case 'c':paint_text(first+y,left+x,"╍",cracking_color);break;
-      case 'x':paint_text(first+y,left+x,"×",gap_color);break;
       case '~':paint_text(first+y,left+x,"≈",0x66bfd7);break;
       }
     }
@@ -403,6 +400,15 @@
       const Marker warning{(start+last)/2,y,1,"╍",cracking_color};
       if(!place(warning,0,-1))
         for(const auto &[dx,dy]:nearby)if(place(warning,dx,dy))break;
+    }
+    for(const auto &[x,y]:broken_floes) {
+      const Marker gap{x,y,1,"×",gap_color};
+      if(map[size_t(y)][size_t(x)]=='~')place(gap,0,0);
+      // On compact maps an intact neighbor may share the gap's surface cell.
+      // Place the mark just below the edge without covering usable ice.
+      else if(y+1<map_rows&&map[size_t(y+1)][size_t(x)]==' '&&
+              buffer_[first+y+1][left+x].background==water_depth_background)
+        place(gap,0,1);
     }
     int legend=top+height-legend_rows;
     if(fork) {
