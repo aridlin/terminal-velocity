@@ -889,6 +889,43 @@ int main(){try {
       }
     }
   }
+  {
+    auto archive_grid=iceworld::build_room(36,73,3);
+    auto archive_view=new_state(archive_grid);
+    auto &v=archive_view.adventure;
+    v.district=3;v.map=v.map_route=v.route.available=true;
+    v.route.current=0;v.route.place=archive_grid.room_name;
+    for(int id:iceworld::make_itinerary(73,3))v.route.rooms.push_back(iceworld::pattern(id).name);
+    auto harbor_view=harbor_fork.state;
+    auto &harbor=harbor_view.adventure;
+    harbor.map_room=false;harbor.map_route=true;
+    harbor.route.alternatives[0]=iceworld::pattern(511).name;
+    const auto route_text=[&] {
+      std::string text;
+      for(const auto &line:frame) {
+        for(size_t x=1;x+1<line.size();++x)text+=line[x].glyph;
+        text+=' ';
+      }
+      return normalize_ui(text);
+    };
+    for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
+      v.language=harbor.language=language;
+      const bool en=language==iceberg::Language::English;
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{38,28},std::pair{56,20},std::pair{110,34}}) {
+        RenderGrid(archive_grid,archive_view,rows,cols,2).draw();
+        const auto archive_map=route_text();
+        const auto room_name=archive_grid.room_name.get(language);
+        ui_check(archive_map.find(std::string(en?"Leg 1 / 3 · ":"Odcinek 1 / 3 · ")+room_name)!=std::string::npos&&
+          archive_map.find(std::string(en?"Now: ":"Teraz: ")+room_name)!=std::string::npos,
+          "the campaign map keeps the full leg and current room names at every supported size");
+        RenderGrid(harbor_fork.grid,harbor_view,rows,cols,2).draw();
+        const auto harbor_map=route_text();
+        ui_check(harbor_map.find("B: "+harbor.route.alternatives[0].get(language))!=std::string::npos&&
+          harbor_map.find(en?"visited":"odwiedzone")!=std::string::npos,
+          "the route map wraps the full Harbor alternate name above its legend");
+      }
+    }
+  }
   AdventureSession preview(options,"/tmp/tv-ui-route-preview-unused");preview.begin_campaign(true);
   preview.stage=2;preview.load_room();
   Controls next_leg;next_leg.navigate=1;
