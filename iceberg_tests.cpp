@@ -442,6 +442,32 @@ int main(int argc,char **argv) {
     archive.advance_room();
     check(archive.grid.growth.empty()&&archive.grid.switch_flags==0,
       "drawer state does not carry into the next expedition room");
+    archive_run.itinerary[1]=41;
+    archive_run.layout_version=2;archive.load_room();
+    check(archive.grid.template_id==41&&archive.grid.platforms.size()==3&&
+          std::none_of(archive.grid.platforms.begin(),archive.grid.platforms.end(),[](const auto &car){return car.tram;}),
+      "older Archive expeditions keep their original rail platforms");
+    archive_run.layout_version=4;archive.load_room();
+    check(archive.grid.platforms.size()==3&&
+          std::all_of(archive.grid.platforms.begin(),archive.grid.platforms.end(),[](const auto &car){return car.tram;})&&
+          verify_route(archive.grid).complete,"the scheduled Archive shuttles preserve the through-route");
+    AdventureSession rail(options,{});
+    const auto rail_sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==41;});
+    rail.start_tour(int(rail_sample-iceberg::DebugTour.begin()));
+    const auto &car=rail.grid.platforms.front();
+    check(car.at(0.).x==car.at(.5).x&&car.at(2.8).x==car.at(3.3).x&&
+          std::abs(car.at(2.8).x-car.at(0.).x-10.8)<.01,
+      "the Archive shuttle waits at both landings and crosses between them");
+    for(int tick=0;tick<93;++tick) {
+      Controls step;step.move=tick<24?1:0;step.jump_pressed=tick==0;step.jump_held=tick<85;
+      rail.tick(step,1./120);
+    }
+    check(rail.state.player.support==0,"a normal jump from the Archive landing boards the rail car");
+    const auto boarded_x=rail.state.player.x;
+    for(int tick=93;tick<332;++tick)rail.tick({},1./120);
+    check(rail.state.player.support==0&&rail.state.player.x-boarded_x>9.&&rail.state.deaths==0,
+      "waiting aboard carries the courier to the far landing without steering");
     archive_run.itinerary={47,36,37,38,39,40,41,42};
     archive_run.room=archive_run.depth=archive.room=archive.depth=0;
     archive.load_room();

@@ -327,6 +327,21 @@ inline void add_expedition_drawers(EngineGrid &room) {
   room.growth.push_back({{65,35,12,1},1});
 }
 
+inline void add_archive_stack_shuttles(EngineGrid &room) {
+  if(room.district!=3||room.template_id!=41||room.platforms.size()!=3)return;
+  auto original=room.platforms;
+  for(size_t i=0;i<room.platforms.size();++i) {
+    auto &shuttle=room.platforms[i];
+    shuttle.dx=5.4;
+    shuttle.period=5.6;
+    shuttle.phase=i*.16;
+    shuttle.tram=true;
+  }
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms=std::move(original);
+}
+
 inline void add_expedition_copy_belts(EngineGrid &room) {
   if(room.district!=3||room.template_id!=44)return;
   // Leave ordinary footing at both ends of each landing.

@@ -438,7 +438,7 @@
       paint_text(legend++,2,label,bridge_color);
     }
     if(has_trams) {
-      const auto name=tr("▰ Tramwaj","▰ Tram");
+      const auto name=grid_.district==3?tr("▰ Wagonik","▰ Shuttle"):tr("▰ Tramwaj","▰ Tram");
       paint_text(legend,2,name,tram_color);
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,separator," · ",0xc7d9df);

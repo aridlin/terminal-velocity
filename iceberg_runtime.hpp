@@ -275,6 +275,7 @@ public:
     add_expedition_stairwells(room);
     add_estate_clotheslines(room);
     add_expedition_drawers(room);
+    add_archive_stack_shuttles(room);
     add_expedition_post_launchers(room);
     add_expedition_copy_belts(room);
     add_expedition_archive_trolley(room);
