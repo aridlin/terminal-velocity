@@ -404,8 +404,12 @@ inline void add_heatworks_cargo_hoists(EngineGrid &room) {
     hoist.cargo_hoist=true;
   }
   const auto route=verify_route(room);
-  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
-  else room.platforms=std::move(original);
+  if(!route.complete||route.deaths!=0) {
+    room.platforms=std::move(original);
+    return;
+  }
+  room.verification_policy=route.policy;
+  room.interactions.push_back({{11,53,2,3},InteractionKind::Npc,1,{"Porozmawiaj","Talk"}});
 }
 
 inline void add_expedition_steam(EngineGrid &room) {

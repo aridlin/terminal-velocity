@@ -297,6 +297,10 @@ inline std::vector<DialogueLine> irrigation_call() {
               "Celina here. I moved Basia's box to the top shelf when water came over the sill. The seeds should still be dry."}}};
 }
 
+inline constexpr DialogueLine HoistCrewOpening{1,{
+  "Przełożyłem przekaźniki. Zielone znaczy, że pomost stoi. Według rozpiski mamy wozić skrzynie w obie strony, ale jedną windę zostawiam pustą na powrót.",
+  "I rewired the relays. Green means the deck has stopped. The sheet says to carry crates both ways, but I keep one lift empty for the trip back."}};
+
 inline constexpr Text ArchiveDryingLetterDetail{
   "Na mokrej kopercie został tylko inicjał. Pod sznurkiem ktoś wsunął paragon z piekarni, z adresem i numerem klatki.",
   "Only an initial survived on the wet envelope. Somebody slipped a bakery receipt under the string with the address and stairwell number."
