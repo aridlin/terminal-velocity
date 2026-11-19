@@ -436,10 +436,14 @@
       tr("⚑ Boja zaznaczona","⚑ Buoy marked"):tr("▤ Mapa portu","▤ Harbor chart"),chart_color);
     if(bridge_legend) {
       std::string label;
-      if(has_path_control)label=tr("⊗ Wysuń pomost","⊗ Extend path");
+      const bool drawers=grid_.district==3,vines=grid_.district==4;
+      if(has_path_control)
+        label=drawers?tr("⊗ Wysuń szuflady","⊗ Extend drawers"):
+          vines?tr("⊗ Podlej pnącza","⊗ Water vines"):tr("⊗ Wysuń pomost","⊗ Extend path");
       if(has_bridges) {
         if(!label.empty())label+=" · ";
-        label+=tr("═ Pomost","═ Bridge");
+        label+=drawers?tr("═ Szuflady","═ Drawers"):
+          vines?tr("═ Pnącza","═ Vines"):tr("═ Pomost","═ Bridge");
       }
       paint_text(legend++,2,label,bridge_color);
     }

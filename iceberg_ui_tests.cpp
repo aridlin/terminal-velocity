@@ -418,28 +418,41 @@ int main(){try {
         "the Archive map marks the two right-moving belts and the left-moving belt");
     }
   }
-  auto drawer_room=verified_room(39,73,3);
-  add_expedition_drawers(drawer_room);
-  auto drawer_view=new_state(drawer_room);
-  drawer_view.adventure.map=drawer_view.adventure.map_room=true;
-  drawer_view.adventure.language=iceberg::Language::English;
-  RenderGrid(drawer_room,drawer_view,24,34,2).draw();
-  ui_check(count_map("⊗",0xabc9e4)==1&&count_map("═",0xabc9e4)==0&&
-    ui_text(frame).find("⊗ Extend path")!=std::string::npos,
-    "the compact room map marks the handle while the optional drawers are retracted");
-  drawer_room.switch_flags=1;
-  for(auto &drawer:drawer_room.growth)drawer.amount=0;
-  RenderGrid(drawer_room,drawer_view,34,110,2).draw();
-  ui_check(count_map("⊗",0xabc9e4)==0&&count_map("═",0xabc9e4)==0,
-    "an activated handle disappears before its drawers have extended");
-  for(auto &drawer:drawer_room.growth)drawer.amount=.5;
-  RenderGrid(drawer_room,drawer_view,34,110,2).draw();
-  const int partial_drawer_cells=count_map("═",0xabc9e4);
-  for(auto &drawer:drawer_room.growth)drawer.amount=1;
-  RenderGrid(drawer_room,drawer_view,34,110,2).draw();
-  ui_check(partial_drawer_cells>0&&count_map("═",0xabc9e4)>partial_drawer_cells&&
-    ui_text(frame).find("═ Bridge")!=std::string::npos,
-    "the room map draws only the available length of an extending bridge");
+  for(const auto &[room_id,district]:{std::pair{39,3},std::pair{52,4}}) {
+    auto room=verified_room(room_id,73,district);
+    const bool drawers=district==3;
+    if(drawers)add_expedition_drawers(room);
+    else add_expedition_channel_bridge(room);
+    auto view=new_state(room);
+    view.adventure.map=view.adventure.map_room=true;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      view.adventure.language=language;
+      const bool english=language==iceberg::Language::English;
+      const char *control=drawers?(english?"⊗ Extend drawers":"⊗ Wysuń szuflady"):
+        (english?"⊗ Water vines":"⊗ Podlej pnącza");
+      const char *surface=drawers?(english?"═ Drawers":"═ Szuflady"):(english?"═ Vines":"═ Pnącza");
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        room.switch_flags=0;
+        RenderGrid(room,view,rows,cols,2).draw();
+        ui_check(count_map("⊗",0xabc9e4)==1&&count_map("═",0xabc9e4)==0&&
+          ui_text(frame).find(control)!=std::string::npos,
+          "the room map names the local mechanism and marks its inactive control");
+        room.switch_flags=1;
+        for(auto &bridge:room.growth)bridge.amount=0;
+        RenderGrid(room,view,rows,cols,2).draw();
+        ui_check(count_map("⊗",0xabc9e4)==0&&count_map("═",0xabc9e4)==0,
+          "the opened control disappears before any foothold extends");
+        for(auto &bridge:room.growth)bridge.amount=.5;
+        RenderGrid(room,view,rows,cols,2).draw();
+        const int partial_cells=count_map("═",0xabc9e4);
+        for(auto &bridge:room.growth)bridge.amount=1;
+        RenderGrid(room,view,rows,cols,2).draw();
+        ui_check(partial_cells>0&&count_map("═",0xabc9e4)>partial_cells&&
+          ui_text(frame).find(surface)!=std::string::npos,
+          "the room map names the extended mechanism and draws only its usable surface");
+      }
+    }
+  }
   auto examination=iceworld::build_mastery_course(0);
   auto refill_view=new_state(examination);
   refill_view.adventure.map=refill_view.adventure.map_room=true;
