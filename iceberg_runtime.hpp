@@ -973,7 +973,11 @@ public:
     switch(node.kind) {
     case InteractionKind::Npc:case InteractionKind::Rescue:
       v.inspect_art=Art::Character;v.inspect_title=iceberg::Npcs[size_t(node.id)].name;
-      v.inspect_body=iceberg::Npcs[size_t(node.id)].title.get(profile.language)+t(". E — rozmowa. Zlecenia i odebrane wiadomości znajdziesz w dzienniku.",". E — talk. Tasks and received messages are kept in your journal.");v.inspect_icon="◉";break;
+      v.inspect_body=grid.template_id==13&&node.id==1?
+        t("Witek pilnuje przekaźników. Zielona lampka na panelu zapala się, gdy pierwsza winda stoi. E — porozmawiaj.",
+          "Witek watches the relays. The panel lights up green when the first lift stops. Press E to talk."):
+        iceberg::Npcs[size_t(node.id)].title.get(profile.language)+t(". E — rozmowa. Zlecenia i odebrane wiadomości znajdziesz w dzienniku.",". E — talk. Tasks and received messages are kept in your journal.");
+      v.inspect_icon="◉";break;
     case InteractionKind::DockWorker:
       v.inspect_title=t("Doker","Dockworker");
       v.inspect_body=t("Sortuje skrzynki. E — porozmawiaj.","Sorting crates. E — talk.");break;

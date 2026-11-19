@@ -361,6 +361,8 @@
       double x=node.area.x,y=node.area.bottom();
       if(node.kind==InteractionKind::Npc||node.kind==InteractionKind::Rescue) {
         if(node.kind==InteractionKind::Rescue&&(grid_.switch_flags&(grid_.template_id==310?8:2)))continue;
+        if(grid_.template_id==13&&node.id==1&&!grid_.platforms.empty()&&grid_.platforms.front().cargo_hoist)
+          draw_heatworks_relay(node.area.right()+.4,y,grid_.platforms.front());
         auto [sx,sy]=screen(x,y-.001);++sy;
         resident_sprite(node.id,sx,sy);
       } else if(node.kind==InteractionKind::DockWorker) {
