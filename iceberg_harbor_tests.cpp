@@ -37,7 +37,7 @@ int main() {
     std::filesystem::remove(file);std::filesystem::remove(file.string()+".bak");
     iceberg::SessionOptions options;options.mute=true;options.seed=73;options.seed_override=true;
     AdventureSession s(options,file);
-    for(int layout:{3,4})for(int mission=0;mission<3;++mission) {
+    for(int layout:{3,4})for(int mission=0;mission<3;++mission)for(int option:{0,1}) {
       s.begin_campaign(true);s.profile.layout_version=layout;
       s.stage=2+mission*2;s.room=iceberg::RoomsPerLeg-1;s.load_room();s.advance_room();
       const int template_id=s.grid.template_id;
@@ -55,7 +55,21 @@ int main() {
       check_harbor(progressed.grid.switch_flags==1&&!progressed.state.adventure.dialogue.active(),
                    "a mission already underway resumes with its machinery state and no opening dialogue");
       std::filesystem::remove(progressed_file);std::filesystem::remove(progressed_file.string()+".bak");
-      read_harbor(resumed);
+      while(dialogue.active()&&!dialogue.choosing())resumed.dialogue_next();
+      AdventureSession prompt(options,file);prompt.begin_campaign(false);
+      check_harbor(prompt.state.adventure.dialogue.choosing()&&
+                   prompt.state.adventure.dialogue.reply_scene==iceberg::HarborMissionReplyBase+mission,
+                   "the unanswered Harbor exchange restores at the reply prompt");
+      Controls choose;choose.navigate=option;choose.confirm=true;
+      prompt.tick(choose,1./120);
+      AdventureSession exchange(options,file);exchange.begin_campaign(false);
+      const auto &lines=exchange.state.adventure.dialogue.lines;
+      const auto &reply=iceberg::harbor_mission_reply(mission,option);
+      check_harbor(lines.size()==2&&lines[0].speaker==iceberg::CourierSpeaker&&
+                   std::string_view(lines[0].text.en)==reply.said.en&&
+                   lines[1].speaker==reply.answer.speaker&&std::string_view(lines[1].text.pl)==reply.answer.text.pl,
+                   "the chosen courier line and resident answer survive reload");
+      read_harbor(exchange);
       AdventureSession finished(options,file);finished.begin_campaign(false);
       check_harbor(finished.grid.template_id==template_id&&!finished.state.adventure.dialogue.active(),
                    "the acknowledged instructions leave the restored mission playable");
