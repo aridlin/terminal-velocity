@@ -6,6 +6,9 @@
     });
     const bool has_wind=wind!=grid_.air_fields.end();
     const bool turbine=has_wind&&wind->turbine;
+    const bool ridge_mast=has_wind&&iceworld::has_ridge_mast(grid_);
+    const uint32_t ridge_signal=ridge_mast&&iceworld::ridge_launch_ready(*wind,state_.elapsed)?
+      iceworld::RidgeLaunchReady:iceworld::RidgeLaunchWaiting;
     const char *wind_symbol=has_wind?(turbine?"↗":wind->reverses?"↔":wind->ax<0?"←":"→"):"";
     const bool has_ice=!grid_.ice_strips.empty()||
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy&&!platform.fragile;});
@@ -71,6 +74,7 @@
     if(has_water)add_feature(tr("≈ Woda","≈ Water"),0x66bfd7);
     if(has_ice)add_feature(tr("━ Lód","━ Ice"),0xa6e9ea);
     if(has_wind)add_feature(wind_symbol+(turbine?tr(" Turbina"," Turbine"):tr(" Wiatr"," Wind")),0xb4d7e4);
+    if(ridge_mast)add_feature(tr("↗ Skok z wiatrem","↗ Gust jump"),ridge_signal);
     if(has_racks)add_feature(tr("▲▼ Regały","▲▼ Racks"),ArchiveRackMarker);
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
       return node.kind==InteractionKind::RouteChoice;
@@ -422,6 +426,8 @@
     if(has_wind)
       mark(wind->area.x+(turbine?0.:wind->area.w*.5),turbine?wind->area.bottom()-3:wind->area.y+3,
         wind_symbol,0xb4d7e4);
+    if(ridge_mast)
+      mark(iceworld::RidgeLaunchX,iceworld::RidgeLaunchFloor-2,"↗",ridge_signal);
     if(turbine&&iceworld::has_turbine_access(grid_))
       mark(iceworld::TurbineAccessX,iceworld::TurbineAccessFloor-2,wind_symbol,0xb4d7e4);
     for(const auto &platform:grid_.platforms)if(platform.archive_rack) {

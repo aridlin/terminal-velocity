@@ -170,6 +170,27 @@
     }
   }
 
+  void draw_ridge_mast(const AirField &wind) {
+    const double row=aspect_*scale_;
+    constexpr uint32_t steel=0x8099ae;
+    draw_scenery_pipe({{70.5,48},{70.5,36},{73,36},{73,37}},steel);
+    for(const auto &step:iceworld::RidgeMastSteps) {
+      std::string rail;
+      for(int cell=0;cell<int(step.w/scale_);++cell)rail+=cell%3==0?"╤":"─";
+      world_text(step.x,step.y-row,rail,steel);
+      world_art(step.x+scale_,step.y+row,{" ╲──╱","  ╲╱"},steel);
+    }
+    prop_art(71.,48.,{"┌─┐","│↑│","└┬┘"," │ "},0xb5d4de);
+    const auto x=iceworld::RidgeLaunchX,y=iceworld::RidgeLaunchFloor;
+    const bool ready=iceworld::ridge_launch_ready(wind,state_.elapsed);
+    const double signal_x=x+2.;
+    draw_scenery_pipe({{signal_x,y},{signal_x,y-2.8}},steel);
+    // Mount the light above the token so it can be read before collecting it.
+    prop_art(signal_x,y-2.6,{"┌───┐",ready?"│ ↗ │":"│ ○ │","└─┬─┘"},
+      ready?iceworld::RidgeLaunchReady:iceworld::RidgeLaunchWaiting);
+    world_text(x,y-row*.3,"╧",0xb5d4de);
+  }
+
   void draw_ridge_sensors(double amount,bool right) {
     const double row=aspect_*scale_;
     for(const auto &pad:iceworld::pattern(grid_.template_id).optional) {
@@ -228,7 +249,10 @@
         world_art(field.area.x+offset,y,{amount>.55?(right?"╶─›":"‹─╴"):(right?"·╴":"╶·")},
           amount>.55?0x93bbd6:0x526779);
       }
-      if(field.reverses)draw_ridge_sensors(amount,right);
+      if(field.reverses) {
+        draw_ridge_sensors(amount,right);
+        if(iceworld::has_ridge_mast(grid_))draw_ridge_mast(field);
+      }
     }
   }
   void draw_epilogue_landmarks() {

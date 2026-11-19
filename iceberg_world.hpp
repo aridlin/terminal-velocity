@@ -10,6 +10,17 @@ inline bool has_turbine_access(const EngineGrid &room) {
   return room.template_id==23&&std::all_of(TurbineAccessSteps.begin(),TurbineAccessSteps.end(),
     [&](const auto &step){return room.solid_at(step.x,step.y);});
 }
+inline constexpr std::array<Pad,2> RidgeMastSteps{{{69,43,4},{66,39,4}}};
+inline constexpr double RidgeLaunchX=91.,RidgeLaunchFloor=32.;
+inline constexpr uint32_t RidgeLaunchReady=0xa8dea1,RidgeLaunchWaiting=0x87a9be;
+inline bool has_ridge_mast(const EngineGrid &room) {
+  return room.template_id==68&&std::all_of(RidgeMastSteps.begin(),RidgeMastSteps.end(),
+    [&](const auto &step){return room.solid_at(step.x,step.y);});
+}
+inline bool ridge_launch_ready(const AirField &wind,double elapsed) {
+  // The east gust needs to last through the dash jump, not just the takeoff.
+  return wind.strength(elapsed)>.6&&wind.strength(elapsed+.60)>.6;
+}
 struct Pattern {
   int id;
   Text name;

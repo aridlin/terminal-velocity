@@ -269,7 +269,7 @@ inline constexpr std::array DebugTour{
   TourStop{4,51,54,44,{"Wiszące donice pękają pod stopami","Hanging planters crack underfoot"}},
   TourStop{4,57,52,50,{"Wjedź czerpakiem koła na półkę z nasionami","Ride a scoop around the wheel to the seed shelf"}},
   TourStop{5,60,69,48,{"Podmuchy i rękawy wiatrowe","Gusts and windsocks"}},
-  TourStop{5,68,74,37,{"Wiatr zmienia kierunek nad górnymi półkami","Crosswinds reverse above the upper ledges"}},
+  TourStop{5,68,77,48,{"Wejdź na maszt i skocz z zieloną strzałką","Climb the mast and dash-jump when the arrow lights"}},
   TourStop{4,55,73,45,{"Kruche kry na zamarzniętym przelewie","Brittle ice over the reservoir spillway"}},
   TourStop{3,47,54,50,{"Regały na wspólnej linie podnoszą się na zmianę","Cable-linked racks rise in turn"}},
   TourStop{5,70,72,41,{"Nawis osłania dolną trasę przed wiatrem","The overhang shelters the lower route"}},

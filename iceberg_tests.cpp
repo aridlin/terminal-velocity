@@ -761,6 +761,24 @@ int main(int argc,char **argv) {
     const auto calm=verified_room(68,ridge.seed,5);
     check(collect_upper_token(ridge,1.8)&&!collect_upper_token(ridge,5.4)&&!collect_upper_token(calm,1.8),
       "a dash jump from the same ledge collects the upper token with the east gust only");
+    int ready_phases=0;
+    for(int tick=0;tick<864;++tick) {
+      const double elapsed=tick/120.;
+      if(!iceworld::ridge_launch_ready(ridge.air_fields.front(),elapsed))continue;
+      ++ready_phases;
+      if(!collect_upper_token(ridge,elapsed))
+        throw std::runtime_error("Ridge beacon lights too early or too late at "+std::to_string(elapsed));
+    }
+    check(iceworld::has_ridge_mast(ridge)&&!iceworld::has_ridge_mast(calm)&&ready_phases>100,
+      "the observation mast marks a sustained gust window and the indicated dash jump works throughout it");
+    for(unsigned seed=0;seed<32;++seed) {
+      auto sample=verified_room(68,iceberg::mix(seed),5);
+      add_ridge_crosswind(sample);
+      const auto path=verify_route(sample);
+      if(!iceworld::has_ridge_mast(sample)||!path.complete||path.deaths)
+        throw std::runtime_error("Ridge mast blocks the lower route for seed "+std::to_string(seed));
+    }
+    check(true,"the mast preserves the lower Ridge Sensors route over 32 seeds");
     auto exposed=verified_room(70,iceberg::mix(73),5);
     strengthen_expedition_wind(exposed);
     auto sheltered=exposed;

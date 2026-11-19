@@ -187,6 +187,16 @@ inline void add_ridge_crosswind(EngineGrid &room) {
   // The upper sensor ledges sit in the exposed strip. The lower landings
   // stay below it and keep their original terrain and checkpoints.
   room.air_fields.push_back({{73.,21.,44.,17.},52.,0.,7.2,0.,0,true});
+  auto mast=room;
+  for(const auto &step:iceworld::RidgeMastSteps) {
+    mast.add_solid_rect(step.x,step.y,step.w,1);
+  }
+  const auto mast_route=verify_route(mast);
+  if(mast_route.complete&&mast_route.deaths==0) {
+    mast.verification_policy=mast_route.policy;
+    room=std::move(mast);
+    return;
+  }
   const auto route=verify_route(room);
   if(route.complete)room.verification_policy=route.policy;
   else room.air_fields.pop_back();
