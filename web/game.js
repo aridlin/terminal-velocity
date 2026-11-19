@@ -222,7 +222,7 @@ function translateUI(){
  }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  const menuSelection=document.querySelector('#menu-selection-actions');
- document.querySelector('#tour-finale').hidden=!tourPicker;
+ document.querySelector('#tour-controls').hidden=!tourPicker;
  menuSelection.hidden=!inMenu||inSettings||replacingSave;
  menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile;
  if(replacingSave){
@@ -389,7 +389,7 @@ window.tvUI=u=>{
  if(!accounts?.active&&((hadTimelineFocus&&!expeditionTimelineOpen())||(hadSettingsFocus&&settingsKeys.hidden)))
   canvas.focus({preventScroll:true});
 };
-const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25,Digit7:26};
+const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25,Digit7:26,PageUp:28,PageDown:29};
 function recompute(){
  held=0;
  for(const code of keyboard)held|=1<<keyMap[code];
@@ -404,9 +404,11 @@ addEventListener('keydown',e=>{
  const settingsBack=e.code==='Escape'&&!e.isComposing&&e.keyCode!==229&&
   e.target instanceof Element&&settingsKeys.contains(e.target);
  const pauseScreen=(uiFlags&(2|64|128))===2;
+ const tourPage=e.code==='PageUp'||e.code==='PageDown';
+ if(tourPage&&!tourPicker)return;
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !settingsBack&&!(isTimelineDirection(e.target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
+    !settingsBack&&!(tourPage&&e.target.closest('#tour-controls'))&&!(isTimelineDirection(e.target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
@@ -530,7 +532,8 @@ for(const b of document.querySelectorAll('[data-tap]'))b.onclick=event=>{
  const key=+b.dataset.tap;
  // Keep keyboard focus on adjustments that leave the Settings panel open.
  const adjustsSetting=settingsKeys.contains(b)&&key!==25;
- if(event.detail!==0||!adjustsSetting)canvas.focus({preventScroll:true});
+ const pagesTour=tourPicker&&(key===28||key===29);
+ if(event.detail!==0||(!adjustsSetting&&!pagesTour))canvas.focus({preventScroll:true});
  tap(key);
 };
 function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';canvasPress=null;held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}

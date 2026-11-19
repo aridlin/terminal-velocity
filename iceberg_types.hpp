@@ -284,6 +284,7 @@ inline constexpr std::array DebugTour{
   TourStop{3,41,19,54,{"Wsiadaj, gdy wagonik zatrzyma się przy pomoście","Board the rail car when it stops at the landing"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
+inline int tour_page_size(int rows) { return std::max(1,rows-12); }
 struct View {
   RouteView route;
   int save_slot=1,picker_choice=0,tour_scene=-1;

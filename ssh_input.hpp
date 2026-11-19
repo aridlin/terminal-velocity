@@ -75,6 +75,10 @@ public:
         code = 'd';
       else if (final == 'D')
         code = 'a';
+      else if (final == '~' && std::atoi(body.c_str()) == 5)
+        code = 57354;
+      else if (final == '~' && std::atoi(body.c_str()) == 6)
+        code = 57355;
       else if ((final == '~' && std::atoi(body.c_str()) == 13) || final == 'R')
         code = 100003;
       if (code)
@@ -184,6 +188,7 @@ private:
       edges_.fast_fall_pressed |= protocol;
     }
     if (k == 'w') edges_.navigate = -1;
+    if (k == 57354 || k == 57355) edges_.tour_page = k == 57354 ? -1 : 1;
     if (k == 'a' || k == 'd') edges_.browse_leg = k == 'a' ? -1 : 1;
     if (k == 13 || k == 10)
       edges_.confirm = true;

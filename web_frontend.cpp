@@ -113,6 +113,7 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   c.menu_request=p(12);c.restart=p(13);c.new_run=p(14);c.language=p(15);c.mute_audio=p(16);
   c.navigate=int(p(3))-int(p(2));
   c.browse_leg=int(p(1))-int(p(0));
+  c.tour_page=int(p(29))-int(p(28));
   if(p(27)&&web_game->state.menu&&web_game->state.adventure.tour_picker) {
     c.browse_leg=1;
     c.confirm=true;

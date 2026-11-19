@@ -3,7 +3,11 @@
 <body><header><a href="./" aria-label="Terminal Velocity home">TERMINAL VELOCITY</a><div id="language" role="group" aria-label="Language / Język"><button type="button" data-language="pl" lang="pl" aria-pressed="true">PL</button><button type="button" data-language="en" lang="en" aria-pressed="false">EN</button></div><span id="save-status" aria-live="polite">Ładowanie gry…</span><button id="fullscreen" data-pl="Pełny ekran" data-en="Fullscreen">Pełny ekran</button></header>
 <div id="playfield"><main id="stage"><canvas id="game" tabindex="0" aria-describedby="hint" data-aria-pl="Terminal Velocity — gra platformowa" data-aria-en="Terminal Velocity — platform game" aria-label="Terminal Velocity — platform game"></canvas>
 </main>
-<button id="tour-finale" data-tap="27" data-pl="Strażnik Korony" data-en="Crown Sentinel" hidden>Strażnik Korony</button>
+<div id="tour-controls" hidden>
+<button data-tap="28" data-aria-pl="Poprzednia strona" data-aria-en="Previous page" aria-keyshortcuts="PageUp">⇞</button>
+<button data-tap="29" data-aria-pl="Następna strona" data-aria-en="Next page" aria-keyshortcuts="PageDown">⇟</button>
+<button id="tour-finale" data-tap="27" data-pl="Strażnik Korony" data-en="Crown Sentinel">Strażnik Korony</button>
+</div>
 <div id="save-replacement-actions" class="menu-actions" hidden>
 <button data-tap="9" data-pl="Anuluj" data-en="Cancel">Anuluj</button>
 <button id="replace-save" data-tap="6" data-pl="Zastąp" data-en="Replace">Zastąp</button>

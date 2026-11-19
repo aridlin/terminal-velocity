@@ -126,6 +126,8 @@ int main() {
     legacy.feed("1\r");
     auto ui = legacy.consume(.01);
     require(ui.select_level == 1 && ui.confirm, "SSH legacy menu controls");
+    legacy.feed("\x1b[6~");
+    require(legacy.consume(.01).tour_page==1,"SSH basic Page Down reaches Tour navigation");
     SshInput keys;
     keys.feed("\x1b[?11u\x1b[100;");
     require(keys.consume(.01).move == 0,
@@ -144,6 +146,8 @@ int main() {
     auto short_down = keys.consume(.01);
     require(short_down.fast_fall_pressed && !short_down.fast_fall,
             "enhanced SSH short Down tap survives the release packet");
+    keys.feed("\x1b[57354;1:1u\x1b[57354;1:3u");
+    require(keys.consume(.01).tour_page==-1,"SSH enhanced Page Up preserves the press before release");
     keys.feed("\x1b[100;1:1u\x1b[O");
     require(!keys.focused && keys.consume(.01).move == 0,
             "SSH focus loss clears controls");

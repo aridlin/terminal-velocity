@@ -5,7 +5,7 @@
 
 .route-browse{display:inline-flex;gap:6px}
 .menu-actions{display:flex;flex-shrink:0;justify-content:center;gap:8px;padding:6px 8px}
-#tour-finale{align-self:center;flex-shrink:0;margin:4px 8px}
+#tour-controls{display:flex;align-self:center;flex-shrink:0;gap:6px;margin:4px 8px}
 /* Keep Select clear of the save replacement buttons if its prompt opens. */
 #menu-selection-actions{justify-content:flex-start}
 #replace-save{border-color:#e4ad68}
@@ -29,7 +29,7 @@
 #game{image-rendering:auto}
 #game:focus-visible{outline:2px solid #e4ad68;outline-offset:-2px}
 
-.account-open #touch,.account-open footer,.account-open #fullscreen-tools,.account-open .menu-actions,.account-open #tour-finale{display:none!important}
+.account-open #touch,.account-open footer,.account-open #fullscreen-tools,.account-open .menu-actions,.account-open #tour-controls{display:none!important}
 
 #playfield{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;background:#101923}
 #playfield:fullscreen,#playfield.expanded{width:100vw;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}

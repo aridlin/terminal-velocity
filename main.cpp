@@ -158,6 +158,7 @@ struct Controls {
   int navigate = 0, browse_leg = 0;
   std::optional<int> move_pressed={}, aim_pressed={};
   bool fast_fall_pressed = false;
+  int tour_page = 0;
 };
 
 struct HeldKeys {
@@ -187,6 +188,7 @@ struct HeldKeys {
 };
 
 struct InputState {
+  int tour_page = 0;
   double left = 0.0;
   double right = 0.0;
   double jump = 0.0;
@@ -199,6 +201,7 @@ struct InputState {
   bool quit_pressed = false;
 
   void begin_frame() {
+    tour_page = 0;
     jump_pressed = false;
     dash_pressed = false;
     restart_pressed = false;
@@ -1639,6 +1642,11 @@ void read_input(InputState &input) {
     unsigned char ch = static_cast<unsigned char>(buffer[i]);
     if (ch == 27 && i + 2 < n && buffer[i + 1] == '[') {
       const char code = buffer[i + 2];
+      if (i + 3 < n && buffer[i + 3] == '~' && (code == '5' || code == '6')) {
+        input.tour_page = code == '5' ? -1 : 1;
+        i += 3;
+        continue;
+      }
       if (code == 'A')
         input.press('w');
       if (code == 'B')
@@ -1763,6 +1771,7 @@ public:
     c.map = press(KEY_J);
     c.language = press(KEY_L);
     c.navigate = int(press(KEY_DOWN) || press(KEY_S)) - int(press(KEY_UP) || press(KEY_W));
+    c.tour_page = int(press(KEY_PAGEDOWN)) - int(press(KEY_PAGEUP));
     c.browse_leg = int(press(KEY_RIGHT) || press(KEY_D)) - int(press(KEY_LEFT) || press(KEY_A));
     c.select_level = press(KEY_1)   ? 1
                      : press(KEY_2) ? 2
@@ -1950,6 +1959,7 @@ public:
     read_input(terminal_);
     Controls controls = terminal_.controls();
     controls.confirm = terminal_.jump_pressed;
+    controls.tour_page = terminal_.tour_page;
     terminal_.decay(dt);
     return controls;
   }
