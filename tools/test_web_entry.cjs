@@ -1089,6 +1089,24 @@ const server=http.createServer((req,res)=>{
    await touch('touchMove',[up]);
    await touch('touchEnd',[]);
    assert.deepEqual(await touchState(),{held:0,pressed:0},'a contact released outside the direction controls leaves no queued aim');
+   const previousFlags=await page.evaluate(()=>{
+    const previous=uiFlags;
+    window.tvUI({flags:previous|4|replyChoiceFlag});
+    return previous;
+   });
+   const select=await page.locator('#touch-use').boundingBox();
+   const reply={x:select.x+select.width/2,y:select.y+select.height/2};
+   await touch('touchStart',[reply]);
+   assert.deepEqual(await touchState(),{held:0,pressed:0},'touching Select does not commit a story reply');
+   await touch('touchMove',[{x:reply.x,y:Math.max(1,select.y-30)}]);
+   await touch('touchEnd',[]);
+   assert.deepEqual(await touchState(),{held:0,pressed:0},'releasing outside Select cancels the reply');
+   await touch('touchStart',[reply]);
+   await touch('touchEnd',[]);
+   assert.deepEqual(await touchState(),{held:0,pressed:1<<8},'a completed tap confirms the story reply');
+   await page.evaluate(flags=>window.tvUI({flags}),previousFlags);
+   console.log('PASS reply selection waits for a completed touch');
+
   } finally {
    await page.evaluate(()=>window.resumeTouchFrames());
   }
