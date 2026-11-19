@@ -35,19 +35,23 @@
       put(y,x,{"▀",Color::Decor,false,false,0,0xb18b61,0x6d513f});
     }
   }
-  void draw_lesson_ferry_signals() {
-    const auto &ferry=grid_.platforms.front();
+  static constexpr uint32_t ferry_ready_color=0xb0e4a8,ferry_wait_color=0xb18b61;
+  std::pair<double,double> lesson_ferry_landing(int side) const {
+    const auto &deck=grid_.platforms.front().base;
     const auto &water=grid_.water_basins.front();
-    const double travel=ferry.offset(state_.elapsed);
+    return side<0?std::pair{water.left()-2.2,deck.y+2.}:std::pair{water.right()+2.2,deck.y-1.};
+  }
+  bool lesson_ferry_ready(int side) const {
+    return side*grid_.platforms.front().offset(state_.elapsed)>=.75;
+  }
+  void draw_lesson_ferry_signals() {
     const double row=aspect_*scale_;
-    // These are the two stone landings on either side of the lesson basin.
     for(int side:{-1,1}) {
-      const double x=side<0?water.left()-2.2:water.right()+2.2;
-      const double landing=side<0?ferry.base.y+2.:ferry.base.y-1.;
+      const auto [x,landing]=lesson_ferry_landing(side);
       const double top=landing-5*row;
       world_art(x-2*scale_,top,{"╭───╮","│   │","╰─┬─╯","  ║","  ╨"},0x738d92);
-      const bool ready=side*travel>=.75;
-      world_art(x,top+row,{ready?(side<0?"→":"←"):"○"},ready?0xb0e4a8:0xb18b61);
+      const bool ready=lesson_ferry_ready(side);
+      world_art(x,top+row,{ready?(side<0?"→":"←"):"○"},ready?ferry_ready_color:ferry_wait_color);
     }
   }
   void draw_quay_ferry(size_t platform,const Rect &deck) {

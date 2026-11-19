@@ -25,6 +25,9 @@
     const bool leaf_ferries=grid_.template_id==50;
     const auto ferry=[&](size_t i){return quay_ferry(i)||leaf_ferries;};
     const bool has_ferries=!grid_.platforms.empty()&&ferry(0);
+    const bool lesson_signals=has_ferries&&grid_.template_id==601;
+    // Fit the extra legend line into the gap above the footer.
+    if(lesson_signals)++height;
     const bool has_service_lift=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.service_lift;});
     const bool has_cargo_hoist=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
@@ -131,7 +134,7 @@
     const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_chart)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
       +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel)
-      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist);
+      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(lesson_signals);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=(has_ferries||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
@@ -367,6 +370,11 @@
       const auto deck=grid_.platforms[i].at(state_.elapsed);
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,ferry_symbol,ferry_color});
     }
+    if(lesson_signals)for(int side:{-1,1}) {
+      const auto [x,y]=lesson_ferry_landing(side);
+      const bool ready=lesson_ferry_ready(side);
+      mark(x,y,ready?(side<0?"→":"←"):"○",ready?ferry_ready_color:ferry_wait_color,side);
+    }
     if(has_seam) {
       const auto &seam=*grid_.crown_seam;
       mark(seam.x+seam.w*.5,seam.bottom(),"↑",seam_color);
@@ -477,6 +485,13 @@
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("┄ Trasa","┄ Route"),ferry_route_color);
+    }
+    if(lesson_signals) {
+      const auto board=tr("→/← Skacz","→/← Jump");
+      paint_text(legend,2,board,ferry_ready_color);
+      const int separator=2+iceberg::cell_length(board);
+      paint_text(legend,separator," · ",0xc7d9df);
+      paint_text(legend++,separator+3,tr("○ Czekaj","○ Wait"),ferry_wait_color);
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_cargo_hoist)paint_text(legend++,2,tr("↕ Winda towarowa","↕ Cargo hoist"),service_lift_color);
