@@ -204,9 +204,17 @@ public:
       profile.district=district;profile.stage=stage;profile.room=room;
       profile.story&=~iceberg::ForkResumeMask;
       if(at_route_fork())profile.story|=iceberg::fork_resume_bits(route_leg());
-      // The Crown arena stores its shield count in place of room switches.
       profile.checkpoint=state.checkpoint;
-      profile.switches=grid.template_id==iceberg::CrownSentinel?uint64_t(state.crown.hits):grid.switch_flags;
+      profile.switches=grid.switch_flags;
+      if(grid.template_id==iceberg::CrownSentinel) {
+        // Keep the legacy shield count below the film checkpoint.
+        profile.switches=uint64_t(state.crown.hits);
+        const auto &film=state.adventure.dialogue;
+        if(film.cinematic&&film.active()&&film.reply_scene==6) {
+          const auto checkpoint=film.choosing()?iceberg::CrownReplyCheckpoint:uint64_t(film.lines[film.page].shot);
+          profile.switches|=checkpoint<<iceberg::CrownFilmShift;
+        }
+      }
       profile.collected=0;
       for(size_t i=0;i<state.collected.size() && i<64;++i)
         if(state.collected[i])profile.collected|=uint64_t(1)<<i;
@@ -458,7 +466,7 @@ public:
       if(profile.story&iceberg::reply_recorded(6)) {
         state.crown.airlock_open=true;
         reply_dialogue(6,(profile.story&iceberg::reply_value(6))!=0,2);
-      } else show_crown_film(2);
+      } else show_crown_film(2,profile.switches>>iceberg::CrownFilmShift);
     } else if(resume&&mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Interlude&&
               grid.district==0&&profile.interlude&&!grid.switch_flags) {
       const int leg=harbor_mission_leg();
@@ -492,10 +500,21 @@ public:
     state.adventure.dialogue.reply_scene=reply_scene;
     state.player.vx=0;frame_dialogue();
   }
-  void show_crown_film(int action) {
+  void show_crown_film(int action,uint64_t checkpoint=0) {
     talk(iceberg::crown_cutscene(profile.story),action,6);
-    state.adventure.dialogue.cinematic=true;
-    state.adventure.dialogue.lines.back().shot=iceberg::CrownShot::Daybreak;
+    auto &film=state.adventure.dialogue;
+    film.cinematic=true;
+    film.lines.back().shot=iceberg::CrownShot::Daybreak;
+    if(checkpoint==iceberg::CrownReplyCheckpoint) {
+      film.page=film.lines.size()-1;
+      film.shot_seconds=iceberg::CrownAirlockOpeningSeconds;
+    } else if(checkpoint>0&&checkpoint<iceberg::CrownReplyCheckpoint) {
+      const auto shot=std::find_if(film.lines.cbegin(),film.lines.cend(),[checkpoint](const auto &line){
+        return uint64_t(line.shot)==checkpoint;
+      });
+      if(shot!=film.lines.cend())film.page=std::distance(film.lines.cbegin(),shot);
+    }
+    state.crown.airlock_open=film.lines[film.page].shot==iceberg::CrownShot::Daybreak;
   }
   void talk_arrival(std::vector<iceberg::DialogueLine> lines,int scene) {
     start_arrival(scene);
@@ -550,15 +569,18 @@ public:
   }
   void reply_dialogue(int scene,int option,int action) {
     const auto &reply=iceberg::civic_reply(scene,option);
+    const double shot_seconds=state.adventure.dialogue.shot_seconds;
     talk({{iceberg::CourierSpeaker,reply.said},reply.answer},action);
     if(scene==6&&grid.template_id==iceberg::CrownSentinel) {
-      state.adventure.dialogue.cinematic=true;
-      for(auto &line:state.adventure.dialogue.lines)line.shot=iceberg::CrownShot::Daybreak;
+      auto &film=state.adventure.dialogue;
+      film.cinematic=true;
+      film.shot_seconds=std::max(shot_seconds,iceberg::CrownAirlockOpeningSeconds);
+      for(auto &line:film.lines)line.shot=iceberg::CrownShot::Daybreak;
     }
   }
   void frame_dialogue() {
     const auto &dialogue=state.adventure.dialogue;if(!dialogue.active())return;
-    if(dialogue.lines[dialogue.page].cue==iceberg::DialogueCue::CrownAirlock) {
+    if(!state.crown.airlock_open&&dialogue.lines[dialogue.page].cue==iceberg::DialogueCue::CrownAirlock) {
       state.crown.airlock_open=true;
       audio.play(AudioCue::Valve);
     }
@@ -689,7 +711,10 @@ public:
           }
         } else if(dialogue.reply_scene>=iceberg::BriefingReplyBase)remember_briefing(true);
       }
-      frame_dialogue();audio.play(AudioCue::Paper,.4f);return;
+      frame_dialogue();
+      if(dialogue.cinematic&&dialogue.reply_scene==6&&tour_scene<0&&
+         (dialogue.choosing()||shot!=dialogue.lines[dialogue.page].shot))persist();
+      audio.play(AudioCue::Paper,.4f);return;
     }
     int action=dialogue.action;
     dialogue={};
