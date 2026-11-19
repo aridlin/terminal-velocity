@@ -809,6 +809,26 @@ int main(){try {
   game.tick(use,1./120);ui_check(game.state.adventure.dialogue.active(),"completed task opens its actual record");
   while(game.state.adventure.dialogue.active())game.dialogue_next();
   ui_check(game.state.journal,"record returns to quest book");
+  for(bool paused:{false,true}) {
+    game.state.paused=paused;
+    game.tick(use,1./120);
+    ui_check(game.state.adventure.dialogue.active(),"the completed record can be reopened");
+    Controls map_and_use=map;map_and_use.interact=true;
+    game.tick(map_and_use,1./120);
+    ui_check(game.state.adventure.map&&!game.state.journal&&!game.state.adventure.dialogue.active()&&
+             game.state.paused==paused&&game.profile.visit_district<0,
+             "Map opens directly from a journal record without travelling or resuming");
+    game.tick(book,1./120);
+    game.tick(use,1./120);
+    ui_check(game.state.journal&&game.state.adventure.dialogue.active(),"the journal keeps its completed tab");
+    Controls book_and_use=book;book_and_use.interact=true;
+    game.tick(book_and_use,1./120);
+    ui_check(!game.state.journal&&!game.state.adventure.map&&!game.state.adventure.dialogue.active()&&
+             game.state.paused==paused&&game.profile.quest_focus==1,
+             "Quests closes the journal and record without changing focus or Pause");
+    game.tick(book,1./120);
+  }
+  game.state.paused=false;
   game.tick(tab,1./120);ui_check(iceberg::journal_entries(game.state.adventure).empty(),"notes do not advertise unknown secrets");
   game.profile.discoveries=2;game.sync_view();ui_check(iceberg::journal_entries(game.state.adventure)==std::vector<int>({101}),"only discovered note is listed");
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English})for(int q=0;q<8;++q) {
