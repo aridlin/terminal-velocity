@@ -21,6 +21,8 @@ int main(){try {
     for(int npc=0;npc<8;++npc)objects.push_back({{5,40,3,4},InteractionKind::Npc,npc,{"Osoba","Person"}});
     for(int note:{0,1,2,3,4,5,6,7,8,9,20,21,22,30})objects.push_back({{5,40,3,4},InteractionKind::Note,note,{"Tablica","Sign"}});
     objects.push_back({{5,40,3,4},InteractionKind::Note,iceberg::CrownShaftPlate,{"Tabliczka przy szybie","Shaft maintenance plate"}});
+    objects.push_back({{5,40,3,4},InteractionKind::Note,iceberg::ArchiveTrolleyNotice,{"Tabliczka suszarni","Drying-room notice"}});
+    objects.push_back({{5,40,3,4},InteractionKind::Note,iceberg::ArchiveDryingLetter,{"List z suszarni","Letter on the drying shelf"}});
     for(auto kind:{InteractionKind::Epilogue,InteractionKind::Evidence,InteractionKind::Valve,InteractionKind::Carry,InteractionKind::Deliver,InteractionKind::Board,InteractionKind::Replay})objects.push_back({{5,40,3,4},kind,0,{"Mechanizm","Mechanism"}});
     for(auto node:objects) {
       game.grid=iceworld::build_settlement(0);game.grid.interactions={node};game.state=new_state(game.grid);game.state.menu=false;
