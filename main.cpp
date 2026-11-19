@@ -366,7 +366,7 @@ struct MovingPlatform {
   }
   double offset(double t) const {
     const double cycle=t/period+phase;
-    if(!tram)return std::sin(cycle*6.283185307179586);
+    if(!tram&&!archive_trolley)return std::sin(cycle*6.283185307179586);
     const double half_cycle=std::fmod(cycle,1.)*2;
     const double travel=std::clamp((std::fmod(half_cycle,1.)-.22)/.78,0.,1.);
     const double eased=travel*travel*(3-2*travel);

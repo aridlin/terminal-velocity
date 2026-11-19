@@ -247,7 +247,10 @@
     }
     for(const auto &platform:grid_.platforms)if(platform.archive_trolley) {
       const auto deck=platform.at(state_.elapsed);
-      mark(deck.x+deck.w*.5,deck.y,"▱",trolley_color);
+      const double center=platform.base.x+platform.base.w*.5;
+      mark(center-platform.dx,platform.base.y-platform.dy,"○",stop_color,-1);
+      mark(center+platform.dx,platform.base.y+platform.dy,"○",stop_color);
+      mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,"▱",trolley_color});
     }
     if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
       const auto deck=grid_.platforms[i].at(state_.elapsed);
@@ -349,7 +352,13 @@
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);
-    if(has_trolley)paint_text(legend++,2,tr("▱ Wózek","▱ Trolley"),trolley_color);
+    if(has_trolley) {
+      const auto name=tr("▱ Wózek","▱ Trolley");
+      paint_text(legend,2,name,trolley_color);
+      const int separator=2+int(glyphs(name).size());
+      paint_text(legend,separator," · ",0xc7d9df);
+      paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
+    }
     if(has_refills) {
       const auto name=tr("▥ Zapas zrywu","▥ Dash refill");
       paint_text(legend,2,name,refill_color);
