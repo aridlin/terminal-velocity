@@ -33,9 +33,15 @@
     const double center=beam.x+beam.w*.5;
     constexpr uint32_t frame=0x6c8797,steel=0xa7c1ce,warning=0xffca85;
     const bool cracked=age<MovingPlatform::CrackTime;
-    // Tie the brackets back toward the adjacent masonry rather than
-    // drawing the rideable surface as an unsupported slab.
-    world_art(beam.x-2.4,beam.y+row,{"     ╞═","    ╱","  ╱","╱"},frame);
+    // The lower beam braces against the lower walkway. The upper beam
+    // hangs from the underside of the token shelf.
+    const double bracket_y=beam.y+row;
+    if(beam.y>40.)
+      draw_scenery_pipe({{beam.x,bracket_y},{beam.x-2.4,bracket_y},
+                         {beam.x-2.4,beam.y+4.}},frame);
+    else
+      draw_scenery_pipe({{beam.x,bracket_y},{beam.x-2.4,bracket_y},
+                         {beam.x-2.4,beam.y-2.},{beam.x-3.6,beam.y-2.}},frame);
     if(age>=MovingPlatform::CrackTime&&age<MovingPlatform::RestoreTime) {
       const double fall=age-MovingPlatform::CrackTime;
       if(fall<.7)for(int side:{-1,1}) {
