@@ -326,8 +326,8 @@ inline std::vector<DialogueLine> archive_drying_letter() {
 inline const Text &training_sign(int id,int room=0) {
   if(id==2&&room==601) {
     static const Text ferry{
-      "Poczekaj przy krawędzi, aż prom podpłynie. Wskocz na pokład i przeskocz na drugi pomost, gdy się zbliży. Winda nad tobą prowadzi do dodatkowego żetonu.",
-      "Wait at the edge for the ferry. Jump aboard and ride until you can jump to the far landing. The lift overhead leads to an optional token."
+      "Gdy zapali się zielona strzałka, wskocz na prom. Przepłyń na drugą stronę i zeskocz, gdy zapali się tam druga strzałka. Winda nad tobą prowadzi do dodatkowego żetonu.",
+      "Jump aboard when the green arrow lights. Ride across and jump off when the far arrow lights. The lift overhead leads to an optional token."
     };
     return ferry;
   }

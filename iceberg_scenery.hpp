@@ -35,6 +35,21 @@
       put(y,x,{"▀",Color::Decor,false,false,0,0xb18b61,0x6d513f});
     }
   }
+  void draw_lesson_ferry_signals() {
+    const auto &ferry=grid_.platforms.front();
+    const auto &water=grid_.water_basins.front();
+    const double travel=ferry.offset(state_.elapsed);
+    const double row=aspect_*scale_;
+    // These are the two stone landings on either side of the lesson basin.
+    for(int side:{-1,1}) {
+      const double x=side<0?water.left()-2.2:water.right()+2.2;
+      const double landing=side<0?ferry.base.y+2.:ferry.base.y-1.;
+      const double top=landing-5*row;
+      world_art(x-2*scale_,top,{"╭───╮","│   │","╰─┬─╯","  ║","  ╨"},0x738d92);
+      const bool ready=side*travel>=.75;
+      world_art(x,top+row,{ready?(side<0?"→":"←"):"○"},ready?0xb0e4a8:0xb18b61);
+    }
+  }
   void draw_quay_ferry(size_t platform,const Rect &deck) {
     const double row=aspect_*scale_;
     const auto [left,deck_row]=screen(deck.x,deck.y-.001);
@@ -206,6 +221,7 @@
       world_art(8,55-8*aspect_*scale_,{"╭─────────────────────────╮",tr("│ SZKOŁA NA NABRZEŻU      │","│ LESSONS ON THE QUAY     │"),"├─────────────────────────┤","│ ▤▤ ▤▤ ▤▤  ╭─────╮  ▤▤   │","│           │     │       │","│           │  ○  │       │","╰───────────┴─────┴───────╯"},d.stone);
       world_art(70,49-5*aspect_*scale_,{"╭──────────────────╮","│ ▥▥▥  ▥▥▥  ▥▥▥    │","├──────────────────┤","│  ▱▱▱  ▱▱▱  ▱▱▱   │","╰──────────────────╯"},d.stone);
       world_art(137,43-7*aspect_*scale_,{"        ╔══════════════╗","        ║              │","        ║              │","        ║             ╱╲","        ║            ▐▣▣▌","        ║","════════╩═══════════════"},d.stone);
+      draw_lesson_ferry_signals();
       world_art(171,40-5*aspect_*scale_,{"╭───────────────────╮",tr("│ DO DOKÓW       →  │","│ TO THE DOCKS   →  │"),"╰──┬─────────────┬──╯","   │             │","═══╧═════════════╧═══"},d.stone);
       return;
     }
