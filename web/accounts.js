@@ -12,6 +12,8 @@ window.TVAccounts=class {
    field.addEventListener('input',()=>this.draw());
    field.addEventListener('keydown',event=>{
     event.stopPropagation();
+    // Enter and Escape belong to the input method until composition ends.
+    if(event.isComposing||event.keyCode===229)return;
     if(event.code==='F2'||event.key==='Escape'){
      event.preventDefault();
      if(!event.repeat)this.close();

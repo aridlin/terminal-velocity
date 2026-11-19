@@ -450,6 +450,24 @@ const server=http.createServer((req,res)=>{
      accounts.authenticate=()=>{++window.accountSubmitProbe.count;};
     });
     try{
+     const composition=await page.evaluate(()=>{
+      const send=(input,key,details)=>input.dispatchEvent(new KeyboardEvent('keydown',
+       {code:key,key,bubbles:true,cancelable:true,...details}));
+      const enter=send(accounts.name,'Enter',{isComposing:true});
+      const nameFocused=document.activeElement===accounts.name;
+      accounts.pass.focus();
+      const password=send(accounts.pass,'Enter',{isComposing:true});
+      const fallback=send(accounts.pass,'Enter',{keyCode:229});
+      const altEnter=send(accounts.pass,'Enter',{altKey:true,isComposing:true});
+      const escape=send(accounts.pass,'Escape',{isComposing:true});
+      const accountOpen=accounts.active;
+      accounts.name.focus();
+      return {enter,nameFocused,password,fallback,altEnter,escape,accountOpen,
+       submits:window.accountSubmitProbe.count};
+     });
+     assert.deepEqual(composition,{enter:true,nameFocused:true,password:true,fallback:true,
+      altEnter:true,escape:true,accountOpen:true,submits:0});
+     console.log('PASS account input composition keeps Enter and Escape with the input method');
      await page.keyboard.down('Enter');
      assert.equal(await accountFocus(),'password');
      await page.keyboard.down('Enter');
