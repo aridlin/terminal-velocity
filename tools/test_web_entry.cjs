@@ -925,6 +925,8 @@ const server=http.createServer((req,res)=>{
 
   const mobile=await browser.newContext({locale:'pl-PL',viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
   const page=await mobile.newPage();page.on('pageerror',e=>errors.push(String(e)));await page.goto(url);await page.waitForFunction(()=>!document.querySelector('#start').disabled);
+  const retry=page.locator('#toolbar [data-tap="13"]');
+  assert.equal(await retry.isDisabled(),true,'Retry is disabled before starting');
   await page.locator('[data-language="en"]').click();await page.locator('#start').click();await page.waitForTimeout(150);
   await page.waitForFunction(()=>!(uiFlags&1)&&(uiFlags&256));await page.waitForTimeout(650);await page.screenshot({path:path.join(out,'web-mobile-opening.png')});
   const inspectControl=page.locator('#touch-inspect');
@@ -932,6 +934,7 @@ const server=http.createServer((req,res)=>{
    page.locator('#touch [data-key="'+key+'"]').getAttribute('aria-label')));
   await inspectControl.tap();
   await page.waitForFunction(()=>!!(uiFlags&8));
+  assert.equal(await retry.isDisabled(),true,'Retry is unavailable while reading an inspection');
   assert.equal(await inspectControl.getAttribute('aria-label'),'Close inspection');
   const pageBack=page.locator('#touch [data-key="2"]'),pageForward=page.locator('#touch [data-key="3"]');
   assert.deepEqual(await page.locator('#touch button:visible').evaluateAll(buttons=>
@@ -949,6 +952,7 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>!!(uiFlags&(1<<28))&&!(uiFlags&(1<<27)));
   await inspectControl.tap();
   await page.waitForFunction(()=>!(uiFlags&8));
+  assert.equal(await retry.isEnabled(),true,'closing the inspection restores Retry');
   assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
   assert.equal(await page.locator('#touch-use').isVisible(),true,'Use returns after closing inspection');
   assert.equal(await page.locator('#touch .jump').isVisible(),true,'Jump returns after closing inspection');
@@ -1377,6 +1381,7 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>(uiFlags&(8192|1))===8192);
   assert.equal(await newRun.textContent(),'Retry');
   assert.equal(await newRun.getAttribute('aria-label'),null);
+  assert.equal(await newRun.isEnabled(),true,'Retry is available during play');
   const expeditionMap=page.locator('footer #toolbar [data-tap="11"]');
   await page.evaluate(()=>{
    const render=window.tvFrame;
@@ -1389,6 +1394,7 @@ const server=http.createServer((req,res)=>{
   for(const roomMap of [false,true]){
    await expeditionMap.tap();
    await page.waitForFunction(()=>!!(uiFlags&128));
+   assert.equal(await newRun.isEnabled(),false,'the map cannot retry the active room');
    assert.equal(await page.locator('#toolbar .map-view-switch').isVisible(),false,
     'touch uses its existing room and route control');
    assert.equal(await page.locator('#toolbar .route-browse').isVisible(),false);
@@ -1418,6 +1424,7 @@ const server=http.createServer((req,res)=>{
    }
    await action.tap();
    await page.waitForFunction(()=>!(uiFlags&128));
+   assert.equal(await newRun.isEnabled(),true,'closing the map restores Retry');
    assert.equal(await action.getAttribute('aria-label'),'Use',
     'closing either Expedition map restores the touch interaction action');
    assert.deepEqual(await touchDirectionNames(),['Up / jump','Down']);

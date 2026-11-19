@@ -254,6 +254,7 @@ function translateUI(){
  const districtControl=!!(uiFlags&16384);
  // Keep the initiating button's space so the confirmation does not move under it.
  retryButton.hidden=!!(uiFlags&1)&&!districtControl&&!replacingRun;
+ retryButton.disabled=!started||reading||inspecting||!!(overlay&(64|128));
  retryButton.style.visibility=replacingRun?'hidden':'';
  if(districtControl||replacingRun){
   retryButton.textContent=tr('Od nowa','New run');
@@ -875,6 +876,7 @@ start.onclick=()=>{
   resize();
   start.hidden=true;
   setGameButtons(true);
+  translateUI();
   refreshSaveControls();
   last=performance.now();canvas.focus();requestAnimationFrame(frame);
  } catch(error) {
