@@ -154,7 +154,7 @@ struct Controls {
   int select_level = 0;
   bool next_seed = false, menu_request = false, mute_audio = false;
   bool interact = false, inspect = false, map = false, language = false;
-  int navigate = 0;
+  int navigate = 0, browse_leg = 0;
   std::optional<int> move_pressed={}, aim_pressed={};
 };
 
@@ -1737,6 +1737,7 @@ public:
     c.map = press(KEY_J);
     c.language = press(KEY_L);
     c.navigate = int(press(KEY_DOWN) || press(KEY_S)) - int(press(KEY_UP) || press(KEY_W));
+    c.browse_leg = int(press(KEY_RIGHT) || press(KEY_D)) - int(press(KEY_LEFT) || press(KEY_A));
     c.select_level = press(KEY_1)   ? 1
                      : press(KEY_2) ? 2
                      : press(KEY_3) ? 3

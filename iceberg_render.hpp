@@ -616,6 +616,7 @@
       if(v.mode!=iceberg::Mode::Campaign) {
         draw_iceberg_route_map(3,rows_-7);
         paint_text(rows_-2,2,v.route.rooms.empty()?tr("B pokój · J/P wróć","B room · J/P return"):
+          v.mode==iceberg::Mode::Endless?tr("↑↓ pokoje · ←→ odc. · B/J/P","↑↓ rooms · ←→ legs · B/J/P"):
           tr("↑↓ pokoje · B pokój · J/P wróć","↑↓ rooms · B room · J/P return"),d.light);
         return;
       }

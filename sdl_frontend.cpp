@@ -1171,6 +1171,8 @@ int terminal_window_main(int argc,char **argv) {
           if(key>=SDL_SCANCODE_1&&key<=SDL_SCANCODE_7)c.select_level=int(key-SDL_SCANCODE_1)+1;
           if(key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP)c.navigate=-1;
           if(key==SDL_SCANCODE_S||key==SDL_SCANCODE_DOWN)c.navigate=1;
+          if(key==SDL_SCANCODE_A||key==SDL_SCANCODE_LEFT)c.browse_leg=-1;
+          if(key==SDL_SCANCODE_D||key==SDL_SCANCODE_RIGHT)c.browse_leg=1;
           if(key==SDL_SCANCODE_F11){fullscreen=!fullscreen;SDL_SetWindowFullscreen(window,fullscreen?SDL_WINDOW_FULLSCREEN_DESKTOP:0);}
         }
         c.move=int(held[SDL_SCANCODE_D]||held[SDL_SCANCODE_RIGHT])-int(held[SDL_SCANCODE_A]||held[SDL_SCANCODE_LEFT]);

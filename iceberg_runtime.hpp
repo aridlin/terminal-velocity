@@ -1340,9 +1340,15 @@ public:
       } else v.map_room=!v.map_room;
     }
     if(v.map&&!v.map_room&&!c.inspect&&mode!=iceberg::Mode::Campaign&&!v.route.rooms.empty()) {
-      const int direction=repeated_navigation(c,dt);
-      if(direction) {
-        const auto [selected,count]=expedition_route_position();
+      const auto [selected,count]=expedition_route_position();
+      if(c.browse_leg&&mode==iceberg::Mode::Endless) {
+        const int current_leg=selected/iceberg::RoomsPerLeg;
+        const int last_leg=(count-1)/iceberg::RoomsPerLeg;
+        const int target=std::clamp(current_leg+c.browse_leg,0,last_leg);
+        if(target!=current_leg)
+          v.route_room_selection=std::min(target*iceberg::RoomsPerLeg+selected%iceberg::RoomsPerLeg,count-1);
+        navigation_repeat_direction=0;
+      } else if(const int direction=repeated_navigation(c,dt)) {
         v.route_room_selection=std::clamp(selected+direction,0,count-1);
       }
     }
