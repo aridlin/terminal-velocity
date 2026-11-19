@@ -261,6 +261,13 @@ int main(){try{
               resumed.state.adventure.dialogue.shot_seconds>=iceberg::CrownAirlockOpeningSeconds&&
               !(resumed.profile.story&iceberg::reply_recorded(6)),
               "reloading the unconfirmed Crown reply returns directly to the prompt");
+  Controls menu;menu.menu_request=true;resumed.tick(menu,1./60);
+  require_end(resumed.state.menu&&!resumed.state.adventure.dialogue.active(),
+              "the main menu closes the Crown film");
+  resumed.persist();
+  resumed.begin_campaign(false);
+  require_end(resumed.state.adventure.dialogue.choosing(),
+              "saving in the main menu and continuing keeps the pending Crown reply");
  }
  require_end(game.state.crown.airlock_open,"the upper airlock opens at the cutscene cue");
  Controls next;next.navigate=1;game.tick(next,1./60);

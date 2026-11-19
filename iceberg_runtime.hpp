@@ -205,16 +205,15 @@ public:
       profile.story&=~iceberg::ForkResumeMask;
       if(at_route_fork())profile.story|=iceberg::fork_resume_bits(route_leg());
       profile.checkpoint=state.checkpoint;
-      profile.switches=grid.switch_flags;
       if(grid.template_id==iceberg::CrownSentinel) {
-        // Keep the legacy shield count below the film checkpoint.
-        profile.switches=uint64_t(state.crown.hits);
+        // Keep the film checkpoint when the main menu has cleared the dialogue.
+        uint64_t checkpoint=profile.switches>>iceberg::CrownFilmShift;
         const auto &film=state.adventure.dialogue;
-        if(film.cinematic&&film.active()&&film.reply_scene==6) {
-          const auto checkpoint=film.choosing()?iceberg::CrownReplyCheckpoint:uint64_t(film.lines[film.page].shot);
-          profile.switches|=checkpoint<<iceberg::CrownFilmShift;
-        }
-      }
+        if(state.crown.hits<3||(profile.story&iceberg::reply_recorded(6)))checkpoint=0;
+        else if(film.cinematic&&film.active()&&film.reply_scene==6)
+          checkpoint=film.choosing()?iceberg::CrownReplyCheckpoint:uint64_t(film.lines[film.page].shot);
+        profile.switches=uint64_t(state.crown.hits)|(checkpoint<<iceberg::CrownFilmShift);
+      } else profile.switches=grid.switch_flags;
       profile.collected=0;
       for(size_t i=0;i<state.collected.size() && i<64;++i)
         if(state.collected[i])profile.collected|=uint64_t(1)<<i;
