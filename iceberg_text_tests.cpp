@@ -21,7 +21,14 @@ int main() {
     for(int note=0;note<10;++note)add(std::vector<iceberg::DialogueLine>{{6,iceberg::training_sign(note)}});
     add(std::vector<iceberg::DialogueLine>{{6,iceberg::training_sign(2,601)}});
     add(iceberg::rescued_conductor());add(iceberg::parcel_delivered());
-    for(int mission=0;mission<3;++mission)add(iceworld::harbor_mission_arrival(mission));
+    for(int mission=0;mission<3;++mission) {
+      add(iceworld::harbor_mission_arrival(mission));
+      for(int option:{0,1}) {
+        const auto &reply=iceberg::harbor_mission_reply(mission,option);
+        content.push_back({iceberg::CourierSpeaker,reply.said});
+        content.push_back(reply.answer);
+      }
+    }
     {
       AdventureSession gauge(options,std::filesystem::path{});gauge.grid=iceworld::build_harbor_mission_v4(2);gauge.state=new_state(gauge.grid);
       auto note=std::find_if(gauge.grid.interactions.begin(),gauge.grid.interactions.end(),[](const auto &node){return node.kind==InteractionKind::Note&&node.id==40;});

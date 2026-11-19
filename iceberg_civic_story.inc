@@ -118,7 +118,38 @@ inline const CivicReply &briefing_reply(int district,int option) {
   return replies[size_t(district)][size_t(option)];
 }
 
+inline const CivicReply &harbor_mission_reply(int mission,int option) {
+  static const std::array<std::array<CivicReply,2>,3> replies{{
+    {{
+      {{"Dlaczego nie wysiadłeś?","Why stay in the tram?"},
+       {"Bogdan, możesz dojść do nabrzeża pieszo. Dlaczego jeszcze tam siedzisz?","Bogdan, you can walk back to the quay. Why are you still in the cab?"},
+       {2,{"Bo kiedy woda zeszła, obiecałem ludziom, że pierwszy kurs ruszy o świcie. Gdy wrócę bez tramwaju, znowu będą szli do pracy przez zalane piwnice.","When the water went down, I promised the first tram would leave at dawn. If I come back without it, people will have to walk to work through flooded cellars again."}}},
+      {{"Ilu ludzi czeka?","How many people are waiting?"},
+       {"Ile osób zostało na przystanku?","How many people are still at the stop?"},
+       {2,{"O pięć po czwartej było siedem. Potem oddałem płaszcz chłopakowi, który przyszedł po matkę. W rozkładzie mam kreskę, gdzie zwykle zapisuję liczbę.","At five past four there were seven. Then I gave my coat to a boy who came looking for his mum. There's a dash where I usually write the headcount."}}},
+    }},
+    {{
+      {{"Czyj jest termometr?","Whose thermometer is it?"},
+       {"Kto przyniósł ten termometr? Na rączce jest czyjeś nazwisko.","Who brought this thermometer in? There's a name on the handle."},
+       {0,{"Witek. To nazwisko jego siostry. Po nocnej zmianie porównywali odczyt w kotłowni z tym w jej kuchni. Któregoś dnia przestały się zgadzać.","Witek. That's his sister's name. After the night shift they'd compare the boiler room reading against the one in her kitchen. One day the two stopped matching."}}},
+      {{"Kto zobaczy odczyt?","Who sees the reading?"},
+       {"Kiedy zaniosę wynik Witkowi, kto poza nim się o nim dowie?","Once I bring Witek the reading, who else will hear it?"},
+       {0,{"Możesz zostawić mi kopię. Rano przychodzą tu ludzie po listy. Od tygodnia pytają, czemu ich liczniki chodzą, kiedy grzejniki są zimne.","Leave me a copy if you can. People come here for their post in the morning. All week they've been asking why their meters keep running with the radiators cold."}}},
+    }},
+    {{
+      {{"Dlaczego ciągle płynie?","Why is it still flowing?"},
+       {"Skoro śluza miała być nieczynna, kto zostawił ciepły obieg?","If the sluice was meant to be out of service, who left the hot circuit running?"},
+       {1,{"Ja. Przy takim mrozie woda musi płynąć, inaczej rura zamarza i pęka. Miałem wrócić po godzinie. Potem zobaczyłem, że na wykazie nikt już tu nie mieszka.","I did. In that kind of cold the water has to keep moving, or the pipe freezes and bursts. I was meant to come back in an hour. Then I saw the register said nobody lived here anymore."}}},
+      {{"Co z drugim brzegiem?","What about the far bank?"},
+       {"Kiedy ruszy obieg, kto sprawdzi grzejniki na drugim brzegu?","When the line comes back, who'll check the radiators on the far bank?"},
+       {1,{"Irena. Wie, który grzejnik w szkole odzywa się pierwszy. Zostawiła mi klucz. Głupio mi było przyznać, że od tygodnia noszę go w kieszeni.","Irena. She knows which radiator in the school makes a noise first. She left me her key. I've been too embarrassed to tell her it's been in my pocket all week."}}},
+    }},
+  }};
+  return replies[size_t(mission)][size_t(option)];
+}
+
 inline const CivicReply &civic_reply(int scene,int option) {
+  if(scene>=HarborMissionReplyBase)return harbor_mission_reply(scene-HarborMissionReplyBase,option);
   if(scene>=BriefingReplyBase)return briefing_reply(scene-BriefingReplyBase,option);
   static const std::array<std::array<CivicReply,2>,7> replies{{
     {{
