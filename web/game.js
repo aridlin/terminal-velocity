@@ -917,7 +917,12 @@ function canvasReplyChoice(x,y){
  const box=canvas.getBoundingClientRect();
  const column=Math.floor((x-box.left)*canvasFit.w/box.width);
  const row=Math.floor((y-box.top)*canvasFit.h/box.height)-replyFirstRow;
- if(column<2||column>=canvasFit.w-2||row<0||row>=4)return -1;
+ if(column<3||column>=canvasFit.w-2||row<0||row>=4)return -1;
+ const rowStart=(replyFirstRow+row)*canvasFit.w*4;
+ // The canvas keeps a copy of the current glyphs, including wrapped labels.
+ let last=canvasFit.w-3;
+ while(last>=5&&previous[rowStart+last*4]===32)last--;
+ if(last<5||column>last||previous.length<rowStart+canvasFit.w*4)return -1;
  return Math.floor(row/2);
 }
 canvas.addEventListener('pointerdown',event=>{
