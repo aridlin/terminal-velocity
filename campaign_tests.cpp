@@ -214,6 +214,43 @@ int main() {
     check(std::all_of(frames.begin(), frames.end(),
                       [](float x) { return std::abs(x) < 1e-7f; }),
           "focus loss silences audio immediately");
+    iceberg::SessionOptions vent_options;vent_options.no_save=vent_options.mute=true;
+    AdventureSession vent_run(vent_options,{});
+    vent_run.audio.init("assets/audio",false,true);
+    vent_run.profile.music_volume=vent_run.profile.ambience_volume=0.f;
+    vent_run.grid=EngineGrid(80,32);
+    vent_run.grid.adventure_level=true;
+    vent_run.grid.district=1;
+    vent_run.grid.add_solid_rect(0,24,80,8);
+    vent_run.grid.spawn_x=8.;vent_run.grid.spawn_y=24.-kPlayerHeight;
+    vent_run.grid.goal={75,20,2,4};
+    vent_run.grid.pulses.push_back({{14,21.5,1.5,2.5},4.,0.});
+    vent_run.state=new_state(vent_run.grid);
+    vent_run.state.player.grounded=true;
+    const double just_before=4.*PulseHazard::warning_start-.004;
+    const auto vent_mix=[&] {
+      if(!vent_run.audio.render(frames.data(),48000))throw std::runtime_error("could not mix vent cue");
+      return std::any_of(frames.begin(),frames.end(),[](float x){return std::abs(x)>.0001f;});
+    };
+    vent_run.state.elapsed=just_before;
+    vent_run.state.paused=true;
+    vent_run.tick({},.1);
+    check(vent_run.state.elapsed==just_before&&!vent_mix(),"paused steam warning leaves the sound and clock quiet");
+    vent_run.state.paused=false;
+    vent_run.tick({},1./120.);
+    check(vent_run.grid.pulses.front().warning(vent_run.state.elapsed)&&vent_mix(),
+      "a nearby steam vent gives one audible warning before the burst");
+    vent_run.tick({},1./120.);
+    check(!vent_mix(),"steam warning does not replay while the vent stays charged");
+    vent_run.state.player.x=58.;
+    vent_run.state.elapsed=just_before+4.;
+    vent_run.tick({},1./120.);
+    check(!vent_mix(),"a distant steam warning is silent");
+    vent_run.state.player.x=8.;
+    vent_run.state.elapsed=8.-.004;
+    vent_run.tick({},1./120.);
+    check(vent_run.grid.pulses.front().active(vent_run.state.elapsed)&&vent_mix(),
+      "the steam burst still has its own audible cue");
     GameAudio silent;
     silent.init("missing-audio", true);
     check(!silent.ready() && silent.error().empty(),

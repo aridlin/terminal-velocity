@@ -1669,10 +1669,20 @@ public:
            std::hypot(deck.base.x-state.player.x,deck.base.y-state.player.y)<16)
           audio.play(AudioCue::Stone2,.65f);
       }
-      for(const auto &vent:grid.pulses)if(vent.active(state.elapsed)&&!vent.active(old_elapsed)) {
-        double distance=std::hypot(vent.area.x-state.player.x,vent.area.y-state.player.y);
-        if(distance<22)audio.play(AudioCue::Steam,float(1-distance/22));
+      double valve_warning=0.;
+      for(const auto &vent:grid.pulses) {
+        if(vent.active(state.elapsed)&&!vent.active(old_elapsed)) {
+          const double distance=std::hypot(vent.area.x-state.player.x,vent.area.y-state.player.y);
+          if(distance<22)audio.play(AudioCue::Steam,float(1-distance/22));
+        } else if(vent.warning(state.elapsed)&&!vent.warning(old_elapsed)) {
+          const auto courier=state.player.rect();
+          const double distance=std::hypot(vent.area.x+vent.area.w*.5-courier.x-courier.w*.5,
+                                          vent.area.bottom()-courier.bottom());
+          valve_warning=std::max(valve_warning,1.-distance/15.);
+        }
       }
+      // A nearby valve clicks once as pressure builds, before any damaging steam.
+      if(valve_warning>0.)audio.play(AudioCue::Valve,float(.65*valve_warning));
     }
     if(state.sweets_count()>old_pickups&&v.pickup_left<=0) {
       v.pickup_kind=8;v.pickup_left=.65;v.pickup_x=state.player.x+.4;v.pickup_y=state.player.y-.8;
