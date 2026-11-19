@@ -157,6 +157,35 @@ int main(){try{
   }
   cell_frame_sink={};
  }
+ {
+  auto core=game.state;
+  core.adventure.door_left=0.;
+  core.camera_x=20.2;core.camera_y=41.2;
+  CellFrame frame;cell_frame_sink=[&](const CellFrame &cells){frame=cells;};
+  for(const auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+   for(double aspect:{1.5,2.,2.5}) {
+    const int left=int(std::floor((crown_core.left()-core.camera_x)/.4));
+    const int right=int(std::floor((std::nextafter(crown_core.right(),crown_core.left())-core.camera_x)/.4));
+    const int top=4+int(std::floor((crown_core.top()-core.camera_y)/(.4*aspect)));
+    const int bottom=4+int(std::floor((std::nextafter(crown_core.bottom(),crown_core.top())-core.camera_y)/(.4*aspect)));
+    core.crown.time=crown_open_time-.1;
+    RenderGrid(game.grid,core,rows,cols,aspect).draw();
+    require_end(frame.at(top).at(left).rgb!=0x88e6dc,"the core hatch stays closed during a strike");
+    core.crown.time=crown_open_time;
+    RenderGrid(game.grid,core,rows,cols,aspect).draw();
+    require_end(frame.at(top).at(left).glyph=="╭"&&frame.at(bottom).at(right).glyph=="╯"&&
+                frame.at(top).at(left).rgb==0x88e6dc&&
+                frame.at((top+bottom)/2).at((left+right)/2).glyph=="█",
+                "the exposed hatch outlines the actual dash target at each viewport and aspect");
+   }
+  }
+  core.crown.hits=3;
+  RenderGrid(game.grid,core,34,110,2.).draw();
+  require_end(std::none_of(frame.begin(),frame.end(),[](const auto &row){
+   return std::any_of(row.begin(),row.end(),[](const Cell &cell){return cell.rgb==0xd4faf3&&cell.glyph=="█";});
+  }),"the core hatch is dark after the last shield breaks");
+  cell_frame_sink={};
+ }
  play_crown_sentinel(game,1);
  {
   auto phase_file=folder/"crown-phase";

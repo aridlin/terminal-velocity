@@ -219,6 +219,18 @@
     }
   }
 #include "iceberg_effects.hpp"
+  void draw_crown_core_hatch(uint32_t signal) {
+    const auto [left,top]=screen(crown_core.left(),crown_core.top());
+    const auto [right,bottom]=screen(std::nextafter(crown_core.right(),crown_core.left()),
+                                     std::nextafter(crown_core.bottom(),crown_core.top()));
+    frame(top,left,right-left+1,bottom-top+1,signal);
+    const uint32_t glow=int(state_.elapsed*12)%2?0x224747:0x294f50;
+    for(int y=std::max(4,top);y<=std::min(rows_-4,bottom);++y)
+      for(int x=std::max(0,left);x<=std::min(cols_-1,right);++x)
+        buffer_[y][x].background=glow;
+    paint_text((top+bottom)/2,(left+right)/2-1,"▶█◀",0xd4faf3,true);
+  }
+
   void draw_crown_sentinel() {
     const auto &boss=state_.crown;
     const bool stopped=boss.hits>=3, exposed=boss.time>=crown_open_time;
@@ -249,7 +261,8 @@
       "╭─┬──╣ ▓▓     ▓▓ ╠──┬─╮","│ ╞══╣ ▒ ╔═══╗ ▒ ╠══╡ │",
       "╰─┘  ║   ║   ║   ║  └─╯","     ║ ▤ ╚═══╝ ▤ ║     ",
       "     ╚═╤═══════╤═╝     ","      ╱╵       ╵╲      "},shell);
-    world_art(26.25,44.9+motion,{stopped?"─╳─":exposed?"◀█▶":strike?"╳▓╳":"[▪]"},signal);
+    if(exposed&&!stopped)draw_crown_core_hatch(signal);
+    else world_art(26.25,44.9+motion,{stopped?"─╳─":strike?"╳▓╳":"[▪]"},signal);
     if(airlock) {
       for(double y=34;y<48;y+=.8)world_text(47.8,y,"│░│",0x99dad7);
     }
