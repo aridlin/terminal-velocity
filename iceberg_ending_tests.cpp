@@ -220,9 +220,11 @@ int main(){try{
                frame.at(top).at(edge+1).background!=0x652e31&&frame.at(bottom+1).at(0).background!=0x652e31,
                "the active floor sweep fills the collision band up to its safe edge");
    sweep.crown.time=crown_follow_warning;
+   const auto follow=crown_attack_areas(sweep.crown)[1];
+   const int start=int(std::floor((follow.left()-sweep.camera_x)/.4));
    RenderGrid(game.grid,sweep,34,34,aspect).draw();
-   require_end(frame.at(top).at(edge+1).background==0x443522&&frame.at(top).at(edge+1).glyph=="┌"&&
-               frame.at(bottom).at(33).background==0x443522&&frame.at(top).at(edge).background!=0x443522,
+   require_end(frame.at(top).at(start).background==0x443522&&frame.at(top).at(start).glyph=="┌"&&
+               frame.at(bottom).at(33).background==0x443522&&frame.at(top).at(start-1).background!=0x443522,
                "the follow-up warning moves the whole band to the other half");
   }
   cell_frame_sink={};
