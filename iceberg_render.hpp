@@ -396,7 +396,7 @@
       if(platform.archive_trolley){draw_archive_trolley(r);continue;}
       if(platform.cargo_hoist){draw_heatworks_hoist(platform,r);continue;}
       if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}
-      if(grid_.template_id==50){draw_leaf_ferry(platform,r);continue;}
+      if(grid_.template_id==50||platform.chute_leaf){draw_leaf_ferry(platform,r);continue;}
       if(platform.irrigation_scoop){draw_irrigation_scoop(r);continue;}
       if(grid_.template_id==57){draw_irrigation_bucket(platform,r);continue;}
       std::string line;

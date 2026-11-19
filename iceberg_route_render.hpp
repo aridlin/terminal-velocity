@@ -30,6 +30,8 @@
     const bool leaf_ferries=grid_.template_id==50;
     const auto ferry=[&](size_t i){return quay_ferry(i)||leaf_ferries;};
     const bool has_ferries=!grid_.platforms.empty()&&ferry(0);
+    const bool has_chute_leaf=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.chute_leaf;});
     const bool lesson_signals=has_ferries&&grid_.template_id==601;
     // Fit the extra legend line into the gap above the footer.
     if(lesson_signals)++height;
@@ -142,7 +144,7 @@
     const bool tube_landmark=has_landmark[2];
     const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_chart)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
-      +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam||has_gutter)+int(has_wheel)
+      +int(has_fragile)+int(has_ferries||has_chute_leaf)+int(has_trolley)+int(has_seam||has_gutter)+int(has_wheel)
       +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(lesson_signals);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=(has_ferries||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
@@ -232,7 +234,7 @@
         for(int y=row(platform.base.y-range);y<=row(platform.base.y+range);++y)
           if(map[size_t(y)][size_t(x)]==' ')map[size_t(y)][size_t(x)]=':';
       }
-      if(platform.archive_trolley) {
+      if(platform.archive_trolley||platform.chute_leaf) {
         const double center=platform.base.x+platform.base.w*.5;
         for(int n=0;n<=16;++n) {
           const double fraction=n/8.-1;
@@ -367,14 +369,15 @@
       // The car sits above the track so a docked car leaves both stops visible.
       mark_cell({column(car.x+car.w*.5),std::max(0,row(car.y)-1),1,"▰",tram_color});
     }
-    for(const auto &platform:grid_.platforms)if(platform.archive_trolley) {
+    for(const auto &platform:grid_.platforms)if(platform.archive_trolley||platform.chute_leaf) {
       const auto deck=platform.at(state_.elapsed);
       const double center=platform.base.x+platform.base.w*.5;
-      const int docked=archive_trolley_stop(platform,state_.elapsed);
+      const int docked=platform.stop(state_.elapsed);
+      const bool leaf=platform.chute_leaf;
       for(int side:{-1,1})
         mark(center+side*platform.dx,platform.base.y+side*platform.dy,
-          docked==side?"●":"○",docked==side?ArchiveTrolleyDocked:stop_color,side);
-      mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,"▱",trolley_color});
+          docked==side?"●":"○",docked==side?(leaf?ChuteLampReady:ArchiveTrolleyDocked):stop_color,side);
+      mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,leaf?"◒":"▱",leaf?0xb6d778:trolley_color});
     }
     if(has_wheel)mark(wheel->base.x+wheel->base.w*.5,wheel->base.y,"⊕",wheel_color);
     if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
@@ -502,9 +505,10 @@
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
-    if(has_ferries) {
-      const auto name=leaf_ferries?tr("◒ Liść","◒ Leaf"):tr("▱ Prom","▱ Ferry");
-      paint_text(legend,2,name,ferry_color);
+    if(has_ferries||has_chute_leaf) {
+      const bool leaf=leaf_ferries||has_chute_leaf;
+      const auto name=leaf?tr("◒ Liść","◒ Leaf"):tr("▱ Prom","▱ Ferry");
+      paint_text(legend,2,name,leaf?0xb6d778:ferry_color);
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("┄ Trasa","┄ Route"),ferry_route_color);

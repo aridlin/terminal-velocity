@@ -284,6 +284,7 @@ public:
     add_expedition_archive_trolley(room);
     add_expedition_archive_racks(room);
     add_expedition_ice(room);
+    add_leaf_chute_flume(room);
     add_reservoir_ice(room);
     add_expedition_root_pod(room);
     add_expedition_irrigation_wheel(room);
