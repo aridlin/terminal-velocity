@@ -14,6 +14,8 @@ int main() {
     add(iceberg::jubilee_arrival());add(iceberg::jubilee_dedication());add(iceberg::jubilee_complete());
     add(iceberg::archive_record());
     add(iceberg::crown_shaft_plate());
+    add(iceberg::archive_trolley_notice());
+    add(iceberg::archive_drying_letter());
     add(std::vector<iceberg::DialogueLine>{{6,iceberg::crown_sign()}});
     add(iceberg::epilogue_arrival());add(iceberg::journey_end());
     for(int npc=0;npc<8;++npc)add(std::vector<iceberg::DialogueLine>{iceberg::epilogue_resident(npc)});

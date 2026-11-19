@@ -210,6 +210,8 @@ struct TourStop {
   Text change;
 };
 inline constexpr int CrownShaftPlate = 41;
+inline constexpr int ArchiveTrolleyNotice = 42;
+inline constexpr int ArchiveDryingLetter = 43;
 inline constexpr int CrownSentinel = 701;
 inline constexpr uint64_t CrownArenaReached = uint64_t(1) << 46;
 inline constexpr uint64_t CrownSentinelDefeated = uint64_t(1) << 47;

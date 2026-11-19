@@ -315,8 +315,15 @@ inline void add_expedition_archive_trolley(EngineGrid &room) {
   room.platforms.push_back({.base={92,34.4,5,.5},.dx=8.5,.dy=-8,.period=7.2,
     .archive_trolley=true});
   const auto route=verify_route(room);
-  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
-  else room.platforms.pop_back();
+  if(!route.complete||route.deaths!=0) {
+    room.platforms.pop_back();
+    return;
+  }
+  room.verification_policy=route.policy;
+  room.interactions.push_back({{84,43,2,3},InteractionKind::Note,iceberg::ArchiveTrolleyNotice,
+    {"Tabliczka suszarni","Drying-room notice"}});
+  room.interactions.push_back({{96,20,2,3},InteractionKind::Note,iceberg::ArchiveDryingLetter,
+    {"List z suszarni","Letter on the drying shelf"}});
 }
 
 inline void add_expedition_archive_racks(EngineGrid &room) {

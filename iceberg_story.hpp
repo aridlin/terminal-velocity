@@ -285,6 +285,28 @@ inline std::vector<DialogueLine> crown_shaft_plate() {
       "Both are still lit. I'll have a wall within reach in the shaft. At the top I'll kick left toward the ridge."}}
   };
 }
+inline constexpr Text ArchiveTrolleyDirections{
+  "Poczekaj, aż wózek stanie nad pomostem, i wskocz na niego. U góry skocz w lewo, na półkę suszarni. Zryw w górę pomoże minąć jej krawędź.",
+  "Wait until the trolley stops above the walkway, then jump aboard. At the upper stop, jump left toward the drying shelf. An upward dash helps clear the lip."
+};
+inline constexpr Text ArchiveDryingLetterDetail{
+  "Na mokrej kopercie został tylko inicjał. Pod sznurkiem ktoś wsunął paragon z piekarni, z adresem i numerem klatki.",
+  "Only an initial survived on the wet envelope. Somebody slipped a bakery receipt under the string with the address and stairwell number."
+};
+inline std::vector<DialogueLine> archive_trolley_notice() {
+  return {{-1,{"Notatka Ireny. Bogdan przyniósł te listy po nocnym kursie. Chciał je rozłożyć na ławkach w wagonie, ale rano miał wieźć ludzi do pracy. Obiecałam wysuszyć je do jego następnego kursu.",
+    "Irena's note. Bogdan brought these letters after his night run. He wanted to dry them on the tram seats, but he was carrying people to work in the morning. I promised to dry them before his next run."}}};
+}
+inline std::vector<DialogueLine> archive_drying_letter() {
+  return {
+    {-1,{"M. Kłos. Jeśli usłyszysz ostatni prom, nie wygaszaj pieca. Ogrzeję przy nim ręce, zanim wejdę po schodach.",
+      "M. Kłos. If you hear the last ferry, keep the oven going. I'll warm my hands by it before I take the stairs."}},
+    {-1,{"Dopisek Ireny. List wrócił bez numeru piętra. Paragon był w środku, pod zgięciem. Piekarnia, klatka jedenasta. Położyłam oba arkusze obok siebie, żeby wyschły.",
+      "Irena's pencil. The letter came back without a floor number. The receipt was tucked into the fold. Bakery, stairwell eleven. I laid the two sheets side by side to dry."}},
+    {CourierSpeaker,{"Adres był w kopercie od początku. Po drugiej stronie ktoś trzymał dla niej ciepły piec.",
+      "The address was inside the envelope all along. At the other end, somebody kept the oven warm for her."}}
+  };
+}
 inline const Text &training_sign(int id,int room=0) {
   if(id==2&&room==601) {
     static const Text ferry{
