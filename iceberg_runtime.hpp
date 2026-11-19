@@ -1258,6 +1258,8 @@ public:
     if(c.inspect&&!toggle_overlay&&!v.dialogue.active()&&!state.paused&&!state.journal&&!v.map) {
       inspect_nearby();sync_view();if(v.inspecting)return;
     }
+    if(v.dialogue.active()&&state.journal&&!c.pause&&(c.map||c.journal))
+      v.dialogue={}; // Let the requested overlay consume the input.
     if(v.dialogue.active()) {
       const bool reading_journal=state.journal;
       if(!reading_journal&&state.paused&&(c.confirm||c.interact)){
