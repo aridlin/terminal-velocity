@@ -164,12 +164,13 @@ inline constexpr uint64_t ArrivalMask = uint64_t(15) << ArrivalShift;
 inline constexpr int EpilogueArrival = DistrictCount + 1;
 inline constexpr int FirstHarborMissionArrival = EpilogueArrival + 1;
 inline constexpr int HarborMissionReplyBase = BriefingReplyBase + DistrictCount;
-// Only meaningful while ArrivalMask names the current Harbor mission.
-inline constexpr int HarborExchangeShift = 34;
-inline constexpr uint64_t HarborExchangeMask = uint64_t(3) << HarborExchangeShift;
-enum class HarborExchange : uint64_t { Opening, Prompt, FirstReply, SecondReply };
-inline constexpr uint64_t harbor_exchange_bits(HarborExchange exchange) {
-  return uint64_t(exchange) << HarborExchangeShift;
+inline constexpr int EpilogueReplyScene = HarborMissionReplyBase + 3;
+// Only meaningful while ArrivalMask names the current interactive arrival.
+inline constexpr int ArrivalExchangeShift = 34;
+inline constexpr uint64_t ArrivalExchangeMask = uint64_t(3) << ArrivalExchangeShift;
+enum class ArrivalExchange : uint64_t { Opening, Prompt, FirstReply, SecondReply };
+inline constexpr uint64_t arrival_exchange_bits(ArrivalExchange exchange) {
+  return uint64_t(exchange) << ArrivalExchangeShift;
 }
 static_assert(FirstHarborMissionArrival + 2 <= 15);
 inline constexpr uint64_t arrival_bits(int scene) { return uint64_t(scene) << ArrivalShift; }

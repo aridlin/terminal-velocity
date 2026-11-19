@@ -18,6 +18,11 @@ int main() {
     add(iceberg::archive_drying_letter());
     add(std::vector<iceberg::DialogueLine>{{6,iceberg::crown_sign()}});
     add(iceberg::epilogue_arrival());add(iceberg::journey_end());
+    for(int option:{0,1}) {
+      const auto &reply=iceberg::epilogue_reply(option);
+      content.push_back({iceberg::CourierSpeaker,reply.said});
+      content.push_back(reply.answer);
+    }
     for(int npc=0;npc<8;++npc)add(std::vector<iceberg::DialogueLine>{iceberg::epilogue_resident(npc)});
     for(int action=0;action<2;++action)add(iceberg::epilogue_action(action));
     for(int note:{20,21})add(std::vector<iceberg::DialogueLine>{{5,iceberg::garden_sign(note)}});

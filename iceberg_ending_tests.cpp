@@ -217,6 +217,33 @@ int main(){try{
               std::string_view(dialogue.lines.front().text.en)==iceberg::epilogue_arrival().front().text.en,
               "reloading after the Crown restores Helena's instructions for the epilogue");
  }
+ for(int option:{0,1}) {
+  auto morning_file=folder/("morning-"+std::to_string(option));
+  require_end(iceberg::SaveStore(morning_file).save(game.profile),"save the epilogue arrival before its reply");
+  AdventureSession morning(options,morning_file);morning.begin_campaign(false);
+  read_to_reply(morning);
+  AdventureSession prompted(options,morning_file);prompted.begin_campaign(false);
+  require_end(prompted.state.adventure.dialogue.choosing()&&
+              prompted.state.adventure.dialogue.reply_scene==iceberg::EpilogueReplyScene,
+              "the epilogue reply prompt reopens after a reload");
+  if(option==1) {
+    Controls down;down.navigate=1;prompted.tick(down,1./60);
+  }
+  Controls accept;accept.confirm=true;prompted.tick(accept,1./60);
+  AdventureSession chosen(options,morning_file);chosen.begin_campaign(false);
+  const auto &lines=chosen.state.adventure.dialogue.lines;
+  const auto &reply=iceberg::epilogue_reply(option);
+  require_end(lines.size()==2&&lines.front().speaker==iceberg::CourierSpeaker&&
+              std::string_view(lines.front().text.en)==reply.said.en&&
+              lines.back().speaker==0&&std::string_view(lines.back().text.pl)==reply.answer.text.pl,
+              "the chosen courier question and Helena's answer survive a reload");
+  read_end(chosen);
+  AdventureSession done(options,morning_file);done.begin_campaign(false);
+  require_end(done.grid.template_id==330&&!done.profile.finished&&
+              !done.state.adventure.dialogue.active()&&
+              !(done.profile.story&(iceberg::ArrivalMask|iceberg::ArrivalExchangeMask)),
+              "acknowledgement clears the exchange and leaves both epilogue tasks available");
+ }
  read_end(game);
  {
   AdventureSession resume(options,file);resume.begin_campaign(false);

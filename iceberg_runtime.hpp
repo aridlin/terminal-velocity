@@ -440,7 +440,7 @@ public:
       const auto arrival=profile.story&iceberg::ArrivalMask;
       if(grid.template_id==330) {
         if(arrival==iceberg::arrival_bits(iceberg::EpilogueArrival)&&!profile.finished&&!(grid.switch_flags&3))
-          talk_arrival(iceberg::epilogue_arrival(),iceberg::EpilogueArrival);
+          restore_arrival_exchange(iceberg::EpilogueReplyScene,iceberg::epilogue_arrival());
       } else if(stage==5&&arrival==iceberg::arrival_bits(district+1)) {
         talk_homecoming(1);
       } else if(stage==3&&(profile.story&iceberg::HomecomingReplyPending)) {
@@ -465,28 +465,33 @@ public:
     state.player.vx=0;frame_dialogue();
   }
   void talk_arrival(std::vector<iceberg::DialogueLine> lines,int scene) {
-    profile.story=(profile.story&~iceberg::ArrivalMask)|iceberg::arrival_bits(scene);
+    start_arrival(scene);
     talk(std::move(lines),FinishArrival);
   }
+  void start_arrival(int arrival) {
+    profile.story=(profile.story&~(iceberg::ArrivalMask|iceberg::ArrivalExchangeMask))|
+      iceberg::arrival_bits(arrival);
+  }
   void talk_harbor_arrival(int leg) {
-    profile.story=(profile.story&~(iceberg::ArrivalMask|iceberg::HarborExchangeMask))|
-      iceberg::arrival_bits(iceberg::FirstHarborMissionArrival+leg);
+    start_arrival(iceberg::FirstHarborMissionArrival+leg);
     restore_harbor_arrival(leg);
   }
   void restore_harbor_arrival(int leg) {
-    using iceberg::HarborExchange;
-    const int scene=iceberg::HarborMissionReplyBase+leg;
-    const auto exchange=HarborExchange((profile.story&iceberg::HarborExchangeMask)>>iceberg::HarborExchangeShift);
-    if(exchange==HarborExchange::FirstReply||exchange==HarborExchange::SecondReply) {
-      reply_dialogue(scene,exchange==HarborExchange::SecondReply,FinishArrival);
+    restore_arrival_exchange(iceberg::HarborMissionReplyBase+leg,
+      profile.layout_version>=4?iceworld::harbor_mission_arrival(leg):iceberg::mission_arrival(leg));
+  }
+  void restore_arrival_exchange(int scene,std::vector<iceberg::DialogueLine> lines) {
+    using iceberg::ArrivalExchange;
+    const auto exchange=ArrivalExchange((profile.story&iceberg::ArrivalExchangeMask)>>iceberg::ArrivalExchangeShift);
+    if(exchange==ArrivalExchange::FirstReply||exchange==ArrivalExchange::SecondReply) {
+      reply_dialogue(scene,exchange==ArrivalExchange::SecondReply,FinishArrival);
     } else {
-      auto lines=exchange==HarborExchange::Prompt?std::vector<iceberg::DialogueLine>{}:
-        profile.layout_version>=4?iceworld::harbor_mission_arrival(leg):iceberg::mission_arrival(leg);
+      if(exchange==ArrivalExchange::Prompt)lines.clear();
       talk(std::move(lines),FinishArrival,scene);
     }
   }
-  void set_harbor_exchange(iceberg::HarborExchange exchange) {
-    profile.story=(profile.story&~iceberg::HarborExchangeMask)|iceberg::harbor_exchange_bits(exchange);
+  void set_arrival_exchange(iceberg::ArrivalExchange exchange) {
+    profile.story=(profile.story&~iceberg::ArrivalExchangeMask)|iceberg::arrival_exchange_bits(exchange);
   }
   void talk_homecoming(int leg) {
     if(leg==0) {
@@ -598,7 +603,7 @@ public:
       const int action=dialogue.action;
       if(tour_scene<0) {
         if(scene>=iceberg::HarborMissionReplyBase) {
-          set_harbor_exchange(option?iceberg::HarborExchange::SecondReply:iceberg::HarborExchange::FirstReply);
+          set_arrival_exchange(option?iceberg::ArrivalExchange::SecondReply:iceberg::ArrivalExchange::FirstReply);
         } else if(scene<iceberg::BriefingReplyBase) {
           profile.story|=iceberg::reply_recorded(scene);
           if(option)profile.story|=iceberg::reply_value(scene);
@@ -621,7 +626,7 @@ public:
       if(dialogue.choosing()) {
         if(dialogue.reply_scene>=iceberg::HarborMissionReplyBase) {
           if(tour_scene<0) {
-            set_harbor_exchange(iceberg::HarborExchange::Prompt);
+            set_arrival_exchange(iceberg::ArrivalExchange::Prompt);
             persist();
           }
         } else if(dialogue.reply_scene>=iceberg::BriefingReplyBase)remember_briefing(true);
@@ -640,7 +645,7 @@ public:
     } else if(action==FinishHomecomingReply) {
       profile.story&=~iceberg::HomecomingReplyPending;
     } else if(action==FinishArrival) {
-      profile.story&=~(iceberg::ArrivalMask|iceberg::HarborExchangeMask);
+      profile.story&=~(iceberg::ArrivalMask|iceberg::ArrivalExchangeMask);
     } else if(action>=100 && action<108) {
       int quest=action-100;
       profile.quests[size_t(quest)]=profile.quest_counts[size_t(quest)]>=unsigned(iceberg::Quests[size_t(quest)].required)?2:1;
@@ -669,7 +674,10 @@ public:
     } else if(district+1==iceberg::DistrictCount){profile.story|=uint64_t(1)<<42;}
     else profile.at_content_boundary=true;
     stage=0;room=0;clear_room_record();load_room();
-    if(profile.story&(uint64_t(1)<<42))talk_arrival(iceberg::epilogue_arrival(),iceberg::EpilogueArrival);
+    if(profile.story&(uint64_t(1)<<42)) {
+      start_arrival(iceberg::EpilogueArrival);
+      restore_arrival_exchange(iceberg::EpilogueReplyScene,iceberg::epilogue_arrival());
+    }
     persist();
   }
   void begin_campaign(bool fresh) {

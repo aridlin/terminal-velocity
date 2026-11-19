@@ -6,7 +6,7 @@ inline Text crown_sign() {return {
 
 inline std::vector<DialogueLine> epilogue_arrival() {return {
   {0,{"Przespałeś cały kurs powrotny. Bogdan omijał hamowanie przy twoim wagonie. Twierdzi, że z powodów technicznych.","You slept through the entire return journey. Bogdan avoided braking near your carriage. He says it was for technical reasons."}},
-  {0,{"Jest rano. Zanieś odpis spisu do nowego okienka, a nasiona do skrzynki przy przystanku. Potem naprawdę możesz odpocząć.","It's morning. Take the register copy to the new counter, and the seeds to the box by the stop. Then you really can rest."}}
+  {0,{"Jest rano. Zanieś odpis spisu do nowego okienka, a nasiona do skrzynki przy przystanku. Zanim pójdziesz, chcesz o coś zapytać?","It's morning. Take the register copy to the new counter, and the seeds to the box by the stop. Is there anything you want to ask before you go?"}}
 };}
 inline DialogueLine epilogue_resident(int npc) {
  static const Text words[]={
