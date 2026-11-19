@@ -340,8 +340,13 @@ int main(int argc,char **argv) {
           std::abs(session.state.player.rect().bottom()-stop.entry_floor)<.01,
           "debug tour starts beside the featured room mechanic");
         if(stop.room==33) {
-          check(i+2==iceberg::DebugTour.size()&&iceworld::has_estate_gutter(session.grid),
-            "the Estate gutter sample starts at the live wall-kick route before the Crown");
+          check(iceworld::has_estate_gutter(session.grid),
+            "the Estate gutter sample starts at the live wall-kick route");
+        }
+        if(stop.room==58) {
+          check(i+2==iceberg::DebugTour.size()&&session.grid.platforms.size()==1&&
+            session.grid.platforms.front().chute_leaf&&session.grid.platforms.front().stop(0)==-1,
+            "the Leaf Chute sample starts at the ready flume before the Crown finale");
         }
         session.state.player.x+=2;
         press({.restart=true});
