@@ -491,6 +491,16 @@ int main(){try {
         ui_check(count_map(glyph,color)==1&&
           text.find(en?"╧ Vent · ↑ Warning · ♨ Active":"╧ Dysza · ↑ Uwaga · ♨ Aktywna")!=std::string::npos,
           "the room map shows the current steam vent phase and fits its full legend");
+        auto exposed=vent_view;
+        exposed.player.x=vent.area.x+(vent.area.w-kPlayerWidth)*.5;
+        exposed.player.y=vent.area.y+(vent.area.h-kPlayerHeight)*.5;
+        RenderGrid(pressure_lifts,exposed,rows,cols,2).draw();
+        const auto bg=phase==.90?0x4a3d2bu:phase==.10?0x59303au:0u;
+        bool courier=false;
+        for(const auto &line:frame)for(const auto &cell:line)
+          if(cell.glyph=="@"&&cell.rgb==0xffd68a)
+            courier=bg?cell.background==bg:cell.background!=0x4a3d2bu&&cell.background!=0x59303au;
+        ui_check(courier,"the steam footprint follows the vent phase under the courier marker");
       }
     }
   }

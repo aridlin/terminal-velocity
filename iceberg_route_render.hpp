@@ -257,6 +257,21 @@
       auto &line=map[size_t(y)];
       for(int x=start;x<=last;++x)line[size_t(x)]=tile;
     }
+    // Show the burst footprint behind the terrain and the exact player marker.
+    constexpr uint32_t warning_tint=0x4a3d2b,burst_tint=0x59303a;
+    for(const auto &vent:grid_.pulses) {
+      const bool active=vent.active(state_.elapsed);
+      if(!active&&!vent.warning(state_.elapsed))continue;
+      const auto &area=vent.area;
+      const int last_row=row(std::nextafter(area.bottom(),area.top()));
+      const int last_col=column(std::nextafter(area.right(),area.left()));
+      const uint32_t tint=active?burst_tint:warning_tint;
+      for(int y=row(area.top());y<=last_row;++y)
+        for(int x=column(area.left());x<=last_col;++x) {
+          auto &background=buffer_[first+y][left+x].background;
+          if(background!=burst_tint)background=tint;
+        }
+    }
     for(int y=0;y<map_rows;++y)for(int x=0;x<width;++x) {
       const char tile=map[size_t(y)][size_t(x)];
       if(hazards[size_t(y)][size_t(x)]) {
