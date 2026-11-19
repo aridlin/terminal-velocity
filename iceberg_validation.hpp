@@ -164,6 +164,22 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   return recovery_room_for(candidate);
 }
 
+inline void add_crown_seam_shortcut(EngineGrid &room) {
+  if(room.district!=5||room.template_id!=61)return;
+  auto shortcut=room;
+  // Leave the zigzag ridge to the west open. The existing side landing
+  // at y=45 leads into this narrow climb and the ridge at y=21.
+  constexpr Rect seam{82,25,7,16};
+  shortcut.add_solid_rect(80,25,2,16);
+  shortcut.add_solid_rect(89,25,2,17);
+  shortcut.crown_seam=seam;
+  const auto route=verify_route(shortcut);
+  if(route.complete&&route.deaths==0) {
+    shortcut.verification_policy=route.policy;
+    room=std::move(shortcut);
+  }
+}
+
 inline void add_ridge_crosswind(EngineGrid &room) {
   if(room.district!=5||room.template_id!=68)return;
   // The upper sensor ledges sit in the exposed strip. The lower landings

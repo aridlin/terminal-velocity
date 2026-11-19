@@ -27,6 +27,23 @@
     world_art(deck_center-3*scale_,deck.y+row,{"╲──╥──╱"," ╲─╨─╱"},steel);
   }
 
+  void draw_crown_seam(const Rect &seam,double time) {
+    const double row=aspect_*scale_;
+    const double center=seam.x+seam.w*.5;
+    world_art(seam.x,seam.y-row,{"╶─────╴"},0xa1bdcc);
+    for(double y=seam.top()+row;y<seam.bottom();y+=2*row) {
+      world_art(seam.left(),y,{"╟"},0x829fb4);
+      world_art(seam.right()-scale_,y,{"╢"},0x829fb4);
+    }
+    // A narrow band of light and drifting ice show the channel's continuity.
+    for(int i=0;i<9;++i) {
+      const double y=seam.top()+std::fmod(i*2.7+time*2.1,seam.h);
+      world_art(center+(i%3-1)*scale_,y,{i%3==1?"│":"·"},i%3==1?0x6e93af:0x577287);
+    }
+    world_art(seam.left(),seam.bottom(),{"◉","╨"},0xc4deeb);
+    world_art(seam.right()-scale_,seam.bottom(),{"◉","╨"},0xc4deeb);
+  }
+
   void draw_crown_landmarks() {
     const auto &d=iceberg::Districts[5];double clock=state_.adventure.presentation_time;
     auto mast=[&](double x,double y) {world_art(x,y,{
@@ -69,6 +86,7 @@
       else world_art(deck.x,deck.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱","      ╱╲"},d.stone);
     }
     draw_crown_wind();
+    if(grid_.crown_seam)draw_crown_seam(*grid_.crown_seam,clock);
     if(grid_.windbreak_roof) {
       const auto &roof=*grid_.windbreak_roof;
       for(double x=roof.left();x+scale_<roof.right();x+=scale_)

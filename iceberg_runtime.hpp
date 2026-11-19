@@ -245,6 +245,7 @@ public:
     add_expedition_fragile_pots(room);
     strengthen_expedition_wind(room);
     add_overhang_windbreak(room);
+    add_crown_seam_shortcut(room);
     add_ridge_crosswind(room);
     add_shutter_service_lift(room);
   }

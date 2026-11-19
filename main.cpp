@@ -555,7 +555,7 @@ public:
   std::vector<std::pair<double,double>> checkpoint_points, route_points;
   std::vector<Interaction> interactions;
   std::vector<AirField> air_fields;
-  std::optional<Rect> windbreak_roof;
+  std::optional<Rect> windbreak_roof, crown_seam;
   std::vector<SortingBelt> sorting_belts;
   std::vector<Rect> ice_strips;
   bool on_ice(const Player &player) const {

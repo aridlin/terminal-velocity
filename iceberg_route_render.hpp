@@ -14,6 +14,7 @@
       [](const auto &platform){return platform.fragile;});
     const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_rack;});
+    const bool has_seam=grid_.crown_seam.has_value();
     const bool has_trolley=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_trolley;});
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
@@ -58,11 +59,11 @@
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const bool has_vents=!grid_.pulses.empty();
-    constexpr uint32_t service_lift_color=0xe4ad68;
+    constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f;
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
-      +int(has_fragile)+int(has_ferries)+int(has_trolley);
+      +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=has_ferries&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
@@ -256,6 +257,10 @@
       const auto deck=grid_.platforms[i].at(state_.elapsed);
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,"▱",ferry_color});
     }
+    if(has_seam) {
+      const auto &seam=*grid_.crown_seam;
+      mark(seam.x+seam.w*.5,seam.bottom(),"↑",seam_color);
+    }
     for(const auto &belt:grid_.sorting_belts)if(powered(belt))
       mark(belt.x+belt.width*.5,belt.y,belt.speed>0?"▶":"◀",belt_color,belt.speed>0?1:-1);
     for(const auto &platform:grid_.platforms)if(platform.service_lift) {
@@ -351,6 +356,7 @@
       paint_text(legend++,separator+3,tr("┄ Trasa","┄ Route"),ferry_route_color);
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
+    if(has_seam)paint_text(legend++,2,tr("↑ Wąski szyb","↑ Wall-kick shaft"),seam_color);
     if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);
     if(has_trolley) {
       const auto name=tr("▱ Wózek","▱ Trolley");

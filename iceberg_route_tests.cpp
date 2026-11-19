@@ -170,6 +170,33 @@ int main() {
       require(climber.player.vx<-15&&climber.player.vy<-20&&climber.player.wall_lock_left>0,
         "the new stairwell face supports a wall jump while holding toward it");
     }
+    AdventureSession crown(options,{});
+    crown.begin_campaign(true);
+    crown.profile.unlocked=crown.run_district=5;
+    auto &ridge=crown.profile.expeditions[0];
+    ridge.active=true;ridge.district=5;ridge.seed=ridge.origin_seed=73;
+    ridge.itinerary={61,60,62,63,64,65,66,67};
+    ridge.layout_version=3;
+    crown.begin_run(iceberg::Mode::Endless);
+    const auto old_shelves=crown.grid.checkpoint_points;
+    const auto old_tokens=crown.grid.sweets;
+    require(crown.grid.template_id==61&&!crown.grid.crown_seam,
+      "a legacy Seam of Light keeps its original geometry");
+    ridge.layout_version=4;
+    crown.load_room();
+    require(crown.grid.crown_seam.has_value()&&crown.grid.checkpoint_points==old_shelves&&
+      crown.grid.sweets==old_tokens&&verify_route(crown.grid).complete,
+      "the Seam of Light shortcut leaves every old checkpoint, token and the ridge route usable");
+    const auto seam=*crown.grid.crown_seam;
+    for(int toward:{-1,1}) {
+      auto climber=new_state(crown.grid);
+      climber.player.x=toward<0?seam.left():seam.right()-kPlayerWidth;
+      climber.player.y=seam.y+seam.h*.5;
+      Controls kick;kick.move=toward;kick.jump_pressed=kick.jump_held=true;
+      world_step(climber,crown.grid,kick,1./120);
+      require(climber.player.vx*toward<-15&&climber.player.vy<-20&&climber.player.wall_lock_left>0,
+        "both faces of the Crown shaft support a wall kick");
+    }
     for(int q:{500,503,506})require(std::find(original.begin(),original.begin()+16,q)!=original.begin()+16,"parcel landmark remains before the last turn-in");
     std::filesystem::remove(path);std::filesystem::remove(path.string()+".bak");
     return 0;
