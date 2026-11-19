@@ -1047,12 +1047,15 @@ public:
       break;
     }
   }
-  void activate_machinery(const Interaction &node,bool tram=false) {
+  void activate_machinery(const Interaction &node,bool tram=false,bool steam_supply=false) {
     auto &v=state.adventure;v.machinery_duration=tram?2.8:grid.district==5?2.4:grid.district==4?1.6:1.05;
     v.machinery_left=v.machinery_duration;v.machinery_kind=tram?2:grid.district==4?5:grid.district==3?3:node.kind==InteractionKind::Task&&node.id==2?1:0;
     v.machinery_x=node.area.x+node.area.w*.5;v.machinery_y=node.area.bottom();
     v.machinery_changed=node.kind==InteractionKind::Valve?uint64_t(1)<<node.id:0;
-    audio.play(AudioCue::Motor,tram?1.f:.6f);audio.play(AudioCue::Rumble,tram?1.f:.45f);
+    if(steam_supply)audio.play(AudioCue::Steam,.8f);
+    else {
+      audio.play(AudioCue::Motor,tram?1.f:.6f);audio.play(AudioCue::Rumble,tram?1.f:.45f);
+    }
     if(tram||v.machinery_kind==1)audio.play(AudioCue::Spark,.65f);
   }
   void inspect_nearby() {
@@ -1286,14 +1289,18 @@ public:
         persist();
       }
     } else if(node.kind==InteractionKind::Valve) {
-      if(grid.template_id==303&&node.id>0&&!(grid.switch_flags&(uint64_t(1)<<(node.id-1)))) {
+      const auto flag=uint64_t(1)<<node.id;
+      if(grid.template_id==303&&node.id>0&&!(grid.switch_flags&(flag>>1))) {
         notice(t("Najpierw odłącz wcześniejszy obieg. Strzałki prowadzą od fontanny do mieszkań.","Disconnect the preceding circuit first. Follow the arrows from fountain to homes."),5);return;
       }
-      if(grid.switch_flags&(uint64_t(1)<<node.id)){notice(t("Obieg już pracuje.","The circuit is already running."));return;}
+      if(grid.switch_flags&flag){notice(t("Obieg już pracuje.","The circuit is already running."));return;}
       animate_pickup(node,1);
-      grid.switch_flags|=uint64_t(1)<<node.id;
-      for(auto &bridge:grid.growth)if(bridge.flag&(uint64_t(1)<<node.id))bridge.amount=0;
-      activate_machinery(node,grid.template_id==77&&grid.switch_flags==7);
+      grid.switch_flags|=flag;
+      for(auto &bridge:grid.growth)if(bridge.flag&flag)bridge.amount=0;
+      const auto opened_supply=std::any_of(grid.air_fields.begin(),grid.air_fields.end(),[&](const auto &field){
+        return (field.enabled_by&flag)&&field.active(grid.switch_flags)&&!field.active(grid.switch_flags&~flag);
+      });
+      activate_machinery(node,grid.template_id==77&&grid.switch_flags==7,opened_supply);
       audio.play(AudioCue::Valve);
       notice(grid.district==3
         ?grid.growth.empty()?t("ZASUWA OTWARTA","SHUTTER RELEASED"):t("SZUFLADY WYSUNIĘTE","DRAWERS RELEASED")
