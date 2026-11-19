@@ -135,6 +135,8 @@ const previousInspectionPageFlag=1<<27,nextInspectionPageFlag=1<<28;
 const previousRouteRoomFlag=1<<29,nextRouteRoomFlag=1<<30;
 const routeDirectionSelector='.route-browse [data-key],#touch .directions [data-key]';
 const expeditionTimelineOpen=()=>(overlayFlags()&(128|expeditionFlag|roomMapFlag|tourFlag))===(128|expeditionFlag);
+const isTimelineDirection=element=>expeditionTimelineOpen()&&element instanceof Element&&element.matches(routeDirectionSelector);
+const timelineShortcuts=new Set(['KeyB','KeyJ','KeyP','Escape']);
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function nameTouchDirections(overlay){
@@ -185,7 +187,7 @@ function translateUI(){
  const showRoute=!!(overlay&roomMapFlag);
  const timeline=expeditionTimelineOpen();
  const legControls=timeline&&routeLegs!==0;
- const focusedDirection=timeline&&document.activeElement?.matches(routeDirectionSelector)?document.activeElement:null;
+ const focusedDirection=isTimelineDirection(document.activeElement)?document.activeElement:null;
  document.querySelector('#touch').toggleAttribute('data-leg-browse',legControls);
  for(const button of document.querySelectorAll('.route-browse [data-leg-control]'))button.hidden=!legControls;
  if(legControls){
@@ -344,6 +346,7 @@ window.tvUI=u=>{
  const nextRouteLegs=u.routeLegs??0;
  // The game sends UI state every frame. Only a transition changes the controls.
  if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs)return;
+ const hadTimelineFocus=isTimelineDirection(document.activeElement);
  routeLegs=nextRouteLegs;
  const previousSlot=selectedSlot;
  if(started)selectedSlot=1+((u.flags>>>20)&3);
@@ -368,6 +371,7 @@ window.tvUI=u=>{
   maybeStartAccount();
  }
  translateUI();
+ if(hadTimelineFocus&&!expeditionTimelineOpen()&&!accounts?.active)canvas.focus({preventScroll:true});
 };
 const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25,Digit7:26};
 function recompute(){
@@ -384,7 +388,7 @@ addEventListener('keydown',e=>{
  const pauseScreen=(uiFlags&(2|64|128))===2;
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !(expeditionTimelineOpen()&&e.target.matches(routeDirectionSelector)&&e.code.startsWith('Arrow')))return;
+    !(isTimelineDirection(e.target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
@@ -446,7 +450,7 @@ for(const button of document.querySelectorAll('[data-key]')){
  button.addEventListener('click',e=>{
   // Pointer clicks already sent their input on pointerdown.
   if(e.detail!==0||button.disabled||accounts?.active||!started)return;
-  if(!expeditionTimelineOpen()||!button.matches(routeDirectionSelector))canvas.focus();
+  if(!isTimelineDirection(button))canvas.focus();
   tap(action());
  });
  button.addEventListener('pointerdown',e=>{
