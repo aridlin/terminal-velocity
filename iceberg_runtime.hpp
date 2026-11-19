@@ -27,7 +27,7 @@ public:
   int district = 0, stage = 0, room = 0, depth = 0, run_district = 0;
   uint32_t run_seed = 1;
   double autosave_left = 15, run_seconds = 0;
-  uint32_t save_revision = 0;
+  uint32_t save_revision = 0, room_revision = 0;
   int run_deaths = 0, run_treasures = 0;
   int navigation_repeat_direction = 0;
   double navigation_repeat_left = 0;
@@ -320,6 +320,7 @@ public:
     reset_profile_menu();
   }
   void load_tour_scene(int index,int retries=0) {
+    ++room_revision;
     tour_scene=index;
     const auto &stop=iceberg::DebugTour[size_t(index)];
     mode=iceberg::Mode::Endless;district=stop.district;stage=2;room=depth=0;run_seed=73;run_active=false;
@@ -362,6 +363,7 @@ public:
   }
   int harbor_mission_leg() const {return stage==2?0:stage==4?1:2;}
   void load_room(bool resume=false) {
+    ++room_revision;
     if(mode==iceberg::Mode::Campaign && profile.hidden_room>=0) {
       grid=iceworld::build_hidden(profile.hidden_room);
     } else if(mode==iceberg::Mode::Campaign && profile.revisit.active) {
@@ -1594,9 +1596,10 @@ public:
     if(!retrying) {
       if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
       if(c.interact) {
-        const int previous_secret=profile.hidden_room;
+        const auto previous_room=room_revision;
         interact();
-        if(v.dialogue.active()||state.menu||profile.hidden_room!=previous_secret){sync_view();return;}
+        // A room-changing interaction consumes this frame's movement.
+        if(room_revision!=previous_room||v.dialogue.active()||state.menu){sync_view();return;}
       }
       if(state.won&&(c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))) {
         advance_room();
