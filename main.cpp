@@ -2152,8 +2152,12 @@ public:
   struct TourRows {
     int first_sample=0, count=0, row=0, left=0, right=0;
   };
+  struct ExpeditionNodes {
+    int first_room=0, count=0, row=0, left=0, stride=0, width=0;
+  };
   int reply_first_row() const { return reply_first_row_; }
   TourRows tour_rows() const { return tour_rows_; }
+  ExpeditionNodes expedition_nodes() const { return expedition_nodes_; }
   void draw() {
     if (rows_ < (grid_.adventure_level&&cols_>=56?20:24) || cols_ < (grid_.adventure_level?34:76)) {
       text(1, 2, grid_.adventure_level?iceberg::tr(state_.adventure.language,"Powiększ okno: 34 × 24 lub 56 × 20.","Resize the window: 34 × 24 or 56 × 20."):"Powiększ terminal do co najmniej 76 × 24.");
@@ -2324,6 +2328,7 @@ private:
   int play_rows_;
   int reply_first_row_=-1;
   TourRows tour_rows_;
+  ExpeditionNodes expedition_nodes_;
   std::vector<std::vector<Cell>> buffer_;
   static std::vector<std::string> glyphs(const std::string &s) {
     std::vector<std::string> v;

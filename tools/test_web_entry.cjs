@@ -4,6 +4,16 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..'),out=path.resolve(process.argv[2]||path.join(root,'../frontend-evidence'));
 fs.mkdirSync(out,{recursive:true});
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.wasm':'application/wasm','.ttf':'font/ttf'};
+function mapNode(page,frame,node,delta=0){
+ return page.locator('#game').evaluate((element,{frame,node,delta})=>{
+  const rows=window[frame].split('\n');
+  const row=rows.findIndex(line=>line.includes(node));
+  if(row<0)throw new Error('Missing timeline node '+node);
+  const column=rows[row].indexOf(node)+delta;
+  const box=element.getBoundingClientRect();
+  return {x:box.left+(column+.5)*box.width/canvasFit.w,y:box.top+(row+.5)*box.height/canvasFit.h};
+ },{frame,node,delta});
+}
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');
  if(url.pathname.endsWith('/api.php')){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({csrf:'isolated-entry-check',username:null}));return;}
@@ -947,6 +957,31 @@ const server=http.createServer((req,res)=>{
   await expedition.waitForFunction(()=>!window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 3:'));
   assert.equal(await nextLeg.evaluate(button=>document.activeElement===button),true);
   console.log('PASS Expedition timeline keeps keyboard focus and reverses it at leg boundaries');
+  const fifth=await mapNode(expedition,'desktopMapFrame','(05)',1);
+  const connector=await mapNode(expedition,'desktopMapFrame','(05)',4);
+  await expedition.mouse.click(connector.x,connector.y);
+  await expedition.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert.ok((await expedition.evaluate(()=>desktopMapFrame)).includes('Room 3:'),'the connector is not a room');
+  await expedition.mouse.click(fifth.x,fifth.y);
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 5:'));
+  await previousRoom.click();
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 4:'));
+  const sixth=await mapNode(expedition,'desktopMapFrame','(06)',1);
+  await expedition.mouse.move(fifth.x,fifth.y);
+  await expedition.mouse.down();
+  await expedition.mouse.move(sixth.x,sixth.y,{steps:3});
+  await expedition.mouse.up();
+  await expedition.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert.ok((await expedition.evaluate(()=>desktopMapFrame)).includes('Room 4:'),'dragging between nodes is neutral');
+  // A change of leg during the press invalidates the room under the pointer.
+  await expedition.mouse.move(fifth.x,fifth.y);
+  await expedition.mouse.down();
+  await expedition.keyboard.press('ArrowRight');
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 4:'));
+  await expedition.mouse.up();
+  await previousLeg.click();
+  await expedition.waitForFunction(()=>!window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 4:'));
+  console.log('PASS Expedition timeline selects a clicked room and ignores connectors, drags and old legs');
   await nextRoom.hover();
   await expedition.mouse.down();
   try {
@@ -1634,8 +1669,16 @@ const server=http.createServer((req,res)=>{
     await nextLeg.tap();
     await page.waitForFunction(()=>window.expeditionFrame?.includes('Next leg 2'));
     assert.equal(await nextLeg.isEnabled(),false,'the preview has no next leg');
+    const wide=await page.evaluate(()=>canvasFit.w>=56);
+    const fourth=await mapNode(page,'expeditionFrame',wide?'(04)':'○4',1);
+    await page.touchscreen.tap(fourth.x,fourth.y);
+    await page.waitForFunction(()=>window.expeditionFrame?.includes('Next leg 2')&&window.expeditionFrame?.includes('Room 4:'));
+    console.log('PASS Expedition timeline selects a tapped room in the next-leg preview');
     await previousLeg.tap();
     await page.waitForFunction(()=>window.expeditionFrame?.includes('Leg 1 · Depth 0'));
+    const current=await mapNode(page,'expeditionFrame',wide?'<01>':'▶1',1);
+    await page.touchscreen.tap(current.x,current.y);
+    await page.waitForFunction(()=>window.expeditionFrame?.includes('Planned:')&&!window.expeditionFrame?.includes('Room 4:'));
     await page.locator('#touch').getByRole('button',{name:'Next room'}).tap();
     await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 2:'));
     await page.keyboard.down('ArrowDown');

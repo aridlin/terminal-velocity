@@ -581,6 +581,9 @@
       const bool wide=cols_>=56;
       const int stride=wide?6:3,node_width=wide?4:2;
       const int left=std::max(3,(cols_-((room_count-1)*stride+node_width))/2),y=top+3;
+      if(!campaign&&v.tour_scene<0)
+        expedition_nodes_={(r.completed_legs+r.browsed_leg)*room_count,
+          std::min(room_count,int(rooms.size())),y,left,stride,node_width};
       for(int n=0;n<room_count&&offset+n<int(rooms.size());++n) {
         const int idx=offset+n;
         const bool branch=r.branching&&n==2;

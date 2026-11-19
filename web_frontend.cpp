@@ -23,6 +23,9 @@ EM_JS(void, browser_reply_rows, (int first_row), {
 EM_JS(void, browser_tour_rows, (int first,int count,int row,int left,int right), {
   if(window.tvTourRows)window.tvTourRows(first,count,row,left,right);
 });
+EM_JS(void, browser_expedition_nodes, (int first,int count,int row,int left,int stride,int width), {
+  if(window.tvExpeditionNodes)window.tvExpeditionNodes(first,count,row,left,stride,width);
+});
 uint32_t first_codepoint(const std::string &s) {
   if(s.empty())return 32;
   auto byte=[&](size_t i){return uint32_t(static_cast<unsigned char>(s[i]));};
@@ -106,6 +109,17 @@ EMSCRIPTEN_KEEPALIVE void web_select_tour_stop(int index) {
   web_game->tick({.select_level=index+1},0.,true,
                  web_game->last_columns,web_game->last_rows,web_game->last_aspect);
 }
+EMSCRIPTEN_KEEPALIVE void web_select_expedition_room(int index) {
+  if(!web_game||web_game->state.menu||web_game->state.journal)return;
+  auto &view=web_game->state.adventure;
+  if(!view.map||view.map_room||view.inspecting||view.dialogue.active()||
+     view.mode==iceberg::Mode::Campaign||view.tour_scene>=0)return;
+  const auto [selected,count]=web_game->expedition_route_position();
+  if(index<0||index>=count||index/iceberg::RoomsPerLeg!=selected/iceberg::RoomsPerLeg)return;
+  view.route_room_selection=index;
+  web_game->navigation_repeat_direction=0;
+  web_game->sync_view();
+}
 EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int cols,int rows,int focused) {
   if(!web_game)return;
   auto h=[&](int key){return bool(held&(1u<<key));};auto p=[&](int key){return bool(pressed&(1u<<key));};
@@ -147,6 +161,8 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   browser_reply_rows(renderer.reply_first_row());
   const auto tour=renderer.tour_rows();
   browser_tour_rows(tour.first_sample,tour.count,tour.row,tour.left,tour.right);
+  const auto nodes=renderer.expedition_nodes();
+  browser_expedition_nodes(nodes.first_room,nodes.count,nodes.row,nodes.left,nodes.stride,nodes.width);
   send_web_ui();
   if(web_game->save_revision!=last_save||web_slot!=previous_slot)browser_save_ready();
 }
