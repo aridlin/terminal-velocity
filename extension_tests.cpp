@@ -146,6 +146,28 @@ int main() {
     auto short_down = keys.consume(.01);
     require(short_down.fast_fall_pressed && !short_down.fast_fall,
             "enhanced SSH short Down tap survives the release packet");
+    keys.feed("\x1b[100;1:1u\x1b[115;1:1u\x1b[120;1:1u"
+              "\x1b[120;1:3u\x1b[115;1:3u\x1b[100;1:3u");
+    auto tap_dash=keys.consume(.001);
+    require(tap_dash.move==0&&!tap_dash.fast_fall&&tap_dash.aim_y==0&&
+            tap_dash.move_pressed==1&&tap_dash.aim_pressed==1&&tap_dash.dash_pressed,
+            "enhanced SSH preserves both released dash directions");
+    auto remote_dash=new_state(open);
+    remote_dash.player.facing=-1;
+    FixedStepper remote_frame;
+    remote_frame.advance(remote_dash,open,tap_dash,.001);
+    auto idle=keys.consume(.009);
+    require(!idle.move_pressed&&!idle.aim_pressed&&!idle.dash_pressed,
+            "enhanced SSH directional edges only survive one input sample");
+    remote_frame.advance(remote_dash,open,idle,.009);
+    require(remote_dash.player.vx>20&&remote_dash.player.vy>20,
+            "the full server input path launches a quick downward diagonal dash");
+    keys.feed("\x1b[97;1:1u\x1b[100;1:1u\x1b[119;1:1u\x1b[115;1:1u");
+    auto opposed=keys.consume(.01);
+    require(opposed.move==0&&opposed.aim_y==0&&opposed.move_pressed==0&&opposed.aim_pressed==0,
+            "opposing held directions cancel queued steering and aim");
+    keys.feed("\x1b[97;1:3u\x1b[100;1:3u\x1b[119;1:3u\x1b[115;1:3u");
+    keys.consume(.01);
     keys.feed("\x1b[57354;1:1u\x1b[57354;1:3u");
     require(keys.consume(.01).tour_page==-1,"SSH enhanced Page Up preserves the press before release");
     keys.feed("\x1b[100;1:1u\x1b[O");

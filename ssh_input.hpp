@@ -98,10 +98,14 @@ public:
     Controls c = edges_;
     edges_ = {};
     if (enhanced) {
-      c.move = int(held('d')) - int(held('a'));
+      c.move = horizontal();
       c.jump_held = held(' ') || held('w');
       c.fast_fall = held('s');
-      c.aim_y = int(held('s')) - int(held('w'));
+      c.aim_y = vertical();
+      if (held('d') && held('a'))
+        c.move_pressed = 0;
+      if (held('s') && held('w'))
+        c.aim_pressed = 0;
     } else {
       c.move = direction_;
       c.jump_held = jump_left_ > 0;
@@ -130,6 +134,8 @@ private:
     auto it = keys_.find(k);
     return it != keys_.end() && it->second;
   }
+  int horizontal() const { return int(held('d')) - int(held('a')); }
+  int vertical() const { return int(held('s')) - int(held('w')); }
   void key(unsigned k, int event, bool protocol) {
     if (k >= 'A' && k <= 'Z')
       k += 'a' - 'A';
@@ -140,6 +146,11 @@ private:
       keys_[k] = event != 3;
       if (event == 3 || event == 2 || prior)
         return;
+      // A complete tap can arrive in one read. Keep the press alongside held state.
+      if (k == 'a' || k == 'd')
+        edges_.move_pressed = horizontal();
+      if (k == 'w' || k == 's')
+        edges_.aim_pressed = vertical();
     } else {
       if (k == 'a')
         direction_ = -1;
