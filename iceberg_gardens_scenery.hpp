@@ -152,11 +152,19 @@
       if(id==51||id==54||id==58)for(int i=0;i<4;++i)world_art(35+i*21,22-i*2,{"┬       ┬","│ ╭─╮   │","│╭╯ ╰╮  │","╰┤   ├──╯"," ╰───╯"},d.stone);
     }
     for(const auto &bridge:grid_.growth) {
-      bool alive=(grid_.switch_flags&bridge.flag)==bridge.flag;
-      int width=alive?int(std::floor(bridge.area.w*bridge.amount)):0;
-      world_art(bridge.area.x-2,bridge.area.y+2,{"╭─╮","│╭╯","╰╯"},d.stone);
-      for(int i=0;i<width;i+=3)world_art(bridge.area.x+i,bridge.area.y+2,{"╲│╱"," │ "," ╰╮"},d.accent);
-      if(alive&&bridge.amount<1)world_text(bridge.area.x+width,bridge.area.y,"╭╯",d.light);
+      const auto &area=bridge.area;
+      const double width=bridge.extended_width(grid_.switch_flags);
+      const double row=aspect_*scale_;
+      world_art(area.x-2,area.bottom(),{"╭─╮","│╭╯","╰╯"},d.stone);
+      if(width<=0)continue;
+      const double tip=area.x+width;
+      constexpr uint32_t leaf=0xa6c780,flower=0xe5d48f;
+      for(double x=area.x+1;x+3*scale_<tip;x+=3) {
+        world_art(x,area.y-row,{"❧"},leaf);
+        world_art(x,area.bottom()+row,{"╲│╱"," │ "," ╰╮"},d.accent);
+      }
+      const bool complete=width>=std::floor(area.w);
+      world_art(tip-scale_,area.y-2*row,{complete?"✿":"❧","╵"},complete?flower:leaf);
     }
     if(grid_.template_id!=50&&grid_.template_id!=57)
       for(const auto &platform:grid_.platforms)if(!platform.icy) {
