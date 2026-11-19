@@ -262,7 +262,7 @@ struct View {
   uint32_t cosmetics = 0;
   bool map = false, settings = false, confirm_new = false, finished = false, at_content_boundary = false;
   bool save_error = false, can_continue = false;
-  bool endless_resume = false, trial_resume = false;
+  bool endless_resume = false, trial_resume = false, trial_replay = false;
   bool branch_at_door = false;
   uint64_t switches = 0;
   uint32_t discoveries = 0;

@@ -55,7 +55,8 @@
         v.can_continue?tr("Kontynuuj podróż","Continue journey"):tr("Rozpocznij podróż","Begin journey"),
         tr("Nowa historia","New story"),
         v.endless_resume?tr("Wznów wyprawę","Resume expedition"):tr("Wyprawa bez końca","Endless expedition"),
-        v.trial_resume?tr("Wznów próbę","Resume trial"):tr("Próba mistrzowska","Mastery trial"),
+        v.trial_resume?tr("Wznów próbę","Resume trial"):
+          v.trial_replay?tr("Powtórz próbę","Replay trial"):tr("Próba mistrzowska","Mastery trial"),
         tr("Ustawienia","Settings"),tr("Trasy klasyczne","Classic courses")};
       for(int i=0;i<6;++i)paint_text((rows_<24?4+i:5+i*2),2,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+" "+labels[size_t(i)],v.selected==i?d.accent:0xc8bbb8);
       const int notice_row=rows_<24?14:20;
