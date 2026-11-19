@@ -8,7 +8,13 @@ inline EngineGrid build_hidden(int id) {
   g.template_id=200+id;g.district=0;
   g.room_name=id==0?iceberg::Text{"Korytarz techniczny","Service corridor"}:
     id==1?iceberg::Text{"Linia wewnętrzna","Internal line"}:iceberg::Text{"Zbiornik wyrównawczy","Equalization reservoir"};
-  g.add_solid_rect(0,48,78,10);g.add_solid_rect(0,20,2,28);g.add_solid_rect(76,20,2,28);
+  if(id==2) {
+    g.add_solid_rect(0,48,24,10);
+    g.add_solid_rect(48,42,30,16);
+    g.add_hazard_rect(24,56,24,2);
+    g.water_basins.push_back({24,50,24,8});
+  } else g.add_solid_rect(0,48,78,10);
+  g.add_solid_rect(0,20,2,28);g.add_solid_rect(76,20,2,28);
   g.spawn_x=6;g.spawn_y=48-kPlayerHeight;g.checkpoint_points={{6,g.spawn_y}};
   g.goal={-20,-20,1,1};
   g.interactions.push_back({{4,44,4,4},InteractionKind::Return,0,{"Wróć","Return"}});
@@ -18,9 +24,8 @@ inline EngineGrid build_hidden(int id) {
   } else if(id==1) {
     g.interactions.push_back({{48,44,4,4},InteractionKind::Note,11,{"Naciśnij przycisk","Press button"}});
   } else {
-    g.add_solid_rect(32,44,32,4);
-    g.interactions.push_back({{56,40,5,4},InteractionKind::Note,12,{"Otwórz protokół","Open the log"}});
-    g.springs.push_back({28,47.7,1.5,.3});
+    g.platforms.push_back({.base={31,45,9,.5},.dy=4,.period=5.2,.phase=.25,.service_lift=true});
+    g.interactions.push_back({{56,38,5,4},InteractionKind::Note,12,{"Otwórz protokół","Open the log"}});
   }
   return g;
 }

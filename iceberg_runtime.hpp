@@ -1518,7 +1518,7 @@ public:
         else state.paused=!state.paused;
       } else if(c.map) {
         v.map=!v.map;state.journal=false;v.selected=grid.district;
-        if(tour_scene>=0) {
+        if(tour_scene>=0||grid.room_role==iceberg::RoomRole::Secret) {
           v.map_room=true;
           v.map_route=false;
         } else if(mode!=iceberg::Mode::Campaign) {

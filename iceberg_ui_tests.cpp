@@ -241,9 +241,9 @@ int main(){try {
   AdventureSession detour(options,"/tmp/tv-ui-room-detour-unused");detour.begin_campaign(true);
   detour.profile.language=iceberg::Language::English;
   detour.profile.hidden_room=0;detour.load_room();
-  detour.tick(map,1./120);detour.tick(tab,1./120);
-  ui_check(!detour.state.adventure.route.available,"a detour stays absent from the campaign route");
-  detour.tick(tab,1./120);
+  detour.tick(map,1./120);
+  ui_check(detour.state.adventure.map_room&&!detour.state.adventure.route.available,
+    "the map opens to the current detour without exposing it on the campaign route");
   detour.state.player.x+=8;
   auto count_marker=[&](const char *glyph,uint32_t color){
     int marks=0;
@@ -259,6 +259,19 @@ int main(){try {
       ui_check(count_marker("↶",0x91d4ce)==2&&count_marker("▣",0xd7e8cd)==0&&
         text.find(language==iceberg::Language::English?"↶ Return":"↶ Powrót")!=std::string::npos,
         "the detour minimap identifies its real return without advertising a finish door");
+    }
+  }
+  detour.profile.hidden_room=2;detour.load_room();
+  detour.state.adventure.map=detour.state.adventure.map_room=true;
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    detour.profile.language=language;detour.sync_view();
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(detour.grid,detour.state,rows,cols,2).draw();
+      const auto text=ui_text(frame);
+      ui_check(count_marker("↕",0xe4ad68)==2&&count_marker("↶",0x91d4ce)==2&&
+        count_marker("≈",0x66bfd7)>1&&text.find(language==iceberg::Language::English?
+          "↕ Service lift":"↕ Winda serwisowa")!=std::string::npos,
+        "the reservoir room map shows the pool, service lift and return at each supported size");
     }
   }
   detour.profile.hidden_room=-1;
