@@ -190,8 +190,10 @@ int main() {
     turbine.load_tour_scene(int(fan_stop-iceberg::DebugTour.begin()));
     const auto original_turbine=verified_room(23,73,1);
     require(turbine.grid.air_fields.size()==1&&turbine.grid.air_fields.front().turbine&&
-      turbine.grid.sweets==original_turbine.sweets&&verify_route(turbine.grid).complete,
-      "the Heatworks turbine keeps the ordinary catwalks and original tokens");
+      iceworld::has_turbine_access(turbine.grid)&&!iceworld::has_turbine_access(original_turbine)&&
+      turbine.grid.sweets==original_turbine.sweets&&turbine.grid.goal.x==original_turbine.goal.x&&
+      verify_route(turbine.grid).complete,
+      "the Heatworks turbine adds maintenance steps and keeps the ordinary catwalk and tokens");
     for(const double phase:{1.,3.7}) {
       const auto courier_jump=[&](const EngineGrid &room) {
         auto rider=new_state(room);

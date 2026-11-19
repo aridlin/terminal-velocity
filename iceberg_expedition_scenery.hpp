@@ -206,6 +206,19 @@
     const auto &rotor=frames[size_t(int(time*10.)%frames.size())];
     world_art(x+2*scale_,y+2*row,{rotor[0],rotor[1],rotor[2]},blades);
     world_art(x+10*scale_,y+3*row,{jump_now?"↗":"○"},jump_now?signal:casing);
+    if(iceworld::has_turbine_access(grid_)) {
+      constexpr uint32_t railing=0xa58a71,access_arrow=0xe6b979;
+      for(const auto &step:iceworld::TurbineAccessSteps) {
+        const int width=int(step.w/scale_);
+        std::string rail="╔";
+        for(int cell=2;cell<width;++cell)rail+="═";
+        world_art(step.x,step.y-2*row,{rail+"╗",
+          "║"+std::string(width-2,' ')+"║"},railing);
+        world_art(step.x+scale_,step.y+1.,{"║╲       ╱║","║ ╲     ╱ ║","╚══╧═══╧══╝"},railing);
+      }
+      prop_art(iceworld::TurbineAccessX,iceworld::TurbineAccessFloor,
+        {"╭─────╮","│  ↖  │","╰──┬──╯","   │","  ╱┴╲"},access_arrow);
+    }
     const int streaks=2+int(pressure*9.);
     for(int i=0;i<streaks;++i) {
       const double along=std::fmod(time*1.16+i/11.,1.);

@@ -487,6 +487,15 @@ inline void add_heatworks_turbine(EngineGrid &room) {
   // The draft crosses the upper maintenance gap and ends over the receiving
   // ledge. The regular catwalks are well below the airstream.
   room.air_fields.push_back({.area={63.,22.,15.,10.},.ax=120.,.ay=-14.,.period=5.2,.turbine=true});
+  auto access=room;
+  for(const auto &step:iceworld::TurbineAccessSteps)
+    access.add_solid_rect(step.x,step.y,step.w,1);
+  const auto stepped_route=verify_route(access);
+  if(stepped_route.complete&&stepped_route.deaths==0) {
+    access.verification_policy=stepped_route.policy;
+    room=std::move(access);
+    return;
+  }
   const auto route=verify_route(room);
   if(route.complete)room.verification_policy=route.policy;
   else room.air_fields.pop_back();

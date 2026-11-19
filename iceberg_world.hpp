@@ -4,6 +4,12 @@
 namespace iceworld {
 using namespace ::iceberg;
 struct Pad { int x, y, w; char kind = 'p'; };
+inline constexpr std::array<Pad,2> TurbineAccessSteps{{{49,41,5},{52,34,5}}};
+inline constexpr int TurbineAccessX=57,TurbineAccessFloor=45;
+inline bool has_turbine_access(const EngineGrid &room) {
+  return room.template_id==23&&std::all_of(TurbineAccessSteps.begin(),TurbineAccessSteps.end(),
+    [&](const auto &step){return room.solid_at(step.x,step.y);});
+}
 struct Pattern {
   int id;
   Text name;
