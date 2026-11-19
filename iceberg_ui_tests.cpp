@@ -524,6 +524,38 @@ int main(){try {
       ui_check(count_map("┅",0xd5aa80)==intact,"the restored planter returns as intact on the map");
     }
   }
+  auto ribs=verified_room(63,73,5);
+  add_fractured_ribs(ribs);
+  for(const auto *room:{&pots,&ribs}) {
+    const size_t first=room->platforms.size()-2;
+    const auto &platform=room->platforms[first];
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      const bool en=language==iceberg::Language::English;
+      const auto cue=room->district==5?(en?"Beam buckling · Jump!":"Belka się ugina · Skacz!"):
+        (en?"Planter cracking · Jump!":"Donica pęka · Skacz!");
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{110,34}}) {
+        auto view=new_state(*room);
+        view.adventure.language=language;
+        view.adventure.notice="Older notice";
+        view.adventure.notice_left=8.;
+        view.elapsed=1.1;
+        view.player.x=platform.base.x+1.;
+        view.player.y=platform.base.y-kPlayerHeight;
+        view.player.support=int(first);
+        view.player.grounded=true;
+        view.platform_armed_at[first]=1.;
+        RenderGrid(*room,view,rows,cols,2).draw();
+        ui_check(ui_text(frame).find(cue)!=std::string::npos&&
+                 ui_text(frame).find("Older notice")==std::string::npos,
+          "the supported fragile platform gives a readable Jump cue over a timed notice");
+        view.player.support=-1;
+        view.player.grounded=false;
+        RenderGrid(*room,view,rows,cols,2).draw();
+        ui_check(ui_text(frame).find(cue)==std::string::npos,
+          "the Jump cue clears when the courier leaves the fragile platform");
+      }
+    }
+  }
   auto reservoir=verified_room(55,73,4);
   auto reservoir_view=new_state(reservoir);
   reservoir_view.adventure.map=reservoir_view.adventure.map_room=true;
