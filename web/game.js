@@ -404,16 +404,16 @@ addEventListener('keydown',e=>{
   if(shiftKey)shiftKeys.add(e.code);
   if(!shiftKey||shiftKeys.size>1)dashShift='';
  }
- const settingsBack=e.code==='Escape'&&!e.isComposing&&e.keyCode!==229&&
-  e.target instanceof Element&&settingsKeys.contains(e.target);
+ const target=e.target instanceof Element?e.target:null;
+ const settingsBack=e.code==='Escape'&&!e.isComposing&&e.keyCode!==229&&settingsKeys.contains(target);
  const pauseScreen=(uiFlags&(2|64|128))===2;
  const tourPage=e.code==='PageUp'||e.code==='PageDown';
  if(tourPage&&!tourPicker)return;
- const tourNavigation=tourPicker&&tourControls.contains(e.target)&&
+ const tourNavigation=tourPicker&&tourControls.contains(target)&&
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape')&&!e.isComposing&&e.keyCode!==229;
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
- if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !settingsBack&&!tourNavigation&&!(isTimelineDirection(e.target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
+ if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
+    !settingsBack&&!tourNavigation&&!(isTimelineDirection(target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
