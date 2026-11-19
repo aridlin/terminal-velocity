@@ -404,6 +404,19 @@ int main(){try {
       }
     }
   }
+  auto seam_room=verified_room(61,73,5);
+  add_crown_seam_shortcut(seam_room);
+  auto seam_view=new_state(seam_room);
+  seam_view.adventure.map=seam_view.adventure.map_room=true;
+  for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+    seam_view.adventure.language=language;
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      RenderGrid(seam_room,seam_view,rows,cols,2).draw();
+      ui_check(count_map("↑",0xc4deeb)==1&&ui_text(frame).find(language==iceberg::Language::English?
+        "↑ Wall-kick shaft":"↑ Wąski szyb")!=std::string::npos,
+        "the room map marks the Crown shaft and fits its localized legend");
+    }
+  }
   auto pots=verified_room(51,73,4);
   add_expedition_fragile_pots(pots);
   const size_t first_pot=pots.platforms.size()-2;

@@ -232,6 +232,7 @@ inline constexpr std::array DebugTour{
   TourStop{5,69,64,51,{"Winda serwisowa prowadzi do górnych półek","A service lift reaches the upper shelves"}},
   TourStop{4,52,77,41,{"Podlej pnącza i przejdź nad kanałem","Water the vines and cross above the channel"}},
   TourStop{3,45,84,46,{"Wózek pod rynną prowadzi na górną półkę","The drainage trolley reaches the upper shelf"}},
+  TourStop{5,61,85,45,{"Odbijaj się od ścian, by wrócić na grań","Wall-kick through the shaft to rejoin the ridge"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 struct View {
