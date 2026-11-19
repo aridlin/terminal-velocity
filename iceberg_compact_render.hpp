@@ -8,6 +8,7 @@
     fill(0,0,cols_,4,Color::Default);
     paint_text(0,1,v.tour_scene>=0?tr("PRZEGLĄD ZMIAN ","DEBUG TOUR ")+std::to_string(v.tour_scene+1)+"/"+std::to_string(iceberg::DebugTour.size()):d.name.get(v.language),d.accent,true);
     int y=1;compact_paragraph(y,v.room_name,3,d.light);
+    if(y==2&&cols_>=56)paint_text(2,1,room_hud_stats(cols_-2),0xb3c3c8);
     for(int x=0;x<cols_;++x)paint_text(3,x,"─",d.stone);
     fill(rows_-3,0,cols_,3,Color::Default);
     const bool at_exit=state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active();

@@ -752,6 +752,24 @@
     paint_text(layout.top+layout.height-2,layout.text_x,state_.paused&&!state_.journal?tr("E/ENTER wznów","E/ENTER resume"):dialogue.revealing?tr("E/ENTER: tekst od razu","E/ENTER: instant text"):tr("E/ENTER: dalej","E/ENTER: continue"),npc.color);
   }
 #include "iceberg_crown_film_render.hpp"
+  std::string room_hud_stats(int width=0) const {
+    const auto &v=state_.adventure;
+    std::string stats;
+    auto append=[&](const std::string &field) {
+      auto next=stats.empty()?field:stats+"   "+field;
+      if(!width||iceberg::cell_length(next)<=width)stats=std::move(next);
+    };
+    if(!grid_.sweets.empty())
+      append(tr("Żetony ","Tokens ")+std::to_string(state_.sweets_count())+"/"+std::to_string(grid_.sweets.size()));
+    append(tr("Powroty ","Retries ")+std::to_string(state_.deaths));
+    if(v.tour_scene<0) {
+      if(v.mode==iceberg::Mode::Endless)append(tr("Głębokość ","Depth ")+std::to_string(v.depth));
+      else if(grid_.room_role==iceberg::RoomRole::Traverse)
+        append(std::to_string(v.room+1)+"/"+std::to_string(iceberg::RoomsPerLeg));
+    }
+    if(state_.multiplayer)append("◌ "+std::to_string(state_.ghosts.size()));
+    return stats;
+  }
 #include "iceberg_compact_render.hpp"
   void draw_iceberg() {
     const auto &dialogue=state_.adventure.dialogue;
@@ -769,11 +787,7 @@
     paint_text(1,2,v.room_name,d.light);
     if(cols_>90)paint_text(0,cols_-27,tr("TRASA ","SEED ")+std::to_string(v.seed),d.stone);
     std::string mode=v.tour_scene>=0?tr("PRZEGLĄD ZMIAN ","DEBUG TOUR ")+std::to_string(v.tour_scene+1)+"/"+std::to_string(iceberg::DebugTour.size()):v.revisit?tr("POWRÓT NA TRASĘ","REVISIT"):v.mode==iceberg::Mode::Campaign?tr("PODRÓŻ","JOURNEY"):v.mode==iceberg::Mode::Endless?tr("BEZ KOŃCA","ENDLESS"):tr("PRÓBA","TRIAL");
-    paint_text(2,2,mode+(grid_.sweets.empty()?"":tr("   Żetony ","   Tokens ")+std::to_string(state_.sweets_count())+"/"+std::to_string(grid_.sweets.size()))+
-      tr("   Powroty ","   Retries ")+std::to_string(state_.deaths)+
-      (v.tour_scene>=0?"":v.mode==iceberg::Mode::Endless?tr("   Głębokość ","   Depth ")+std::to_string(v.depth):
-       grid_.room_role==iceberg::RoomRole::Traverse?"   "+std::to_string(v.room+1)+"/"+std::to_string(iceberg::RoomsPerLeg):"")+
-      (state_.multiplayer?"   ◌ "+std::to_string(state_.ghosts.size()):""),0xb3c3c8);
+    paint_text(2,2,mode+"   "+room_hud_stats(),0xb3c3c8);
     for(int x=0;x<cols_;++x)paint_text(3,x,"─",d.stone);
     fill(rows_-3,0,cols_,3,Color::Default);
     text(rows_-3,2,state_.ssh_basic?tr("A/D bieg S stop SPACJA skok X zryw I/O ↑/↓ E rozmowa","A/D run S stop SPACE jump X dash I/O ↑/↓ E interact"):
