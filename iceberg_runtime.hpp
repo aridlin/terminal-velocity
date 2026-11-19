@@ -1453,7 +1453,6 @@ public:
       v.presentation_time+=dt;v.npc_reaction_left=std::max(0.,v.npc_reaction_left-dt);
       v.death_left=std::max(0.,v.death_left-dt);
       v.machinery_left=std::max(0.,v.machinery_left-dt);v.lamp_left=std::max(0.,v.lamp_left-dt);
-      for(auto &bridge:grid.growth)if((grid.switch_flags&bridge.flag)==bridge.flag)bridge.amount=std::min(1.,bridge.amount+dt/1.15);
       if(v.dialogue.active())v.pickup_left=std::max(0.,v.pickup_left-dt);
     }
     if(state.menu) {menu(c,dt);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
@@ -1630,6 +1629,10 @@ public:
     int old_crown_hits=state.crown.hits;
     const auto old_crown_beat=crown_beat(state.crown);
     double old_elapsed=state.elapsed;
+    // Bridge growth changes collision, so it follows playable room time.
+    for(auto &bridge:grid.growth)
+      if((grid.switch_flags&bridge.flag)==bridge.flag)
+        bridge.amount=std::min(1.,bridge.amount+dt/1.15);
     stepper.advance(state,grid,c,dt);
     update_water_splash(before,old_deaths,dt);
     if(!state.won)v.door_open=std::max(0.,v.door_open-dt*4.5);
