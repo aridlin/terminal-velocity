@@ -187,6 +187,7 @@ struct Dialogue {
 };
 struct RouteView {
   std::vector<Text> rooms;
+  std::vector<Text> next_rooms;
   std::array<Text,3> alternatives{};
   uint32_t visited=0;
   unsigned choices=0, decisions=0;

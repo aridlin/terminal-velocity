@@ -870,6 +870,14 @@ const server=http.createServer((req,res)=>{
   } finally {await expedition.mouse.up();}
   await previousRoom.click();
   await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 7:'));
+  await nextRoom.click();
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 8:'));
+  await nextRoom.click();
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 1:'));
+  await previousRoom.click();
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 8:')&&!window.desktopMapFrame?.includes('Next leg 2'));
+  await previousRoom.click();
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 7:'));
   assert.equal(await desktopSwitch.getAttribute('aria-label'),'Show room map');
   await desktopSwitch.click();
   await expedition.waitForFunction(()=>uiFlags&(1<<17));

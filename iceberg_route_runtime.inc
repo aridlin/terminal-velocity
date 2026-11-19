@@ -1,6 +1,11 @@
 // Included inside AdventureSession. Branch decisions are campaign state, not
 // a drawing convention. A fork replaces exactly one non-quest traversal cell.
   int route_leg() const {return stage<=3?0:stage<=5?1:2;}
+  uint32_t next_expedition_seed() const {return iceberg::mix(run_seed+1);}
+  std::vector<int> expedition_itinerary(uint32_t seed) const {
+    const auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
+    return iceworld::make_itinerary(seed,district,iceberg::RoomsPerLeg,e.layout_version,mode);
+  }
   bool route_forks_enabled() const {
     return mode==iceberg::Mode::Campaign&&profile.layout_version>=4&&district==0;
   }
@@ -65,6 +70,9 @@
       r.available=!e.itinerary.empty();r.current=room;r.place=grid.room_name;
       r.visited=(1u<<unsigned(room+1))-1;
       for(int id:e.itinerary)r.rooms.push_back(iceworld::pattern(id).name);
+      if(mode==iceberg::Mode::Endless&&v.map&&!v.map_room&&
+         v.route_room_selection>=iceberg::RoomsPerLeg)
+        for(int id:expedition_itinerary(next_expedition_seed()))r.next_rooms.push_back(iceworld::pattern(id).name);
       if(mode==iceberg::Mode::Trial&&!r.rooms.empty())r.rooms.back()=iceworld::MasteryCourseName;
     }
   }
