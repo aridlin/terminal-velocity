@@ -289,6 +289,14 @@ inline constexpr Text ArchiveTrolleyDirections{
   "Poczekaj, aż wózek stanie nad pomostem, i wskocz na niego. U góry skocz w lewo, na półkę suszarni. Zryw w górę pomoże minąć jej krawędź.",
   "Wait until the trolley stops above the walkway, then jump aboard. At the upper stop, jump left toward the drying shelf. An upward dash helps clear the lip."
 };
+inline constexpr Text IrrigationCallBoxDetail{
+  "Rura głosowa do szklarni. Naciśnij E, żeby zawołać Celinę. Czerpaki przejeżdżają obok tarasu i wznoszą się do półki z nasionami.",
+  "A speaking tube to the greenhouse. Press E to call Celina. The scoops pass the terrace and climb to the seed shelf."};
+inline std::vector<DialogueLine> irrigation_call() {
+  return {{5,{"Tu Celina. Przeniosłam skrzynkę Basi na górną półkę, kiedy woda przeszła przez próg. Nasiona powinny być suche.",
+              "Celina here. I moved Basia's box to the top shelf when water came over the sill. The seeds should still be dry."}}};
+}
+
 inline constexpr Text ArchiveDryingLetterDetail{
   "Na mokrej kopercie został tylko inicjał. Pod sznurkiem ktoś wsunął paragon z piekarni, z adresem i numerem klatki.",
   "Only an initial survived on the wet envelope. Somebody slipped a bakery receipt under the string with the address and stairwell number."

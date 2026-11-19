@@ -26,6 +26,10 @@
       prop_art(x,y,{"┌────┐","│╲  ╱│","└─╳──┘","  ╵   "},0xf2d0a4);
       return;
     }
+    if(id==iceberg::IrrigationCallBox) {
+      prop_art(x,y,{"◀╗ "," ╚╗","  ║"," ═╩"},0xd4bc88);
+      return;
+    }
     if(id>=10&&id!=30){prop_art(x,y,{"╭──╮","│≋≋│","│≋ │","╰──╯"},color);return;}
     const char *face=id==30?"│JP2│":id==0?"│A D│":id==1?"│ X │":id==2?"│↑ X│":id==3?"│ ⇧ │":id==4?"│♨ !│":"│ ↑ │";
     if(id==2&&grid_.template_id==601)face="│≈ →│";

@@ -600,7 +600,7 @@ public:
     if(dialogue.choosing()) {
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
-      if(tour_scene<0) {
+      if(tour_scene<0&&scene!=iceberg::IrrigationReplyScene) {
         if(scene>=iceberg::HarborMissionReplyBase) {
           set_arrival_exchange(option?iceberg::ArrivalExchange::SecondReply:iceberg::ArrivalExchange::FirstReply);
         } else if(scene<iceberg::BriefingReplyBase) {
@@ -622,7 +622,7 @@ public:
     else {++dialogue.page;dialogue.segment=0;}
     if(dialogue.active()){
       dialogue.reset_reveal();if(dialogue.instant)dialogue.reveal_all();
-      if(dialogue.choosing()) {
+      if(dialogue.choosing()&&dialogue.reply_scene!=iceberg::IrrigationReplyScene) {
         if(dialogue.reply_scene>=iceberg::HarborMissionReplyBase) {
           if(tour_scene<0) {
             set_arrival_exchange(iceberg::ArrivalExchange::Prompt);
@@ -996,6 +996,11 @@ public:
         v.inspect_art=Art::Sign;
         v.inspect_body=iceberg::CrownShaftDirections.get(profile.language);
       }
+      else if(node.id==iceberg::IrrigationCallBox) {
+        v.inspect_title=node.label.get(profile.language);
+        v.inspect_art=Art::Speaker;
+        v.inspect_body=iceberg::IrrigationCallBoxDetail.get(profile.language);
+      }
       else if(node.id==iceberg::ArchiveTrolleyNotice||node.id==iceberg::ArchiveDryingLetter) {
         const bool notice=node.id==iceberg::ArchiveTrolleyNotice;
         v.inspect_title=node.label.get(profile.language);
@@ -1112,6 +1117,7 @@ public:
       if(node.id==iceberg::CrownShaftPlate){talk(iceberg::crown_shaft_plate());return;}
       if(node.id==iceberg::ArchiveTrolleyNotice){talk(iceberg::archive_trolley_notice());return;}
       if(node.id==iceberg::ArchiveDryingLetter){talk(iceberg::archive_drying_letter());return;}
+      if(node.id==iceberg::IrrigationCallBox){talk(iceberg::irrigation_call(),0,iceberg::IrrigationReplyScene);return;}
       if(node.id>=10&&node.id<=12) {
         profile.discoveries|=1u<<(node.id-10);
         talk(iceberg::hidden_testimony(node.id-10));persist();return;

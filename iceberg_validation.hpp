@@ -270,8 +270,13 @@ inline void add_expedition_irrigation_wheel(EngineGrid &room) {
     room.platforms.push_back({.base={42,44,4,.5},.dx=5.,.dy=7.6,.period=7.2,
       .phase=phase,.irrigation_scoop=true});
   const auto route=verify_route(room);
-  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
-  else room.platforms.resize(original);
+  if(!route.complete||route.deaths!=0) {
+    room.platforms.resize(original);
+    return;
+  }
+  room.verification_policy=route.policy;
+  room.interactions.push_back({{51,47,2,3},InteractionKind::Note,iceberg::IrrigationCallBox,
+    {"Rura głosowa","Speaking tube"}});
 }
 
 inline void add_expedition_channel_bridge(EngineGrid &room) {
