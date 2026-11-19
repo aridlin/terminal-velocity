@@ -1157,6 +1157,23 @@ const server=http.createServer((req,res)=>{
     await page.evaluate(flags=>window.tvUI({flags}),previousFlags);
    }
    console.log('PASS save replacement waits for a completed touch in both game modes');
+   for(const [fork,buttonId,key] of [[false,'touch-use',8],[true,'touch-use',6],[true,'touch-inspect',8]]){
+    const flags=previousFlags|1024|(fork?1<<18:0);
+    await page.evaluate(flags=>window.tvUI({flags}),flags);
+    const door=await page.locator('#'+buttonId).boundingBox();
+    const point={x:door.x+door.width/2,y:door.y+door.height/2,id:1};
+    await touch('touchStart',[point]);
+    assert.deepEqual(await touchState(),{held:0,pressed:0},'door contact waits for release');
+    await page.evaluate(flags=>window.tvUI({flags}),previousFlags);
+    await page.evaluate(flags=>window.tvUI({flags}),flags);
+    await touch('touchEnd',[]);
+    assert.deepEqual(await touchState(),{held:0,pressed:0},'a stale contact cannot confirm a new doorway');
+    await touch('touchStart',[point]);
+    await touch('touchEnd',[]);
+    assert.deepEqual(await touchState(),{held:0,pressed:1<<key},'release sends the selected doorway action once');
+    await page.evaluate(flags=>{clearPresses();window.tvUI({flags});},previousFlags);
+   }
+   console.log('PASS main and alternate doorway contacts confirm only on release');
 
   } finally {
    await page.evaluate(()=>window.resumeTouchFrames());
