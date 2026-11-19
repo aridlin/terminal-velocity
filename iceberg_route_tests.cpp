@@ -118,6 +118,21 @@ int main() {
         iceberg::SaveStore::validate_file(events_path,saved_events)&&
         saved_events.quest_counts[6]==3&&saved_events.quests[6]==2,
         "Kuba's third dash jump saves both the count and the ready-to-return quest state");
+      const auto clock=events.state.elapsed;
+      const auto switches=events.grid.switch_flags;
+      Controls retry_frame;
+      retry_frame.restart=retry_frame.jump_pressed=retry_frame.jump_held=retry_frame.dash_pressed=true;
+      retry_frame.move=1;
+      events.tick(retry_frame,.1);
+      require(events.state.player.x==events.state.spawn_x&&events.state.player.y==events.state.spawn_y&&
+        events.state.player.vx==0.&&events.state.player.dash_available&&
+        std::abs(events.state.elapsed-clock-1./120.)<1e-8,
+        "a slow retry frame stops at the lamp before consuming stale movement");
+      require(events.state.deaths==2&&iceberg::SaveStore::validate_file(events_path,saved_events)&&
+        saved_events.expeditions[0].deaths==2&&saved_events.expeditions[0].room_deaths==2&&
+        saved_events.expeditions[0].collected==1&&saved_events.expeditions[0].treasures==1&&
+        saved_events.expeditions[0].switches==switches,
+        "a slow retry records one attempt while preserving its token and room switches");
       std::filesystem::remove(events_path);std::filesystem::remove(events_path.string()+".bak");
     }
     options.no_save=true;
