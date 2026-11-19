@@ -106,17 +106,36 @@ public:
     const auto &saved=profile.expeditions[target==iceberg::Mode::Endless?0:1];
     return saved.active&&saved.district==area&&compatible_seed(target,saved);
   }
-  bool can_retry_trial(int area) const {
-    return mode==iceberg::Mode::Trial&&!run_active&&depth==iceberg::RoomsPerLeg&&district==area&&
-      compatible_seed(iceberg::Mode::Trial,profile.expeditions[1]);
-  }
   bool separate_trial_record(int area,uint32_t seed,unsigned version) const {
     return options.seed_override||seed!=default_trial_seed(area)||version!=iceberg::ContentVersion;
+  }
+  const iceberg::Record *seeded_trial_record(int area,uint32_t seed,unsigned version) const {
+    const auto record=std::find_if(profile.challenges.begin(),profile.challenges.end(),[&](const auto &entry){
+      return entry.district==area&&entry.seed==seed&&entry.version==version;
+    });
+    return record==profile.challenges.end()?nullptr:&record->record;
+  }
+  bool can_retry_trial(int area) const {
+    const auto &saved=profile.expeditions[1];
+    if(area<0||area>=iceberg::AuthoredDistrictCount||saved.active||saved.district!=area||
+       saved.room!=iceberg::RoomsPerLeg-1||
+       saved.depth!=saved.room||saved.itinerary.size()!=iceberg::RoomsPerLeg||
+       !compatible_seed(iceberg::Mode::Trial,saved))return false;
+    if(!separate_trial_record(area,saved.seed,saved.layout_version)&&profile.trials[size_t(area)].complete)
+      return true;
+    const auto *record=seeded_trial_record(area,saved.seed,saved.layout_version);
+    return record&&record->complete;
+  }
+  int selected_run_area(iceberg::Mode target,bool fresh) const {
+    if(!fresh&&(can_resume_run(target,run_district)||
+       (target==iceberg::Mode::Trial&&can_retry_trial(run_district))))return run_district;
+    return std::min(run_district,expedition_unlocked());
   }
   void choose_saved_run_district(int selected) {
     if(options.district_override||selected<2||selected>3)return;
     const auto &e=profile.expeditions[size_t(selected-2)];
-    run_district=e.active?e.district:std::min(run_district,expedition_unlocked());
+    run_district=e.active||(selected==3&&can_retry_trial(e.district))?
+      e.district:std::min(run_district,expedition_unlocked());
   }
   void select_resume_option() {
     auto &selected=state.adventure.selected;
@@ -131,7 +150,9 @@ public:
     v.story=profile.story;v.journey_district=district;v.can_travel=(profile.story&(uint64_t(1)<<8))||profile.quests[2]==3||profile.finished||profile.at_content_boundary;
     v.unlocked=profile.unlocked;v.finished=profile.finished;v.at_content_boundary=profile.at_content_boundary;v.can_continue=profile.started;
     v.endless_resume=can_resume_run(iceberg::Mode::Endless,run_district);
-    v.trial_resume=can_resume_run(iceberg::Mode::Trial,run_district);v.revisit=profile.revisit.active;
+    v.trial_resume=can_resume_run(iceberg::Mode::Trial,run_district);
+    v.trial_replay=can_retry_trial(run_district);
+    v.revisit=profile.revisit.active;
     v.hidden_room=profile.hidden_room;v.visit_district=profile.visit_district;v.cosmetics=profile.cosmetics;
     v.run_district=run_district;v.endless_best=profile.endless_best;v.seed=mode==iceberg::Mode::Campaign?profile.seed:run_seed;
     v.quest_focus=profile.quest_focus;
@@ -143,9 +164,8 @@ public:
       const uint32_t wanted=saved?e.seed:options.seed_override?options.seed:default_trial_seed(d);
       const unsigned version=saved?e.layout_version:iceberg::ContentVersion;
       if(separate_trial_record(d,wanted,version)) {
-        v.trials[size_t(d)]={};
-        for(const auto &challenge:profile.challenges)if(challenge.district==d&&challenge.seed==wanted&&challenge.version==version)
-          v.trials[size_t(d)]=challenge.record;
+        const auto *record=seeded_trial_record(d,wanted,version);
+        v.trials[size_t(d)]=record?*record:iceberg::Record{};
       }
     }
     if(grid.template_id==330)for(auto &node:grid.interactions)if(node.kind==InteractionKind::Board)
@@ -710,7 +730,7 @@ public:
   }
   void request_run(iceberg::Mode next,bool fresh=false) {
     const bool trial=next==iceberg::Mode::Trial;
-    const int area=std::min(run_district,expedition_unlocked());
+    const int area=selected_run_area(next,fresh);
     if(profile.expeditions[trial?1:0].active&&(fresh||!can_resume_run(next,area))&&
        (!trial||trial_unlocked())) {
       state.adventure.selected=trial?3:2;
@@ -722,7 +742,7 @@ public:
   }
   void begin_run(iceberg::Mode next,bool fresh=false) {
     const bool trial=next==iceberg::Mode::Trial;
-    const int area=std::min(run_district,expedition_unlocked());
+    const int area=selected_run_area(next,fresh);
     auto &e=profile.expeditions[trial?1:0];
     const bool resume=!fresh&&can_resume_run(next,area);
     const bool replay=trial&&!fresh&&can_retry_trial(area);

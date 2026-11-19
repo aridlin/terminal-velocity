@@ -553,7 +553,9 @@
     std::array<std::string,6> labels{
       v.can_continue?tr("KONTYNUUJ PODRÓŻ","CONTINUE JOURNEY"):tr("ROZPOCZNIJ PODRÓŻ","BEGIN JOURNEY"),
       tr("NOWA HISTORIA","NEW STORY"),v.endless_resume?tr("WZNÓW WYPRAWĘ BEZ KOŃCA","RESUME ENDLESS EXPEDITION"):tr("WYPRAWA BEZ KOŃCA","ENDLESS EXPEDITION"),
-      v.trial_resume?tr("WZNÓW PRÓBĘ MISTRZOWSKĄ","RESUME MASTERY TRIAL"):tr("PRÓBA MISTRZOWSKA","MASTERY TRIAL"),tr("USTAWIENIA","SETTINGS"),
+      v.trial_resume?tr("WZNÓW PRÓBĘ MISTRZOWSKĄ","RESUME MASTERY TRIAL"):
+        v.trial_replay?tr("POWTÓRZ PRÓBĘ MISTRZOWSKĄ","REPLAY MASTERY TRIAL"):tr("PRÓBA MISTRZOWSKA","MASTERY TRIAL"),
+      tr("USTAWIENIA","SETTINGS"),
       tr("TRASY KLASYCZNE","CLASSIC COURSES")};
     auto menu_line=[&](int row,const std::string &line,Color color=Color::Text){
       if(wide)text(row,cols_/2+1,line,color);else center(row,line,color);

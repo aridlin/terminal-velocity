@@ -89,6 +89,38 @@ int main() {
     if(imported.profile.trials[0].best_seconds!=10.||imported.state.adventure.trials[0].best_seconds!=84.||
        imported.profile.challenges.front().record.best_treasures!=5)
       throw std::runtime_error("the imported trial must finish into the challenge record, visible in the completion menu");
+    const auto completion=std::filesystem::temp_directory_path()/("tv-completed-trial-"+
+      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    if(!iceberg::SaveStore(completion).save(imported.profile))
+      throw std::runtime_error("the completed seeded trial did not save");
+    AdventureSession reopened(options,completion);
+    std::filesystem::remove(completion);
+    Controls show_trial;show_trial.select_level=4;reopened.tick(show_trial,1./120);
+    if(!reopened.state.adventure.trial_replay||reopened.state.adventure.trial_resume||
+       reopened.state.adventure.trials[0].best_seconds!=84.)
+      throw std::runtime_error("after reopening, the menu must offer replay with the original seeded record");
+    reopened.options.seed_override=true;reopened.options.seed=74;reopened.sync_view();
+    if(reopened.state.adventure.trial_replay)
+      throw std::runtime_error("an explicit different seed must not offer to replay the completed route");
+    reopened.options.seed_override=false;
+    reopened.tick(select,1./120);
+    if(reopened.state.menu||reopened.room!=0||reopened.run_seed!=73||reopened.route_version()!=2||
+       reopened.run_seconds!=0||reopened.profile.expeditions[1].itinerary!=itinerary)
+      throw std::runtime_error("replaying after reopening must preserve the completed route's seed, layout and rooms");
+    std::cout<<"PASS the saved completion replays its seeded trial from room one after process restart\n";
+    auto gardens_completion=imported.profile;
+    auto &gardens_trial=gardens_completion.expeditions[1];
+    gardens_trial.district=4;
+    gardens_trial.itinerary=iceworld::make_itinerary(73,4,iceberg::RoomsPerLeg,2,iceberg::Mode::Trial);
+    gardens_completion.challenges.front().district=4;
+    if(!iceberg::SaveStore(completion).save(gardens_completion))
+      throw std::runtime_error("the completed Gardens trial did not save");
+    AdventureSession gardens_replay(options,completion);
+    std::filesystem::remove(completion);
+    gardens_replay.tick(select,1./120);
+    if(gardens_replay.state.menu||gardens_replay.district!=4||gardens_replay.run_seed!=73||
+       gardens_replay.profile.expeditions[1].itinerary!=gardens_trial.itinerary)
+      throw std::runtime_error("a completed trial keeps its district even with a fresh campaign");
     Controls retry;retry.confirm=true;imported.tick(retry,1./120);
     if(imported.state.menu||imported.room!=0||imported.run_seed!=73||imported.route_version()!=2||
        imported.run_seconds!=0||saved.itinerary!=itinerary)
