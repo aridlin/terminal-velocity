@@ -445,6 +445,30 @@ const server=http.createServer((req,res)=>{
      if(document.activeElement===accounts.pass)return 'password';
      return document.activeElement===canvas?accounts.selected:null;
     });
+    await page.evaluate(()=>{
+     window.accountSubmitProbe={original:accounts.authenticate,count:0};
+     accounts.authenticate=()=>{++window.accountSubmitProbe.count;};
+    });
+    try{
+     await page.keyboard.down('Enter');
+     assert.equal(await accountFocus(),'password');
+     await page.keyboard.down('Enter');
+     assert.equal(await page.evaluate(()=>window.accountSubmitProbe.count),0,'holding Enter after username does not submit the password');
+     await page.keyboard.up('Enter');
+     await page.keyboard.press('Tab');
+     assert.equal(await accountFocus(),0);
+     await page.keyboard.down('Enter');
+     await page.keyboard.down('Enter');
+     assert.equal(await page.evaluate(()=>window.accountSubmitProbe.count),1,'a rendered account button only confirms once per Enter press');
+    }finally{
+     await page.keyboard.up('Enter');
+     await page.evaluate(()=>{
+      accounts.authenticate=window.accountSubmitProbe.original;
+      delete window.accountSubmitProbe;
+      accounts.name.focus();
+     });
+    }
+    console.log('PASS holding Enter never repeats an account confirmation');
     const walkAccount=async key=>{
      const visits=[await accountFocus()];
      for(let i=0;i<5;i++){await page.keyboard.press(key);visits.push(await accountFocus());}

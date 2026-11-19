@@ -26,6 +26,7 @@ window.TVAccounts=class {
      }
     } else if(event.key==='Enter'){
      event.preventDefault();
+     if(event.repeat)return;
      if(field===this.name)this.pass.focus();
      else this.authenticate();
     }
@@ -54,7 +55,7 @@ window.TVAccounts=class {
     }
    } else if(this.active&&event.key==='Enter'){
     event.preventDefault();
-    this.buttons[this.selected]?.fn();
+    if(!event.repeat)this.buttons[this.selected]?.fn();
    }
   });
   const buttonAt=event=>{
