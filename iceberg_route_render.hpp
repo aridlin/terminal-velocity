@@ -17,6 +17,9 @@
     const bool has_seam=grid_.crown_seam.has_value();
     const bool has_trolley=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_trolley;});
+    const auto wheel=std::find_if(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.irrigation_scoop;});
+    const bool has_wheel=wheel!=grid_.platforms.end();
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.tram;});
     const auto ferry=[&](size_t i){return quay_ferry(i)||grid_.template_id==50;};
@@ -55,7 +58,7 @@
     constexpr uint32_t valve_color=0xf0a277,bridge_color=0xabc9e4;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
     constexpr uint32_t ferry_color=0xe4ad68,ferry_route_color=0x6f9eaa;
-    constexpr uint32_t belt_color=0xa0d6df,trolley_color=0xaee1df;
+    constexpr uint32_t belt_color=0xa0d6df,trolley_color=0xaee1df,wheel_color=0xc5a36d;
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const bool has_vents=!grid_.pulses.empty();
@@ -63,7 +66,7 @@
     constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f;
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
-      +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam);
+      +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=has_ferries&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
@@ -133,6 +136,11 @@
       auto &line=map[size_t(row(belt.y))];
       const int last=column(std::nextafter(belt.x+belt.width,belt.x));
       for(int x=column(belt.x);x<=last;++x)line[size_t(x)]='b';
+    }
+    if(has_wheel)for(int i=0;i<32;++i) {
+      const auto rim=wheel->at(wheel->period*i/32.);
+      auto &cell=map[size_t(row(rim.y))][size_t(column(rim.x+rim.w*.5))];
+      if(cell==' ')cell='s';
     }
     std::vector<std::array<int,3>> cracking_spans;
     for(size_t i=0;i<grid_.platforms.size();++i) {
@@ -253,6 +261,7 @@
       mark(center+platform.dx,platform.base.y+platform.dy,"○",stop_color);
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,"▱",trolley_color});
     }
+    if(has_wheel)mark(wheel->base.x+wheel->base.w*.5,wheel->base.y,"⊕",wheel_color);
     if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
       const auto deck=grid_.platforms[i].at(state_.elapsed);
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,"▱",ferry_color});
@@ -365,6 +374,7 @@
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
+    if(has_wheel)paint_text(legend++,2,tr("⊕ Koło nawadniające","⊕ Irrigation wheel"),wheel_color);
     if(has_refills) {
       const auto name=tr("▥ Zapas zrywu","▥ Dash refill");
       paint_text(legend,2,name,refill_color);

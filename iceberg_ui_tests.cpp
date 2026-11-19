@@ -487,6 +487,38 @@ int main(){try {
     ui_check(count_background(0x14394e)==water&&count_background(0x214b62,"≈")>0,
       "broken floes reveal the water surface without changing the basin");
   }
+  {
+    AdventureSession wheel(options,{});
+    const auto sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==57;});
+    wheel.start_tour(int(sample-iceberg::DebugTour.begin()));
+    int scoops=std::count_if(wheel.grid.platforms.begin(),wheel.grid.platforms.end(),
+      [](const auto &deck){return deck.irrigation_scoop;});
+    ui_check(scoops==4,"the irrigation wheel has four quarter-spaced scoops");
+    Controls approach;approach.move=-1;approach.jump_held=true;approach.dash_pressed=true;
+    wheel.tick(approach,.1);
+    approach.dash_pressed=false;
+    for(int i=0;i<3;++i)wheel.tick(approach,.1);
+    approach.move=0;wheel.tick(approach,.1);
+    const int support=wheel.state.player.support;
+    ui_check(support>=0&&wheel.grid.platforms[size_t(support)].irrigation_scoop,
+      "dashing off the terrace reaches an orbiting scoop");
+    const double low=wheel.state.player.rect().bottom();
+    for(int i=0;i<21;++i)wheel.tick({},.1);
+    ui_check(wheel.state.player.support==support&&wheel.state.deaths==0&&
+             wheel.state.player.rect().bottom()<low-10,
+      "the wheel carries the courier more than ten units above the boarding point");
+    wheel.state.adventure.map=wheel.state.adventure.map_room=true;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      wheel.state.adventure.language=language;
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(wheel.grid,wheel.state,rows,cols,2).draw();
+        ui_check(count_map("⊕",0xc5a36d)==1&&count_map("@",0xffd68a)==1&&
+          ui_text(frame).find(language==iceberg::Language::English?"⊕ Irrigation wheel":"⊕ Koło nawadniające")!=std::string::npos,
+          "the irrigation map shows the axle and the rider with a localized legend");
+      }
+    }
+  }
   auto rack_room=verified_room(47,73,3);
   auto rack_view=new_state(rack_room);
   rack_view.adventure.map=rack_view.adventure.map_room=true;
