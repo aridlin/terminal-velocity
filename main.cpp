@@ -965,7 +965,7 @@ bool step_ledge(Player &player, const EngineGrid &grid, const Controls &controls
     player.grounded = true;
     player.coyote_left = kCoyoteTime;
     player.dash_available = true;
-    player.jump_buffer_left = 0.;
+    // A fresh press near the top can jump from the shelf on the next step.
   }
   return true;
 }
