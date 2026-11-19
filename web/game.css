@@ -75,6 +75,37 @@
 #touch[data-compact-controls="actions"]{justify-content:center}
 #touch[data-leg-browse] .directions{flex:1}
 #touch[data-leg-browse] .directions button{flex:1;min-width:0;padding-inline:4px}
+/* Use the side space during play and keep the ordinary control rows for overlays. */
+@media(pointer:coarse) and (orientation:landscape) and (min-width:640px) and (max-height:500px){
+ body:not(.account-open) #playfield:is(:fullscreen,.expanded):has(#touch:not([data-compact-controls])){
+  --touch-gutter:150px;
+  display:grid;
+  grid-template:minmax(0,1fr) auto / minmax(0,1fr);
+ }
+ #playfield:is(:fullscreen,.expanded):has(#touch:not([data-compact-controls])) #stage{
+  grid-area:1/1;
+  margin-inline:var(--touch-gutter,0px);
+ }
+ #playfield:is(:fullscreen,.expanded) #touch:not([data-compact-controls]){
+  grid-area:1/1;
+  align-self:end;
+  align-items:end;
+  padding:6px 8px;
+  background:transparent;
+  pointer-events:none;
+ }
+ #playfield:is(:fullscreen,.expanded) #touch:not([data-compact-controls]) button{pointer-events:auto}
+ #playfield:is(:fullscreen,.expanded) #touch:not([data-compact-controls]) .directions{
+  display:grid;
+  grid-template-columns:repeat(3,42px);
+ }
+ #playfield:is(:fullscreen,.expanded) #touch:not([data-compact-controls]) .actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  width:136px;
+ }
+ #playfield:is(:fullscreen,.expanded):has(#touch:not([data-compact-controls])) #fullscreen-tools{grid-area:2/1}
+}
 #touch .directions button:disabled,.route-browse button:disabled,[data-tap="10"]:disabled,[data-tap="11"]:disabled,[data-tap="13"]:disabled{cursor:default}
 
 #downloads{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 12px;margin-top:5px;font-size:12px}
