@@ -664,6 +664,7 @@ async function toggleFullscreen(){
  }finally{fullscreenTransition=false;}
 }
 addEventListener('keydown',e=>{
+ if(e.isComposing||e.keyCode===229)return;
  if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&expanded()&&!accounts?.active)){
   e.preventDefault();e.stopImmediatePropagation();
   if(!e.repeat)toggleFullscreen();
