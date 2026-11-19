@@ -19,6 +19,37 @@
     world_text(leaf.x+glint*scale_,leaf.y,"━",0xd5eda9);
   }
 
+  static constexpr uint32_t ChuteLampReady=0xa9db8b,ChuteLampWaiting=0x78989a;
+
+  void draw_leaf_chute(const MovingPlatform &platform) {
+    const double start=platform.base.x-platform.dx+platform.base.w*.5;
+    const double end=platform.base.x+platform.dx+platform.base.w*.5;
+    const double upper=platform.base.y-platform.dy,lower=platform.base.y+platform.dy;
+    const double row=aspect_*scale_;
+    const auto trough_y=[&](double x) {
+      return upper+(lower-upper)*(x-start)/(end-start)+2*row;
+    };
+    for(double x=start;x<=end;x+=scale_) {
+      const double y=trough_y(x);
+      const bool drop=std::floor(y/row)!=std::floor((y+(lower-upper)*scale_/(end-start))/row);
+      world_text(x,y,drop?"╲":"─",0x6d947f);
+      world_text(x,y+row,drop?"╲":"━",0x5c7873);
+    }
+    for(int i=0;i<13;++i) {
+      const double x=start+std::fmod(state_.elapsed*8.5+i*2.83,end-start);
+      world_text(x,trough_y(x)-row,i%3==0?"∿":"·",0x80c3b7);
+    }
+    draw_scenery_pipe({{54,38},{54,trough_y(start)},{start,trough_y(start)}},0x718c7e);
+    // Raise the downstream lamp above the arriving leaf and its rider.
+    const double lower_lamp=lower-2.4;
+    draw_scenery_pipe({{end,lower_lamp},{end,46}},0x718c7e);
+    const int dock=platform.stop(state_.elapsed);
+    prop_art(53.,38.,{"┌─┐",dock==-1?"│→│":"│○│","└┬┘"," │ "},
+      dock==-1?ChuteLampReady:ChuteLampWaiting);
+    prop_art(end,lower_lamp,{"┌─┐",dock==1?"│←│":"│○│","└┬┘"},
+      dock==1?ChuteLampReady:ChuteLampWaiting);
+  }
+
   void draw_garden_pod(const Rect &pod) {
     const double row=aspect_*scale_;
     const int cells=std::max(3,int(std::round(pod.w/scale_)));
@@ -149,6 +180,8 @@
       if(id==56)world_art(60,30,{"╭──────────────────────╮","│  ╭─╮   ╭─╮   ╭─╮     │","│  │⠿│   │⠿│   │⠿│     │","│  ╰─╯   ╰─╯   ╰─╯     │","├──────────────────────┤","│  01    02    03      │","╰──────────────────────╯"},d.stone);
       if((id==57&&!draw_irrigation_wheel())||id==81)wheel(88,25);
       if(id==48||id==59)world_art(67,8,{"     ╭───────────────╮","  ╭──┤░░░░░░░░░░░░░░░├──╮","  ╰──┴───────────────┴──╯","    ╲       │       ╱","     ╲      │      ╱"},d.stone);
+      for(const auto &platform:grid_.platforms)
+        if(platform.chute_leaf)draw_leaf_chute(platform);
       if(id==51||id==54||id==58)for(int i=0;i<4;++i)world_art(35+i*21,22-i*2,{"┬       ┬","│ ╭─╮   │","│╭╯ ╰╮  │","╰┤   ├──╯"," ╰───╯"},d.stone);
     }
     for(const auto &bridge:grid_.growth) {

@@ -1,10 +1,6 @@
   static constexpr double ArchiveCableY=21.;
   static constexpr uint32_t ArchiveRackMarker=0xe5b276;
   static constexpr uint32_t ArchiveTrolleyDocked=0xb5dba0;
-  static int archive_trolley_stop(const MovingPlatform &platform,double time) {
-    const double offset=platform.offset(time);
-    return offset<=-1.?-1:offset>=1.?1:0;
-  }
   static const char *archive_rack_direction(const MovingPlatform &platform,double time) {
     const double motion=platform.at(time+.025).y-platform.at(time-.025).y;
     return motion<-.02?"▲":motion>.02?"▼":"■";
@@ -89,7 +85,7 @@
         y=next;
       }
       rail_cell(right,y,"╡");
-      const int docked=archive_trolley_stop(platform,state_.elapsed);
+      const int docked=platform.stop(state_.elapsed);
       for(int side:{-1,1}) {
         const double stop_x=center+side*platform.dx;
         const double stop_y=rail_y+side*platform.dy;

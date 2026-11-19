@@ -257,6 +257,15 @@ inline void add_expedition_ice(EngineGrid &room) {
   else room.ice_strips.clear();
 }
 
+inline void add_leaf_chute_flume(EngineGrid &room) {
+  if(room.district!=4||room.template_id!=58)return;
+  // An optional ride above the original stepping beds.
+  room.platforms.push_back({.base={73,40.2,6,.5},.dx=18.,.dy=3.,.period=8.4,.chute_leaf=true});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms.pop_back();
+}
+
 inline void add_reservoir_ice(EngineGrid &room) {
   if(room.district!=4||room.template_id!=55)return;
   const size_t existing=room.platforms.size();

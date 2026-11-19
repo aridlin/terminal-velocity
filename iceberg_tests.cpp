@@ -691,6 +691,33 @@ int main(int argc,char **argv) {
     gardens.begin_campaign(false);gardens.begin_run(iceberg::Mode::Endless);
     check(gardens.grid.template_id==52&&gardens.grid.solid_at(112,41)&&gardens.state.collected.back(),
       "resuming the greenhouse channel restores both the bridge and its token");
+    auto chute=verified_room(58,iceberg::mix(73),4);
+    check(chute.platforms.empty(),"older Leaf Chute layouts retain the stepped descent");
+    add_expedition_ice(chute);
+    add_leaf_chute_flume(chute);
+    check(chute.platforms.size()==1&&chute.platforms.front().chute_leaf,
+      "the current Leaf Chute has a diagonal flume ride above the stepping beds");
+    const auto &leaf=chute.platforms.front();
+    const auto top=leaf.at(0),bottom=leaf.at(leaf.period*.5);
+    check(leaf.stop(.8)==-1&&leaf.stop(leaf.period*.38)==0&&leaf.stop(leaf.period*.6)==1&&
+      bottom.x-top.x==36.&&bottom.y-top.y==6.,
+      "the leaf docks at each end of its downhill route and shows transit in between");
+    auto leaf_rider=new_state(chute);
+    leaf_rider.player.x=top.x+2;leaf_rider.player.y=top.y-kPlayerHeight;
+    leaf_rider.player.grounded=true;leaf_rider.player.support=0;
+    for(int tick=0;tick<int(leaf.period*60.);++tick)world_step(leaf_rider,chute,{},1./120);
+    check(leaf_rider.player.support==0&&leaf_rider.deaths==0&&std::abs(leaf_rider.player.x-bottom.x-2)<.01&&
+      std::abs(leaf_rider.player.rect().bottom()-bottom.y)<.01,
+      "an inputs-free ride carries the courier to the downstream stop");
+    for(unsigned seed=0;seed<32;++seed) {
+      auto sample=verified_room(58,iceberg::mix(seed),4);
+      add_expedition_ice(sample);
+      add_leaf_chute_flume(sample);
+      const auto route=verify_route(sample);
+      if(sample.platforms.size()!=1||!route.complete||route.deaths)
+        throw std::runtime_error("Leaf Chute flume blocks the original exit for seed "+std::to_string(seed));
+    }
+    check(true,"the Leaf Chute flume retains the original exit over 32 seeds");
     AdventureSession crown(options,path);
     crown.begin_campaign(true);
     crown.profile.unlocked=5;crown.run_district=5;
