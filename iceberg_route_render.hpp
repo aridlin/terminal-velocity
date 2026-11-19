@@ -356,8 +356,10 @@
     for(const auto &platform:grid_.platforms)if(platform.archive_trolley) {
       const auto deck=platform.at(state_.elapsed);
       const double center=platform.base.x+platform.base.w*.5;
-      mark(center-platform.dx,platform.base.y-platform.dy,"○",stop_color,-1);
-      mark(center+platform.dx,platform.base.y+platform.dy,"○",stop_color);
+      const int docked=archive_trolley_stop(platform,state_.elapsed);
+      for(int side:{-1,1})
+        mark(center+side*platform.dx,platform.base.y+side*platform.dy,
+          docked==side?"●":"○",docked==side?ArchiveTrolleyDocked:stop_color,side);
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,"▱",trolley_color});
     }
     if(has_wheel)mark(wheel->base.x+wheel->base.w*.5,wheel->base.y,"⊕",wheel_color);

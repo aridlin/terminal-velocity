@@ -1,5 +1,10 @@
   static constexpr double ArchiveCableY=21.;
   static constexpr uint32_t ArchiveRackMarker=0xe5b276;
+  static constexpr uint32_t ArchiveTrolleyDocked=0xb5dba0;
+  static int archive_trolley_stop(const MovingPlatform &platform,double time) {
+    const double offset=platform.offset(time);
+    return offset<=-1.?-1:offset>=1.?1:0;
+  }
   static const char *archive_rack_direction(const MovingPlatform &platform,double time) {
     const double motion=platform.at(time+.025).y-platform.at(time-.025).y;
     return motion<-.02?"▲":motion>.02?"▼":"■";
@@ -84,6 +89,16 @@
         y=next;
       }
       rail_cell(right,y,"╡");
+      const int docked=archive_trolley_stop(platform,state_.elapsed);
+      for(int side:{-1,1}) {
+        const double stop_x=center+side*platform.dx;
+        const double stop_y=rail_y+side*platform.dy;
+        const double lamp_x=stop_x+side*1.6;
+        constexpr uint32_t socket=0x6d8892;
+        draw_scenery_pipe({{stop_x,stop_y},{lamp_x,stop_y},{lamp_x,stop_y+row}},socket);
+        world_art(lamp_x-scale_,stop_y+row,{"╭┴╮","│ │","╰─╯"},socket);
+        world_art(lamp_x,stop_y+2*row,{docked==side?"●":"○"},docked==side?ArchiveTrolleyDocked:socket);
+      }
       const auto deck=platform.at(state_.elapsed);
       const double rider=deck.x+deck.w*.5;
       world_art(rider,deck.y-5.2,{"◉"},0x96b3b8);
