@@ -1610,6 +1610,7 @@ public:
       audio.play(AudioCue::Death);
       return;
     }
+    const auto switches_at_start=grid.switch_flags;
     // A retry queued between physics steps still takes priority at a doorway.
     if(!retrying) {
       if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
@@ -1629,9 +1630,10 @@ public:
     int old_crown_hits=state.crown.hits;
     const auto old_crown_beat=crown_beat(state.crown);
     double old_elapsed=state.elapsed;
-    // Bridge growth changes collision, so it follows playable room time.
+    // A newly opened bridge starts extending on the next playable frame.
+    const auto active_bridges=switches_at_start&grid.switch_flags;
     for(auto &bridge:grid.growth)
-      if((grid.switch_flags&bridge.flag)==bridge.flag)
+      if((active_bridges&bridge.flag)==bridge.flag)
         bridge.amount=std::min(1.,bridge.amount+dt/1.15);
     stepper.advance(state,grid,c,dt);
     update_water_splash(before,old_deaths,dt);
