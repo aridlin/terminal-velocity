@@ -828,7 +828,7 @@ int main(){try {
     game.tick(tab,0);
     Controls next_room;next_room.navigate=1;
     Controls previous_room;previous_room.navigate=-1;
-    for(int i=0;i<8;++i)game.tick(next_room,0);
+    for(int i=v.route.current;i<7;++i)game.tick(next_room,0);
     ui_check(v.route_room_selection==7&&v.route.current==room+1,
       "browsing reaches the last planned room without moving the courier");
     RenderGrid(game.grid,game.state,24,34,2).draw();
@@ -912,6 +912,22 @@ int main(){try {
           "the final room on the timeline shows where its exit leads");
       }
     }
+    std::vector<iceberg::Text> next_leg_preview;
+    if(mode==iceberg::Mode::Endless) {
+      game.tick(next_room,0);
+      next_leg_preview=v.route.next_rooms;
+      RenderGrid(game.grid,game.state,24,34,2).draw();
+      ui_check(v.route_room_selection==8&&v.route.current==7&&next_leg_preview.size()==8&&
+        ui_text(frame).find("Next leg 3")!=std::string::npos&&ui_text(frame).find("Room 1:")!=std::string::npos,
+        "browsing past the last room previews the first room of the next leg");
+      game.profile.language=iceberg::Language::Polish;game.sync_view();
+      RenderGrid(game.grid,game.state,24,34,2).draw();
+      ui_check(ui_text(frame).find("Następny odcinek 3")!=std::string::npos,
+        "the next route page has a localized leg heading");
+      game.tick(previous_room,0);
+      ui_check(v.route_room_selection==7,"browsing back returns to room eight of the current leg");
+      game.profile.language=iceberg::Language::English;game.sync_view();
+    }
     const int resume_option=mode==iceberg::Mode::Endless?2:3;
     const auto saved_seed=game.run_seed;
     const int saved_depth=game.depth,saved_district=game.district;
@@ -928,6 +944,10 @@ int main(){try {
       ui_check(v.route.current==0&&v.route.visited==1&&
         ui_text(frame).find("Leg 3 · Depth 16")!=std::string::npos,
         "the last exit leads to the promised leg with fresh visit markers");
+      ui_check(v.route.rooms.size()==next_leg_preview.size()&&
+        std::equal(v.route.rooms.begin(),v.route.rooms.end(),next_leg_preview.begin(),[](const auto &a,const auto &b){
+          return std::string_view(a.en)==b.en&&std::string_view(a.pl)==b.pl;
+        }),"the generated leg matches every previewed room in order");
       game.tick(map,0);
     }
   }

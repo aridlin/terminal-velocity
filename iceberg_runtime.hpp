@@ -348,7 +348,7 @@ public:
       } else {
         auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
         if(e.itinerary.size()!=iceberg::RoomsPerLeg)
-          e.itinerary=iceworld::make_itinerary(run_seed,district,iceberg::RoomsPerLeg,e.layout_version,mode);
+          e.itinerary=expedition_itinerary(run_seed);
         grid=verified_room(e.itinerary[size_t(room % iceberg::RoomsPerLeg)],
           iceberg::mix(run_seed+unsigned(depth)),district,mode==iceberg::Mode::Trial);
         if(mode==iceberg::Mode::Endless&&e.layout_version>=4) {
@@ -743,7 +743,7 @@ public:
           state.adventure.save_error?t("PRÓBA UKOŃCZONA — błąd zapisu","TRIAL COMPLETE — save error"):
           t("PRÓBA UKOŃCZONA — zapisano","TRIAL COMPLETE — record saved"),6);
       } else {
-        if(room>=iceberg::RoomsPerLeg){room=0;run_seed=iceberg::mix(run_seed+1);profile.expeditions[0].itinerary.clear();}
+        if(room>=iceberg::RoomsPerLeg){room=0;run_seed=next_expedition_seed();profile.expeditions[0].itinerary.clear();}
         load_room();persist();
       }
       return;
@@ -1273,7 +1273,8 @@ public:
       const int direction=repeated_navigation(c,dt);
       if(direction) {
         const int selected=v.route_room_selection<0?v.route.current:v.route_room_selection;
-        v.route_room_selection=std::clamp(selected+direction,0,int(v.route.rooms.size())-1);
+        const int count=int(v.route.rooms.size())+(mode==iceberg::Mode::Endless?iceberg::RoomsPerLeg:0);
+        v.route_room_selection=std::clamp(selected+direction,0,count-1);
       }
     }
     if(v.map&&mode==iceberg::Mode::Campaign&&!v.map_room&&!c.inspect) {
