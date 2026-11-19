@@ -590,7 +590,8 @@ function resize(){
  const width=stage.clientWidth,height=stage.clientHeight;
  if(width!==stageWidth||height!==stageHeight)canvasFit=null;
  stageWidth=width;stageHeight=height;
- const compact=mobile()&&!!(uiFlags&255),landscape=matchMedia('(orientation:landscape) and (max-height:500px)').matches;
+ const landscape=matchMedia('(orientation:landscape) and (max-height:500px)').matches;
+ const compact=mobile()&&(!!(uiFlags&255)||(landscape&&expanded()));
  cols=compact?(landscape?60:38):Math.max(76,Math.min(160,Math.floor(stageWidth/10)));
  rows=compact?(landscape?20:28):Math.max(24,Math.min(48,Math.floor(stageHeight/(stageWidth/cols*2))));
  previous=new Uint32Array(0);if(!started)drawBoot();

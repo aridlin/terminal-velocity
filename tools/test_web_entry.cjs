@@ -1481,6 +1481,26 @@ const server=http.createServer((req,res)=>{
   await page.locator('#toolbar [data-tap="11"]').tap();
   await page.waitForFunction(()=>!(uiFlags&128));
   console.log('PASS short fullscreen keeps the map visible and Exit fixed beside the scrollable controls');
+  await page.setViewportSize({width:640,height:240});
+  await page.locator('#fullscreen').tap();
+  await page.waitForFunction(()=>expanded()&&rows===20&&canvas.getBoundingClientRect().height>=170);
+  assert.ok(await page.evaluate(()=>{
+   const game=canvas.getBoundingClientRect();
+   const directions=document.querySelector('#touch .directions').getBoundingClientRect();
+   const actions=document.querySelector('#touch .actions').getBoundingClientRect();
+   return directions.right<=game.left&&actions.left>=game.right;
+  }),'landscape gameplay controls flank the unobstructed canvas');
+  const steering=await page.locator('#touch [data-key="1"]').boundingBox();
+  const steeringSession=await mobile.newCDPSession(page);
+  const steeringPoint={x:steering.x+steering.width/2,y:steering.y+steering.height/2};
+  await steeringSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[steeringPoint]});
+  await page.waitForFunction(()=>held===2);
+  await steeringSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForFunction(()=>held===0);
+  await steeringSession.detach();
+  await landscapeExit.tap();
+  await page.waitForFunction(()=>!expanded());
+  console.log('PASS landscape fullscreen gives the level more height while touch controls flank it');
   await page.setViewportSize({width:390,height:844});
   const action=page.locator('#touch-use');
   const openMenu=async()=>{
