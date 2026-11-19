@@ -1,8 +1,6 @@
 // Included inside RenderGrid. The maps share the terrain and route state.
   void draw_room_map(int top,int height) {
     const bool has_water=!grid_.water_basins.empty();
-    const bool has_boost=!grid_.springs.empty()||
-      std::any_of(grid_.air_fields.begin(),grid_.air_fields.end(),[](const auto &field){return field.ay<0;});
     const auto wind=std::find_if(grid_.air_fields.begin(),grid_.air_fields.end(),[&](const auto &field){
       return (field.reverses||(grid_.windbreak_roof&&field.ax!=0))&&field.active(grid_.switch_flags);
     });
@@ -30,7 +28,35 @@
       [](const auto &platform){return platform.cargo_hoist;});
     const auto powered=[](const SortingBelt &belt){return belt.speed!=0;};
     const bool has_belts=std::any_of(grid_.sorting_belts.begin(),grid_.sorting_belts.end(),powered);
-    const bool has_features=has_water||has_boost||has_wind||has_ice||has_racks||!grid_.sweets.empty();
+    const auto spring_symbol=[](const SpringPad &spring){
+      return spring.push_x>0?"↗":spring.push_x<0?"↖":"↑";
+    };
+    const auto lift_field=[&](const AirField &field){return field.ay<0&&field.active(grid_.switch_flags);};
+    std::string boost_symbols;
+    const auto add_boost_symbol=[&](const char *symbol){
+      if(boost_symbols.find(symbol)==std::string::npos)boost_symbols+=symbol;
+    };
+    for(const auto &spring:grid_.springs)add_boost_symbol(spring_symbol(spring));
+    if(std::any_of(grid_.air_fields.begin(),grid_.air_fields.end(),lift_field))add_boost_symbol("↑");
+    const bool remaining_token=std::find(state_.collected.begin(),state_.collected.end(),false)!=state_.collected.end();
+    constexpr uint32_t hazard_color=0xe09386,hazard_tint=0x63353b;
+    std::vector<std::vector<std::pair<std::string,uint32_t>>> feature_legend;
+    int feature_width=0;
+    const auto add_feature=[&](std::string label,uint32_t color){
+      const int width=iceberg::cell_length(label);
+      if(feature_legend.empty()||feature_width+3+width>cols_-4) {
+        feature_legend.emplace_back();
+        feature_width=width;
+      } else feature_width+=3+width;
+      feature_legend.back().emplace_back(std::move(label),color);
+    };
+    if(grid_.has_hazards())add_feature(tr("░ Ryzyko","░ Hazard"),hazard_color);
+    if(remaining_token)add_feature(tr("● Żeton","● Token"),0xedc278);
+    if(!boost_symbols.empty())add_feature(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
+    if(has_water)add_feature(tr("≈ Woda","≈ Water"),0x66bfd7);
+    if(has_ice)add_feature(tr("━ Lód","━ Ice"),0xa6e9ea);
+    if(has_wind)add_feature(wind_symbol+tr(" Wiatr"," Wind"),0xb4d7e4);
+    if(has_racks)add_feature(tr("▲▼ Regały","▲▼ Racks"),ArchiveRackMarker);
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
       return node.kind==InteractionKind::RouteChoice;
     });
@@ -86,7 +112,7 @@
       if(const int i=field_landmark(node);i>=0)has_landmark[size_t(i)]=true;
     const bool paper_landmarks=has_landmark[0]||has_landmark[1];
     const bool tube_landmark=has_landmark[2];
-    const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
+    const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
       +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel)
       +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist);
@@ -112,12 +138,16 @@
     auto column=[&](double x){return std::clamp(int(x/grid_.width()*width),0,width-1);};
     auto row=[&](double y){return std::clamp(int((y-world_top)/(grid_.height()-world_top)*map_rows),0,map_rows-1);};
 
-    // Exposed edges keep solid foundations from filling the map at compact sizes.
+    // A coarse cell can contain both the landing and its spikes.
     std::vector<std::string> map(size_t(map_rows),std::string(size_t(width),' '));
+    std::vector<std::vector<bool>> hazards(size_t(map_rows),std::vector<bool>(size_t(width),false));
     for(int y=world_top;y<grid_.height();++y) {
-      auto &line=map[size_t(row(y))];
+      const int map_y=row(y);
+      auto &line=map[size_t(map_y)];
       for(int x=0;x<grid_.width();++x) {
-        auto &tile=line[size_t(column(x))];
+        const int map_x=column(x);
+        auto &tile=line[size_t(map_x)];
+        if(grid_.hazard_at(x,y))hazards[size_t(map_y)][size_t(map_x)]=true;
         if(grid_.solid_at(x,y)) {
           const bool edge=!grid_.solid_at(x,y-1)||
             (y+1<grid_.height()&&!grid_.solid_at(x,y+1))||
@@ -125,7 +155,6 @@
             (x+1<grid_.width()&&!grid_.solid_at(x+1,y));
           if(edge)tile='#';
         }
-        else if(tile==' '&&grid_.hazard_at(x,y))tile='!';
       }
     }
     for(const auto &strip:grid_.ice_strips) {
@@ -209,9 +238,18 @@
       for(int x=start;x<=last;++x)line[size_t(x)]=tile;
     }
     for(int y=0;y<map_rows;++y)for(int x=0;x<width;++x) {
-      switch(map[size_t(y)][size_t(x)]) {
+      const char tile=map[size_t(y)][size_t(x)];
+      if(hazards[size_t(y)][size_t(x)]) {
+        auto &background=buffer_[first+y][left+x].background;
+        if(background!=water_surface_background&&background!=water_depth_background)
+          background=blend_light(background,hazard_tint,.75);
+        if(tile==' '||tile=='#'||tile=='~') {
+          paint_text(first+y,left+x,"░",hazard_color);
+          continue;
+        }
+      }
+      switch(tile) {
       case '#':paint_text(first+y,left+x,"▪",0x8ba2ae);break;
-      case '!':paint_text(first+y,left+x,"░",0xa26666);break;
       case '=':paint_text(first+y,left+x,"─",0x9dd4dd);break;
       case ':':paint_text(first+y,left+x,"┆",0x718c9d);break;
       case '-':paint_text(first+y,left+x,"┄",0x887b96);break;
@@ -311,21 +349,14 @@
       mark(vent.area.x+vent.area.w*.5,vent.area.bottom(),
         active?"♨":warning?"↑":"╧",active?vent_active:warning?vent_warning:vent_idle);
     }
-    bool remaining_token=false;
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];
       mark(x,y,"●",0xedc278);
-      remaining_token=true;
     }
-    std::string boost_symbols;
-    auto boost=[&](double x,double y,const char *symbol) {
-      mark(x,y,symbol,0x9dd39c);
-      if(boost_symbols.find(symbol)==std::string::npos)boost_symbols+=symbol;
-    };
     for(const auto &spring:grid_.springs)
-      boost(spring.x+spring.w*.5,spring.y,spring.push_x>0?"↗":spring.push_x<0?"↖":"↑");
-    for(const auto &field:grid_.air_fields)if(field.ay<0&&field.active(grid_.switch_flags))
-      boost(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑");
+      mark(spring.x+spring.w*.5,spring.y,spring_symbol(spring),0x9dd39c);
+    for(const auto &field:grid_.air_fields)if(lift_field(field))
+      mark(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑",0x9dd39c);
     if(has_wind)
       mark(wind->area.x+wind->area.w*.5,wind->area.y+3,wind_symbol,0xb4d7e4);
     for(const auto &platform:grid_.platforms)if(platform.archive_rack) {
@@ -446,18 +477,15 @@
       paint_text(legend,separator," · ",0xc7d9df);
       paint_text(legend++,separator+3,tr("╍ Pękają","╍ Cracking"),cracking_color);
     }
-    int feature_col=2;
-    auto label=[&](const std::string &entry,uint32_t color) {
-      if(feature_col>2){paint_text(legend,feature_col," · ",0xc7d9df);feature_col+=3;}
-      paint_text(legend,feature_col,entry,color);
-      feature_col+=int(glyphs(entry).size());
-    };
-    if(remaining_token)label(tr("● Żeton","● Token"),0xedc278);
-    if(!boost_symbols.empty())label(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
-    if(has_water)label(tr("≈ Woda","≈ Water"),0x66bfd7);
-    if(has_ice)label(tr("━ Lód","━ Ice"),0xa6e9ea);
-    if(has_wind)label(wind_symbol+tr(" Wiatr"," Wind"),0xb4d7e4);
-    if(has_racks)label(tr("▲▼ Regały","▲▼ Racks"),ArchiveRackMarker);
+    for(const auto &line:feature_legend) {
+      int x=2;
+      for(const auto &[label,color]:line) {
+        if(x>2){paint_text(legend,x," · ",0xc7d9df);x+=3;}
+        paint_text(legend,x,label,color);
+        x+=iceberg::cell_length(label);
+      }
+      ++legend;
+    }
   }
 
   void draw_iceberg_route_map(int top,int height) {

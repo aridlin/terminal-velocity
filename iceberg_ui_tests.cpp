@@ -213,6 +213,38 @@ int main(){try {
       count+=cell.glyph==glyph&&cell.rgb==rgb;
     return count;
   };
+  {
+    auto hulls=verified_room(403,iceberg::mix(73),0);
+    auto view=new_state(hulls);
+    view.adventure.map=view.adventure.map_room=true;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      view.adventure.language=language;
+      const auto legend=language==iceberg::Language::English?"░ Hazard":"░ Ryzyko";
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{56,20},std::pair{110,34}}) {
+        view.player.x=hulls.spawn_x;view.player.y=hulls.spawn_y;
+        RenderGrid(hulls,view,rows,cols,2).draw();
+        const int width=std::min(cols-8,72),left=(cols-width)/2;
+        auto danger_column=[&](int x) {
+          return left+x*width/hulls.width();
+        };
+        auto has_ledge_spike=[&](int x) {
+          return std::any_of(frame.begin()+6,frame.end()-6,[&](const auto &line){
+            const auto &cell=line[size_t(danger_column(x))];
+            return cell.glyph=="░"&&cell.rgb==0xe09386&&
+              std::count_if(line.begin(),line.end(),[](const auto &c){return c.rgb==0xe09386;})<width/2;
+          });
+        };
+        ui_check(has_ledge_spike(30)&&has_ledge_spike(80)&&ui_text(frame).find(legend)!=std::string::npos,
+          "both Between the hulls spikes appear above the fall hazard and have a localized legend");
+        view.player.x=30.-kPlayerWidth*.5;view.player.y=47.-kPlayerHeight*.5;
+        RenderGrid(hulls,view,rows,cols,2).draw();
+        ui_check(std::any_of(frame.begin()+6,frame.end()-6,[&](const auto &line){
+          const auto &cell=line[size_t(danger_column(30))];
+          return cell.glyph=="@"&&cell.rgb==0xffd68a&&cell.background==0x4e2e35;
+        }),"the courier stays visible when its map marker overlaps a spike");
+      }
+    }
+  }
   AdventureSession valves(options,"/tmp/tv-ui-room-valves-unused");
   valves.begin_campaign(true);
   valves.grid=iceworld::build_heatworks_sequence(true);
