@@ -175,6 +175,8 @@ function translateUI(){
  const reading=!!(overlay&4);
  const choosingReply=!!(overlay&replyChoiceFlag);
  const inspecting=!!(overlay&8);
+ const closingOverlay=inspecting||!!(overlay&(64|128));
+ const navigationBlocked=inspecting||(reading&&!questRecordOpen());
  const hasPreviousPage=!!(overlay&previousInspectionPageFlag);
  const hasNextPage=!!(overlay&nextInspectionPageFlag);
  const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
@@ -201,9 +203,9 @@ function translateUI(){
  }
  const browsingQuests=!!(overlay&64)&&!reading;
  touchUse.hidden=inspecting;
- if(inSettings||showingPause){
+ if(inSettings||closingOverlay||showingPause){
   for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-buttons > [data-tap="9"]'))
-   button.textContent=inSettings?tr('Wróć','Back'):tr('Wznów','Resume');
+   button.textContent=inSettings||closingOverlay?tr('Wróć','Back'):tr('Wznów','Resume');
  }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  const menuSelection=document.querySelector('#menu-selection-actions');
@@ -254,7 +256,7 @@ function translateUI(){
  const districtControl=!!(uiFlags&16384);
  // Keep the initiating button's space so the confirmation does not move under it.
  retryButton.hidden=!!(uiFlags&1)&&!districtControl&&!replacingRun;
- retryButton.disabled=!started||reading||inspecting||!!(overlay&(64|128));
+ retryButton.disabled=!started||reading||closingOverlay;
  retryButton.style.visibility=replacingRun?'hidden':'';
  if(districtControl||replacingRun){
   retryButton.textContent=tr('Od nowa','New run');
@@ -263,7 +265,9 @@ function translateUI(){
  for(const button of document.querySelectorAll('[data-tap="11"]')){
   button.textContent=districtControl?tr('Dzielnica','District'):tr('Mapa','Map');
   button.setAttribute('aria-label',districtControl?tr('Zmień dzielnicę','Change district'):button.textContent);
+  button.disabled=!started||navigationBlocked;
  }
+ for(const button of document.querySelectorAll('[data-tap="10"]'))button.disabled=!started||navigationBlocked;
  const touchInspect=document.querySelector('#touch-inspect');
  const touchControls=document.querySelector('#touch');
  if(inMenu||overlay&128||showingPause||reading||inspecting||browsingQuests){
