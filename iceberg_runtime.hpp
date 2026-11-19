@@ -10,7 +10,6 @@ public:
   int save_slot=1;
   bool profile_action_busy=false;
   std::optional<iceberg::Profile> before_tour;
-  std::vector<std::array<int,iceberg::RoomsPerLeg>> completed_expedition_legs;
   int tour_scene=-1;
   EngineGrid grid;
   GameState state;
@@ -272,7 +271,6 @@ public:
     }
     const auto previous_language=profile.language;
     save_slot=slot;
-    completed_expedition_legs.clear();
     saves=iceberg::SaveStore(iceberg::SaveStore::slot_file(save_base,slot));
     profile={};
     if(!saves.load(profile))profile.language=previous_language;
@@ -735,7 +733,6 @@ public:
       district=e.district;room=e.room;depth=e.depth;run_seed=e.seed;
       run_seconds=e.seconds;run_deaths=e.deaths;run_treasures=e.treasures;
     } else {
-      if(!trial)completed_expedition_legs.clear();
       district=area;room=depth=0;
       run_seed=replay?e.seed:options.seed_override?options.seed:trial?default_trial_seed(area):iceberg::mix(run_seed+1);
       iceberg::Expedition restarted;
@@ -782,12 +779,13 @@ public:
           t("PRÓBA UKOŃCZONA — zapisano","TRIAL COMPLETE — record saved"),6);
       } else {
         if(room>=iceberg::RoomsPerLeg) {
-          auto &itinerary=profile.expeditions[0].itinerary;
+          auto &expedition=profile.expeditions[0];
+          auto &itinerary=expedition.itinerary;
           if(itinerary.size()==iceberg::RoomsPerLeg) {
             std::array<int,iceberg::RoomsPerLeg> leg;
             std::copy(itinerary.begin(),itinerary.end(),leg.begin());
-            completed_expedition_legs.push_back(leg);
-          } else completed_expedition_legs.clear();
+            expedition.completed_legs.push_back(leg);
+          } else expedition.completed_legs.clear();
           room=0;run_seed=next_expedition_seed();itinerary.clear();
         }
         load_room();persist();

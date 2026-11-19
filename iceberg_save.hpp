@@ -70,7 +70,11 @@ class SaveStore {
   // Older clients ignore and preserve it when rewriting their saves.
   static constexpr uint32_t focus_pause_disabled = uint32_t(1)<<31;
   static constexpr uint32_t smooth_camera_enabled = uint32_t(1)<<30;
-  static bool read(const std::filesystem::path &file, Profile &p, const std::string *matching_payload=nullptr) {
+  static bool valid_room_id(int id) {
+    return (id>=0&&id<72)||(id>=400&&id<=405)||(id>=420&&id<=425)||(id>=500&&id<=511);
+  }
+  static bool read(const std::filesystem::path &file, Profile &p,
+                   const std::string *matching_payload=nullptr,uint64_t *save_hash=nullptr) {
     std::error_code size_error;auto bytes=std::filesystem::file_size(file,size_error);
     if(size_error||bytes>65536)return false;
     std::ifstream in(file, std::ios::binary);
@@ -115,7 +119,7 @@ class SaveStore {
           !record_valid(r)) return false;
     if (!(data >> count) || count > 512) return false;
     q.itinerary.resize(count);
-    for (int &id : q.itinerary) if (!(data >> id) || !((id>=0&&id<72)||(id>=400&&id<=405)||(id>=420&&id<=425)||(id>=500&&id<=511))) return false;
+    for (int &id : q.itinerary) if (!(data >> id) || !valid_room_id(id)) return false;
     if (magic!="TVICE2" && !(data >> q.at_content_boundary))return false;
     if (!(data >> q.hidden_room >> q.visit_district) || q.hidden_room < -1 || q.hidden_room > 2 || q.visit_district < -1 || q.visit_district >= DistrictCount) return false;
     for (auto &e : q.expeditions) {
@@ -127,7 +131,7 @@ class SaveStore {
         !std::isfinite(e.room_seconds) || e.room_seconds < 0 || e.room_seconds > 1e9 ||
         !std::isfinite(e.seconds) || e.seconds < 0 || e.seconds > 1e9 || count > 512) return false;
       e.itinerary.resize(count);
-      for (int &id : e.itinerary) if (!(data >> id) || !((id>=0&&id<72)||(id>=400&&id<=405)||(id>=420&&id<=425)||(id>=500&&id<=511))) return false;
+      for (int &id : e.itinerary) if (!(data >> id) || !valid_room_id(id)) return false;
     }
     if(magic!="TVICE2") {
       if(!(data>>count)||count>128)return false;
@@ -168,7 +172,75 @@ class SaveStore {
     q.cosmetics&=~(focus_pause_disabled|smooth_camera_enabled);
     q.language = Language(language);
     p = std::move(q);
+    if(save_hash)*save_hash=hash;
     return true;
+  }
+
+  std::array<std::filesystem::path,2> history_files() const {
+    auto first=path_,second=path_;
+    first+=".routes";second+=".routes.bak";
+    return {first,second};
+  }
+  static bool history_header(std::istream &input,uint64_t anchor,uint64_t &body_hash) {
+    std::string magic;uint64_t saved_anchor=0;
+    return (input>>magic>>saved_anchor>>body_hash)&&magic=="TVROUTE1"&&saved_anchor==anchor&&input.get()=='\n';
+  }
+  void restore_history(Expedition &expedition,uint64_t anchor) const {
+    const size_t max_legs=size_t(expedition.depth/RoomsPerLeg);
+    if(!expedition.active||!max_legs)return;
+    for(const auto &file:history_files()) {
+      std::error_code ec;
+      const auto bytes=std::filesystem::file_size(file,ec);
+      if(ec||bytes>64+max_legs*(4*RoomsPerLeg+1))continue;
+      std::ifstream input(file,std::ios::binary);
+      uint64_t body_hash=0;
+      if(!history_header(input,anchor,body_hash))continue;
+      const std::string body((std::istreambuf_iterator<char>(input)),{});
+      if(checksum(body)!=body_hash)continue;
+      std::istringstream data(body);
+      size_t count=0;
+      if(!(data>>count)||!count||count>max_legs)continue;
+      if(count>body.size()/(2*RoomsPerLeg))continue;
+      std::vector<std::array<int,RoomsPerLeg>> legs(count);
+      const bool valid=std::all_of(legs.begin(),legs.end(),[&](auto &leg) {
+        return std::all_of(leg.begin(),leg.end(),[&](int &id){return (data>>id)&&valid_room_id(id);});
+      });
+      data>>std::ws;
+      if(valid&&data.eof()) {
+        expedition.completed_legs=std::move(legs);
+        return;
+      }
+    }
+  }
+  void save_history(const Expedition &expedition,uint64_t anchor,uint64_t previous,
+                    std::filesystem::path temporary) const {
+    const auto &legs=expedition.completed_legs;
+    if(!expedition.active||legs.empty())return;
+    const auto files=history_files();
+    const auto matches=[](const auto &file,uint64_t hash) {
+      std::ifstream input(file,std::ios::binary);uint64_t body_hash=0;
+      return history_header(input,hash,body_hash);
+    };
+    if(matches(files[0],anchor)||matches(files[1],anchor))return;
+
+    // Keep the companion for the previous valid save until its replacement
+    // commits. Both the primary save and its recovery copy can find a match.
+    const auto &target=files[matches(files[0],previous)?1:0];
+    std::ostringstream body;
+    body<<legs.size()<<'\n';
+    for(const auto &leg:legs) {
+      for(int id:leg)body<<id<<' ';
+      body<<'\n';
+    }
+    const auto payload=body.str();
+    temporary+=".routes";
+    std::ofstream output(temporary,std::ios::binary|std::ios::trunc);
+    output<<"TVROUTE1 "<<anchor<<' '<<checksum(payload)<<'\n'<<payload;
+    output.close();
+    if(!output||!sync_file(temporary)||!replace_file(temporary,target)) {
+      std::error_code ec;
+      std::filesystem::remove(temporary,ec);
+    }
   }
 public:
   // Importers validate the exact file, without consulting recovery siblings.
@@ -198,9 +270,17 @@ public:
         if(checksum(payload)==hash&&(body>>version))protected_future=(magic.rfind("TVICE",0)==0&&magic!="TVICE2"&&magic!="TVICE3"&&magic!="TVICE4"&&magic!="TVICE5"&&magic!="TVICE6")||version>ContentVersion;
       }
     }
-    if (read(path_, p)) return true;
+    uint64_t anchor=0;
+    if (read(path_, p,nullptr,&anchor)) {
+      restore_history(p.expeditions[0],anchor);
+      return true;
+    }
     auto backup = path_; backup += ".bak";
-    if (read(backup, p)) { recovered = true; return true; }
+    if (read(backup, p,nullptr,&anchor)) {
+      recovered=true;
+      restore_history(p.expeditions[0],anchor);
+      return true;
+    }
     return false;
   }
   bool save(const Profile &p) {
@@ -248,29 +328,39 @@ public:
     for(int d=0;d<DistrictCount;++d)
       body<<p.route_visited[size_t(d)]<<' '<<p.route_choices[size_t(d)]<<' '<<p.route_decisions[size_t(d)]<<'\n';
     auto payload = body.str();
+    const auto anchor=checksum(payload);
     Profile verified;
-    // Idle autosaves must leave the previous distinct progress in the recovery file.
-    if (read(path_, verified, &payload)) return true;
 
-    std::error_code ec;
-    if (!path_.parent_path().empty()) std::filesystem::create_directories(path_.parent_path(), ec);
-    if (ec) return false;
     auto temp = path_;
 #ifdef _WIN32
     temp += "." + std::to_string(GetCurrentProcessId()) + ".tmp";
 #else
     temp += "." + std::to_string(::getpid()) + ".tmp";
 #endif
+    // Idle autosaves must leave the previous distinct progress in the recovery file.
+    if(read(path_,verified,&payload)) {
+      uint64_t previous=0;
+      auto backup=path_;backup+=".bak";
+      if(!p.expeditions[0].completed_legs.empty()) {
+        read(backup,verified,nullptr,&previous);
+        save_history(p.expeditions[0],anchor,previous,temp);
+      }
+      return true;
+    }
+    std::error_code ec;
+    if (!path_.parent_path().empty()) std::filesystem::create_directories(path_.parent_path(), ec);
+    if (ec) return false;
     {
       std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-      out << "TVICE6 " << checksum(payload) << '\n' << payload;
+      out << "TVICE6 " << anchor << '\n' << payload;
       out.close();
       if (!out) return false;
     }
     if (!sync_file(temp) || !read(temp, verified)) { std::filesystem::remove(temp, ec); return false; }
     Profile current;
     // Never replace a healthy recovery copy with a damaged primary save.
-    if (read(path_, current)) {
+    uint64_t previous=0;
+    if (read(path_, current,nullptr,&previous)) {
       auto backup = path_; backup += ".bak";
       if(!read(backup,verified)&&!preserve_unreadable_file(backup)) {
         std::filesystem::remove(temp,ec);
@@ -282,7 +372,11 @@ public:
     } else if(!preserve_unreadable_file(path_)) {
       std::filesystem::remove(temp,ec);
       return false;
+    } else {
+      auto backup=path_;backup+=".bak";
+      read(backup,verified,nullptr,&previous);
     }
+    save_history(p.expeditions[0],anchor,previous,temp);
     bool ok=replace_file(temp,path_);
     if (!ok) std::filesystem::remove(temp, ec);
     return ok;
