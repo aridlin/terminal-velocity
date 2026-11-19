@@ -82,12 +82,14 @@
     std::array<bool,field_landmarks.size()> has_landmark{};
     for(const auto &node:grid_.interactions)
       if(const int i=field_landmark(node);i>=0)has_landmark[size_t(i)]=true;
+    const bool paper_landmarks=has_landmark[0]||has_landmark[1];
+    const bool tube_landmark=has_landmark[2];
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
       +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel)
-      +int(std::count(has_landmark.begin(),has_landmark.end(),true));
+      +int(paper_landmarks)+int(tube_landmark);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
-    const int title_rows=has_ferries&&title.size()==1?1:2;
+    const int title_rows=(has_ferries||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
     const int left=(cols_-width)/2,first=top+title_rows+1;
     int title_row=top;
@@ -399,10 +401,20 @@
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
     if(has_wheel)paint_text(legend++,2,tr("⊕ Koło nawadniające","⊕ Irrigation wheel"),wheel_color);
-    for(size_t i=0;i<field_landmarks.size();++i)if(has_landmark[i]) {
-      const auto &landmark=field_landmarks[i];
-      paint_text(legend++,2,landmark.legend.get(state_.adventure.language),landmark.color);
+    if(paper_landmarks) {
+      int x=2;
+      if(has_landmark[0]) {
+        const auto label=field_landmarks[0].legend.get(state_.adventure.language);
+        paint_text(legend,x,label,field_landmarks[0].color);
+        x+=iceberg::cell_length(label);
+        if(has_landmark[1]){paint_text(legend,x," · ",0xc7d9df);x+=3;}
+      }
+      if(has_landmark[1])
+        paint_text(legend,x,field_landmarks[1].legend.get(state_.adventure.language),field_landmarks[1].color);
+      ++legend;
     }
+    if(tube_landmark)
+      paint_text(legend++,2,field_landmarks[2].legend.get(state_.adventure.language),field_landmarks[2].color);
     if(has_refills) {
       const auto name=tr("▥ Zapas zrywu","▥ Dash refill");
       paint_text(legend,2,name,refill_color);
