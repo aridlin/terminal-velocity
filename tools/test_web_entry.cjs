@@ -985,6 +985,13 @@ const server=http.createServer((req,res)=>{
    await expedition.waitForFunction(()=>saveStatus.textContent==='Save slot changed — choose the file again');
    assert.equal(replacementPrompt,false,'a stale picker cannot offer to replace the newly selected slot');
   } finally {expedition.off('dialog',declineStaleImport);}
+  const [slotExport]=await Promise.all([
+   expedition.waitForEvent('download'),expedition.locator('#export-save').click(),
+  ]);
+  assert.equal(slotExport.suggestedFilename(),'terminal-velocity-slot-2.iceberg');
+  assert.equal(fs.readFileSync(await slotExport.path(),'utf8'),
+   await expedition.evaluate(()=>Module.FS.readFile(currentSavePath(),{encoding:'utf8'})));
+  console.log('PASS the downloaded backup names its selected save slot');
   await expedition.close();
   console.log('PASS desktop Expedition mouse navigation browses rooms and survives switching views');
   console.log('PASS desktop mouse controls reach Settings and select a save slot');
