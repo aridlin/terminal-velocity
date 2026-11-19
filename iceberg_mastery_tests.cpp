@@ -50,9 +50,22 @@ int main() {
       game.grid.sweets={{game.state.player.x+.3,game.state.player.y+.5}};
       game.state.collected.assign(1,false);
       game.tick({},1./120);
-      game.interact();
+      const auto harbor_time=game.state.elapsed;
+      Controls doorway;
+      doorway.interact=doorway.jump_held=doorway.jump_pressed=doorway.dash_pressed=true;
+      doorway.move=1;
+      game.tick(doorway,.1);
       if(game.grid.template_id!=iceberg::BreakwaterSurvey||!(game.profile.cosmetics&iceberg::SurveyTransitPass))
         throw std::runtime_error("the final token should open the survey entrance");
+      if(game.state.elapsed!=0.||game.state.player.x!=game.grid.spawn_x||
+          game.state.player.y!=game.grid.spawn_y||!game.state.player.can_dash())
+        throw std::runtime_error("entering the survey must consume same-frame movement, jump and dash");
+      game.tick(doorway,.1);
+      if(game.profile.revisit.active||game.state.elapsed!=harbor_time||
+          game.state.player.x!=entry.x||game.state.player.y!=entry.bottom()-kPlayerHeight||
+          !game.state.player.can_dash())
+        throw std::runtime_error("returning from the survey must restore the exact entrance");
+      game.tick(doorway,.1);
       AdventureSession resumed(options,file);
       resumed.begin_campaign(false);
       if(resumed.grid.template_id!=iceberg::BreakwaterSurvey||!resumed.profile.revisit.active)
