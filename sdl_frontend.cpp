@@ -1116,9 +1116,15 @@ int terminal_window_main(int argc,char **argv) {
       }
       if(args.smoke){session.state.menu=false;maxframes=120;}
       std::array<bool,SDL_NUM_SCANCODES> held{};
+      const auto left=[&]{return held[SDL_SCANCODE_A]||held[SDL_SCANCODE_LEFT];};
+      const auto right=[&]{return held[SDL_SCANCODE_D]||held[SDL_SCANCODE_RIGHT];};
+      const auto up=[&]{return held[SDL_SCANCODE_W]||held[SDL_SCANCODE_UP];};
+      const auto down=[&]{return held[SDL_SCANCODE_S]||held[SDL_SCANCODE_DOWN];};
+      const auto horizontal=[&]{return int(right())-int(left());};
+      const auto vertical=[&]{return int(down())-int(up());};
       bool focused=true,fullscreen=false;
       int cell_w=10,cell_h=20,origin_x=0,origin_y=0,zoom=10;
-      int smoke_initial_columns=0;bool smoke_zoomed=false,smoke_reset=false;
+      int smoke_initial_columns=0;bool smoke_zoomed=false,smoke_reset=false,smoke_tap=false;
       cell_frame_sink=[&](const CellFrame &frame){
         color(ink);SDL_RenderClear(ren);
         // Draw the same per-cell backgrounds as ANSI, coalesced into row runs.
@@ -1139,11 +1145,21 @@ int terminal_window_main(int argc,char **argv) {
           zoom_event.key.keysym.scancode=frames==20?SDL_SCANCODE_EQUALS:SDL_SCANCODE_0;
           zoom_event.key.keysym.mod=KMOD_CTRL;SDL_PushEvent(&zoom_event);
         }
+        if(args.smoke&&frames==60) {
+          for(auto type:{SDL_KEYDOWN,SDL_KEYUP})
+            for(auto key:{SDL_SCANCODE_LEFT,SDL_SCANCODE_DOWN,SDL_SCANCODE_X}) {
+              SDL_Event tap{};tap.type=type;tap.key.keysym.scancode=key;
+              SDL_PushEvent(&tap);
+            }
+        }
         SDL_Event event;
         while(SDL_PollEvent(&event)) {
           if(event.type==SDL_QUIT)c.quit=true;
           if(event.type==SDL_WINDOWEVENT) {
-            if(event.window.event==SDL_WINDOWEVENT_FOCUS_LOST){focused=false;held.fill(false);}
+            if(event.window.event==SDL_WINDOWEVENT_FOCUS_LOST){
+              focused=false;held.fill(false);
+              c.move_pressed.reset();c.aim_pressed.reset();
+            }
             if(event.window.event==SDL_WINDOWEVENT_FOCUS_GAINED)focused=true;
           }
           if(event.type==SDL_KEYUP)held[event.key.keysym.scancode]=false;
@@ -1170,20 +1186,37 @@ int terminal_window_main(int argc,char **argv) {
           c.quit|=key==SDL_SCANCODE_Q;
           if(key>=SDL_SCANCODE_1&&key<=SDL_SCANCODE_7)c.select_level=int(key-SDL_SCANCODE_1)+1;
           if(key==SDL_SCANCODE_PAGEUP||key==SDL_SCANCODE_PAGEDOWN)c.tour_page=key==SDL_SCANCODE_PAGEUP?-1:1;
-          if(key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP)c.navigate=-1;
+          // Preserve aim when both edges of a quick tap arrive before a physics tick.
+          if(key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP) {
+            c.navigate=-1;
+            c.aim_pressed=vertical();
+          }
           if(key==SDL_SCANCODE_S||key==SDL_SCANCODE_DOWN) {
             c.navigate=1;
+            c.aim_pressed=vertical();
             c.fast_fall_pressed=true;
           }
-          if(key==SDL_SCANCODE_A||key==SDL_SCANCODE_LEFT)c.browse_leg=-1;
-          if(key==SDL_SCANCODE_D||key==SDL_SCANCODE_RIGHT)c.browse_leg=1;
+          if(key==SDL_SCANCODE_A||key==SDL_SCANCODE_LEFT) {
+            c.browse_leg=-1;
+            c.move_pressed=horizontal();
+          }
+          if(key==SDL_SCANCODE_D||key==SDL_SCANCODE_RIGHT) {
+            c.browse_leg=1;
+            c.move_pressed=horizontal();
+          }
           if(key==SDL_SCANCODE_F11){fullscreen=!fullscreen;SDL_SetWindowFullscreen(window,fullscreen?SDL_WINDOW_FULLSCREEN_DESKTOP:0);}
         }
-        c.move=int(held[SDL_SCANCODE_D]||held[SDL_SCANCODE_RIGHT])-int(held[SDL_SCANCODE_A]||held[SDL_SCANCODE_LEFT]);
-        c.jump_held=held[SDL_SCANCODE_SPACE]||held[SDL_SCANCODE_W]||held[SDL_SCANCODE_UP];
-        c.fast_fall=held[SDL_SCANCODE_S]||held[SDL_SCANCODE_DOWN];
-        c.aim_y=int(c.fast_fall)-int(held[SDL_SCANCODE_W]||held[SDL_SCANCODE_UP]);
-        if(args.smoke){c.move=1;c.jump_held=true;}
+        c.move=horizontal();
+        c.jump_held=held[SDL_SCANCODE_SPACE]||up();
+        c.fast_fall=down();
+        c.aim_y=vertical();
+        if(left()&&right())c.move_pressed=0;
+        if(up()&&down())c.aim_pressed=0;
+        if(args.smoke){
+          if(frames==60)smoke_tap=c.move==0&&c.aim_y==0&&c.dash_pressed&&
+            c.move_pressed==-1&&c.aim_pressed==1;
+          c.move=1;c.jump_held=true;
+        }
         int w,h;SDL_GetRendererOutputSize(ren,&w,&h);
         int logical_w,logical_h;SDL_GetWindowSize(window,&logical_w,&logical_h);
         const auto viewport=unicode_viewport(w,h,logical_w,logical_h,zoom);
@@ -1219,7 +1252,11 @@ int terminal_window_main(int argc,char **argv) {
       }
       session.persist();cell_frame_sink={};
       if(session.legacy_requested)result=10;
-      if(args.smoke){std::cout<<"SDL cell view smoke x="<<session.state.player.x<<" zoom="<<smoke_zoomed<<" reset="<<smoke_reset<<'\n';if(session.state.player.x<10||!smoke_zoomed||!smoke_reset)result=3;}
+      if(args.smoke){
+        std::cout<<"SDL cell view smoke x="<<session.state.player.x<<" zoom="<<smoke_zoomed
+                 <<" reset="<<smoke_reset<<" tap="<<smoke_tap<<'\n';
+        if(session.state.player.x<10||!smoke_zoomed||!smoke_reset||!smoke_tap)result=3;
+      }
     }
   }
   SDL_DestroyRenderer(ren);ren=nullptr;SDL_DestroyWindow(window);SDL_Quit();return result;
