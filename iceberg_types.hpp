@@ -165,6 +165,9 @@ inline constexpr int EpilogueArrival = DistrictCount + 1;
 inline constexpr int FirstHarborMissionArrival = EpilogueArrival + 1;
 static_assert(FirstHarborMissionArrival + 2 <= 15);
 inline constexpr uint64_t arrival_bits(int scene) { return uint64_t(scene) << ArrivalShift; }
+inline constexpr int ForkResumeShift = 32;
+inline constexpr uint64_t ForkResumeMask = uint64_t(3) << ForkResumeShift;
+inline constexpr uint64_t fork_resume_bits(int leg) { return uint64_t(leg+1) << ForkResumeShift; }
 struct Dialogue {
   std::vector<DialogueLine> lines;
   size_t page = 0;
