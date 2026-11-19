@@ -149,16 +149,22 @@ int main() {
     loud_layers.set_mix(1,1,1);loud_layers.update(AudioScene::Play,1,.02,false);loud_layers.render(loud.data(),960);
     check(std::all_of(loud.begin(),loud.end(),[](float x){return std::abs(x)<1e-7f;}),"focus loss silences the entire layered score immediately");
     {
-      GameAudio dry_score,echo_score;
+      GameAudio dry_score,echo_score,interrupted_score;
       dry_score.init("assets/audio",false,true);
       echo_score.init("assets/audio",false,true);
-      dry_score.set_mix(1,0,0);echo_score.set_mix(1,0,0);
-      echo_score.set_climax(true,1);
-      constexpr size_t rate=48000,frames_per_score=rate*4,block_frames=960;
-      std::vector<float> dry(frames_per_score*2),echo(frames_per_score*2);
+      interrupted_score.init("assets/audio",false,true);
+      dry_score.set_mix(1,0,0);echo_score.set_mix(1,0,0);interrupted_score.set_mix(1,0,0);
+      echo_score.set_climax(true,1);interrupted_score.set_climax(true,1);
+      constexpr size_t rate=48000,frames_per_score=rate*6,block_frames=960;
+      std::vector<float> dry(frames_per_score*2),echo(frames_per_score*2),interrupted(frames_per_score*2);
       for(size_t frame=0;frame<frames_per_score;frame+=block_frames) {
         dry_score.update(AudioScene::Play,3,.02);echo_score.update(AudioScene::Play,3,.02);
-        if(!dry_score.render(dry.data()+frame*2,block_frames)||!echo_score.render(echo.data()+frame*2,block_frames))
+        interrupted_score.muted=frame>=rate&&frame<rate*3/2;
+        const bool focused=frame<rate*3||frame>=rate*21/5;
+        interrupted_score.update(AudioScene::Play,3,.02,focused);
+        if(!dry_score.render(dry.data()+frame*2,block_frames)||
+           !echo_score.render(echo.data()+frame*2,block_frames)||
+           !interrupted_score.render(interrupted.data()+frame*2,block_frames))
           throw std::runtime_error("the Crown audio block did not render");
       }
       double energy=0,error=0;
@@ -172,6 +178,18 @@ int main() {
       check(energy>1&&error/energy<.001,"the Crown adds a second copy of its score 750 ms behind the first");
       check(std::all_of(echo.begin(),echo.end(),[](float x){return std::isfinite(x)&&std::abs(x)<.98f;}),
         "the delayed Crown mix retains headroom");
+      const auto silent=[&](size_t first,size_t last) {
+        return std::all_of(interrupted.begin()+first*2,interrupted.begin()+last*2,
+          [](float x){return std::abs(x)<1e-7f;});
+      };
+      const auto matches=[&](size_t first,size_t last) {
+        return std::equal(echo.begin()+first*2,echo.begin()+last*2,interrupted.begin()+first*2,
+          [](float a,float b){return std::abs(a-b)<1e-6f;});
+      };
+      check(silent(rate,rate*3/2)&&silent(rate*3,rate*21/5),
+        "mute and focus loss silence both voices");
+      check(matches(rate*5/2,rate*3)&&matches(rate*5,frames_per_score),
+        "the Crown theme stays in phase through mute and focus loss");
     }
     sound.set_climax(false);
     sound.set_mix(0,0,1);sound.set_environment(0);

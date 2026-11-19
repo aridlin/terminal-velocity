@@ -233,7 +233,7 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
   const bool echoing=climax_&&track==3&&!silence_&&impl_->boss_echo.loaded;
   const bool returning=(!impl_->was_focused&&focused)||(impl_->was_muted&&!muted);
   const bool entering=layered&&(!impl_->climax_active||returning);
-  const bool starting_echo=echoing&&(!impl_->boss_echo_active||returning);
+  const bool starting_echo=echoing&&!impl_->boss_echo_active;
   if(entering||starting_echo) {
     const auto rate=ma_engine_get_sample_rate(&impl_->engine);
     const auto start=ma_engine_get_time_in_pcm_frames(&impl_->engine)+rate/20;
@@ -254,10 +254,11 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
     }
     changed=true;
   }
+  const float music_scene_gain=scene==AudioScene::Paused?.25f:scene==AudioScene::Menu?.65f:1.f;
+  const bool audible=!muted&&focused;
   if(echoing) {
     ma_sound_set_volume(&impl_->boss_echo.sound,.36f*music_gain_);
-    if(changed)ma_sound_set_fade_in_milliseconds(&impl_->boss_echo.sound,-1,
-      scene==AudioScene::Paused?.25f:scene==AudioScene::Menu?0.f:1.f,800);
+    if(changed)ma_sound_set_fade_in_milliseconds(&impl_->boss_echo.sound,-1,audible?music_scene_gain:0.f,800);
   } else if(impl_->boss_echo_active)ma_sound_stop(&impl_->boss_echo.sound);
   impl_->boss_echo_active=echoing;
   // Master mute is immediate and also silences already-playing effects.
@@ -266,9 +267,11 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
     auto &music = impl_->music[i];
     if (!music.loaded)
       continue;
-    bool selected = int(i) == track && !muted && focused && !silence_;
+    const bool selected=int(i)==track&&audible&&!silence_;
+    // Keep both Crown voices on the same clock while the master output is silent.
+    const bool keep_crown_phase=echoing&&i==3;
     ma_sound_set_volume(&music.sound, (layered?.40f:.48f) * music_gain_);
-    if (selected) {
+    if (selected||keep_crown_phase) {
       impl_->quiet_time[i] = 0;
       if (!ma_sound_is_playing(&music.sound))
         ma_sound_start(&music.sound);
@@ -277,13 +280,7 @@ void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
       if (impl_->quiet_time[i] > .9)
         ma_sound_stop(&music.sound);
     }
-    if (changed) {
-      float gain = selected ? (scene == AudioScene::Paused ? .25f
-                               : scene == AudioScene::Menu ? .65f
-                                                           : 1.f)
-                            : 0.f;
-      ma_sound_set_fade_in_milliseconds(&music.sound, -1, gain, 800);
-    }
+    if(changed)ma_sound_set_fade_in_milliseconds(&music.sound,-1,selected?music_scene_gain:0.f,800);
   }
   for (size_t i = 0; i < impl_->ambience.size(); ++i) {
     auto &clip = impl_->ambience[i];
