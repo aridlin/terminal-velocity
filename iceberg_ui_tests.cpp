@@ -962,6 +962,28 @@ int main(){try {
   RenderGrid(features.grid,features.state,24,34,2).draw();
   ui_check(count_map("≈",0x66bfd7)>0&&ui_text(frame).find("≈ Water")!=std::string::npos,
     "the compact Harbor lesson map shows the real ferry waterline");
+  {
+    const auto lesson=iceworld::build_harbor_lesson_v4();
+    auto ferry=new_state(lesson);
+    ferry.adventure.door_left=0.;
+    ferry.camera_y=34.7;
+    for(auto [size,rows]:{std::pair{34,24},std::pair{110,34}}) {
+      for(int side:{-1,1}) {
+        const double x=side<0?89.8:122.2;
+        ferry.camera_x=x-5.;
+        for(int phase:{-1,0,1}) {
+          ferry.elapsed=phase==-1?0.:phase==0?1.7:3.4;
+          RenderGrid(lesson,ferry,rows,size,2.).draw();
+          const int lamp_row=side<0?17:14;
+          const auto &lamp=frame.at(lamp_row).at(12);
+          const auto &foot=frame.at(lamp_row+3).at(12);
+          ui_check(lamp.glyph==(phase==side?(side<0?"→":"←"):"○")&&
+                   lamp.rgb==(phase==side?0xb0e4a8:0xb18b61)&&foot.glyph=="╨",
+            "the lesson ferry lights only the near landing and keeps its post mounted");
+        }
+      }
+    }
+  }
   for(const int id:{601,504,50}) {
     auto grid=id==601?iceworld::build_harbor_lesson_v4():iceworld::build_room(id,73,id==50?4:0);
     auto state=new_state(grid);
