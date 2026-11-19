@@ -1009,6 +1009,10 @@ public:
     if(stage==3||stage==5)talk_homecoming(stage==3?0:1);
     persist();
   }
+  bool at_locked_survey_exit() const {
+    return grid.template_id==iceberg::BreakwaterSurvey&&(grid.switch_flags&1)==0&&
+      grid.touches_exit(state.player.rect());
+  }
   int near_interaction() const {
     auto p=state.player.rect();p.x-=1.6;p.y-=1.;p.w+=3.2;p.h+=2.;
     for(size_t i=0;i<grid.interactions.size();++i)
@@ -1054,6 +1058,13 @@ public:
       v.inspect_title=std::move(title);v.inspect_body=std::move(body);v.inspect_icon=icon;v.inspect_art=art;
       v.inspecting=true;discard_pending_movement();audio.play(AudioCue::Paper);
     };
+    if(at_locked_survey_exit()) {
+      describe(t("Powrót do przystani","Return to harbor"),
+        t("Drzwi otworzą się, gdy oznaczysz trzecią boję na mapie po lewej.",
+          "The return door opens once buoy 3 is marked on the chart to your left."),
+        "▣",Art::Door);
+      return;
+    }
     int at=near_interaction();
     if(at<0) {
       auto close=[&](double x,double y){return std::hypot(state.player.x+.45-x,state.player.y+.6-y)<2.8;};
@@ -1644,6 +1655,8 @@ public:
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
     if(at<0&&state.player.support>=0&&grid.platforms[size_t(state.player.support)].clothesline)
       v.prompt=t("↓ / S — zeskocz z liny","↓ / S — drop through the line");
+    if(at_locked_survey_exit())
+      v.prompt=t("Oznacz trzecią boję na mapie.","Mark buoy 3 at the chart.");
     if(grid.template_id==iceberg::CrownSentinel&&state.crown.hits<3) {
       const auto beat=crown_beat(state.crown);
       const std::string shield=std::to_string(3-state.crown.hits)+"/3 · ";
