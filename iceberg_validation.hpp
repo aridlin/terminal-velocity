@@ -347,8 +347,23 @@ inline void add_expedition_copy_belts(EngineGrid &room) {
   // Leave ordinary footing at both ends of each landing.
   room.sorting_belts={{29,50,8,5},{47,47,9,-4},{67,44,8,6}};
   const auto route=verify_route(room);
-  if(route.complete)room.verification_policy=route.policy;
-  else room.sorting_belts.clear();
+  if(!route.complete) {
+    room.sorting_belts.clear();
+    return;
+  }
+  room.verification_policy=route.policy;
+  // The relay is on the fixed footing before the middle belt.
+  auto &belt=room.sorting_belts[1];
+  constexpr uint64_t reverse=1;
+  const auto original_flags=room.switch_flags;
+  belt.reverse_flag=reverse;
+  room.switch_flags|=reverse;
+  const auto reversed=verify_route(room);
+  room.switch_flags=original_flags;
+  if(reversed.complete&&reversed.deaths==0) {
+    room.interactions.push_back({{45,44,2,3},InteractionKind::Valve,0,
+      {"Odwróć środkową taśmę","Reverse the middle belt"}});
+  } else belt.reverse_flag=0;
 }
 
 inline void add_expedition_archive_trolley(EngineGrid &room) {

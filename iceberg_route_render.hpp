@@ -34,6 +34,9 @@
       [](const auto &platform){return platform.cargo_hoist;});
     const auto powered=[](const SortingBelt &belt){return belt.speed!=0;};
     const bool has_belts=std::any_of(grid_.sorting_belts.begin(),grid_.sorting_belts.end(),powered);
+    const auto belt_control=[&](const auto &node) {
+      return node.kind==InteractionKind::Valve&&grid_.belt_relay(uint64_t(1)<<node.id);
+    };
     const auto spring_symbol=[](const SpringPad &spring){
       return spring.push_x>0?"↗":spring.push_x<0?"↖":"↑";
     };
@@ -324,6 +327,8 @@
     for(const auto &node:grid_.interactions) {
       if(node.kind==InteractionKind::Valve&&(steam_controls&(uint64_t(1)<<node.id)))
         mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,"⊗",0xe9ae83);
+      else if(belt_control(node))
+        mark(node.area.x+node.area.w*.5,node.area.y,"⇄",belt_color,-1);
       else if(required_valve(node)||path_valve(node))
         mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,"⊗",
           required_valve(node)?valve_color:bridge_color);
@@ -379,8 +384,10 @@
       const auto &seam=*grid_.crown_seam;
       mark(seam.x+seam.w*.5,seam.bottom(),"↑",seam_color);
     }
-    for(const auto &belt:grid_.sorting_belts)if(powered(belt))
-      mark(belt.x+belt.width*.5,belt.y,belt.speed>0?"▶":"◀",belt_color,belt.speed>0?1:-1);
+    for(const auto &belt:grid_.sorting_belts)if(powered(belt)) {
+      const bool right=belt.speed_at(grid_.switch_flags)>0;
+      mark(belt.x+belt.width*.5,belt.y,right?"▶":"◀",belt_color,right?1:-1);
+    }
     for(const auto &platform:grid_.platforms)if(platform.service_lift||platform.cargo_hoist) {
       const auto deck=platform.at(state_.elapsed);
       mark(deck.x+deck.w*.5,deck.y,"↕",service_lift_color);
@@ -496,7 +503,12 @@
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_cargo_hoist)paint_text(legend++,2,tr("↕ Winda towarowa","↕ Cargo hoist"),service_lift_color);
     if(has_seam)paint_text(legend++,2,tr("↑ Wąski szyb","↑ Wall-kick shaft"),seam_color);
-    if(has_belts)paint_text(legend++,2,tr("◀ ▶ Taśmy","◀ ▶ Belts"),belt_color);
+    if(has_belts) {
+      auto label=tr("◀ ▶ Taśmy","◀ ▶ Belts");
+      if(std::any_of(grid_.interactions.begin(),grid_.interactions.end(),belt_control))
+        label+=tr(" · ⇄ Przekaźnik"," · ⇄ Belt relay");
+      paint_text(legend++,2,label,belt_color);
+    }
     if(has_trolley) {
       const auto name=tr("▱ Wózek","▱ Trolley");
       paint_text(legend,2,name,trolley_color);

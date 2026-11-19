@@ -150,9 +150,10 @@
   }
   void draw_belt_tread(const SortingBelt &belt,uint32_t color) {
     const int count=std::max(3,int(belt.width/scale_));
-    const int travel=int(std::floor(state_.elapsed*belt.speed/scale_));
+    const double speed=belt.speed_at(grid_.switch_flags);
+    const int travel=int(std::floor(state_.elapsed*speed/scale_));
     std::string tread="◉";
-    for(int i=2;i<count;++i)tread+=(i-travel)%5==0?(belt.speed>0?"▶":"◀"):"─";
+    for(int i=2;i<count;++i)tread+=(i-travel)%5==0?(speed>0?"▶":"◀"):"─";
     world_text(belt.x,belt.y+aspect_*scale_,tread+"◉",color);
   }
   void draw_sorting_belts() {

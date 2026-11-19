@@ -402,7 +402,11 @@ struct Interaction {
   iceberg::Text label;
   int detail = 0;
 };
-struct SortingBelt { double x, y, width, speed; };
+struct SortingBelt {
+  double x, y, width, speed;
+  uint64_t reverse_flag=0;
+  double speed_at(uint64_t switches) const { return switches&reverse_flag?-speed:speed; }
+};
 struct SpringPad : Rect {
   double push_x, push_y;
   SpringPad(double x,double y,double w,double h,double push_x=0.,double push_y=-31.)
@@ -573,6 +577,10 @@ public:
   std::vector<AirField> air_fields;
   std::optional<Rect> windbreak_roof, crown_seam;
   std::vector<SortingBelt> sorting_belts;
+  const SortingBelt *belt_relay(uint64_t flag) const {
+    for(const auto &belt:sorting_belts)if(belt.reverse_flag==flag)return &belt;
+    return nullptr;
+  }
   std::vector<Rect> ice_strips;
   bool on_ice(const Player &player) const {
     if(!player.grounded)return false;
@@ -1243,10 +1251,11 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       if (std::abs(feet.bottom() - belt.y) > .1 ||
           feet.right() <= belt.x || feet.left() >= belt.x + belt.width) continue;
       double run_speed = p.vx;
-      p.vx = belt.speed;
+      const double belt_speed = belt.speed_at(g.switch_flags);
+      p.vx = belt_speed;
       move_axis(g, p, dt, 'x');
       p.vx = run_speed;
-      p.lift_x = belt.speed;
+      p.lift_x = belt_speed;
       p.lift_y = 0;
       p.lift_left = .12;
       break;

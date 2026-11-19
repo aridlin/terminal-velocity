@@ -181,6 +181,32 @@ int main() {
       for(int tick=0;tick<48;++tick)world_step(rider,archive.grid,{},1./120);
       require(std::abs(rider.player.x-x-belt.speed*.4)<.02,"a Copies Conveyor belt carries a standing courier in its indicated direction");
     }
+    const auto relay=std::find_if(archive.grid.interactions.begin(),archive.grid.interactions.end(),[](const auto &node) {
+      return node.kind==InteractionKind::Valve;
+    });
+    require(relay!=archive.grid.interactions.end(),"the Copies Conveyor has a relay on fixed footing");
+    const auto relay_area=relay->area;
+    auto use_relay=[&] {
+      archive.state.player.x=relay_area.x;
+      archive.state.player.y=relay_area.bottom()-kPlayerHeight;
+      Controls use;use.interact=true;archive.tick(use,1./120);
+    };
+    use_relay();
+    require(archive.grid.switch_flags==1&&copies.switches==1&&verify_route(archive.grid).complete,
+      "the belt relay reverses the middle belt and persists the setting without blocking the route");
+    archive.load_room(true);
+    require(archive.grid.switch_flags==1&&archive.grid.sorting_belts[1].speed_at(archive.grid.switch_flags)>0,
+      "the Copies Conveyor restores the reversed belt after loading the room");
+    auto rider=new_state(archive.grid);
+    rider.player.x=51.;rider.player.y=47.-kPlayerHeight;rider.player.grounded=true;
+    for(int tick=0;tick<48;++tick)world_step(rider,archive.grid,{},1./120);
+    require(std::abs(rider.player.x-52.6)<.02,"the reversed belt physically carries the courier to the right");
+    Controls leap;leap.jump_pressed=leap.jump_held=true;
+    world_step(rider,archive.grid,leap,1./120);
+    require(rider.player.vy<0&&rider.player.vx>0,"the reversed belt carries momentum into the next jump");
+    use_relay();
+    require(!archive.grid.switch_flags&&!copies.switches&&copies.itinerary==reserved,
+      "a second pull restores the original direction without changing the itinerary");
     copies.itinerary[0]=38;copies.layout_version=3;archive.load_room();
     require(archive.grid.template_id==38&&archive.grid.springs.empty(),
       "legacy Pneumatic Post saves keep their original route");
