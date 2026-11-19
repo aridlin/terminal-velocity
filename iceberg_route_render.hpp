@@ -73,6 +73,13 @@
       return node.kind==InteractionKind::Valve&&(missing&(uint64_t(1)<<node.id));
     };
     const bool has_valves=std::any_of(grid_.interactions.begin(),grid_.interactions.end(),required_valve);
+    const auto chart=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
+      return node.kind==InteractionKind::SurveyChart;
+    });
+    const bool has_chart=chart!=grid_.interactions.end();
+    const bool chart_marked=grid_.switch_flags&1;
+    const char *chart_symbol=chart_marked?"⚑":"▤";
+    const uint32_t chart_color=chart_marked?0x88e6dc:0xe4c696;
     uint64_t bridge_flags=0;
     for(const auto &bridge:grid_.growth)bridge_flags|=bridge.flag;
     const auto path_controls=bridge_flags&~grid_.switch_flags&~missing;
@@ -112,7 +119,7 @@
       if(const int i=field_landmark(node);i>=0)has_landmark[size_t(i)]=true;
     const bool paper_landmarks=has_landmark[0]||has_landmark[1];
     const bool tube_landmark=has_landmark[2];
-    const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
+    const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_chart)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
       +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel)
       +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist);
@@ -288,6 +295,7 @@
         mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,"⊗",
           required_valve(node)?valve_color:bridge_color);
     }
+    if(has_chart)mark(chart->area.x+chart->area.w*.5,chart->area.y+chart->area.h*.5,chart_symbol,chart_color,-1);
     if(fork) {
       const auto &door=branch->area;
       mark(door.x+door.w*.5,door.y+door.h*.5,"▧",0xe8a758,-1);
@@ -400,6 +408,8 @@
     }
     if(has_return&&!return_only)paint_text(legend++,2,tr("↶ Powrót","↶ Return"),return_color);
     if(has_valves)paint_text(legend++,2,tr("⊗ Wymagany zawór","⊗ Required valve"),valve_color);
+    if(has_chart)paint_text(legend++,2,chart_marked?
+      tr("⚑ Boja zaznaczona","⚑ Buoy marked"):tr("▤ Mapa portu","▤ Harbor chart"),chart_color);
     if(bridge_legend) {
       std::string label;
       if(has_path_control)label=tr("⊗ Wysuń pomost","⊗ Extend path");

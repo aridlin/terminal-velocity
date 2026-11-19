@@ -39,7 +39,7 @@ inline EngineGrid build_survey_course() {
   g.spawn_x=6;g.spawn_y=51-kPlayerHeight;
   g.checkpoint_points={{6,g.spawn_y},{42,47-kPlayerHeight},{78,37-kPlayerHeight}};
   g.route_points={{8,51},{45,47},{69,42},{81,37},{120,34}};
-  g.interactions.push_back({{119,30,3,4},InteractionKind::Valve,0,{"Oznacz zgaszoną boję","Mark the dark buoy"}});
+  g.interactions.push_back({{119,30,3,4},InteractionKind::SurveyChart,0,{"Oznacz zgaszoną boję","Mark the dark buoy"}});
   g.goal={128,30,3,4};
   g.goal_requires=1;
   return g;
