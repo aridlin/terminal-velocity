@@ -244,15 +244,27 @@
       } else if(id==504) {
         world_art(126,41-6*aspect_*scale_,{"    ╱╲","   ╱  ╲","  ╱    ╲"," ╱______╲","     │","─────┴──────"},d.stone);
       } else if(id==505) {
-        draw_scenery_pipe({{39,32},{39,35.2},{44,35.2},{44,37.3}},0x879396);
-        draw_pipe_drip(44,37.3,41,0);
-        draw_scenery_pipe({{72,36.5},{72,39.2},{78,39.2},{78,41.4}},0x879396);
-        draw_pipe_drip(78,41.4,45,1.1);
-        draw_scenery_pipe({{72,26},{91,26},{91,28.4},{102,28.4},{102,34}},0x788d92);
-        draw_pipe_drip(102,34,48,.3);
-        draw_scenery_pipe({{69,24},{69,27.6},{126,27.6},{126,32.8},{163,32.8},{163,40.8}},0x49656d);
-        draw_scenery_pipe({{164,41},{164,35.4},{202,35.4},{202,38}},0x49656d);
-        world_art(98,48-5*aspect_*scale_,{"╭─────────────╮","│  ◴     ◷    │","╰──┬─────┬────╯","   ║     ║","═══╩═════╩════"},d.stone);
+        constexpr uint32_t trunk=0x607f88,branch=0x82959a;
+        // Follow the two ceiling soffits, then rise through the gap into
+        // the open gallery. The far end enters the last landing's wall.
+        draw_scenery_pipe({{-1,35.2},{62,35.2},{62,39.2},{89,39.2},{89,31.2},{201,31.2},{201,37.2}},trunk);
+        for(double x:{40.,54.,70.,84.}) {
+          const double ceiling=x<62?34.:38.;
+          draw_scenery_pipe({{x,ceiling},{x,ceiling+1.2}},trunk);
+          world_art(x,ceiling+1.2,{"╩"},trunk);
+        }
+        struct Drain { double x, feed, lip, floor, phase; };
+        for(const auto &[x,feed,lip,floor,phase]:std::array{
+              Drain{44,35.2,37.3,41,0},Drain{78,39.2,41.4,45,1.1},Drain{102,31.2,34,38,.3}}) {
+          draw_scenery_pipe({{x,feed},{x,lip}},branch);
+          world_art(x,feed,{"╦"},trunk);
+          draw_pipe_drip(x,lip,floor,phase);
+        }
+        const double row=aspect_*scale_;
+        const double panel_y=48-5*row,panel_inlet=112+3*scale_;
+        draw_scenery_pipe({{panel_inlet,31.2},{panel_inlet,panel_y}},branch);
+        world_art(panel_inlet,31.2,{"╦"},trunk);
+        world_art(112,panel_y,{"╭──╨──────────╮","│  ◴     ◷    │","╰──┬─────┬────╯","   ║     ║","   ║     ║"},d.stone);
       } else if(id==506) {
         for(size_t i=1;i<p.path.size();i+=2) {
           auto a=p.path[i];world_art(a.x+5,a.y-7*aspect_*scale_,{"╭───╮","│ ▣ │","╰─┬─╯","  │","  │","  │","══╧══"},0xa18d67);
