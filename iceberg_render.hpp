@@ -506,6 +506,7 @@
       const int count=int(iceberg::DebugTour.size());
       const auto &stop=iceberg::DebugTour[size_t(v.picker_choice)];
       line(2,tr("PRZEGLĄD ZMIAN ","DEBUG TOUR ")+std::to_string(v.picker_choice+1)+"/"+std::to_string(count),d.accent,true);
+      line(3,tr("Przegląd nie zapisuje postępu.","Tour progress is never saved."),d.light);
       const int visible=std::min(rows_-11,count);
       const int first=std::clamp(v.picker_choice-visible/2,0,count-visible);
       for(int i=first;i<first+visible;++i) {
@@ -523,7 +524,7 @@
       int y=rows_-4;
       for(const auto &part:wrap(v.save_error?save_failure_hint():v.notice,width-4))if(y<rows_-1)line(y++,part,d.accent);
     } else {
-      if(v.tour_picker)line(rows_-3,tr("Przegląd nie zapisuje postępu.","Tour progress is never saved."),d.light);
+      if(v.tour_picker)line(rows_-3,tr("← Pierwsza · → Strażnik Korony","← First · → Crown Sentinel"),d.light);
       line(rows_-2,tr("↑↓ · ENTER wybierz · P wróć","↑↓ · ENTER select · P back"),d.accent);
     }
   }

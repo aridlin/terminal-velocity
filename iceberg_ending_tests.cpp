@@ -300,7 +300,15 @@ int main(){try{
  {
   AdventureSession tour(options,file);
   const auto before=tour.profile.story;
-  tour.start_tour(int(iceberg::DebugTour.size())-1);
+  tour.state.menu=true;
+  tour.state.adventure.tour_picker=true;
+  Controls finale;finale.browse_leg=1;
+  tour.tick(finale,0);
+  require_end(tour.state.menu&&iceberg::DebugTour[size_t(tour.state.adventure.picker_choice)].room==iceberg::CrownSentinel,
+              "Right selects the Crown finale without starting the tour");
+  finale.browse_leg=-1;tour.tick(finale,0);
+  require_end(tour.state.adventure.picker_choice==0,"Left returns the picker to the first sample");
+  finale.browse_leg=1;finale.confirm=true;tour.tick(finale,0);
   require_end(tour.grid.template_id==iceberg::CrownSentinel&&tour.music_track()==3,
               "the Debug Tour opens the Crown Sentinel with the same score");
   play_crown_sentinel(tour,1);
