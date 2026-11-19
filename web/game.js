@@ -129,6 +129,8 @@ const doorReadyFlag=1<<10;
 const expeditionFlag=1<<13;
 const roomMapFlag=1<<17;
 const forkDoorFlag=1<<18;
+const blockingFlags=1|2|4|8|64|128;
+const doorwayContext=flags=>flags&blockingFlags?0:flags&(doorReadyFlag|forkDoorFlag);
 const replaceRunFlag=1<<19;
 const districtTravelFlag=1<<25;
 const replyChoiceFlag=1<<26;
@@ -355,10 +357,13 @@ window.tvUI=u=>{
  routeLegs=nextRouteLegs;
  const previousSlot=selectedSlot;
  if(started)selectedSlot=1+((u.flags>>>20)&3);
- const blockingFlags=1|2|4|8|64|128;
  const inputContextFlags=blockingFlags|2048|settingsFlag|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag|replyChoiceFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&inputContextFlags)!==(uiFlags&inputContextFlags))clearInput();
+ if(doorwayContext(u.flags)!==doorwayContext(uiFlags)){
+  // Finish only obsolete doorway contacts. A second thumb may still be moving.
+  for(const [id,pointer] of pointers)if(pointer.doorConfirm)finishPointer(id,false);
+ }
  lastBlocked=!!(u.flags&(blockingFlags|doorReadyFlag));
  const before=uiFlags;uiFlags=u.flags;
  if((before&255)!==(uiFlags&255))resize();
@@ -475,8 +480,10 @@ for(const button of document.querySelectorAll('[data-key]')){
   const touch=e.pointerType==='touch';
   const canSlide=touch&&(button.matches(horizontalTouchControls)||(!lastBlocked&&button.closest('#touch .directions')));
   const confirmingReply=(overlayFlags()&(replyChoiceFlag|2))===replyChoiceFlag;
-  const onRelease=button.id==='touch-use'&&(confirmingReply||!!(uiFlags&confirmSaveFlag));
-  const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,pending:0};
+  const doorConfirm=!!doorwayContext(uiFlags)&&(button.id==='touch-use'||
+   (button.id==='touch-inspect'&&!!(uiFlags&forkDoorFlag)));
+  const onRelease=doorConfirm||(button.id==='touch-use'&&(confirmingReply||!!(uiFlags&confirmSaveFlag)));
+  const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,doorConfirm,pending:0};
   pointers.set(e.pointerId,pointer);
   button.classList.add('held');
   if(!onRelease)pointerPress(pointer);
