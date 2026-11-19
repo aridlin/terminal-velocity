@@ -842,6 +842,18 @@ int main(){try {
     !same_deck(start_deck,1.2)&&!same_deck(upper_deck,4.8),
     "the trolley waits briefly at both stops before resuming travel");
 
+  auto trolley_lamps=trolley_view;
+  trolley_lamps.camera_x=69.9;
+  trolley_lamps.camera_y=17;
+  for(const auto &[time,lit_column]:{std::pair{0.,36},std::pair{1.8,-1},std::pair{3.6,86},std::pair{5.4,-1}}) {
+    trolley_lamps.elapsed=time;
+    RenderGrid(envelope_room,trolley_lamps,42,110,2).draw();
+    ui_check(count_marker("●",0xb5dba0)==int(lit_column>=0)&&
+      (lit_column<0||std::any_of(frame.begin(),frame.end(),[&](const auto &line){
+        return line[size_t(lit_column)].glyph=="●"&&line[size_t(lit_column)].rgb==0xb5dba0;
+      })),"only the docked Archive trolley landing lights its lamp");
+  }
+
   trolley_view.player.x=start_deck.x+(start_deck.w-kPlayerWidth)*.5;
   trolley_view.player.y=start_deck.y-kPlayerHeight;
   trolley_view.player.grounded=true;
@@ -858,8 +870,10 @@ int main(){try {
       for(double phase:{0.,1.8,3.6,5.4}) {
         trolley_view.elapsed=phase;
         RenderGrid(envelope_room,trolley_view,rows,cols,2).draw();
+        const int docked=phase==0.||phase==3.6?1:0;
         ui_check(count_map("▱",0xaee1df)>=1&&count_map("@",0xffd68a)==1&&
-          count_map("○",0xc2accf)>=2&&count_map("┄",0x6f9eaa)>0&&
+          count_map("○",0xc2accf)>=2-docked&&count_map("●",0xb5dba0)==docked&&
+          count_map("┄",0x6f9eaa)>0&&
           ui_text(frame).find(label)!=std::string::npos&&ui_text(frame).find(language==iceberg::Language::English?
             "○ Stop":"○ Przystanek")!=std::string::npos,
           "the trolley map shows the rider, both stops, and its localized legend at every phase");
