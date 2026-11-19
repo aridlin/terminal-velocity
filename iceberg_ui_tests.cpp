@@ -984,6 +984,26 @@ int main(){try {
       }
     }
   }
+  {
+    const auto lesson=iceworld::build_harbor_lesson_v4();
+    auto ferry=new_state(lesson);
+    ferry.adventure.map=ferry.adventure.map_room=true;
+    ferry.player.x=89.8;ferry.player.y=49.-kPlayerHeight;
+    for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
+      ferry.adventure.language=language;
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{56,20},std::pair{110,34}}) {
+        for(int phase:{-1,0,1}) {
+          ferry.elapsed=(phase+1)*1.7;
+          RenderGrid(lesson,ferry,rows,cols,2.).draw();
+          const auto label=language==iceberg::Language::English?"→/← Jump · ○ Wait":"→/← Skacz · ○ Czekaj";
+          ui_check(count_map("@",0xffd68a)==1&&count_map("▱",0xe4ad68)==1&&
+            count_map("○",0xb18b61)==(phase==0?2:1)&&count_map("→",0xb0e4a8)==(phase==-1?1:0)&&
+            count_map("←",0xb0e4a8)==(phase==1?1:0)&&ui_text(frame).find(label)!=std::string::npos,
+            "the lesson map shows the correct landing signals without covering the courier or ferry");
+        }
+      }
+    }
+  }
   for(const int id:{601,504,50}) {
     auto grid=id==601?iceworld::build_harbor_lesson_v4():iceworld::build_room(id,73,id==50?4:0);
     auto state=new_state(grid);
