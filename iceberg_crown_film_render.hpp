@@ -78,7 +78,11 @@
       if(level==0||level==3) {
         const int step=level==0?shaft-11:shaft+1;
         paint_text(y,step,"═══════════",0x658895);
-        paint_text(y,level==0?shaft+14:shaft-21,"╞══════╡",0x5a6d82);
+        const int side=level==0?1:-1;
+        const int door=shaft+side*18-3;
+        if(y>=top+4)film_art(y-4,door,{"┌─┬─┐","│ │▪│","│ │ │","│ │ │","╧═╧═╧"},0x65848f);
+        if(side>0)for(int x=shaft+13;x<cols_;++x)paint_text(y,x,"━",0x4d6978);
+        else for(int x=0;x<shaft-12;++x)paint_text(y,x,"━",0x4d6978);
       }
       if(level==2||level==5)paint_text(y,shaft-4+level,"╱╱╱╱╱",0x647887);
     }
@@ -89,15 +93,31 @@
     film_art(top+1,2,{"┌─────┐","│  11 │","└─────┘"},0xe4ad68);
     const int lamp=shaft+17;
     paint_text(top+2,lamp,"◆",std::fmod(time,.9)<.55?0xe78868:0x775665);
-    const int witness_y=std::max(top+4,water-2-int(time/8.));
-    film_art(witness_y-3,shaft-20,{" ▄█▄ ","▄███▄"," ▐ ▌ "},0xaec0c4);
-    film_art(witness_y-2,shaft+15,{" ▄█▄ ","╶███▄"," ▐ ▌ "},0xd4ad7e);
+    const int witness_y=std::max(top+5,water-3-std::min(5,int(time/8.)));
+    const int left_floor=witness_y-(witness_y-top+pan+3)%6;
+    const int right_floor=witness_y-(witness_y-top+pan)%6;
+    film_art(std::max(top+1,left_floor-3),shaft-12-std::max(5,cols_/12),{" ▄█▄ ","▄███▄"," ▐ ▌ "},0xaec0c4);
+    film_art(std::max(top+1,right_floor-3),shaft+12+std::max(1,cols_/13),{" ▄█▄ ","╶███▄"," ▐ ▌ "},0xd4ad7e);
   }
 
   void film_chamber(int top,int bottom,double time,bool speaking) {
     film_fill(top,bottom,0x253344);
     const int x=cols_/2-15-int(std::min(time*1.3,5.));
     const int center=std::max(top+2,top+(bottom-top-9)/2);
+    const int gantry=std::max(top,center-4);
+    film_fill(gantry,gantry+3,0x364960);
+    for(int at=0;at<cols_;at+=8)
+      film_art(gantry,at,{"━━━━━━━━","╲      ╱","━╲━━━━╱━"},0x536d82);
+    for(int side:{-1,1}) {
+      const int rack=x+13+side*std::max(17,cols_/4);
+      for(int row=gantry+3;row<bottom-2;++row) {
+        paint_text(row,rack,"║",0x46647a);
+        if((row-gantry)%5==0)
+          paint_text(row,rack-4,"┌─▥─╫─▥─┐",0x688398);
+      }
+    }
+    for(int at=0;at<cols_;at+=6)
+      film_art(bottom-2,at,{"══════","  │   "},0x62788b);
     for(int y=top+1;y<bottom;++y) {
       paint_text(y,x-3,"║",0x475d72);
       paint_text(y,x+34,"║",0x475d72);
