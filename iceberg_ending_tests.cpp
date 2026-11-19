@@ -247,6 +247,11 @@ int main(){try{
   tour.start_tour(int(iceberg::DebugTour.size())-1);
   require_end(tour.grid.template_id==iceberg::CrownSentinel&&tour.music_track()==3,
               "the Debug Tour opens the Crown Sentinel with the same score");
+  play_crown_sentinel(tour,1);
+  Controls retry_tour;retry_tour.restart=true;
+  tour.tick(retry_tour,1./120);
+  require_end(tour.state.crown.hits==0&&tour.state.crown.time==0&&tour.state.deaths==1,
+              "Retry restarts the Crown sample from its first phase");
   play_crown_sentinel(tour);read_end(tour);tour.end_tour();
   require_end(tour.profile.story==before,"debug victory does not change the campaign save");
  }

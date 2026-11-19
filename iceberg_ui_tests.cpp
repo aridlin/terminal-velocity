@@ -560,6 +560,30 @@ int main(){try {
         "the room map fits the trolley, route, rider and localized legend");
     }
   }
+  {
+    AdventureSession tour(options,{});
+    const auto stop=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &entry){return entry.room==45;});
+    const int sample=int(stop-iceberg::DebugTour.begin());
+    tour.start_tour(sample);
+    const auto initial=tour.grid.platforms.front().at(0);
+    const double landing_x=tour.state.spawn_x,landing_y=tour.state.spawn_y;
+    tour.state.elapsed=3.6;
+    tour.state.player.x=100; tour.state.player.y=24;
+    tour.state.collected.back()=true;
+    tour.state.checkpoint=1;
+    tour.state.deaths=2;
+    Controls retry;retry.restart=true;
+    tour.tick(retry,0);
+    const auto &restarted=tour.state;
+    const auto deck=tour.grid.platforms.front().at(restarted.elapsed);
+    ui_check(tour.tour_scene==sample&&restarted.deaths==3&&restarted.elapsed==0&&
+      restarted.player.x==landing_x&&restarted.player.y==landing_y&&
+      deck.x==initial.x&&deck.y==initial.y,
+      "Retry restarts the same Debug Tour sample and machinery even before the next physics tick");
+    ui_check(restarted.sweets_count()==0&&restarted.checkpoint==0&&restarted.player.support<0,
+      "Retry restores the sample's original pickups and landing");
+  }
   AdventureSession winter(options,"/tmp/tv-ui-ice-map-unused");
   winter.begin_campaign(true);winter.profile.unlocked=4;winter.run_district=4;
   auto &garden=winter.profile.expeditions[0];
