@@ -515,6 +515,10 @@ public:
     return hazard_[index(col, row)];
   }
 
+  bool has_hazards() const {
+    return std::find(hazard_.begin(), hazard_.end(), true) != hazard_.end();
+  }
+
   std::vector<Rect> solid_rects_near(const Rect &rect) const {
     std::vector<Rect> rects;
     const int min_col = static_cast<int>(std::floor(rect.left())) - 1;
