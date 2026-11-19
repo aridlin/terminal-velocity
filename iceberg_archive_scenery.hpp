@@ -18,6 +18,32 @@
     world_text(center,deck.y-row*1.1,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);
   }
 
+  void draw_archive_stack_shuttle(const MovingPlatform &platform,const Rect &deck) {
+    const double row=aspect_*scale_;
+    const double track_y=deck.y+3*row;
+    const double left=platform.base.x-platform.dx,right=platform.base.right()+platform.dx;
+    const uint32_t rail=0x566f83,steel=0x87b3c5;
+    draw_scenery_pipe({{left,track_y-row},{left,track_y},{right,track_y},{right,track_y-row}},rail);
+    const double offset=platform.offset(state_.elapsed);
+    const double stop_lamps[]={left+.8,right-.8};
+    for(int stop=0;stop<2;++stop) {
+      const auto x=stop_lamps[stop];
+      const bool docked=stop==0?offset<=-1.:offset>=1.;
+      world_art(x,deck.y-.8*row,{"│","╨"},rail);
+      world_text(x,deck.y-1.6*row,docked?"●":"○",docked?0xb5dba0:rail);
+    }
+
+    const int width=std::max(4,int(std::round(deck.w/scale_)));
+    std::string files="║";
+    for(int i=1;i<width-1;++i)files+=i%5==0?"│":i%2==0?"▥":"▤";
+    std::string surface="╞",base="╚";
+    for(int i=1;i<width-1;++i){surface+="═";base+="═";}
+    world_text(deck.x,deck.y,surface+"╡",0xbce0e6);
+    world_art(deck.x,deck.y+row,{files+"║",base+"╝"},steel);
+    for(double wheel:{deck.x+1.6,deck.right()-2.})
+      world_text(wheel,track_y,"◉",steel);
+  }
+
   void draw_archive_trolley(const Rect &deck) {
     const int width=std::max(3,int(std::round(deck.w/scale_)));
     std::string surface="╞",tray="╰";
@@ -118,7 +144,7 @@
     const double row_height=aspect_*scale_;
     const MovingPlatform *first_rack=nullptr;
     for(const auto &platform:grid_.platforms) {
-      if(platform.archive_trolley)continue;
+      if(platform.archive_trolley||platform.tram)continue;
       if(platform.archive_rack) {
         const double center=platform.base.x+platform.base.w*.5;
         if(first_rack) {

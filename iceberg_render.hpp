@@ -351,7 +351,11 @@
       if(platform.icy){draw_reservoir_floe(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile&&grid_.district==5){draw_crown_rib(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile){draw_fragile_planter(r,platform.crack_age(state_,i,state_.elapsed));continue;}
-      if(platform.tram){draw_estate_tram(platform,r);continue;}
+      if(platform.tram) {
+        if(grid_.district==3)draw_archive_stack_shuttle(platform,r);
+        else draw_estate_tram(platform,r);
+        continue;
+      }
       if(platform.clothesline){draw_estate_clothesline(r,i);continue;}
       if(platform.archive_rack){draw_archive_rack(platform,r);continue;}
       if(platform.archive_trolley){draw_archive_trolley(r);continue;}
