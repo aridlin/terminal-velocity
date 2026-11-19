@@ -1112,6 +1112,14 @@ public:
       if(node.id==5)v.inspect_body=t("Nasiona przechowano w szklanej kapsule. W środku jest jeszcze sucho. Celina znajdzie dla nich miejsce na dole.","Seeds are stored in a glass capsule. The inside is still dry. Celina will find a place for them downstairs.");
       if(profile.task_items[size_t(node.detail/64)]&(uint64_t(1)<<(node.detail%64)))v.inspect_body+=t("\nJuż załatwione.","\nAlready handled.");
       break;
+    case InteractionKind::SurveyChart:
+      v.inspect_title=t("Mapa portu","Harbor chart");v.inspect_art=Art::Chart;v.inspect_detail=bool(grid.switch_flags&1);
+      v.inspect_body=grid.switch_flags&1?
+        t("Pozycja trzeciej boi jest już zaznaczona. Drzwi na końcu pomostu prowadzą z powrotem do przystani.",
+          "The third buoy is already marked. The door at the end of the platform leads back to the harbor."):
+        t("Trzecia boja zgasła. Zamknij oględziny, a potem naciśnij E przy mapie, żeby oznaczyć boję i otworzyć drogę powrotną.",
+          "Buoy 3 is dark. Close this panel, then press E at the chart to mark it and open the way back.");
+      break;
     case InteractionKind::Valve:
       v.inspect_art=Art::Valve;v.inspect_icon="⊗";
       if(grid.district==3&&!grid.growth.empty()) {
@@ -1249,16 +1257,14 @@ public:
       persist();profile.hidden_room=node.id;load_room();persist();return;
     } else if(node.kind==InteractionKind::Board) {
       advance_room();
-    } else if(node.kind==InteractionKind::Valve) {
-      if(grid.template_id==iceberg::BreakwaterSurvey) {
-        if(!(grid.switch_flags&1)) {
-          grid.switch_flags|=1;
-          animate_pickup(node,0);
-          notice(t("Pozycja boi zaznaczona na mapie.","Buoy position marked on the chart."));
-          persist();
-        }
-        return;
+    } else if(node.kind==InteractionKind::SurveyChart) {
+      if(!(grid.switch_flags&1)) {
+        grid.switch_flags|=1;
+        animate_pickup(node,0);
+        notice(t("Pozycja boi zaznaczona na mapie.","Buoy position marked on the chart."));
+        persist();
       }
+    } else if(node.kind==InteractionKind::Valve) {
       if(grid.template_id==303&&node.id>0&&!(grid.switch_flags&(uint64_t(1)<<(node.id-1)))) {
         notice(t("Najpierw odłącz wcześniejszy obieg. Strzałki prowadzą od fontanny do mieszkań.","Disconnect the preceding circuit first. Follow the arrows from fountain to homes."),5);return;
       }

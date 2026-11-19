@@ -406,6 +406,10 @@
         prop_art(x+node.area.w*.5,y,{"╭─B─╮","│   │","│ ↗ │","│   │","╰───╯"},0x91d4ce);
       } else if(node.kind==InteractionKind::Board) {
         prop_art(x+node.area.w*.5,y,{"╭─────╮","│ ≋≋≋ │","│ ≋≋  │","╰┬───┬╯"," │   │ "},d.accent);
+      } else if(node.kind==InteractionKind::SurveyChart) {
+        const bool marked=grid_.switch_flags&1;
+        prop_art(x+node.area.w*.5,y,{"  ╭─────────╮"," ╱ ≈≈ ≋ "+std::string(marked?"⚑":"◇")+" ╱",
+          "╞═════════╡"," ╲│     │╱ ","  ╵     ╵  "},marked?0x88e6dc:0xe4c696);
       } else if(node.kind==InteractionKind::Valve)valve_art(x+node.area.w*.5,y,bool(grid_.switch_flags&(uint64_t(1)<<node.id)));
       else if(node.kind==InteractionKind::Note)sign_art(x+node.area.w*.5,y,node.id,d.light);
       else if(node.kind==InteractionKind::Task) {
