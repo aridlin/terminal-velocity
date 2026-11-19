@@ -280,6 +280,7 @@ inline constexpr std::array DebugTour{
   TourStop{5,61,85,45,{"Odbijaj się od ścian, by wrócić na grań","Wall-kick through the shaft to rejoin the ridge"}},
   TourStop{1,13,9,56,{"Wsiadaj, gdy winda zatrzyma się na dole","Board the cargo hoist when it pauses at the lower landing"}},
   TourStop{4,50,19,52,{"Wskocz na liść i przepłyń przez basen","Jump onto a leaf and ride it across the pool"}},
+  TourStop{5,63,68,45,{"Skacz po belkach, zanim się załamią","Jump across the beams before they buckle"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 struct View {

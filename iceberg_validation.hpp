@@ -217,6 +217,16 @@ inline void add_overhang_windbreak(EngineGrid &room) {
   }
 }
 
+inline void add_fractured_ribs(EngineGrid &room) {
+  if(room.district!=5||room.template_id!=63)return;
+  const size_t previous=room.platforms.size();
+  room.platforms.push_back({.base={74,41,4.5,.5},.fragile=true});
+  room.platforms.push_back({.base={75,37,4.5,.5},.fragile=true});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms.resize(previous);
+}
+
 inline void add_shutter_service_lift(EngineGrid &room) {
   if(room.district!=5||room.template_id!=69)return;
   // The narrow lift travels between the lower approach and the upper

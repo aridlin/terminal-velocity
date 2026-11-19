@@ -349,6 +349,7 @@
       const auto &platform=grid_.platforms[i];
       const auto r=platform.at(state_.elapsed);
       if(platform.icy){draw_reservoir_floe(r,platform.crack_age(state_,i,state_.elapsed));continue;}
+      if(platform.fragile&&grid_.district==5){draw_crown_rib(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile){draw_fragile_planter(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.tram){draw_estate_tram(platform,r);continue;}
       if(platform.clothesline){draw_estate_clothesline(r,i);continue;}

@@ -623,8 +623,31 @@ int main(int argc,char **argv) {
       if(direction>0)crown.advance_room();
     }
     crown_run.layout_version=2;crown.load_room();
-    check(crown.grid.template_id==63&&crown.grid.air_fields[0].ax==-4.,
+    check(crown.grid.template_id==63&&crown.grid.air_fields[0].ax==-4.&&crown.grid.platforms.empty(),
       "legacy Crown expeditions keep their original wind strength");
+    AdventureSession ribs(options,{});
+    const auto ribs_sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==63;});
+    ribs.start_tour(int(ribs_sample-iceberg::DebugTour.begin()));
+    check(ribs.grid.platforms.size()==2&&ribs.grid.platforms[0].fragile&&ribs.grid.platforms[1].fragile,
+      "Fractured Ribs adds two buckling beams to the optional climb");
+    auto climb=[&](int duration,int right) {
+      for(int tick=0;tick<duration;++tick) {
+        Controls c;c.jump_pressed=tick==0;c.jump_held=true;c.move=tick<right?1:0;
+        ribs.tick(c,1./120);
+      }
+    };
+    climb(66,51);
+    check(ribs.state.player.support==0&&ribs.state.platform_armed_at[0]>0.,
+      "an ordinary jump boards the lower beam before it buckles");
+    climb(62,15);
+    check(ribs.state.player.support==1&&ribs.state.platform_armed_at[1]>0.,
+      "the second jump reaches the upper beam");
+    climb(82,0);
+    check(ribs.state.deaths==0&&ribs.state.player.grounded&&ribs.state.collected[3]&&
+          std::abs(ribs.state.player.rect().bottom()-34.)<.01&&
+          !ribs.grid.platforms[0].available(ribs.state,0,ribs.state.elapsed),
+      "the gust carries the third jump to the existing token shelf as the first beam gives way");
     crown_run.itinerary[1]=68;crown.load_room();
     check(crown.grid.template_id==68&&crown.grid.air_fields.empty(),
       "older Ridge Sensors layouts remain calm");
