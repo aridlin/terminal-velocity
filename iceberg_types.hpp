@@ -142,6 +142,7 @@ inline constexpr int SurveyTokenFare = 24;
 inline constexpr uint32_t SurveyTransitPass = 1u << 25;
 inline constexpr uint32_t SurveyCourseComplete = 1u << 26;
 inline constexpr int SurveyReplay = 3;
+inline constexpr int BreakwaterSurvey = 321;
 
 inline int transit_token_progress(const Profile &profile,int fare) {
   int campaign=0;

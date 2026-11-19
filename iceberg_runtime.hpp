@@ -1250,6 +1250,15 @@ public:
     } else if(node.kind==InteractionKind::Board) {
       advance_room();
     } else if(node.kind==InteractionKind::Valve) {
+      if(grid.template_id==iceberg::BreakwaterSurvey) {
+        if(!(grid.switch_flags&1)) {
+          grid.switch_flags|=1;
+          animate_pickup(node,0);
+          notice(t("Pozycja boi zaznaczona na mapie.","Buoy position marked on the chart."));
+          persist();
+        }
+        return;
+      }
       if(grid.template_id==303&&node.id>0&&!(grid.switch_flags&(uint64_t(1)<<(node.id-1)))) {
         notice(t("Najpierw odłącz wcześniejszy obieg. Strzałki prowadzą od fontanny do mieszkań.","Disconnect the preceding circuit first. Follow the arrows from fountain to homes."),5);return;
       }

@@ -303,7 +303,7 @@
     }
     draw_iceberg_landmarks();
     draw_expedition_infrastructure();
-    if(grid_.template_id==321) {
+    if(grid_.template_id==iceberg::BreakwaterSurvey) {
       for(int i=0;i<3;++i) {
         const double x=28.+i*43.;
         const double y=54.+.25*std::sin(state_.elapsed*3.+i);

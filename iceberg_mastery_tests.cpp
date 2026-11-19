@@ -51,11 +51,11 @@ int main() {
       game.state.collected.assign(1,false);
       game.tick({},1./120);
       game.interact();
-      if(game.grid.template_id!=321||!(game.profile.cosmetics&iceberg::SurveyTransitPass))
+      if(game.grid.template_id!=iceberg::BreakwaterSurvey||!(game.profile.cosmetics&iceberg::SurveyTransitPass))
         throw std::runtime_error("the final token should open the survey entrance");
       AdventureSession resumed(options,file);
       resumed.begin_campaign(false);
-      if(resumed.grid.template_id!=321||!resumed.profile.revisit.active)
+      if(resumed.grid.template_id!=iceberg::BreakwaterSurvey||!resumed.profile.revisit.active)
         throw std::runtime_error("a save inside the survey must reopen at its checkpoint");
       int initial_deaths=resumed.state.deaths;
       for(const auto target:{Rect{42,44,8,3},Rect{79,34,6,3},Rect{118,31,3,3}}) {

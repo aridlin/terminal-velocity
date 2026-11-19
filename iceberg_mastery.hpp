@@ -21,7 +21,7 @@ inline EngineGrid build_mastery_course(int district) {
 // A retired Harbor inspection route. The buoy lights double as return lamps.
 inline EngineGrid build_survey_course() {
   EngineGrid g(134,62);
-  g.adventure_level=true;g.district=0;g.template_id=321;g.room_role=iceberg::RoomRole::Lesson;
+  g.adventure_level=true;g.district=0;g.template_id=iceberg::BreakwaterSurvey;g.room_role=iceberg::RoomRole::Lesson;
   g.room_name={"Objazd latarni przyboju","Breakwater survey"};
   g.add_solid_rect(0,51,20,11);
   g.add_solid_rect(39,47,12,2);
