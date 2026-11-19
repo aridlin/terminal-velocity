@@ -621,7 +621,7 @@ public:
     if(dialogue.choosing()) {
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
-      if(tour_scene<0&&scene!=iceberg::IrrigationReplyScene) {
+      if(tour_scene<0&&!iceberg::expedition_reply_scene(scene)) {
         if(scene>=iceberg::HarborMissionReplyBase) {
           set_arrival_exchange(option?iceberg::ArrivalExchange::SecondReply:iceberg::ArrivalExchange::FirstReply);
         } else if(scene<iceberg::BriefingReplyBase) {
@@ -643,7 +643,7 @@ public:
     else {++dialogue.page;dialogue.segment=0;}
     if(dialogue.active()){
       dialogue.reset_reveal();if(dialogue.instant)dialogue.reveal_all();
-      if(dialogue.choosing()&&dialogue.reply_scene!=iceberg::IrrigationReplyScene) {
+      if(dialogue.choosing()&&!iceberg::expedition_reply_scene(dialogue.reply_scene)) {
         if(dialogue.reply_scene>=iceberg::HarborMissionReplyBase) {
           if(tour_scene<0) {
             set_arrival_exchange(iceberg::ArrivalExchange::Prompt);
@@ -1060,6 +1060,10 @@ public:
       talk(iceberg::epilogue_action(node.id));audio.play(AudioCue::Cloth);persist();return;
     } else if(node.kind==InteractionKind::Npc) {
       state.adventure.reacting_npc=node.id;state.adventure.npc_reaction_left=1.2;
+      if(grid.template_id==13&&node.id==1) {
+        talk({iceberg::HoistCrewOpening},0,iceberg::HoistCrewReplyScene);
+        return;
+      }
       if(grid.template_id==330) {
         if(node.id==0&&(profile.story&iceberg::reply_recorded(6))) {
           talk({{0,(profile.story&iceberg::reply_value(6))!=0?

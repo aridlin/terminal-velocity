@@ -147,40 +147,47 @@ int main(){try {
                   "the briefing completes after the final exchange");
   }
  }
- AdventureSession expedition(options,{});
- expedition.begin_campaign(true);
- expedition.profile.unlocked=expedition.run_district=4;
- auto &run=expedition.profile.expeditions[0];
- for(uint32_t seed=1;seed<100;++seed) {
-  auto itinerary=iceworld::make_itinerary(seed,4,8,4,iceberg::Mode::Endless);
-  const auto room=std::find(itinerary.begin(),itinerary.end(),57);
-  if(room==itinerary.end())continue;
-  run.active=true;run.seed=run.origin_seed=seed;run.district=4;
-  run.room=run.depth=int(room-itinerary.begin());run.itinerary=std::move(itinerary);
-  break;
- }
- dialogue_check(run.active,"a normal Expedition itinerary contains the irrigation room");
- expedition.begin_run(iceberg::Mode::Endless);
- expedition.state.player.x=52;
- expedition.state.player.y=50-kPlayerHeight;
- const uint64_t story=expedition.profile.story;
- for(int option=0;option<2;++option) {
-  expedition.interact();
-  auto &exchange=expedition.state.adventure.dialogue;
-  for(int i=0;i<30&&exchange.active()&&!exchange.choosing();++i)expedition.dialogue_next();
-  dialogue_check(exchange.choosing()&&exchange.reply_scene==iceberg::IrrigationReplyScene&&
-                 expedition.profile.story==story,"calling Celina opens a reply without a pending campaign choice");
-  if(option) {
-   Controls navigate;navigate.navigate=1;
-   expedition.tick(navigate,0);
+ struct ExpeditionScene {int district,room,scene,speaker;double x,floor;};
+ for(const auto &scene:std::array{
+     ExpeditionScene{4,57,iceberg::IrrigationReplyScene,5,52,50},
+     ExpeditionScene{1,13,iceberg::HoistCrewReplyScene,1,12,56}}) {
+  AdventureSession expedition(options,{});
+  expedition.begin_campaign(true);
+  expedition.profile.unlocked=expedition.run_district=scene.district;
+  auto &run=expedition.profile.expeditions[0];
+  for(uint32_t seed=1;seed<100;++seed) {
+   auto itinerary=iceworld::make_itinerary(seed,scene.district,8,4,iceberg::Mode::Endless);
+   const auto room=std::find(itinerary.begin(),itinerary.end(),scene.room);
+   if(room==itinerary.end())continue;
+   run.active=true;run.seed=run.origin_seed=seed;run.district=scene.district;
+   run.room=run.depth=int(room-itinerary.begin());run.itinerary=std::move(itinerary);
+   break;
   }
-  const auto &reply=iceberg::civic_reply(iceberg::IrrigationReplyScene,option);
-  expedition.dialogue_next();
-  dialogue_check(exchange.lines.size()==2&&exchange.lines[0].speaker==iceberg::CourierSpeaker&&
-                 exchange.lines[0].text.en==reply.said.en&&exchange.lines[1].speaker==5&&
-                 exchange.lines[1].text.en==reply.answer.text.en,"Celina answers each chosen Courier line");
-  for(int i=0;i<30&&exchange.active();++i)expedition.dialogue_next();
-  dialogue_check(!exchange.active()&&expedition.profile.story==story,"the call leaves campaign story flags intact");
+  dialogue_check(run.active,"a normal Expedition itinerary contains the conversation room");
+  expedition.begin_run(iceberg::Mode::Endless);
+  expedition.state.player.x=scene.x;
+  expedition.state.player.y=scene.floor-kPlayerHeight;
+  const auto story=expedition.profile.story;
+  const auto quests=expedition.profile.quests;
+  for(int option=0;option<2;++option) {
+   expedition.interact();
+   auto &exchange=expedition.state.adventure.dialogue;
+   for(int i=0;i<30&&exchange.active()&&!exchange.choosing();++i)expedition.dialogue_next();
+   dialogue_check(exchange.choosing()&&exchange.reply_scene==scene.scene&&
+                  expedition.profile.story==story,"the Expedition reply opens without a pending campaign choice");
+   if(option) {
+    Controls navigate;navigate.navigate=1;
+    expedition.tick(navigate,0);
+   }
+   const auto &reply=iceberg::civic_reply(scene.scene,option);
+   expedition.dialogue_next();
+   dialogue_check(exchange.lines.size()==2&&exchange.lines[0].speaker==iceberg::CourierSpeaker&&
+                  exchange.lines[0].text.en==reply.said.en&&exchange.lines[1].speaker==scene.speaker&&
+                  exchange.lines[1].text.en==reply.answer.text.en,"each Courier choice receives its matching answer");
+   for(int i=0;i<30&&exchange.active();++i)expedition.dialogue_next();
+   dialogue_check(!exchange.active()&&expedition.profile.story==story&&expedition.profile.quests==quests,
+                  "the Expedition exchange leaves campaign story and quests intact");
+  }
  }
  cell_frame_sink={};return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}
