@@ -441,6 +441,20 @@ inline void add_heatworks_cargo_hoists(EngineGrid &room) {
   room.interactions.push_back({{11,53,2,3},InteractionKind::Npc,1,{"Porozmawiaj","Talk"}});
 }
 
+inline void add_heatworks_pressure_bypass(EngineGrid &room) {
+  if(room.district!=1||room.template_id!=20)return;
+  auto bypass=room;
+  bypass.air_fields.push_back({.area={58.5,27.,6.4,15.},.ax=12.,.ay=-150.,.enabled_by=1});
+  bypass.switch_flags|=1;
+  const auto route=verify_route(bypass);
+  if(!route.complete||route.deaths!=0)return;
+  // The generated route was verified before adding the bypass. Keep its
+  // policy for the unpowered room and leave the valve closed on first entry.
+  room.air_fields=std::move(bypass.air_fields);
+  room.interactions.push_back({{52,40,4,3},InteractionKind::Valve,0,
+    {"Otwórz dopływ pary","Open steam supply"}});
+}
+
 inline void add_expedition_steam(EngineGrid &room) {
   if(room.district!=1||(room.template_id!=18&&room.template_id!=22))return;
   if(room.template_id==18)room.air_fields.push_back({{59.2,29.,2.6,19.},0.,-165.,4.8,0.});

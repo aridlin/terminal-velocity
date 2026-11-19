@@ -282,6 +282,7 @@ inline constexpr std::array DebugTour{
   TourStop{4,50,19,52,{"Wskocz na liść i przepłyń przez basen","Jump onto a leaf and ride it across the pool"}},
   TourStop{5,63,68,45,{"Skacz po belkach, zanim się załamią","Jump across the beams before they buckle"}},
   TourStop{3,41,19,54,{"Wsiadaj, gdy wagonik zatrzyma się przy pomoście","Board the rail car when it stops at the landing"}},
+  TourStop{1,20,54,43,{"Otwórz dopływ i wskocz w strumień pary","Open the supply and jump into the steam"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 inline int tour_page_size(int rows) { return std::max(1,rows-12); }

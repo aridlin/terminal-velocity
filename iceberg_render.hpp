@@ -327,6 +327,11 @@
     if(grid_.district==4)draw_garden_ice();
     if(grid_.district==1)for(const auto &jet:grid_.air_fields) {
       if(grid_.room_role==iceberg::RoomRole::Traverse&&state_.adventure.mode==iceberg::Mode::Endless) {
+        if(grid_.template_id==20) {
+          const double center=jet.area.x+jet.area.w*.5,bottom=jet.area.bottom();
+          draw_scenery_pipe({{54.,43.},{54.,47.},{center,47.},{center,bottom}},
+            jet.active(grid_.switch_flags)?0x789da1:0x576f78);
+        }
         draw_expedition_steam_lift(jet);
         continue;
       }

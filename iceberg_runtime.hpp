@@ -271,6 +271,7 @@ public:
   static void apply_expedition_mechanics(EngineGrid &room) {
     add_expedition_steam(room);
     add_heatworks_cargo_hoists(room);
+    add_heatworks_pressure_bypass(room);
     add_expedition_trams(room);
     add_expedition_stairwells(room);
     add_estate_clotheslines(room);
@@ -1137,6 +1138,11 @@ public:
       break;
     case InteractionKind::Valve:
       v.inspect_art=Art::Valve;v.inspect_icon="⊗";
+      if(grid.district==1&&grid.template_id==20) {
+        v.inspect_body=t("Otwórz dopływ i wskocz w strumień pary. Nad górną półką skręć w lewo.",
+          "Open the supply and jump into the steam. Steer left above the upper shelf.");
+        break;
+      }
       if(grid.district==3&&!grid.growth.empty()) {
         v.inspect_body=t("Pociągnij za uchwyt, aby wysunąć dwie szuflady. Po nich wskoczysz na górne półki.",
           "Pull the handle to slide out two drawers. Use them as steps to reach the upper shelves.");

@@ -420,6 +420,47 @@ int main(int argc,char **argv) {
     check(estate.grid.template_id==26&&estate.grid.platforms.empty(),
       "legacy Estate expeditions keep their original Laundry over the street layout");
 
+    AdventureSession pressure(options,{});
+    const auto steam_sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==20;});
+    pressure.start_tour(int(steam_sample-iceberg::DebugTour.begin()));
+    check(pressure.grid.air_fields.size()==1&&!pressure.grid.air_fields.front().active(pressure.grid.switch_flags),
+      "the Heatworks pressure bypass starts closed");
+    const auto jump_to_steam_shelf=[](AdventureSession &session) {
+      for(int tick=0;tick<250;++tick) {
+        Controls jump;
+        jump.move=tick<29?1:tick<86?0:tick<131?-1:0;
+        jump.jump_pressed=tick==0;
+        jump.jump_held=tick<80;
+        session.tick(jump,1./120.);
+      }
+      return session.state.player.grounded&&std::abs(session.state.player.rect().bottom()-35.)<.05;
+    };
+    check(!jump_to_steam_shelf(pressure),"the same jump misses the upper steam shelf with the valve closed");
+    pressure.end_tour();
+    pressure.start_tour(int(steam_sample-iceberg::DebugTour.begin()));
+    pressure.tick({.interact=true},1./120.);
+    check(pressure.grid.air_fields.front().active(pressure.grid.switch_flags)&&
+          jump_to_steam_shelf(pressure)&&pressure.state.deaths==0&&
+          std::count(pressure.state.collected.begin(),pressure.state.collected.end(),true)==1,
+      "opening the supply lifts an ordinary jump to the upper token without a dash or retry");
+    AdventureSession steam_run(options,path);
+    steam_run.begin_campaign(true);
+    steam_run.profile.unlocked=1;steam_run.run_district=1;
+    auto &steam_save=steam_run.profile.expeditions[0];
+    steam_save={};steam_save.active=true;steam_save.district=1;steam_save.seed=steam_save.origin_seed=73;
+    steam_save.itinerary={20,12,13,16,17,18,21,22};
+    steam_run.begin_run(iceberg::Mode::Endless);
+    check(steam_run.grid.air_fields.size()==1&&!steam_run.grid.air_fields.front().active(steam_run.grid.switch_flags),
+      "the pressure bypass is available in a regular current Heatworks expedition");
+    steam_run.state.player.x=54.;steam_run.state.player.y=43.-kPlayerHeight;
+    steam_run.tick({.interact=true},1./120.);
+    steam_run.begin_campaign(false);steam_run.begin_run(iceberg::Mode::Endless);
+    check(steam_run.grid.air_fields.front().active(steam_run.grid.switch_flags),
+      "the open steam supply survives a saved expedition resume");
+    steam_save.layout_version=2;steam_run.load_room();
+    check(steam_run.grid.air_fields.empty(),"legacy Heatworks expeditions do not gain the pressure bypass");
+
     AdventureSession archive(options,path);
     archive.begin_campaign(true);
     archive.profile.unlocked=3;archive.run_district=3;
