@@ -354,6 +354,7 @@ struct MovingPlatform {
   bool service_lift = false;
   bool clothesline = false;
   bool archive_trolley = false;
+  bool irrigation_scoop = false;
   static constexpr double CrackTime = .55, RestoreTime = 2.9;
   double crack_age(const GameState &state, size_t index, double time) const {
     const double start = state.platform_armed_at[index];
@@ -374,7 +375,8 @@ struct MovingPlatform {
   }
   Rect at(double t) const {
     const double a=offset(t);
-    return {base.x + dx * a, base.y + dy * a, base.w, base.h};
+    const double horizontal=irrigation_scoop?offset(t+period*.25):a;
+    return {base.x + dx * horizontal, base.y + dy * a, base.w, base.h};
   }
 };
 struct Patrol {

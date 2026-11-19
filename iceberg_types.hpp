@@ -227,7 +227,7 @@ inline constexpr std::array DebugTour{
   TourStop{3,44,28,50,{"Taśmy odpisów zmieniają kierunek","Copy belts alternate direction"}},
   TourStop{4,49,67,48,{"Strąk odbija do bocznej półki","A seedpod launches to the side shelf"}},
   TourStop{4,51,54,44,{"Wiszące donice pękają pod stopami","Hanging planters crack underfoot"}},
-  TourStop{4,57,20.5,57,{"Ruchome wiadra koła nawadniającego","The irrigation wheel's bucket lifts"}},
+  TourStop{4,57,52,50,{"Wjedź czerpakiem koła na półkę z nasionami","Ride a scoop around the wheel to the seed shelf"}},
   TourStop{5,60,69,48,{"Podmuchy i rękawy wiatrowe","Gusts and windsocks"}},
   TourStop{5,68,74,37,{"Wiatr zmienia kierunek nad górnymi półkami","Crosswinds reverse above the upper ledges"}},
   TourStop{4,55,73,45,{"Kruche kry na zamarzniętym przelewie","Brittle ice over the reservoir spillway"}},

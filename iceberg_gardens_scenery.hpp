@@ -34,6 +34,39 @@
     world_art(x,pod.y-row,{"╭"+shell+"╮"},0xb9d77b);
   }
 
+  bool draw_irrigation_wheel() {
+    const auto first=std::find_if(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const MovingPlatform &platform){return platform.irrigation_scoop;});
+    if(first==grid_.platforms.end())return false;
+    const double x=first->base.x+first->base.w*.5,y=first->base.y;
+    if(screen(x-first->dx-4,y).first>=cols_||screen(x+first->dx+4,y).first<0)return true;
+    constexpr uint32_t iron=0x668e86, brass=0xc5a36d;
+    draw_scenery_pipe({{26,32},{46,32},{46,34}},iron);
+    draw_pipe_drip(46,34,y+first->dy+1,.27);
+    draw_scenery_pipe({{x-4,y+first->dy+3},{x-4,y+first->dy+5},{53,y+first->dy+5}},iron);
+    for(int i=0;i<64;++i) {
+      const auto rim=first->at(first->period*i/64.);
+      world_text(rim.x+rim.w*.5,rim.y,i%4==0?"•":"·",iron);
+    }
+    for(const auto &platform:grid_.platforms)if(platform.irrigation_scoop) {
+      const auto deck=platform.at(state_.elapsed);
+      const double dx=deck.x+deck.w*.5-x,dy=deck.y-y;
+      const char *spoke=std::abs(dx)<1.?"│":std::abs(dy)<1.?"─":dx*dy>0?"╲":"╱";
+      for(double fraction:{.2,.4,.6,.8})
+        world_text(x+fraction*dx,y+fraction*dy,spoke,brass);
+    }
+    world_text(x,y,"⊕",brass);
+    return true;
+  }
+
+  void draw_irrigation_scoop(const Rect &deck) {
+    const int cells=std::max(3,int(std::round(deck.w/scale_)));
+    std::string rim="╓",body="╰";
+    for(int cell=1;cell<cells-1;++cell){rim+="━";body+="≈";}
+    world_text(deck.x,deck.y,rim+"╖",0xc7e3a5);
+    world_art(deck.x,deck.y+aspect_*scale_,{body+"╯"},0x82bec0);
+  }
+
   void draw_irrigation_bucket(const MovingPlatform &platform,const Rect &deck) {
     const double row=aspect_*scale_, elapsed=state_.elapsed;
     const double left=deck.x+2*scale_, right=deck.right()-3*scale_;
@@ -105,7 +138,7 @@
         if(std::fmod(clock,1.25)<.7)world_text(75.2,48.5,"·",0x92e1ec);
       }
       if(id==56)world_art(60,30,{"╭──────────────────────╮","│  ╭─╮   ╭─╮   ╭─╮     │","│  │⠿│   │⠿│   │⠿│     │","│  ╰─╯   ╰─╯   ╰─╯     │","├──────────────────────┤","│  01    02    03      │","╰──────────────────────╯"},d.stone);
-      if(id==57||id==81)wheel(88,25);
+      if((id==57&&!draw_irrigation_wheel())||id==81)wheel(88,25);
       if(id==48||id==59)world_art(67,8,{"     ╭───────────────╮","  ╭──┤░░░░░░░░░░░░░░░├──╮","  ╰──┴───────────────┴──╯","    ╲       │       ╱","     ╲      │      ╱"},d.stone);
       if(id==51||id==54||id==58)for(int i=0;i<4;++i)world_art(35+i*21,22-i*2,{"┬       ┬","│ ╭─╮   │","│╭╯ ╰╮  │","╰┤   ├──╯"," ╰───╯"},d.stone);
     }

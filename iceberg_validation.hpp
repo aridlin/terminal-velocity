@@ -262,6 +262,18 @@ inline void add_expedition_root_pod(EngineGrid &room) {
   else room.springs.pop_back();
 }
 
+inline void add_expedition_irrigation_wheel(EngineGrid &room) {
+  if(room.district!=4||room.template_id!=57)return;
+  const size_t original=room.platforms.size();
+  // The scoops pass above the first bucket lift and beside the seed shelf.
+  for(double phase:{0.,.25,.5,.75})
+    room.platforms.push_back({.base={42,44,4,.5},.dx=5.,.dy=7.6,.period=7.2,
+      .phase=phase,.irrigation_scoop=true});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms.resize(original);
+}
+
 inline void add_expedition_channel_bridge(EngineGrid &room) {
   if(room.district!=4||room.template_id!=52)return;
   // Extend from the overlook over the lower landing. The old route stays
