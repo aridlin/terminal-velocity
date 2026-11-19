@@ -233,6 +233,12 @@ int main() {
       for(int i=0;i<21;++i) world_step(approach,adventure,{},1./120);
       check(approach.player.ledge && (approach.player.x - hanging.player.x)*side > .05,
             "the climb travels sideways across the ledge over several ticks");
+      auto queued_jump=approach;
+      world_step(queued_jump,adventure,{.jump_held=true,.jump_pressed=true},1./120);
+      for(int i=0;i<8;++i)world_step(queued_jump,adventure,{.jump_held=true},1./120);
+      check(!queued_jump.player.ledge&&!queued_jump.player.grounded&&
+            queued_jump.player.vy<0&&queued_jump.player.rect().bottom()<24.&&queued_jump.deaths==0,
+            "a new jump buffered near the top of either ledge takes off after the climb");
       for(int i=0;i<7;++i) world_step(approach,adventure,{},1./120);
       check(!approach.player.ledge && approach.player.grounded && approach.deaths == 0 &&
             std::abs(approach.player.rect().bottom() - 24.) < 1e-6,
