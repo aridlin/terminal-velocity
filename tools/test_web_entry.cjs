@@ -1460,6 +1460,23 @@ const server=http.createServer((req,res)=>{
    await page.locator('#toolbar [data-tap="13"]').waitFor({state:'visible'});
   }
   console.log('PASS mobile native and fallback fullscreen Map, Quests and settings controls');
+  await page.keyboard.press('m');
+  await page.waitForFunction(()=>!!(uiFlags&1));
+  await page.keyboard.press('Digit5');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>!!(uiFlags&16));
+  const keyboardSetting=page.locator('#focus-pause');
+  await keyboardSetting.focus();
+  const focusPauseBefore=await keyboardSetting.getAttribute('aria-pressed');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(before=>document.querySelector('#focus-pause').getAttribute('aria-pressed')!==before,focusPauseBefore);
+  assert.equal(await keyboardSetting.evaluate(button=>button===document.activeElement),true);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>!(uiFlags&16)&&document.activeElement===canvas);
+  await page.keyboard.press('Digit1');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>!(uiFlags&1));
+  console.log('PASS Escape from a focused settings button restores game keyboard focus');
   console.log('PASS mobile, landscape, resized and large canvas preserve proportions; language remains reachable');
   await page.setViewportSize({width:568,height:320});
   const toolbar=page.locator('#toolbar');

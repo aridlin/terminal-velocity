@@ -351,6 +351,7 @@ window.tvUI=u=>{
  if(tourPicker!==!!u.tourPicker)clearInput();
  tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
+ const hadSettingsFocus=settingsKeys.contains(document.activeElement);
  routeLegs=nextRouteLegs;
  const previousSlot=selectedSlot;
  if(started)selectedSlot=1+((u.flags>>>20)&3);
@@ -375,7 +376,8 @@ window.tvUI=u=>{
   maybeStartAccount();
  }
  translateUI();
- if(hadTimelineFocus&&!expeditionTimelineOpen()&&!accounts?.active)canvas.focus({preventScroll:true});
+ if(!accounts?.active&&((hadTimelineFocus&&!expeditionTimelineOpen())||(hadSettingsFocus&&settingsKeys.hidden)))
+  canvas.focus({preventScroll:true});
 };
 const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25,Digit7:26};
 function recompute(){
@@ -389,10 +391,12 @@ addEventListener('keydown',e=>{
   if(shiftKey)shiftKeys.add(e.code);
   if(!shiftKey||shiftKeys.size>1)dashShift='';
  }
+ const settingsBack=e.code==='Escape'&&!e.isComposing&&e.keyCode!==229&&
+  e.target instanceof Element&&settingsKeys.contains(e.target);
  const pauseScreen=(uiFlags&(2|64|128))===2;
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !(isTimelineDirection(e.target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
+    !settingsBack&&!(isTimelineDirection(e.target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
