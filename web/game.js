@@ -118,6 +118,10 @@ let tourRows=null;
 window.tvTourRows=(first,count,row,left,right)=>{
  tourRows=count?{first,count,row,left,right}:null;
 };
+let expeditionNodes=null;
+window.tvExpeditionNodes=(first,count,row,left,stride,width)=>{
+ expeditionNodes=count?{first,count,row,left,stride,width}:null;
+};
 const tap=(...keys)=>{for(const k of keys){completedPresses|=1<<k;pressed|=1<<k;}};
 function pointerPress(pointer){
  dashShift='';
@@ -970,6 +974,7 @@ function canvasConfirmContext(){
  const overlay=overlayFlags();
  if((overlay&(replyChoiceFlag|2))===replyChoiceFlag)return replyChoiceFlag;
  if(overlay&4)return 4;
+ if(expeditionTimelineOpen())return expeditionFlag;
  if(overlay&(8|64|128))return 0;
  return (overlay&2)||(overlay&doorReadyFlag);
 }
@@ -987,6 +992,14 @@ function canvasTourChoice(x,y){
  return offset>=0&&offset<tourRows.count&&column>=tourRows.left&&column<tourRows.right
   ?tourRows.first+offset:-1;
 }
+function canvasExpeditionRoom(x,y){
+ if(!expeditionNodes||!canvasFit)return -1;
+ const {column,row}=canvasCell(x,y);
+ const nodes=expeditionNodes,offset=column-nodes.left;
+ if(row!==nodes.row||offset<0||offset%nodes.stride>=nodes.width)return -1;
+ const room=Math.floor(offset/nodes.stride);
+ return room<nodes.count?nodes.first+room:-1;
+}
 function canvasReplyChoice(x,y){
  if(replyFirstRow<0||!canvasFit)return -1;
  const cell=canvasCell(x,y);
@@ -1003,7 +1016,8 @@ canvas.addEventListener('pointerdown',event=>{
  if(!event.isPrimary||event.button!==0||accounts?.active||importPending)return;
  const context=canvasConfirmContext();
  const choice=context===replyChoiceFlag?canvasReplyChoice(event.clientX,event.clientY):
-  context===profilePickerFlag?canvasTourChoice(event.clientX,event.clientY):-1;
+  context===profilePickerFlag?canvasTourChoice(event.clientX,event.clientY):
+  context===expeditionFlag?canvasExpeditionRoom(event.clientX,event.clientY):-1;
  canvasPress={id:event.pointerId,context,choice,x:event.clientX,y:event.clientY};
 });
 addEventListener('pointermove',event=>{
@@ -1025,6 +1039,11 @@ canvas.onclick=event=>{
  if(context===profilePickerFlag){
   const choice=canvasTourChoice(event.clientX,event.clientY);
   if(choice>=0&&press?.choice===choice)Module._web_select_tour_stop(choice);
+  return;
+ }
+ if(context===expeditionFlag){
+  const room=canvasExpeditionRoom(event.clientX,event.clientY);
+  if(room>=0&&press?.choice===room)Module._web_select_expedition_room(room);
   return;
  }
  if(context===replyChoiceFlag){
