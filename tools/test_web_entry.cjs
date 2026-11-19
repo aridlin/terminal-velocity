@@ -933,14 +933,27 @@ const server=http.createServer((req,res)=>{
   await inspectControl.tap();
   await page.waitForFunction(()=>!!(uiFlags&8));
   assert.equal(await inspectControl.getAttribute('aria-label'),'Close inspection');
-  assert.deepEqual(await touchDirectionNames(),['Previous page','Next page']);
+  const pageBack=page.locator('#touch [data-key="2"]'),pageForward=page.locator('#touch [data-key="3"]');
   assert.deepEqual(await page.locator('#touch button:visible').evaluateAll(buttons=>
-   buttons.map(button=>button.dataset.key)),['2','3','7']);
+   buttons.map(button=>button.dataset.key)),['7'],'one-page inspections show only Close');
+  await page.evaluate(()=>{rows=24;});
+  await page.waitForFunction(()=>uiFlags&(1<<28));
+  assert.deepEqual(await touchDirectionNames(),['Previous page','Next page']);
+  assert.equal(await pageBack.isDisabled(),true,'Previous is disabled on the first page');
+  assert.equal(await pageForward.isEnabled(),true,'Next is enabled on the first page');
+  await pageForward.tap();
+  await page.waitForFunction(()=>!!(uiFlags&(1<<27))&&!(uiFlags&(1<<28)));
+  assert.equal(await pageForward.isDisabled(),true,'Next is disabled on the final page');
+  assert.equal(await pageBack.isEnabled(),true,'Previous remains enabled on the final page');
+  await pageBack.tap();
+  await page.waitForFunction(()=>!!(uiFlags&(1<<28))&&!(uiFlags&(1<<27)));
   await inspectControl.tap();
   await page.waitForFunction(()=>!(uiFlags&8));
   assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
   assert.equal(await page.locator('#touch-use').isVisible(),true,'Use returns after closing inspection');
   assert.equal(await page.locator('#touch .jump').isVisible(),true,'Jump returns after closing inspection');
+  assert.equal(await pageBack.isEnabled(),true,'Up is available again in play');
+  assert.equal(await pageForward.isEnabled(),true,'Down is available again in play');
   const touchSession=await mobile.newCDPSession(page);
   const [left,up,right]=await Promise.all([0,2,1].map(async key=>{
    const box=await page.locator('#touch [data-key="'+key+'"]').boundingBox();

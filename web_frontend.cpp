@@ -42,6 +42,11 @@ void send_web_ui() {
     (int(fork_door)<<18)|(int(s.menu&&v.confirm_new&&v.selected!=1)<<19)|
     ((web_slot-1)<<20)|(int(v.tour_scene>=0)<<22)|(int(v.save_picker||v.tour_picker)<<23)|(int(v.smooth_camera)<<24)|(int(district_travel)<<25)|
     (int(!s.menu&&v.dialogue.choosing())<<26);
+  if(v.inspecting) {
+    const auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,web_game->last_columns,web_game->last_rows);
+    const int page=std::clamp(v.inspect_page,0,layout.pages-1);
+    flags|=(int(page>0)<<27)|(int(page+1<layout.pages)<<28);
+  }
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }
