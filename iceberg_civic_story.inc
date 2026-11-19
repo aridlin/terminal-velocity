@@ -176,8 +176,8 @@ inline const CivicReply &civic_reply(int scene,int option) {
     static const std::array<CivicReply,2> replies{{
       {{"Kiedy wskoczyć?","When should I board?"},
        {"Winda przejeżdża tuż obok. Wskoczyć, kiedy zapali się zielone?","The hoist passes close to this ledge. Do I jump when the light goes green?"},
-       {1,{"Na zielonym wskocz na pasy. U góry poczekaj na następne zielone i skocz w prawo. Kolejna winda ma inny rytm, więc spójrz na jej lampkę.",
-           "Jump onto the striped deck when the light goes green. At the top, wait for green again and jump right. Check the next lift's light. It runs on its own cycle."}}},
+       {1,{"Na zielonym wskocz na pasy. Patrz na mój panel, póki czekasz na dole. Gdy winda stanie u góry, skocz w prawo. Dalej patrz na pasy. Każda winda ma swój rytm.",
+           "Jump onto the striped deck when my panel goes green. Once the lift stops at the top, jump right. Watch the striped decks ahead. Each lift runs on its own cycle."}}},
       {{"Dla kogo wolna winda?","Who needs the empty lift?"},
        {"Mówisz, że jedna winda ma wrócić pusta. Dla kogo ją zostawiasz?","You said one lift goes back empty. Who are you keeping it for?"},
        {1,{"Dla Ani. Po podwójnej zmianie zejście po schodach zajmuje jej pół godziny. Kiedyś wpisywałem ten pusty kurs jako stratę czasu. Teraz wpisuję go jako kurs dla załogi.",

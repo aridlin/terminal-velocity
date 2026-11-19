@@ -21,15 +21,16 @@
     world_art(tram.x,tram.y+row,{windows+"│",sill+"╯"},0xc0a487,true);
   }
 
-  void draw_hoist_lamp(const MovingPlatform &hoist,double x,double y) {
-    const bool docked=hoist.offset(state_.elapsed)==hoist.offset(state_.elapsed+.08);
-    world_art(x,y,{docked?"●":"○"},docked?0xb5d599:0xb58952);
+  void draw_hoist_lamp(double x,double y,bool ready) {
+    world_art(x,y,{ready?"●":"○"},ready?0xb5d599:0xb58952);
   }
 
   void draw_heatworks_relay(double x,double floor,const MovingPlatform &hoist) {
     const double row=aspect_*scale_,top=floor-3.5*row;
     world_art(x,top,{"╭───╮","│   │","╰─┬─╯","  │  "},0xa08770);
-    draw_hoist_lamp(hoist,x+2*scale_,top+row);
+    const double lower_dock=hoist.base.y+std::abs(hoist.dy);
+    const bool ready=hoist.at(state_.elapsed).y==lower_dock&&hoist.at(state_.elapsed+.08).y==lower_dock;
+    draw_hoist_lamp(x+2*scale_,top+row,ready);
   }
 
   void draw_heatworks_hoist(const MovingPlatform &hoist,const Rect &deck) {
@@ -52,7 +53,8 @@
     }
     for(double y=top+2*row;y<deck.y-row*.5;y+=row)
       world_art(center,y,{"║"},cable_color);
-    draw_hoist_lamp(hoist,center,top+row);
+    const bool docked=hoist.offset(state_.elapsed)==hoist.offset(state_.elapsed+.08);
+    draw_hoist_lamp(center,top+row,docked);
     world_text(left,deck.y,lip+"╡",deck_color);
     world_art(left,deck.y+row,{frame+"╝"},0xa08770);
   }
