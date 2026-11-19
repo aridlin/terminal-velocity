@@ -47,6 +47,10 @@ void send_web_ui() {
     const int page=layout.page_at(v.inspect_offset);
     flags|=(int(page>0)<<27)|(int(page+1<layout.pages)<<28);
   }
+  if(!s.menu&&v.map&&!v.map_room&&v.tour_scene<0&&v.mode!=iceberg::Mode::Campaign) {
+    const auto [selected,count]=web_game->expedition_route_position();
+    flags|=(int(count>0&&selected>0)<<29)|(int(selected+1<count)<<30);
+  }
   browser_ui(flags,web_game->audio.ready(),int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }

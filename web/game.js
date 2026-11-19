@@ -131,6 +131,7 @@ const replaceRunFlag=1<<19;
 const districtTravelFlag=1<<25;
 const replyChoiceFlag=1<<26;
 const previousInspectionPageFlag=1<<27,nextInspectionPageFlag=1<<28;
+const previousRouteRoomFlag=1<<29,nextRouteRoomFlag=1<<30;
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function nameTouchDirections(overlay){
@@ -175,8 +176,19 @@ function translateUI(){
  const inspecting=!!(overlay&8);
  const hasPreviousPage=!!(overlay&previousInspectionPageFlag);
  const hasNextPage=!!(overlay&nextInspectionPageFlag);
- document.querySelector('#touch [data-key="2"]').disabled=inspecting&&!hasPreviousPage;
- document.querySelector('#touch [data-key="3"]').disabled=inspecting&&!hasNextPage;
+ const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
+ const showRoute=!!(overlay&roomMapFlag);
+ const timeline=expeditionMap&&!showRoute;
+ for(const [key,available] of [
+  [2,timeline?!!(overlay&previousRouteRoomFlag):!inspecting||hasPreviousPage],
+  [3,timeline?!!(overlay&nextRouteRoomFlag):!inspecting||hasNextPage],
+ ]){
+  for(const button of document.querySelectorAll('#touch [data-key="'+key+'"],.route-browse [data-key="'+key+'"]')){
+   if(button.disabled===!available)continue;
+   if(!available)for(const [id,pointer] of pointers)if(pointer.button===button)finishPointer(id,false);
+   button.disabled=!available;
+  }
+ }
  const browsingQuests=!!(overlay&64)&&!reading;
  touchUse.hidden=inspecting;
  if(inSettings||showingPause){
@@ -250,9 +262,7 @@ function translateUI(){
   touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
  }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
- const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
- const showRoute=!!(overlay&roomMapFlag);
- for(const controls of document.querySelectorAll('.route-browse'))controls.hidden=!expeditionMap||showRoute;
+ for(const controls of document.querySelectorAll('.route-browse'))controls.hidden=!timeline;
  const mapViewLabel=showRoute?tr('Trasa','Route'):tr('Pokój','Room');
  const mapViewAction=showRoute?tr('Pokaż trasę','Show route map'):tr('Pokaż plan pokoju','Show room map');
  for(const button of document.querySelectorAll('.map-view-switch')){

@@ -72,7 +72,7 @@
 #touch[data-compact-controls] .actions :is(.dash,.jump),
 #touch[data-compact-controls="actions"] .directions{display:none}
 #touch[data-compact-controls="actions"]{justify-content:center}
-#touch .directions button:disabled{cursor:default}
+#touch .directions button:disabled,.route-browse button:disabled{cursor:default}
 
 #downloads{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 12px;margin-top:5px;font-size:12px}
 #downloads span{color:#9baeb7}#downloads a{color:#e4ad68;text-underline-offset:3px;padding:3px 0}

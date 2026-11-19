@@ -51,6 +51,14 @@
         InteractionKind::RouteChoice,alternative,iceworld::pattern(alternative).name,leg});
     }
   }
+  std::pair<int,int> expedition_route_position() const {
+    const auto &v=state.adventure;
+    const int completed=v.route.completed_legs*iceberg::RoomsPerLeg;
+    const int selected=v.route_room_selection<0?completed+v.route.current:v.route_room_selection;
+    const int count=v.route.rooms.empty()?0:completed+int(v.route.rooms.size())+
+      (mode==iceberg::Mode::Endless?iceberg::RoomsPerLeg:0);
+    return {selected,count};
+  }
   void sync_route_view() {
     auto &v=state.adventure;auto &r=v.route;r={};
     // A hidden excursion never appears in the route graph or its counters.

@@ -1344,9 +1344,7 @@ public:
     if(v.map&&!v.map_room&&!c.inspect&&mode!=iceberg::Mode::Campaign&&!v.route.rooms.empty()) {
       const int direction=repeated_navigation(c,dt);
       if(direction) {
-        const int completed=v.route.completed_legs*iceberg::RoomsPerLeg;
-        const int selected=v.route_room_selection<0?completed+v.route.current:v.route_room_selection;
-        const int count=completed+int(v.route.rooms.size())+(mode==iceberg::Mode::Endless?iceberg::RoomsPerLeg:0);
+        const auto [selected,count]=expedition_route_position();
         v.route_room_selection=std::clamp(selected+direction,0,count-1);
       }
     }
