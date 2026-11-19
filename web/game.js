@@ -719,11 +719,12 @@ function readCurrentSave(forAccount=false){
  try{return Module.FS.readFile(recovery);}
  finally{Module.FS.unlink(recovery);}
 }
-function downloadSave(event,name,read){
+function downloadSave(event,suffix,read){
  try {
+  const slot=selectedSlot===1?'':'-slot-'+selectedSlot;
   const url=URL.createObjectURL(new Blob([read()],{type:'application/octet-stream'}));
   const link=document.createElement('a');
-  link.href=url;link.download=name;link.click();
+  link.href=url;link.download='terminal-velocity'+slot+suffix+'.iceberg';link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   setSaveActionError(null);
  } catch {
@@ -732,12 +733,12 @@ function downloadSave(event,name,read){
   if(event.detail!==0)canvas.focus({preventScroll:true});
  }
 }
-exportSave.onclick=event=>downloadSave(event,'terminal-velocity.iceberg',readCurrentSave);
-exportPreviousSave.onclick=event=>downloadSave(event,'terminal-velocity-previous.iceberg',()=>Module.FS.readFile(previousImportPath()));
+exportSave.onclick=event=>downloadSave(event,'',readCurrentSave);
+exportPreviousSave.onclick=event=>downloadSave(event,'-previous',()=>Module.FS.readFile(previousImportPath()));
 unreadableSaveButtons.forEach((button,i)=>{
  button.onclick=event=>{
   const name=unreadableSaveNames[i];
-  if(name)downloadSave(event,name,()=>Module.FS.readFile(saveDirectory+'/'+name));
+  if(name)downloadSave(event,i===0?'-unreadable':'-unreadable-backup',()=>Module.FS.readFile(saveDirectory+'/'+name));
  };
 });
 function finishImport(returnToPicker=false){
