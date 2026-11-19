@@ -277,7 +277,7 @@ public:
     if(!saves.load(profile))profile.language=previous_language;
     reset_profile_menu();
   }
-  void load_tour_scene(int index) {
+  void load_tour_scene(int index,int retries=0) {
     tour_scene=index;
     const auto &stop=iceberg::DebugTour[size_t(index)];
     mode=iceberg::Mode::Endless;district=stop.district;stage=2;room=depth=0;run_seed=73;run_active=false;
@@ -293,7 +293,7 @@ public:
       grid.spawn_x=entry.x;grid.spawn_y=entry.y;
       if(!grid.checkpoint_points.empty())grid.checkpoint_points.front()={entry.x,entry.y};
     }
-    state=new_state(grid);state.ssh=options.remote;stepper={};
+    state=new_state(grid);state.ssh=options.remote;state.deaths=retries;stepper={};
     update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
     if(stop.room!=iceberg::CrownSentinel)notice(stop.change.get(profile.language),8);
     sync_view();
@@ -1338,6 +1338,11 @@ public:
     if(at_door)v.door_open=std::min(1.,v.door_open+dt*4.5);
     c.restart=c.restart||c.new_run;
     const bool retrying=c.restart||stepper.pending.restart;
+    if(tour_scene>=0&&retrying) {
+      load_tour_scene(tour_scene,state.deaths+1);
+      audio.play(AudioCue::Death);
+      return;
+    }
     // A retry queued between physics steps still takes priority at a doorway.
     if(!retrying) {
       if(c.dash_pressed&&grid.dash_locked())notice(t("Przesyłka musi stać pionowo — skocz zamiast zrywu.","Keep the parcel upright — jump instead of dashing."));
