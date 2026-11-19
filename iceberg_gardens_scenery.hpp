@@ -39,21 +39,30 @@
       [](const MovingPlatform &platform){return platform.irrigation_scoop;});
     if(first==grid_.platforms.end())return false;
     const double x=first->base.x+first->base.w*.5,y=first->base.y;
-    if(screen(x-first->dx-4,y).first>=cols_||screen(x+first->dx+4,y).first<0)return true;
+    if(screen(22,y).first>=cols_||screen(54,y).first<0)return true;
     constexpr uint32_t iron=0x668e86, brass=0xc5a36d;
+    const double row=aspect_*scale_;
+    world_art(26-4*scale_,32-3*row,{"╭───────╮","│≈≈≈≈≈≈≈│","╰───╥───╯"},iron);
     draw_scenery_pipe({{26,32},{46,32},{46,34}},iron);
     draw_pipe_drip(46,34,y+first->dy+1,.27);
     draw_scenery_pipe({{x-4,y+first->dy+3},{x-4,y+first->dy+5},{53,y+first->dy+5}},iron);
+    const auto stroke=[](double dx,double dy) {
+      return std::abs(dx)>2*std::abs(dy)?"━":std::abs(dy)>2*std::abs(dx)?"┃":dx*dy>0?"╲":"╱";
+    };
     for(int i=0;i<64;++i) {
       const auto rim=first->at(first->period*i/64.);
-      world_text(rim.x+rim.w*.5,rim.y,i%4==0?"•":"·",iron);
+      const auto next=first->at(first->period*(i+1)/64.);
+      world_text(rim.x+rim.w*.5,rim.y,stroke((next.x-rim.x)/scale_,(next.y-rim.y)/row),iron);
     }
     for(const auto &platform:grid_.platforms)if(platform.irrigation_scoop) {
       const auto deck=platform.at(state_.elapsed);
       const double dx=deck.x+deck.w*.5-x,dy=deck.y-y;
-      const char *spoke=std::abs(dx)<1.?"│":std::abs(dy)<1.?"─":dx*dy>0?"╲":"╱";
-      for(double fraction:{.2,.4,.6,.8})
+      const int cells=int(std::ceil(std::max(std::abs(dx)/scale_,std::abs(dy)/row)));
+      const char *spoke=stroke(dx/scale_,dy/row);
+      for(int cell=1;cell<cells;++cell) {
+        const double fraction=double(cell)/cells;
         world_text(x+fraction*dx,y+fraction*dy,spoke,brass);
+      }
     }
     world_text(x,y,"⊕",brass);
     return true;
