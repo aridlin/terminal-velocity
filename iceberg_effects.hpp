@@ -77,20 +77,22 @@
 
     const double time=state_.elapsed;
     const bool active=vent.active(time),warning=vent.warning(time);
-    const int middle=(left+right)/2;
+    const int middle=left+(right-left)/2;
     const int steam_rows=bottom-top;
     const double pressure=(vent.cycle(time)-PulseHazard::warning_start)/(1-PulseHazard::warning_start);
     const int pressure_rows=warning?std::min(steam_rows,1+int(pressure*steam_rows)):0;
     const int ripple=int(time*14);
     for(int y=std::max(4,top);y<std::min(bottom,rows_-3);++y) {
-      if(active) {
-        for(int x=std::max(0,left);x<=std::min(right,cols_-1);++x) {
-          const bool core=x==middle;
+      if(!active&&y<bottom-pressure_rows)continue;
+      for(int x=std::max(0,left);x<=std::min(right,cols_-1);++x) {
+        const bool core=x==middle;
+        if(active) {
           const char *steam=core?((y+ripple)%2?"∿":"│"):x==left?"▐":x==right?"▌":"░";
           put(y,x,{steam,Color::Text,false,false,0,core?0xffb7a4:vent_active});
+        } else if(core||x==left||x==right) {
+          const char *steam=core?"↑":y==bottom-pressure_rows?"▴":"┊";
+          put(y,x,{steam,Color::Text,false,false,0,vent_warning});
         }
-      } else if(y>=bottom-pressure_rows) {
-        put(y,middle,{"↑",Color::Text,false,false,0,vent_warning});
       }
     }
     if(bottom<rows_-3) {
