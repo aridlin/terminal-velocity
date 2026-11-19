@@ -1,6 +1,7 @@
 'use strict';
 const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d',{alpha:false});
 const stage=document.querySelector('#stage'),start=document.querySelector('#start'),saveStatus=document.querySelector('#save-status');
+const tourControls=document.querySelector('#tour-controls');
 const gameButtons=document.querySelectorAll('[data-tap],[data-key],#account,#account-fullscreen,#export-save,#import-save');
 function setGameButtons(enabled){
  for(const button of gameButtons)button.disabled=!enabled;
@@ -222,7 +223,7 @@ function translateUI(){
  }
  document.querySelector('#save-replacement-actions').hidden=!replacingSave;
  const menuSelection=document.querySelector('#menu-selection-actions');
- document.querySelector('#tour-controls').hidden=!tourPicker;
+ tourControls.hidden=!tourPicker;
  menuSelection.hidden=!inMenu||inSettings||replacingSave;
  menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile;
  if(replacingSave){
@@ -356,6 +357,7 @@ window.tvUI=u=>{
  tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
  const hadSettingsFocus=settingsKeys.contains(document.activeElement);
+ const hadTourFocus=tourControls.contains(document.activeElement);
  routeLegs=nextRouteLegs;
  const previousSlot=selectedSlot;
  if(started)selectedSlot=1+((u.flags>>>20)&3);
@@ -386,7 +388,8 @@ window.tvUI=u=>{
   maybeStartAccount();
  }
  translateUI();
- if(!accounts?.active&&((hadTimelineFocus&&!expeditionTimelineOpen())||(hadSettingsFocus&&settingsKeys.hidden)))
+ if(!accounts?.active&&((hadTimelineFocus&&!expeditionTimelineOpen())||
+    (hadSettingsFocus&&settingsKeys.hidden)||(hadTourFocus&&tourControls.hidden)))
   canvas.focus({preventScroll:true});
 };
 const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25,Digit7:26,PageUp:28,PageDown:29};
@@ -406,9 +409,11 @@ addEventListener('keydown',e=>{
  const pauseScreen=(uiFlags&(2|64|128))===2;
  const tourPage=e.code==='PageUp'||e.code==='PageDown';
  if(tourPage&&!tourPicker)return;
+ const tourNavigation=tourPicker&&tourControls.contains(e.target)&&
+  (tourPage||e.code.startsWith('Arrow')||e.code==='Escape')&&!e.isComposing&&e.keyCode!==229;
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  if(e.target instanceof Element&&e.target.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !settingsBack&&!(tourPage&&e.target.closest('#tour-controls'))&&!(isTimelineDirection(e.target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
+    !settingsBack&&!tourNavigation&&!(isTimelineDirection(e.target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
