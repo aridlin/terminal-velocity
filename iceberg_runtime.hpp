@@ -1681,7 +1681,7 @@ public:
     if(crown_advanced||old_cp!=state.checkpoint||(state.won&&!at_door)||at_route_fork()!=at_fork||
        deaths>0||pickups>0||mastery_progress||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,
-      profile.smooth_camera&&deaths>0?10.:dt,profile.smooth_camera);
+      deaths>0?10.:dt,profile.smooth_camera);
     if(crown_advanced) {
       audio.play(AudioCue::Metal1);
       if(crown_victory) {

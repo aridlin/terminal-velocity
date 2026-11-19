@@ -1349,6 +1349,7 @@ public:
       // Adventure goals indicate current doorway contact, while classic
       // courses latch completion for the results screen.
       if (grid.adventure_level) state.won = false;
+      const int deaths=state.deaths;
       if (!state.won || input.restart) {
         world_step(state, grid, input, 1.0 / 120.0);
         for (size_t i = 0; i < grid.sweets.size(); ++i) {
@@ -1385,9 +1386,9 @@ public:
         }
       }
 
-      // Retry ends this frame at the lamp, even if slower rendering left
-      // more physics steps queued with the old held controls.
-      if(input.restart) {
+      // End a respawn at the checkpoint. Any remaining steps in this frame
+      // would reuse the movement input from before the respawn.
+      if(state.deaths!=deaths) {
         accumulator=0.;
         return;
       }

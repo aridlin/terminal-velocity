@@ -257,8 +257,15 @@ int main() {
     step.advance(s, course, {}, 1. / 120);
     check(s.checkpoint == 1, "safe checkpoint activates");
     s.player.y = 60;
-    step.advance(s, course, {}, 1. / 120);
-    check(s.deaths == 1 && s.player.x == 61, "death respawns at checkpoint");
+    const double fall_time=s.elapsed;
+    Controls falling;
+    falling.move=1;
+    step.advance(s, course, falling, .1);
+    check(s.deaths==1&&s.player.x==s.spawn_x&&s.player.y==s.spawn_y&&s.player.dash_available&&
+              step.accumulator==0.&&std::abs(s.elapsed-fall_time-1./120)<1e-8,
+          "a hazard respawn ends a slow frame at the checkpoint");
+    step.advance(s, course, falling, 1./120);
+    check(s.deaths==1&&s.player.x>s.spawn_x,"held movement resumes on the next frame after a fall");
     s = new_state(course);
     step = FixedStepper{};
     int jumps = 0, dashes = 0;
