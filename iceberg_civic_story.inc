@@ -161,6 +161,17 @@ inline const CivicReply &epilogue_reply(int option) {
 }
 
 inline const CivicReply &civic_reply(int scene,int option) {
+  if(scene==IrrigationReplyScene) {
+    static const std::array<CivicReply,2> replies{{
+      {{"Jak wjechać na górę?","How do I get up there?"},
+       {"Stoję przy kole. Jak dostać się na półkę z nasionami?","I'm at the wheel. How do I reach the seed shelf?"},
+       {5,{"Poczekaj, aż czerpak zjedzie obok tarasu. Wskocz na niego w lewo. Kiedy cię podniesie, skocz w prawo na półkę.","Wait for a scoop to come down beside the terrace. Jump left onto it. Once it carries you up, jump right to the shelf."}}},
+      {{"Gdzie znajdę Basię?","Where can I find Basia?"},
+       {"A gdzie znajdę Basię, jeśli uda mi się zdjąć skrzynkę?","Where can I find Basia if I get the box down?"},
+       {5,{"W szklarni. To moja siostra. Ostatniej wiosny rozdałam sąsiadom sadzonki, które miała zabrać. Sama jej zaniosę skrzynkę. Tym razem wybierze pierwsza.","In the greenhouse. She's my sister. Last spring I gave away the seedlings she'd set aside. I'll take the box to her myself. This time she gets first pick."}}},
+    }};
+    return replies[size_t(option)];
+  }
   if(scene==EpilogueReplyScene)return epilogue_reply(option);
   if(scene>=HarborMissionReplyBase)return harbor_mission_reply(scene-HarborMissionReplyBase,option);
   if(scene>=BriefingReplyBase)return briefing_reply(scene-BriefingReplyBase,option);

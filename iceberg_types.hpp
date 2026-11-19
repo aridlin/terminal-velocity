@@ -166,6 +166,7 @@ inline constexpr int EpilogueArrival = DistrictCount + 1;
 inline constexpr int FirstHarborMissionArrival = EpilogueArrival + 1;
 inline constexpr int HarborMissionReplyBase = BriefingReplyBase + DistrictCount;
 inline constexpr int EpilogueReplyScene = HarborMissionReplyBase + 3;
+inline constexpr int IrrigationReplyScene = EpilogueReplyScene + 1;
 // Only meaningful while ArrivalMask names the current interactive arrival.
 inline constexpr int ArrivalExchangeShift = 34;
 inline constexpr uint64_t ArrivalExchangeMask = uint64_t(3) << ArrivalExchangeShift;
@@ -214,6 +215,7 @@ struct TourStop {
 inline constexpr int CrownShaftPlate = 41;
 inline constexpr int ArchiveTrolleyNotice = 42;
 inline constexpr int ArchiveDryingLetter = 43;
+inline constexpr int IrrigationCallBox = 44;
 inline constexpr int CrownSentinel = 701;
 inline constexpr uint64_t CrownArenaReached = uint64_t(1) << 46;
 inline constexpr uint64_t CrownSentinelDefeated = uint64_t(1) << 47;
