@@ -86,14 +86,25 @@ public:
   }
   Controls consume() {
     Controls c;
-    c.move = int(key('D') || key(VK_RIGHT)) - int(key('A') || key(VK_LEFT));
-    c.jump_held = key(VK_SPACE) || key('W') || key(VK_UP);
-    c.jump_pressed = press(VK_SPACE) || press('W') || press(VK_UP);
+    const bool left=key('A')||key(VK_LEFT),right=key('D')||key(VK_RIGHT);
+    const bool up=key('W')||key(VK_UP),down=key('S')||key(VK_DOWN);
+    const bool tap_left=press('A')||press(VK_LEFT),tap_right=press('D')||press(VK_RIGHT);
+    const bool tap_up=press('W')||press(VK_UP),tap_down=press('S')||press(VK_DOWN);
+    c.move=int(right)-int(left);
+    c.aim_y=int(down)-int(up);
+    c.browse_leg=int(tap_right)-int(tap_left);
+    c.navigate=int(tap_down)-int(tap_up);
+    // A tap that includes both edges in one console read still aims the dash.
+    if(tap_left||tap_right||(left&&right))
+      c.move_pressed=left&&right?0:c.browse_leg;
+    if(tap_up||tap_down||(up&&down))
+      c.aim_pressed=up&&down?0:c.navigate;
+    c.jump_held = key(VK_SPACE) || up;
+    c.jump_pressed = press(VK_SPACE) || tap_up;
     c.dash_pressed = press(VK_SHIFT) || press(VK_LSHIFT) || press(VK_RSHIFT) ||
                      press('X') || press('K');
-    c.fast_fall = key('S') || key(VK_DOWN);
-    c.fast_fall_pressed = press('S') || press(VK_DOWN);
-    c.aim_y = int(c.fast_fall) - int(key('W') || key(VK_UP));
+    c.fast_fall = down;
+    c.fast_fall_pressed = tap_down;
     c.restart = press('R');
     c.new_run = press('N') || (press('R') && key(VK_CONTROL));
     c.quit = press('Q') || (press('C') && key(VK_CONTROL));
@@ -110,8 +121,6 @@ public:
     c.map = press('J');
     c.language = press('L');
     c.tour_page = int(press(VK_NEXT)) - int(press(VK_PRIOR));
-    c.navigate = int(press('S') || press(VK_DOWN)) - int(press('W') || press(VK_UP));
-    c.browse_leg = int(press('D') || press(VK_RIGHT)) - int(press('A') || press(VK_LEFT));
     c.next_seed = press('G');
     c.menu_request = press('M');
     c.pause = press(VK_ESCAPE) || press('P');
