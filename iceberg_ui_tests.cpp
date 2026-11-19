@@ -828,8 +828,9 @@ int main(){try {
     game.tick(tab,0);
     Controls next_room;next_room.navigate=1;
     Controls previous_room;previous_room.navigate=-1;
+    const int leg_start=mode==iceberg::Mode::Endless?iceberg::RoomsPerLeg:0;
     for(int i=v.route.current;i<7;++i)game.tick(next_room,0);
-    ui_check(v.route_room_selection==7&&v.route.current==room+1,
+    ui_check(v.route_room_selection==leg_start+7&&v.route.current==room+1,
       "browsing reaches the last planned room without moving the courier");
     RenderGrid(game.grid,game.state,24,34,2).draw();
     ui_check(ui_text(frame).find("Room 8:")!=std::string::npos&&ui_text(frame).find("╰╯")!=std::string::npos,
@@ -862,7 +863,7 @@ int main(){try {
       }
       game.profile.language=iceberg::Language::English;game.sync_view();
     }
-    for(int i=0;i<8;++i)game.tick(previous_room,0);
+    for(int i=0;i<leg_start+8;++i)game.tick(previous_room,0);
     ui_check(v.route_room_selection==0&&v.route.current==room+1,
       "browsing stops at the first room without changing expedition progress");
     game.tick(map,0);game.tick(map,0);
@@ -874,7 +875,7 @@ int main(){try {
     const int first_selection=v.route_room_selection;
     held_next.navigate=0;
     for(int i=0;i<3;++i)game.tick(held_next,.1);
-    ui_check(first_selection==room+2&&v.route_room_selection==first_selection,
+    ui_check(first_selection==leg_start+room+2&&v.route_room_selection==first_selection,
       "a held down arrow moves once before the repeat delay");
     game.tick(held_next,.1);
     ui_check(v.route_room_selection==first_selection+1,
@@ -915,9 +916,9 @@ int main(){try {
     std::vector<iceberg::Text> next_leg_preview;
     if(mode==iceberg::Mode::Endless) {
       game.tick(next_room,0);
-      next_leg_preview=v.route.next_rooms;
+      next_leg_preview=v.route.browsed_rooms;
       RenderGrid(game.grid,game.state,24,34,2).draw();
-      ui_check(v.route_room_selection==8&&v.route.current==7&&next_leg_preview.size()==8&&
+      ui_check(v.route_room_selection==leg_start+8&&v.route.current==7&&next_leg_preview.size()==8&&
         ui_text(frame).find("Next leg 3")!=std::string::npos&&ui_text(frame).find("Room 1:")!=std::string::npos,
         "browsing past the last room previews the first room of the next leg");
       game.profile.language=iceberg::Language::Polish;game.sync_view();
@@ -925,7 +926,7 @@ int main(){try {
       ui_check(ui_text(frame).find("Następny odcinek 3")!=std::string::npos,
         "the next route page has a localized leg heading");
       game.tick(previous_room,0);
-      ui_check(v.route_room_selection==7,"browsing back returns to room eight of the current leg");
+      ui_check(v.route_room_selection==leg_start+7,"browsing back returns to room eight of the current leg");
       game.profile.language=iceberg::Language::English;game.sync_view();
     }
     const int resume_option=mode==iceberg::Mode::Endless?2:3;
@@ -939,6 +940,7 @@ int main(){try {
     ui_check(!game.state.menu&&!v.map&&game.mode==mode&&game.run_seed==saved_seed&&game.depth==saved_depth,
       "confirming the preselected run resumes the same route and room");
     if(mode==iceberg::Mode::Endless) {
+      const auto completed=v.route.rooms;
       game.advance_room();game.tick(map,0);
       RenderGrid(game.grid,game.state,24,34,2).draw();
       ui_check(v.route.current==0&&v.route.visited==1&&
@@ -948,6 +950,23 @@ int main(){try {
         std::equal(v.route.rooms.begin(),v.route.rooms.end(),next_leg_preview.begin(),[](const auto &a,const auto &b){
           return std::string_view(a.en)==b.en&&std::string_view(a.pl)==b.pl;
         }),"the generated leg matches every previewed room in order");
+      game.tick(previous_room,0);
+      RenderGrid(game.grid,game.state,24,34,2).draw();
+      ui_check(v.route.browsed_leg==-1&&v.route.current==0&&ui_text(frame).find("Completed leg 2")!=std::string::npos&&
+        ui_text(frame).find("Room 8:")!=std::string::npos,
+        "browsing back from a new leg opens the completed leg");
+      ui_check(v.route.browsed_rooms.size()==completed.size()&&
+        std::equal(v.route.browsed_rooms.begin(),v.route.browsed_rooms.end(),completed.begin(),[](const auto &a,const auto &b){
+          return std::string_view(a.en)==b.en&&std::string_view(a.pl)==b.pl;
+        }),"history lists the actual completed itinerary in order");
+      game.tick(next_room,0);
+      ui_check(v.route.browsed_leg==0&&v.route.current==0,"browsing forward returns to the current leg");
+      game.tick(previous_room,0);
+      for(int leg_room=0;leg_room<2*iceberg::RoomsPerLeg;++leg_room)game.tick(previous_room,0);
+      ui_check(v.route_room_selection==0&&v.route.browsed_leg==-2,"history stops at the first recorded room");
+      game.tick(open_menu,0);game.tick(enter,0);game.tick(map,0);
+      game.tick(previous_room,0);
+      ui_check(v.route.browsed_leg==-1,"resuming the same Expedition from the menu retains its session history");
       game.tick(map,0);
     }
   }
