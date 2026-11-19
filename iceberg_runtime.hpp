@@ -1567,7 +1567,8 @@ public:
     if(v.map&&mode==iceberg::Mode::Campaign&&!v.map_room&&!c.inspect) {
       if(c.navigate&&!v.map_route)v.selected=(v.selected-c.navigate+iceberg::DistrictCount)%iceberg::DistrictCount;
       if(c.navigate&&v.map_route&&v.route.available)v.route_page=std::clamp((v.route_page<0?v.route.leg:v.route_page)+c.navigate,0,2);
-      if(c.confirm&&!v.map_route&&iceberg::district_travel_available(v,v.selected)) {
+      // A selection change needs a fresh confirmation for the newly highlighted district.
+      if(c.confirm&&!c.navigate&&!v.map_route&&iceberg::district_travel_available(v,v.selected)) {
         int destination=v.selected;persist();profile.visit_district=destination==district?-1:destination;
         load_room(profile.visit_district<0);persist();audio.play(AudioCue::Door);
         notice((profile.visit_district<0?t("POWRÓT NA TRASĘ — ","BACK ON YOUR ROUTE — "):t("PRZYJAZD — ","ARRIVED — "))+iceberg::Districts[size_t(destination)].name.get(profile.language),6);

@@ -99,7 +99,9 @@ int main(){try {
   ui_check(!guidance.state.adventure.map&&guidance.state.adventure.notice_left==0,
     "confirming the current district leaves no travel notice over gameplay");
   guidance.tick(map,0);
-  Controls pick_district;pick_district.navigate=-1;guidance.tick(pick_district,0);
+  Controls pick_district=enter;pick_district.navigate=-1;guidance.tick(pick_district,0);
+  ui_check(guidance.state.adventure.map&&guidance.state.adventure.selected==1&&guidance.profile.visit_district<0,
+    "navigating and confirming together leaves the newly selected district on the map");
   RenderGrid(guidance.grid,guidance.state,24,34,2).draw();
   ui_check(ui_text(frame).find("ENTER travel")!=std::string::npos,
     "the map offers travel when an unlocked destination is selected");
