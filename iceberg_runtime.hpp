@@ -974,8 +974,8 @@ public:
     case InteractionKind::Npc:case InteractionKind::Rescue:
       v.inspect_art=Art::Character;v.inspect_title=iceberg::Npcs[size_t(node.id)].name;
       v.inspect_body=grid.template_id==13&&node.id==1?
-        t("Witek pilnuje przekaźników. Zielona lampka na panelu zapala się, gdy pierwsza winda stoi. E — porozmawiaj.",
-          "Witek watches the relays. The panel lights up green when the first lift stops. Press E to talk."):
+        t("Witek pilnuje przekaźników. Zielona lampka oznacza, że winda stoi na tym poziomie. E — porozmawiaj.",
+          "Witek watches the relays. A green light on his panel means the lift is at this landing. Press E to talk."):
         iceberg::Npcs[size_t(node.id)].title.get(profile.language)+t(". E — rozmowa. Zlecenia i odebrane wiadomości znajdziesz w dzienniku.",". E — talk. Tasks and received messages are kept in your journal.");
       v.inspect_icon="◉";break;
     case InteractionKind::DockWorker:

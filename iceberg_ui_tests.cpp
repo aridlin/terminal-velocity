@@ -532,10 +532,23 @@ int main(){try {
       }
       ui_check(courier_cap>=0&&mechanic_cap<cols&&courier_cap+3<=mechanic_cap,
         "entering Salvaged lifts leaves the Courier and Witek visibly apart");
-      ui_check(count_marker("●",0xb5d599)>0,"the relay shows green when the first hoist is stopped");
+      const auto lower_signal=[&]{
+        for(int x=mechanic_cap+4;x<cols;++x)for(int y=4;y<rows-3;++y) {
+          const auto &cell=frame[size_t(y)][size_t(x)];
+          if((cell.glyph=="●"&&cell.rgb==0xb5d599)||(cell.glyph=="○"&&cell.rgb==0xb58952))return cell.rgb;
+        }
+        return uint32_t(0);
+      };
+      ui_check(lower_signal()==0xb5d599,"the lower relay shows green when the deck can be boarded");
       lifts.state.elapsed=.8;
       RenderGrid(lifts.grid,lifts.state,rows,cols,2).draw();
-      ui_check(count_marker("○",0xb58952)>0,"the relay shows amber when the first hoist is moving");
+      ui_check(lower_signal()==0xb58952,"the lower relay stays amber while the deck rises");
+      lifts.state.elapsed=2.6;
+      RenderGrid(lifts.grid,lifts.state,rows,cols,2).draw();
+      ui_check(lower_signal()==0xb58952,"the lower relay stays amber while the deck waits upstairs");
+      lifts.state.elapsed=hoist.period+.1;
+      RenderGrid(lifts.grid,lifts.state,rows,cols,2).draw();
+      ui_check(lower_signal()==0xb5d599,"the lower relay turns green when the deck returns");
     }
     lifts.state.elapsed=0;
     lifts.interact();
