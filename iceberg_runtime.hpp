@@ -924,21 +924,11 @@ public:
       });
       if(entrance!=grid.interactions.end()) {
         auto &courier=state.player;
-        const auto &door=entrance->area;
+        const auto door=entrance->at(grid.platforms,state.elapsed);
         courier.x=door.x+(door.w-kPlayerWidth)*.5;
         courier.y=door.bottom()-kPlayerHeight;
         courier.grounded=true;
-        // The reservoir entrance is on a lift, whose phase comes from the source room.
-        for(size_t i=0;i<grid.platforms.size();++i) {
-          const auto &lift=grid.platforms[i];
-          if(lift.base.x==door.x&&lift.base.y==door.bottom()&&lift.base.w==door.w) {
-            const auto surface=lift.at(state.elapsed);
-            courier.x+=surface.x-lift.base.x;
-            courier.y=surface.y-kPlayerHeight;
-            courier.support=int(i);
-            break;
-          }
-        }
+        courier.support=entrance->platform;
         update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
       }
       persist();return;
@@ -1025,7 +1015,7 @@ public:
     for(size_t i=0;i<grid.interactions.size();++i)
       if(!(grid.interactions[i].kind==InteractionKind::Evidence&&(grid.switch_flags&4))&&
          !(grid.template_id==310&&grid.interactions[i].kind==InteractionKind::Rescue&&(grid.switch_flags&8))&&
-         p.intersects(grid.interactions[i].area))return int(i);
+         p.intersects(grid.interactions[i].at(grid.platforms,state.elapsed)))return int(i);
     return -1;
   }
   void animate_pickup(const Interaction &node,int kind) {

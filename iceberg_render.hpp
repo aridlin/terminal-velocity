@@ -417,7 +417,8 @@
       auto p=grid_.enemies[i].at(state_.elapsed);prop_art(p.x+p.w*.5,p.bottom(),{" ▄▄▄ ","◢▐▣▌◣"," ╱ ╲ "},0xeb6a74);
     }
     for(const auto &node:grid_.interactions) {
-      double x=node.area.x,y=node.area.bottom();
+      const auto area=node.at(grid_.platforms,state_.elapsed);
+      double x=area.x,y=area.bottom();
       if(node.kind==InteractionKind::Npc||node.kind==InteractionKind::Rescue) {
         if(node.kind==InteractionKind::Rescue&&(grid_.switch_flags&(grid_.template_id==310?8:2)))continue;
         if(grid_.template_id==13&&node.id==1&&!grid_.platforms.empty()&&grid_.platforms.front().cargo_hoist)
@@ -459,7 +460,7 @@
         task_art(node,done);
       } else if(node.kind==InteractionKind::Shortcut||node.kind==InteractionKind::Replay||node.kind==InteractionKind::Return)world_text(x,y-2,"╭↶─╮",d.accent);
       else if(node.kind==InteractionKind::Secret&&node.id==1)world_art(x,y-2,{"╭─╮","│▥│","╰┬╯"},d.stone);
-      else if(node.kind==InteractionKind::Secret&&node.id==2)world_art(x,y-3,{"┌──┐","│ 7│","└──┘"},d.stone);
+      else if(node.kind==InteractionKind::Secret&&node.id==2)prop_art(x+area.w*.5,y,{"┌──┐","│ 7│","└──┘"},d.stone);
     }
     draw_machinery_reaction();
     draw_water_splash();

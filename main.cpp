@@ -401,6 +401,13 @@ struct Interaction {
   int id;
   iceberg::Text label;
   int detail = 0;
+  int platform = -1;
+  Rect at(const std::vector<MovingPlatform> &platforms,double time) const {
+    if(platform<0)return area;
+    const auto &lift=platforms[size_t(platform)];
+    const auto surface=lift.at(time);
+    return {area.x+surface.x-lift.base.x,area.y+surface.y-lift.base.y,area.w,area.h};
+  }
 };
 struct SortingBelt {
   double x, y, width, speed;
