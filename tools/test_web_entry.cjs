@@ -1491,11 +1491,13 @@ const server=http.createServer((req,res)=>{
    return directions.right<=game.left&&actions.left>=game.right;
   }),'landscape gameplay controls flank the unobstructed canvas');
   const steering=await page.locator('#touch [data-key="1"]').boundingBox();
+  const steeringSession=await mobile.newCDPSession(page);
   const steeringPoint={x:steering.x+steering.width/2,y:steering.y+steering.height/2};
-  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[steeringPoint]});
+  await steeringSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[steeringPoint]});
   await page.waitForFunction(()=>held===2);
-  await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await steeringSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.waitForFunction(()=>held===0);
+  await steeringSession.detach();
   await landscapeExit.tap();
   await page.waitForFunction(()=>!expanded());
   console.log('PASS landscape fullscreen gives the level more height while touch controls flank it');
