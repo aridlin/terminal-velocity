@@ -600,14 +600,15 @@ int main(){try {
     tour.state.collected.back()=true;
     tour.state.checkpoint=1;
     tour.state.deaths=2;
-    Controls retry;retry.restart=true;
+    Controls pause;pause.pause=true;tour.tick(pause,0);
+    Controls retry;retry.restart=true;retry.navigate=1;retry.confirm=true;
     tour.tick(retry,0);
     const auto &restarted=tour.state;
     const auto deck=tour.grid.platforms.front().at(restarted.elapsed);
-    ui_check(tour.tour_scene==sample&&restarted.deaths==3&&restarted.elapsed==0&&
+    ui_check(!restarted.paused&&tour.tour_scene==sample&&restarted.deaths==3&&restarted.elapsed==0&&
       restarted.player.x==landing_x&&restarted.player.y==landing_y&&
       deck.x==initial.x&&deck.y==initial.y,
-      "Retry restarts the same Debug Tour sample and machinery even before the next physics tick");
+      "Retry from Pause restarts the same Debug Tour sample and machinery immediately");
     ui_check(restarted.sweets_count()==0&&restarted.checkpoint==0&&restarted.player.support<0,
       "Retry restores the sample's original pickups and landing");
   }
@@ -714,6 +715,22 @@ int main(){try {
   paused.profile.language=iceberg::Language::English;
   paused.profile.quests[2]=3;paused.sync_view();
   Controls pause;pause.pause=true;
+  {
+    auto &courier=paused.state.player;
+    courier.x+=1.;
+    paused.tick(pause,0);
+    Controls retry;retry.restart=true;retry.move=1;retry.dash_pressed=retry.jump_pressed=true;
+    paused.tick(retry,1./120,true,33,23);
+    ui_check(paused.state.paused&&paused.state.deaths==0,"Retry leaves Pause in place when the room cannot fit");
+    paused.tick(retry,0);
+    ui_check(!paused.state.paused&&paused.state.deaths==0,"Retry leaves Pause even before the next physics tick");
+    paused.tick({},1./120);
+    ui_check(paused.state.deaths==1&&courier.x==paused.state.spawn_x&&courier.y==paused.state.spawn_y&&
+             courier.dash_time_left==0.&&courier.jump_buffer_left==0.,
+             "Retry returns to the checkpoint once without passing buffered movement");
+    paused.tick({},1./120);
+    ui_check(paused.state.deaths==1,"Retry from Pause is consumed exactly once");
+  }
   for(Controls overlay:{pause,map,book}) {
     paused.state.player.landing_dash_left=.08;
     Controls dash;dash.dash_pressed=true;dash.aim_y=-1;
