@@ -130,6 +130,7 @@ const forkDoorFlag=1<<18;
 const replaceRunFlag=1<<19;
 const districtTravelFlag=1<<25;
 const replyChoiceFlag=1<<26;
+const previousInspectionPageFlag=1<<27,nextInspectionPageFlag=1<<28;
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function nameTouchDirections(overlay){
@@ -172,6 +173,10 @@ function translateUI(){
  const reading=!!(overlay&4);
  const choosingReply=!!(overlay&replyChoiceFlag);
  const inspecting=!!(overlay&8);
+ const hasPreviousPage=!!(overlay&previousInspectionPageFlag);
+ const hasNextPage=!!(overlay&nextInspectionPageFlag);
+ document.querySelector('#touch [data-key="2"]').disabled=inspecting&&!hasPreviousPage;
+ document.querySelector('#touch [data-key="3"]').disabled=inspecting&&!hasNextPage;
  const browsingQuests=!!(overlay&64)&&!reading;
  touchUse.hidden=inspecting;
  if(inSettings||showingPause){
@@ -241,7 +246,7 @@ function translateUI(){
  if(inMenu||overlay&128||showingPause||reading||inspecting||browsingQuests){
   const browseTour=!!(overlay&tourFlag)&&!(overlay&4);
   const actionsOnly=inMenu?(inSettings||replacingSave):showingPause?!browseTour:
-   (reading&&!choosingReply)||!!(overlay&roomMapFlag);
+   (reading&&!choosingReply)||!!(overlay&roomMapFlag)||(inspecting&&!hasPreviousPage&&!hasNextPage);
   touchControls.dataset.compactControls=actionsOnly?'actions':'browse';
  }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
@@ -404,12 +409,12 @@ for(const button of document.querySelectorAll('[data-key]')){
  };
  button.addEventListener('click',e=>{
   // Pointer clicks already sent their input on pointerdown.
-  if(e.detail!==0||accounts?.active||!started)return;
+  if(e.detail!==0||button.disabled||accounts?.active||!started)return;
   canvas.focus();
   tap(action());
  });
  button.addEventListener('pointerdown',e=>{
-  if(e.button!==0||accounts?.active||!started)return;
+  if(e.button!==0||button.disabled||accounts?.active||!started)return;
   e.preventDefault();
   canvas.focus({preventScroll:true});
   const key=action();
