@@ -341,6 +341,10 @@
     if(grid_.district==3)draw_archive_drawers();
     if(grid_.district==4)draw_garden_ice();
     if(grid_.district==1)for(const auto &jet:grid_.air_fields) {
+      if(jet.turbine) {
+        draw_heatworks_turbine(jet);
+        continue;
+      }
       if(grid_.room_role==iceberg::RoomRole::Traverse&&state_.adventure.mode==iceberg::Mode::Endless) {
         draw_expedition_steam_lift(jet);
         continue;

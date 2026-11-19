@@ -183,6 +183,32 @@ int main() {
       "a westward dash stays at the door and never falls off the far side");
     west_exit.tick(confirm,1./120);
     require(west_exit.room==1,"the west-facing door still advances on a separate confirmation");
+    AdventureSession turbine(options,{});
+    const auto fan_stop=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==23;});
+    require(fan_stop!=iceberg::DebugTour.end(),"Debug Tour includes the turbine launch shelf");
+    turbine.load_tour_scene(int(fan_stop-iceberg::DebugTour.begin()));
+    const auto original_turbine=verified_room(23,73,1);
+    require(turbine.grid.air_fields.size()==1&&turbine.grid.air_fields.front().turbine&&
+      turbine.grid.sweets==original_turbine.sweets&&verify_route(turbine.grid).complete,
+      "the Heatworks turbine keeps the ordinary catwalks and original tokens");
+    for(const double phase:{1.,3.7}) {
+      const auto courier_jump=[&](const EngineGrid &room) {
+        auto rider=new_state(room);
+        rider.player.x=63.7;rider.player.y=32.-kPlayerHeight;
+        rider.player.grounded=true;rider.player.vx=kMaxRunSpeed;rider.elapsed=phase;
+        Controls launch;launch.move=1;launch.jump_held=launch.jump_pressed=true;
+        for(int tick=0;tick<180;++tick) {
+          world_step(rider,room,launch,1./120);
+          launch.jump_pressed=false;
+          if(rider.player.grounded&&tick>16)break;
+        }
+        return rider.deaths==0&&rider.player.grounded&&
+          std::abs(rider.player.rect().bottom()-27.)<.01&&rider.player.x>=74.1&&rider.player.x<83.;
+      };
+      require(courier_jump(turbine.grid)==(phase==1.)&&!courier_jump(original_turbine),
+        "only a timed turbine draft carries an ordinary jump to the upper shelf without a dash");
+    }
     AdventureSession archive(options,{});
     archive.begin_campaign(true);archive.profile.unlocked=3;archive.run_district=3;
     auto &copies=archive.profile.expeditions[0];

@@ -482,6 +482,16 @@ inline void add_heatworks_pressure_bypass(EngineGrid &room) {
     {"Otwórz dopływ pary","Open steam supply"}});
 }
 
+inline void add_heatworks_turbine(EngineGrid &room) {
+  if(room.district!=1||room.template_id!=23)return;
+  // The draft crosses the upper maintenance gap and ends over the receiving
+  // ledge. The regular catwalks are well below the airstream.
+  room.air_fields.push_back({.area={63.,22.,15.,10.},.ax=120.,.ay=-14.,.period=5.2,.turbine=true});
+  const auto route=verify_route(room);
+  if(route.complete)room.verification_policy=route.policy;
+  else room.air_fields.pop_back();
+}
+
 inline void add_expedition_steam(EngineGrid &room) {
   if(room.district!=1||(room.template_id!=18&&room.template_id!=22))return;
   if(room.template_id==18)room.air_fields.push_back({{59.2,29.,2.6,19.},0.,-165.,4.8,0.});

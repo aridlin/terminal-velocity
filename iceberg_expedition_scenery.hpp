@@ -188,6 +188,33 @@
     } else if(cycle>.73)world_art(center+2*scale_,floor-2*row,{"›"},pipe);
   }
 
+  void draw_heatworks_turbine(const AirField &fan) {
+    const double row=aspect_*scale_,floor=fan.area.bottom(),time=state_.elapsed;
+    const double x=fan.area.x-13*scale_,y=floor-9*row;
+    const double pressure=fan.strength(time);
+    const bool jump_now=fan.strength(time+.25)>=.86;
+    constexpr uint32_t casing=0xab8a68,blades=0xc9a583,draft=0xe8ca9e,signal=0xcbe5a5;
+    world_art(x,y,{"  ╔═══════╗  "," ╔╝       ╚╗ ","╔╝         ╚╦",
+      "║           ╠","╚╗         ╔╩"," ╚╗       ╔╝ ","  ╚═╤═══╤═╝  ",
+      "    ║   ║","    ║   ║"},casing);
+    static constexpr std::array<std::array<const char *,3>,4> frames{{
+      {{"   ▛   ","╺━━●━━╸","   ▟   "}},
+      {{" ▚   ▞ ","  ╲●╱  "," ▞   ▚ "}},
+      {{"   ▲   "," ▛ ● ▟ ","   ▼   "}},
+      {{" ▞   ▚ ","  ╱●╲  "," ▚   ▞ "}}
+    }};
+    const auto &rotor=frames[size_t(int(time*10.)%frames.size())];
+    world_art(x+2*scale_,y+2*row,{rotor[0],rotor[1],rotor[2]},blades);
+    world_art(x+10*scale_,y+3*row,{jump_now?"↗":"○"},jump_now?signal:casing);
+    const int streaks=2+int(pressure*9.);
+    for(int i=0;i<streaks;++i) {
+      const double along=std::fmod(time*1.16+i/11.,1.);
+      const double wx=fan.area.x+along*fan.area.w;
+      const double wy=y+(2.+(i%3)*.84)*row-along*row;
+      world_art(wx,wy,{jump_now&&i%3==0?"›":"─"},jump_now?draft:casing);
+    }
+  }
+
   void draw_expedition_steam_lift(const AirField &jet) {
     const auto &area=jet.area;
     const double row=aspect_*scale_,bottom=area.bottom(),center=area.x+area.w*.5;
