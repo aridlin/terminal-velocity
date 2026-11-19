@@ -27,6 +27,37 @@
     world_art(deck_center-3*scale_,deck.y+row,{"╲──╥──╱"," ╲─╨─╱"},steel);
   }
 
+  void draw_crown_service_lift(const MovingPlatform &lift,const Rect &deck) {
+    constexpr uint32_t frame=0x587185,cable=0x809bab,steel=0xa6bdc9,amber=0xe4ad68;
+    const double row=aspect_*scale_,center=deck.x+deck.w*.5,weight_x=deck.right()+3*scale_;
+    const double upper=lift.base.y-std::abs(lift.dy),lower=lift.base.y+std::abs(lift.dy);
+    const double head=upper-4*row,foot=lower+1.5*row;
+    const double left=lift.base.x-2*scale_,right=weight_x+2*scale_;
+
+    draw_scenery_pipe({{left,foot},{left,head},{right,head},{right,foot}},frame);
+    world_art(left-2*scale_,foot,{"╞═╧═══════════════╧══╡"," ▓▓                ▓▓ "},frame);
+    // The outside rail is braced back to the masonry ledge.
+    for(int brace=0;brace<7;++brace)
+      world_art(right-(2*brace+1)*scale_,foot+(brace+1)*row,{"╱"},frame);
+    for(double y=head+3*row;y<foot-2*row;y+=4*row) {
+      world_art(left,y,{"╟─","║╲"},frame);
+      world_art(right-scale_,y,{"─╢","╱║"},frame);
+    }
+    const double weight_y=2*lift.base.y-deck.y;
+    draw_scenery_pipe({{center,deck.y},{center,head},{weight_x,head},{weight_x,weight_y}},cable);
+    world_art(center-2*scale_,head-row,{"╭───╮","│ ◉ │","╰─┬─╯"},steel);
+    world_art(weight_x-scale_,head,{"◉"},steel);
+    world_art(weight_x-scale_,weight_y,{"┌─┐","│▓│","└─┘"},cable);
+    world_art(center-3*scale_,deck.y+row,{"╲──┬──╱"," ╰─┴─╯"},steel);
+
+    const double change=lift.at(state_.elapsed+.08).y-lift.at(state_.elapsed-.08).y;
+    const auto signal=std::abs(change)<.14?"●":change<0?"↑":"↓";
+    world_art(left-5*scale_,lower-3*row,{"┌─┐","│ │","└┬┘"," ╞═══╡"},steel);
+    world_art(left-4*scale_,lower-2*row,{signal},amber);
+    world_art(right,upper-3*row,{"╟──┌─┐","║  │ │","╟──└─┘"},steel);
+    world_art(right+4*scale_,upper-2*row,{signal},amber);
+  }
+
   void draw_crown_seam(const Rect &seam,double time) {
     const double row=aspect_*scale_;
     const double center=seam.x+seam.w*.5;
@@ -81,7 +112,8 @@
     }
     for(const auto &platform:grid_.platforms) {
       const auto deck=platform.at(state_.elapsed);
-      if(grid_.room_role==iceberg::RoomRole::Traverse&&state_.adventure.mode!=iceberg::Mode::Campaign)
+      if(platform.service_lift)draw_crown_service_lift(platform,deck);
+      else if(grid_.room_role==iceberg::RoomRole::Traverse&&state_.adventure.mode!=iceberg::Mode::Campaign)
         draw_crown_cradle(platform,deck);
       else world_art(deck.x,deck.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱","      ╱╲"},d.stone);
     }
