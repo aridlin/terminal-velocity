@@ -140,6 +140,26 @@ int main() {
     check(reaimed.player.dash_time_left>0&&reaimed.player.vx<-20&&reaimed.player.vy<-20,
           "a second dash tap replaces the buffered direction with its diagonal aim");
     check(land_and_dash(g).player.can_dash(), "classic courses retain their landing timing");
+    Controls combo;
+    combo.move = 1;
+    combo.dash_pressed = combo.jump_pressed = true;
+    auto step_combo = [&](const EngineGrid &course, Controls input, bool reference = false) {
+      auto state = new_state(course);
+      state.reference_movement = reference;
+      ticks(state, course, {}, 2);
+      world_step(state, course, input, 1./120);
+      return state.player;
+    };
+    const auto launched = step_combo(adventure, combo);
+    check(launched.dash_jump_left > 0 && launched.vx > 20 && launched.vy < 0,
+          "same-tick Dash and Jump launch a grounded dash jump");
+    combo.aim_y = -1;
+    const auto diagonal_launch = step_combo(adventure, combo);
+    check(diagonal_launch.dash_jump_left == 0 && diagonal_launch.dash_time_left > 0 && diagonal_launch.vy < 0,
+          "aiming upward keeps a diagonal dash when Jump is pressed");
+    combo.aim_y = 0;
+    check(step_combo(g, combo).dash_jump_left == 0 && step_combo(adventure, combo, true).dash_jump_left == 0,
+          "classic and reference movement retain same-tick launch behavior");
     auto lift = adventure;
     lift.platforms.push_back({{4,36,8,.5},0,.01,3,0});
     auto on_lift = new_state(lift);
@@ -149,6 +169,11 @@ int main() {
     world_step(on_lift, lift, {}, 1./120);
     check(on_lift.player.support == 0 && !on_lift.player.can_dash(),
           "landing on a moving platform also starts the cooldown");
+    for (int i = 0; i < 15; ++i) world_step(on_lift, lift, {}, 1./120);
+    check(on_lift.player.support == 0 && on_lift.player.can_dash(), "the lift rider can dash after the cooldown");
+    world_step(on_lift, lift, combo, 1./120);
+    check(on_lift.player.dash_jump_left > 0 && on_lift.player.vy < 0,
+          "same-tick dash jumps work off moving platforms");
     adventure.add_solid_rect(10, 24, 4, 8);
     for(int side:{1,-1}) {
       auto approach = new_state(adventure);
