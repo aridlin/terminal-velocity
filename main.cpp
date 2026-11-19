@@ -412,7 +412,10 @@ struct AirField {
   double ax=0, ay=0, period=0, phase=0;
   uint64_t disabled_by=0;
   bool reverses=false;
-  bool active(uint64_t flags) const {return !disabled_by||(flags&disabled_by)!=disabled_by;}
+  uint64_t enabled_by=0;
+  bool active(uint64_t flags) const {
+    return (flags&enabled_by)==enabled_by&&(!disabled_by||(flags&disabled_by)!=disabled_by);
+  }
   double strength(double elapsed) const {
     if(period<=0)return 1.;
     const double wave=std::sin((elapsed/period+phase)*6.283185307);

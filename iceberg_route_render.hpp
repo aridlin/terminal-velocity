@@ -56,6 +56,10 @@
     if(grid_.has_hazards())add_feature(tr("░ Ryzyko","░ Hazard"),hazard_color);
     if(remaining_token)add_feature(tr("● Żeton","● Token"),0xedc278);
     if(!boost_symbols.empty())add_feature(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
+    uint64_t steam_controls=0;
+    for(const auto &field:grid_.air_fields)
+      if(field.ay<0&&!field.active(grid_.switch_flags))steam_controls|=field.enabled_by;
+    if(steam_controls)add_feature(tr("⊗ Dopływ pary","⊗ Steam supply"),0xe9ae83);
     if(has_water)add_feature(tr("≈ Woda","≈ Water"),0x66bfd7);
     if(has_ice)add_feature(tr("━ Lód","━ Ice"),0xa6e9ea);
     if(has_wind)add_feature(wind_symbol+tr(" Wiatr"," Wind"),0xb4d7e4);
@@ -300,7 +304,9 @@
       mark(grid_.goal.x+grid_.goal.w*.5,grid_.goal.y+grid_.goal.h*.5,"▣",missing?0x7c8492:0xd7e8cd);
     }
     for(const auto &node:grid_.interactions) {
-      if(required_valve(node)||path_valve(node))
+      if(node.kind==InteractionKind::Valve&&(steam_controls&(uint64_t(1)<<node.id)))
+        mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,"⊗",0xe9ae83);
+      else if(required_valve(node)||path_valve(node))
         mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,"⊗",
           required_valve(node)?valve_color:bridge_color);
     }

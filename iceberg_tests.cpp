@@ -420,6 +420,29 @@ int main(int argc,char **argv) {
     check(estate.grid.template_id==26&&estate.grid.platforms.empty(),
       "legacy Estate expeditions keep their original Laundry over the street layout");
 
+    AdventureSession pressure(options,{});
+    const auto steam_sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==20;});
+    pressure.start_tour(int(steam_sample-iceberg::DebugTour.begin()));
+    check(pressure.grid.air_fields.size()==1&&!pressure.grid.air_fields.front().active(pressure.grid.switch_flags),
+      "the Heatworks pressure bypass starts closed");
+    const auto jump_to_steam_shelf=[](AdventureSession &session) {
+      for(int tick=0;tick<209;++tick) {
+        Controls jump;
+        jump.move=tick<29?1:tick<86?0:tick<124?-1:0;
+        jump.jump_pressed=tick==0;
+        jump.jump_held=tick<80;
+        session.tick(jump,1./120.);
+      }
+      return session.state.player.grounded&&std::abs(session.state.player.rect().bottom()-35.)<.05;
+    };
+    check(!jump_to_steam_shelf(pressure),"the same jump misses the upper steam shelf with the valve closed");
+    pressure.start_tour(int(steam_sample-iceberg::DebugTour.begin()));
+    pressure.tick({.interact=true},1./120.);
+    check(pressure.grid.air_fields.front().active(pressure.grid.switch_flags)&&
+          jump_to_steam_shelf(pressure)&&pressure.state.deaths==0,
+      "opening the supply lifts an ordinary jump to the upper shelf without a dash or retry");
+
     AdventureSession archive(options,path);
     archive.begin_campaign(true);
     archive.profile.unlocked=3;archive.run_district=3;
