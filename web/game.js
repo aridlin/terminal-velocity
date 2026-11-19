@@ -27,6 +27,7 @@ const inTour=()=>!!(uiFlags&tourFlag);
 const persistentSaveDirectory='/persist';
 let saveDirectory=persistentSaveDirectory;
 let routeLegs=0;
+let travelDistrict=-1;
 let tourPicker=false;
 const accountSlot=()=>started&&selectedSlot===1&&!inTour()&&saveDirectory===persistentSaveDirectory;
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
@@ -132,7 +133,6 @@ const forkDoorFlag=1<<18;
 const blockingFlags=1|2|4|8|64|128;
 const doorwayContext=flags=>flags&blockingFlags?0:flags&(doorReadyFlag|forkDoorFlag);
 const replaceRunFlag=1<<19;
-const districtTravelFlag=1<<25;
 const replyChoiceFlag=1<<26;
 const previousInspectionPageFlag=1<<27,nextInspectionPageFlag=1<<28;
 const previousRouteRoomFlag=1<<29,nextRouteRoomFlag=1<<30;
@@ -140,7 +140,7 @@ const routeDirectionSelector='.route-browse [data-key],#touch .directions [data-
 const expeditionTimelineOpen=()=>(overlayFlags()&(128|expeditionFlag|roomMapFlag|tourFlag))===(128|expeditionFlag);
 const isTimelineDirection=element=>expeditionTimelineOpen()&&element instanceof Element&&element.matches(routeDirectionSelector);
 const timelineShortcuts=new Set(['KeyB','KeyJ','KeyP','Escape']);
-const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&!(overlayFlags()&districtTravelFlag));
+const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&travelDistrict<0);
 const questRecordOpen=()=>(overlayFlags()&(4|64))===(4|64);
 function nameTouchDirections(overlay){
  let directions;
@@ -257,7 +257,7 @@ function translateUI(){
  }else if(readOnlyMapOpen()){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));
- }else if(overlay&districtTravelFlag){
+ }else if(travelDistrict>=0){
   touchUse.textContent=tr('Podróżuj','Travel');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(overlay&doorReadyFlag){
@@ -348,8 +348,10 @@ languageToggle.onclick=()=>selectLanguage(english?'pl':'en');
 window.tvUI=u=>{
  const nextEnglish=!!(u.flags&512);
  const nextRouteLegs=u.routeLegs??0;
+ const nextTravelDistrict=u.travelDistrict??-1;
+ const travelChanged=nextTravelDistrict!==travelDistrict;
  // The game sends UI state every frame. Only a transition changes the controls.
- if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&tourPicker===!!u.tourPicker)return;
+ if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&!travelChanged&&tourPicker===!!u.tourPicker)return;
  if(tourPicker!==!!u.tourPicker)clearInput();
  tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
@@ -360,10 +362,13 @@ window.tvUI=u=>{
  const inputContextFlags=blockingFlags|2048|settingsFlag|confirmSaveFlag|roomMapFlag|profilePickerFlag|tourFlag|replyChoiceFlag;
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&inputContextFlags)!==(uiFlags&inputContextFlags))clearInput();
- if(doorwayContext(u.flags)!==doorwayContext(uiFlags)){
-  // Finish only obsolete doorway contacts. A second thumb may still be moving.
-  for(const [id,pointer] of pointers)if(pointer.doorConfirm)finishPointer(id,false);
+ const doorChanged=doorwayContext(u.flags)!==doorwayContext(uiFlags);
+ if(doorChanged||travelChanged){
+  // Cancel only contacts for obsolete destinations; independent inputs stay active.
+  for(const [id,pointer] of pointers)
+   if((doorChanged&&pointer.doorConfirm)||(travelChanged&&pointer.travelConfirm))finishPointer(id,false);
  }
+ travelDistrict=nextTravelDistrict;
  lastBlocked=!!(u.flags&(blockingFlags|doorReadyFlag));
  const before=uiFlags;uiFlags=u.flags;
  if((before&255)!==(uiFlags&255))resize();
@@ -482,8 +487,10 @@ for(const button of document.querySelectorAll('[data-key]')){
   const confirmingReply=(overlayFlags()&(replyChoiceFlag|2))===replyChoiceFlag;
   const doorConfirm=!!doorwayContext(uiFlags)&&(button.id==='touch-use'||
    (button.id==='touch-inspect'&&!!(uiFlags&forkDoorFlag)));
-  const onRelease=doorConfirm||(button.id==='touch-use'&&(confirmingReply||!!(uiFlags&confirmSaveFlag)));
-  const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,doorConfirm,pending:0};
+  const travelConfirm=button.id==='touch-use'&&travelDistrict>=0;
+  const onRelease=doorConfirm||travelConfirm||
+   (button.id==='touch-use'&&(confirmingReply||!!(uiFlags&confirmSaveFlag)));
+  const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,doorConfirm,travelConfirm,pending:0};
   pointers.set(e.pointerId,pointer);
   button.classList.add('held');
   if(!onRelease)pointerPress(pointer);
