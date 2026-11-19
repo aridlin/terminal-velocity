@@ -1661,6 +1661,18 @@ public:
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
     if(at<0&&state.player.support>=0&&grid.platforms[size_t(state.player.support)].clothesline)
       v.prompt=t("↓ / S — zeskocz z liny","↓ / S — drop through the line");
+    if(v.prompt.empty()&&grid.template_id==55&&state.player.grounded) {
+      const Rect feet=state.player.rect();
+      for(const auto &platform:grid.platforms) {
+        if(!platform.icy||!platform.fragile)continue;
+        const auto &ice=platform.base;
+        if(feet.bottom()<=ice.top()&&ice.top()-feet.bottom()<=4.&&
+           feet.right()+2.5>ice.left()&&feet.left()-2.5<ice.right()) {
+          v.prompt=t("Cienki lód · Nie zatrzymuj się","Thin ice · Keep moving");
+          break;
+        }
+      }
+    }
     if(at_locked_survey_exit())
       v.prompt=t("Oznacz trzecią boję na mapie.","Mark buoy 3 at the chart.");
     if(grid.template_id==iceberg::CrownSentinel&&state.crown.hits<3) {

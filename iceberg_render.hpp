@@ -38,6 +38,16 @@
     return state_.ssh_basic?tr("Skok: wejdź · S: puść","Jump: climb · S: drop"):
       tr("Skok: wejdź · Puść: spadnij","Jump: climb · Release: drop");
   }
+  bool on_cracking_ice() const {
+    const int support=state_.player.support;
+    if(support<0||size_t(support)>=grid_.platforms.size())return false;
+    const auto &platform=grid_.platforms[size_t(support)];
+    return platform.icy&&platform.fragile&&
+      platform.crack_age(state_,size_t(support),state_.elapsed)<MovingPlatform::CrackTime;
+  }
+  std::string cracking_ice_hint() const {
+    return tr("Lód pęka · Skacz!","Ice cracking · Jump!");
+  }
   void paint_text(int row,int col,const std::string &s,uint32_t rgb,bool bold=false) {
     for(auto ch:glyphs(s))put(row,col++,{ch,Color::Text,false,bold,0,rgb});
   }
@@ -818,6 +828,7 @@
     if(v.save_error)text(rows_-1,2,save_failure_hint(),Color::Hazard);
     else if(state_.player.ledge&&state_.player.ledge_climb_left<=0.)
       text(rows_-1,2,ledge_hint(),Color::Gold);
+    else if(on_cracking_ice())text(rows_-1,2,cracking_ice_hint(),Color::Gold);
     else if(v.notice_left>0)text(rows_-1,2,v.notice,Color::Gold);
     else text(rows_-1,2,v.prompt.empty()?quest_focus_hint():v.prompt,Color::Gold);
     if(state_.debug)text(5,2,"vx "+fixed(state_.player.vx)+" vy "+fixed(state_.player.vy)+" 120 Hz",Color::Gold);
