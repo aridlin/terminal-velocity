@@ -202,6 +202,41 @@ int main() {
     world_step(on_lift, lift, combo, 1./120);
     check(on_lift.player.dash_jump_left > 0 && on_lift.player.vy < 0,
           "same-tick dash jumps work off moving platforms");
+    const auto ferry_room = iceworld::build_room(504,73,0);
+    const auto &ferry = ferry_room.platforms.front();
+    auto board = [&](double fraction) {
+      auto rider = new_state(ferry_room);
+      rider.elapsed=1.;
+      const auto deck=ferry.at(rider.elapsed);
+      rider.player.x=deck.x+deck.w*fraction;
+      rider.player.y=deck.top()-kPlayerHeight-.02;
+      rider.player.vy=10.;
+      world_step(rider,ferry_room,{},1./120);
+      return rider;
+    };
+    const Controls along_deck{.move=1,.dash_pressed=true};
+    auto rider=board(.15);
+    check(rider.player.support==0&&rider.player.can_dash(),"the courier boards the Harbor ferry");
+    world_step(rider,ferry_room,along_deck,1./120);
+    const double remaining=rider.player.dash_time_left;
+    check(remaining>0.&&rider.player.support==0&&!rider.player.can_dash(),
+          "a horizontal dash keeps ferry contact without recharging");
+    const double local_x=rider.player.x-ferry.at(rider.elapsed).x;
+    world_step(rider,ferry_room,along_deck,1./120);
+    check(rider.player.dash_time_left<remaining&&!rider.player.can_dash()&&
+          std::abs(rider.player.x-ferry.at(rider.elapsed).x-local_x-kDashSpeed/120.)<1e-6,
+          "a second input cannot restart the ferry dash and the deck still carries the courier");
+    for(int i=0;i<20;++i)world_step(rider,ferry_room,{},1./120);
+    check(rider.player.support==0&&rider.player.grounded&&rider.player.landing_dash_left>0.,
+          "finishing the dash on deck begins the ordinary landing cooldown");
+    for(int i=0;i<20;++i)world_step(rider,ferry_room,{},1./120);
+    check(rider.player.support==0&&rider.player.can_dash(),
+          "the ferry restores the dash after the cooldown");
+    auto off_deck=board(.9);
+    world_step(off_deck,ferry_room,along_deck,1./120);
+    for(int i=0;i<8;++i)world_step(off_deck,ferry_room,{},1./120);
+    check(off_deck.player.support<0&&!off_deck.player.can_dash()&&off_deck.player.dash_time_left>0.,
+          "dashing off the ferry crosses the edge and spends the dash");
     adventure.add_solid_rect(10, 24, 4, 8);
     for(int side:{1,-1}) {
       auto approach = new_state(adventure);

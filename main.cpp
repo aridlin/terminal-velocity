@@ -1203,6 +1203,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   const bool spent_dash = !p.dash_available || p.dash_time_left > 0.;
   double before_time = s.elapsed;
   int deaths = s.deaths;
+  int carried_support = -1;
   p.drop_left = std::max(0.0, p.drop_left - dt);
   if (p.support >= 0 && size_t(p.support) < g.platforms.size()) {
     const auto &platform = g.platforms[p.support];
@@ -1215,6 +1216,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       p.grounded = false;
       p.support = -1;
     } else {
+      carried_support = p.support;
       if (g.adventure_level) {
         const double before_x = p.x;
         const double run_speed = p.vx;
@@ -1266,14 +1268,20 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       const auto &platform = g.platforms[i];
       if (!platform.available(s, i, s.elapsed)) continue;
       auto r = platform.at(s.elapsed), prev = platform.at(before_time);
-      if (old.bottom() <= prev.top() + .10 && p.rect().bottom() >= r.top() &&
+      const bool carried = g.adventure_level && !s.reference_movement && carried_support == int(i);
+      const double previous_top = carried ? r.top() : prev.top();
+      const double contact_top = r.top() - (carried ? 1e-6 : 0.);
+      if (old.bottom() <= previous_top + .10 && p.rect().bottom() >= contact_top &&
           p.rect().right() > r.left() && p.x < r.right()) {
         p.y = r.y - kPlayerHeight;
+        p.support = int(i);
+        // Keep carrying a horizontal dash along its starting deck. It
+        // hasn't landed again and must not get another dash yet.
+        if (carried && p.dash_time_left > 0. && p.vy == 0. && !p.grounded) continue;
         p.vy = 0;
         p.grounded = true;
         p.dash_available = true;
         p.coyote_left = kCoyoteTime;
-        p.support = int(i);
         if (platform.fragile && platform.crack_age(s, i, s.elapsed) >= MovingPlatform::RestoreTime)
           s.platform_armed_at[i] = s.elapsed;
       }
