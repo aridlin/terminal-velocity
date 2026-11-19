@@ -1106,6 +1106,22 @@ const server=http.createServer((req,res)=>{
    assert.deepEqual(await touchState(),{held:0,pressed:1<<8},'a completed tap confirms the story reply');
    await page.evaluate(flags=>window.tvUI({flags}),previousFlags);
    console.log('PASS reply selection waits for a completed touch');
+   for(const expedition of [false,true]){
+    await page.evaluate(expedition=>{
+     window.tvUI({flags:uiFlags|1|confirmSaveFlag|(expedition?replaceRunFlag:0)});
+    },expedition);
+    const replacement=await page.locator('#touch-use').boundingBox();
+    const hit={x:replacement.x+replacement.width/2,y:replacement.y+replacement.height/2};
+    await touch('touchStart',[hit]);
+    assert.deepEqual(await touchState(),{held:0,pressed:0},'touching Replace does not commit the save replacement');
+    await touch('touchCancel',[]);
+    assert.deepEqual(await touchState(),{held:0,pressed:0},'a cancelled touch leaves the save alone');
+    await touch('touchStart',[hit]);
+    await touch('touchEnd',[]);
+    assert.deepEqual(await touchState(),{held:0,pressed:1<<(expedition?6:8)},'a completed tap queues the correct replacement');
+    await page.evaluate(flags=>window.tvUI({flags}),previousFlags);
+   }
+   console.log('PASS save replacement waits for a completed touch in both game modes');
 
   } finally {
    await page.evaluate(()=>window.resumeTouchFrames());

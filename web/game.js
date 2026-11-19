@@ -470,11 +470,12 @@ for(const button of document.querySelectorAll('[data-key]')){
   button.setPointerCapture(e.pointerId);
   const touch=e.pointerType==='touch';
   const canSlide=touch&&(button.matches(horizontalTouchControls)||(!lastBlocked&&button.closest('#touch .directions')));
-  const confirmReply=button.id==='touch-use'&&(overlayFlags()&(replyChoiceFlag|2))===replyChoiceFlag;
-  const pointer={key:confirmReply?null:key,releaseKey:confirmReply?key:null,button,touch,canSlide,pending:0};
+  const confirmingReply=(overlayFlags()&(replyChoiceFlag|2))===replyChoiceFlag;
+  const onRelease=button.id==='touch-use'&&(confirmingReply||!!(uiFlags&confirmSaveFlag));
+  const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,pending:0};
   pointers.set(e.pointerId,pointer);
   button.classList.add('held');
-  if(!confirmReply)pointerPress(pointer);
+  if(!onRelease)pointerPress(pointer);
   recompute();
  });
  button.addEventListener('pointermove',e=>{
