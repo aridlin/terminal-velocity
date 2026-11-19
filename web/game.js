@@ -482,7 +482,8 @@ for(const button of document.querySelectorAll('[data-key]')){
   // Keep an initial Up or Down press until the thumb leaves its button.
   // Sliding across a vertical button must never trigger a new jump or fall.
   const hit=document.elementFromPoint(e.clientX,e.clientY);
-  const next=hit?.closest(horizontalTouchControls)??(pointer.button===button&&button.contains(hit)?button:null);
+  const candidate=hit?.closest(horizontalTouchControls)??(pointer.button===button&&button.contains(hit)?button:null);
+  const next=candidate&&!candidate.disabled?candidate:null;
   if(pointer.button===next)return;
   const previous=pointer.button;
   pointer.button=next;

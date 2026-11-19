@@ -1464,6 +1464,33 @@ const server=http.createServer((req,res)=>{
     const previousLeg=page.locator('#touch').getByRole('button',{name:'Previous leg'});
     const nextLeg=page.locator('#touch').getByRole('button',{name:'Next leg'});
     assert.equal(await previousLeg.isEnabled(),false,'the first leg has no previous leg');
+    const timelineTouch=await page.context().newCDPSession(page);
+    const point=async (control,id)=>{
+     const {x,y,width,height}=await control.boundingBox();
+     return {x:x+width/2,y:y+height/2,id};
+    };
+    const left=await point(previousLeg,1),right=await point(nextLeg,1),second=await point(nextLeg,2);
+    await page.evaluate(()=>{
+     const tick=Module._web_tick;
+     window.resumeTimelineTick=()=>{Module._web_tick=tick;clearInput();};
+     Module._web_tick=(dt,_held,_pressed,w,h,focus)=>tick(0,0,0,w,h,focus);
+    });
+    try{
+     const touch=(type,touchPoints)=>timelineTouch.send('Input.dispatchTouchEvent',{type,touchPoints});
+     await touch('touchStart',[right]);
+     await page.waitForFunction(()=>held===2);
+     await touch('touchMove',[left]);
+     assert.equal(await page.evaluate(()=>held),0,'sliding to an unavailable leg is neutral');
+     assert.equal(await previousLeg.evaluate(button=>button.classList.contains('held')),false);
+     await touch('touchStart',[left,second]);
+     assert.equal(await page.evaluate(()=>held),2,'an independent touch keeps its enabled direction');
+     await touch('touchEnd',[]);
+     assert.equal(await page.evaluate(()=>held),0);
+    }finally{
+     await timelineTouch.detach();
+     await page.evaluate(()=>window.resumeTimelineTick());
+    }
+    console.log('PASS sliding onto a disabled timeline arrow keeps it neutral');
     await nextLeg.tap();
     await page.waitForFunction(()=>window.expeditionFrame?.includes('Next leg 2'));
     assert.equal(await nextLeg.isEnabled(),false,'the preview has no next leg');
