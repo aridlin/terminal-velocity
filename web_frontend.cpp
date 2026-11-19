@@ -20,6 +20,9 @@ EM_JS(void, browser_save_ready, (), {
 EM_JS(void, browser_reply_rows, (int first_row), {
   if(window.tvReplyRows)window.tvReplyRows(first_row);
 });
+EM_JS(void, browser_tour_rows, (int first,int count,int row,int left,int right), {
+  if(window.tvTourRows)window.tvTourRows(first,count,row,left,right);
+});
 uint32_t first_codepoint(const std::string &s) {
   if(s.empty())return 32;
   auto byte=[&](size_t i){return uint32_t(static_cast<unsigned char>(s[i]));};
@@ -97,6 +100,12 @@ EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language,int muted) {
 EMSCRIPTEN_KEEPALIVE void web_enter_campaign() {
   if(web_game)web_game->begin_campaign(false);
 }
+EMSCRIPTEN_KEEPALIVE void web_select_tour_stop(int index) {
+  if(!web_game||!web_game->state.menu||!web_game->state.adventure.tour_picker||
+     index<0||index>=int(iceberg::DebugTour.size()))return;
+  web_game->tick({.select_level=index+1},0.,true,
+                 web_game->last_columns,web_game->last_rows,web_game->last_aspect);
+}
 EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int cols,int rows,int focused) {
   if(!web_game)return;
   auto h=[&](int key){return bool(held&(1u<<key));};auto p=[&](int key){return bool(pressed&(1u<<key));};
@@ -136,6 +145,8 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   RenderGrid renderer(web_game->grid,web_game->state,std::clamp(rows,cols>=56?20:24,60),std::clamp(cols,34,160),2);
   renderer.draw();
   browser_reply_rows(renderer.reply_first_row());
+  const auto tour=renderer.tour_rows();
+  browser_tour_rows(tour.first_sample,tour.count,tour.row,tour.left,tour.right);
   send_web_ui();
   if(web_game->save_revision!=last_save||web_slot!=previous_slot)browser_save_ready();
 }

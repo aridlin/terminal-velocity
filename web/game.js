@@ -114,6 +114,10 @@ let completedPresses=0;
 let canvasPress=null;
 let replyFirstRow=-1;
 window.tvReplyRows=firstRow=>{replyFirstRow=firstRow;};
+let tourRows=null;
+window.tvTourRows=(first,count,row,left,right)=>{
+ tourRows=count?{first,count,row,left,right}:null;
+};
 const tap=(...keys)=>{for(const k of keys){completedPresses|=1<<k;pressed|=1<<k;}};
 function pointerPress(pointer){
  dashShift='';
@@ -962,17 +966,31 @@ start.onclick=()=>{
  }
 };
 function canvasConfirmContext(){
+ if(tourPicker)return profilePickerFlag;
  const overlay=overlayFlags();
  if((overlay&(replyChoiceFlag|2))===replyChoiceFlag)return replyChoiceFlag;
  if(overlay&4)return 4;
  if(overlay&(8|64|128))return 0;
  return (overlay&2)||(overlay&doorReadyFlag);
 }
+function canvasCell(x,y){
+ const box=canvas.getBoundingClientRect();
+ return {
+  column:Math.floor((x-box.left)*canvasFit.w/box.width),
+  row:Math.floor((y-box.top)*canvasFit.h/box.height)
+ };
+}
+function canvasTourChoice(x,y){
+ if(!tourRows||!canvasFit)return -1;
+ const {column,row}=canvasCell(x,y);
+ const offset=row-tourRows.row;
+ return offset>=0&&offset<tourRows.count&&column>=tourRows.left&&column<tourRows.right
+  ?tourRows.first+offset:-1;
+}
 function canvasReplyChoice(x,y){
  if(replyFirstRow<0||!canvasFit)return -1;
- const box=canvas.getBoundingClientRect();
- const column=Math.floor((x-box.left)*canvasFit.w/box.width);
- const row=Math.floor((y-box.top)*canvasFit.h/box.height)-replyFirstRow;
+ const cell=canvasCell(x,y);
+ const column=cell.column,row=cell.row-replyFirstRow;
  if(column<3||column>=canvasFit.w-2||row<0||row>=4)return -1;
  const rowStart=(replyFirstRow+row)*canvasFit.w*4;
  // The canvas keeps a copy of the current glyphs, including wrapped labels.
@@ -984,7 +1002,8 @@ function canvasReplyChoice(x,y){
 canvas.addEventListener('pointerdown',event=>{
  if(!event.isPrimary||event.button!==0||accounts?.active||importPending)return;
  const context=canvasConfirmContext();
- const choice=context===replyChoiceFlag?canvasReplyChoice(event.clientX,event.clientY):-1;
+ const choice=context===replyChoiceFlag?canvasReplyChoice(event.clientX,event.clientY):
+  context===profilePickerFlag?canvasTourChoice(event.clientX,event.clientY):-1;
  canvasPress={id:event.pointerId,context,choice,x:event.clientX,y:event.clientY};
 });
 addEventListener('pointermove',event=>{
@@ -1003,6 +1022,11 @@ canvas.onclick=event=>{
  if(event.detail!==0&&(!press||press.context!==context||
     (event.pointerId!==undefined&&press.id!==event.pointerId)))return;
  if(!started){start.click();return;}
+ if(context===profilePickerFlag){
+  const choice=canvasTourChoice(event.clientX,event.clientY);
+  if(choice>=0&&press?.choice===choice)Module._web_select_tour_stop(choice);
+  return;
+ }
  if(context===replyChoiceFlag){
   const choice=canvasReplyChoice(event.clientX,event.clientY);
   if(choice>=0&&press?.choice===choice)tap(17+choice);

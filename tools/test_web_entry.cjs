@@ -1691,6 +1691,15 @@ const server=http.createServer((req,res)=>{
    'leaving the Debug Tour returns focus to the game');
   await page.keyboard.press('Enter');
   await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 1/'));
+  const secondTourRow=await page.locator('#game').evaluate(game=>{
+   const box=game.getBoundingClientRect();
+   return {x:box.x+box.width/2,y:box.y+5.5*box.height/canvasFit.h};
+  });
+  await page.touchscreen.tap(secondTourRow.x,secondTourRow.y);
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 2/'));
+  assert.equal(await page.evaluate(()=>tourPicker&&!inTour()),true,'a row tap selects without starting the sample');
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 1/'));
   await inspectControl.tap();
   await page.waitForFunction(()=>window.tourPickerHeading?.includes('SAVE SLOTS'));
   await action.tap();
