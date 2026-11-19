@@ -147,7 +147,6 @@ struct Controls {
   bool jump_pressed = false;
   bool dash_pressed = false;
   bool fast_fall = false;
-  bool fast_fall_pressed = false;
   bool restart = false;
   bool quit = false;
   int aim_y = 0;
@@ -158,6 +157,7 @@ struct Controls {
   bool interact = false, inspect = false, map = false, language = false;
   int navigate = 0, browse_leg = 0;
   std::optional<int> move_pressed={}, aim_pressed={};
+  bool fast_fall_pressed = false;
 };
 
 struct HeldKeys {
