@@ -422,6 +422,8 @@
     if(has_wind)
       mark(wind->area.x+(turbine?0.:wind->area.w*.5),turbine?wind->area.bottom()-3:wind->area.y+3,
         wind_symbol,0xb4d7e4);
+    if(turbine&&iceworld::has_turbine_access(grid_))
+      mark(iceworld::TurbineAccessX,iceworld::TurbineAccessFloor-2,wind_symbol,0xb4d7e4);
     for(const auto &platform:grid_.platforms)if(platform.archive_rack) {
       const auto rack=platform.at(state_.elapsed);
       mark(rack.x+rack.w*.5,rack.y,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);
