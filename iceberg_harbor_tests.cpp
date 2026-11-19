@@ -93,6 +93,29 @@ int main() {
     for(int tick=0;tick<360;++tick)world_step(riding,quay,{},1./120);
     check_harbor(riding.player.support==0&&sling.y-riding.player.rect().bottom()>12,"the quay sling lifts a rider to the high transfer");
     const auto lesson=iceworld::build_harbor_lesson_v4();
+    auto roof_view=new_state(lesson);
+    roof_view.camera_x=164.3;
+    roof_view.camera_y=33.2;
+    CellFrame roof_frame;
+    cell_frame_sink=[&](const CellFrame &frame){roof_frame=frame;};
+    for(const auto language:{iceberg::Language::Polish,iceberg::Language::English})
+      for(const int width:{34,110}) {
+        roof_view.adventure.language=language;
+        RenderGrid(lesson,roof_view,24,width,2).draw();
+        const int left=5,top=5;
+        std::string heading;
+        for(int x=left;x<=left+20;++x)heading+=roof_frame[top+1][x].glyph;
+        const auto arrow=roof_frame[top+1][left+17];
+        check_harbor(heading==(language==iceberg::Language::Polish?
+          "│ DO DOKÓW       →  │":"│ TO THE DOCKS   →  │")&&
+          arrow.rgb==iceberg::Districts[0].light&&
+          roof_frame[top+2][left].glyph=="╰"&&roof_frame[top+2][left+20].glyph=="╯"&&
+          roof_frame[top+3][left+3].glyph=="║"&&roof_frame[top+3][left+17].glyph=="║"&&
+          roof_frame[top+6][left+3].glyph=="║"&&roof_frame[top+6][left+17].glyph=="║"&&
+          roof_frame[top+7][left+3].glyph=="╨"&&roof_frame[top+7][left+17].glyph=="╨",
+          "the lesson exit sign has readable bilingual wayfinding and two continuous mounts");
+      }
+    cell_frame_sink={};
     const auto ferry=lesson.platforms.front().at(0);
     auto ferry_rider=new_state(lesson);
     ferry_rider.player.x=ferry.right()-kPlayerWidth-.2;

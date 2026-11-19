@@ -227,7 +227,19 @@
       world_art(70,49-5*aspect_*scale_,{"╭──────────────────╮","│ ▥▥▥  ▥▥▥  ▥▥▥    │","├──────────────────┤","│  ▱▱▱  ▱▱▱  ▱▱▱   │","╰──────────────────╯"},d.stone);
       world_art(137,43-7*aspect_*scale_,{"        ╔══════════════╗","        ║              │","        ║              │","        ║             ╱╲","        ║            ▐▣▣▌","        ║","════════╩═══════════════"},d.stone);
       draw_lesson_ferry_signals();
-      world_art(171,40-5*aspect_*scale_,{"╭───────────────────╮",tr("│ DO DOKÓW       →  │","│ TO THE DOCKS   →  │"),"╰──┬─────────────┬──╯","   │             │","═══╧═════════════╧═══"},d.stone);
+      const double sign_x=166.5,roof=40,sign_y=roof-7*aspect_*scale_;
+      constexpr uint32_t sign_ink=0x7498a0;
+      world_art(sign_x,sign_y,{"╭───────────────────╮",
+        tr("│ DO DOKÓW       →  │","│ TO THE DOCKS   →  │"),"╰──╥─────────────╥──╯",
+        "   ║             ║","   ║             ║","   ║             ║","   ║             ║"},sign_ink,true);
+      const auto [left,top]=screen(sign_x,sign_y);
+      const int arrow_x=left+17,arrow_y=top+1;
+      if(arrow_x>=0&&arrow_x<cols_&&arrow_y>=4&&arrow_y<rows_-3&&buffer_[arrow_y][arrow_x].glyph=="→")
+        buffer_[arrow_y][arrow_x].rgb=d.light;
+      const int roof_row=top+7;
+      if(roof_row>=4&&roof_row<rows_-3)
+        for(int post:{left+3,left+17})
+          put(roof_row,post,{"╨",Color::Decor,false,false,0,sign_ink});
       return;
     }
     if(iceworld::harbor_v4_room(id)) {
