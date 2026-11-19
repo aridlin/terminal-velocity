@@ -1392,8 +1392,8 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#toolbar .map-view-switch').isVisible(),false,
     'touch uses its existing room and route control');
    assert.equal(await page.locator('#toolbar .route-browse').isVisible(),false);
-   for(const key of [0,1,4,5])assert.equal(await page.locator('#touch [data-key="'+key+'"]').isVisible(),false,
-    'the map hides gameplay movement, jump and dash');
+   for(const key of [4,5])assert.equal(await page.locator('#touch [data-key="'+key+'"]').isVisible(),false,
+    'the map hides jump and dash');
    if(roomMap){
     await inspectControl.tap();
     await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
@@ -1401,6 +1401,14 @@ const server=http.createServer((req,res)=>{
     assert.deepEqual(await touchDirectionNames(),['Up','Down']);
    }else{
     assert.deepEqual(await touchDirectionNames(),['Previous room','Next room']);
+    const previousLeg=page.locator('#touch').getByRole('button',{name:'Previous leg'});
+    const nextLeg=page.locator('#touch').getByRole('button',{name:'Next leg'});
+    assert.equal(await previousLeg.isEnabled(),false,'the first leg has no previous leg');
+    await nextLeg.tap();
+    await page.waitForFunction(()=>window.expeditionFrame?.includes('Next leg 2'));
+    assert.equal(await nextLeg.isEnabled(),false,'the preview has no next leg');
+    await previousLeg.tap();
+    await page.waitForFunction(()=>window.expeditionFrame?.includes('Leg 1 · Depth 0'));
     await page.locator('#touch').getByRole('button',{name:'Next room'}).tap();
     await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 2:'));
     await page.keyboard.down('ArrowDown');
