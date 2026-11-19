@@ -268,6 +268,14 @@ inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = 
   if(district==5&&(id==60||id==63||id==66||id==70)) {
     g.air_fields.push_back({{69,15,44,44},id==63||id==70?-4.:4.,0,6.,0});
   }
+  if(id==50) {
+    for(size_t i=1;i+1<spec.path.size();i+=2) {
+      const auto &bank=spec.path[i-1];
+      const double left=bank.x+bank.w, right=spec.path[i+1].x;
+      const double surface=spec.path[i].y+1.5;
+      g.water_basins.push_back({left,surface,right-left,62-surface});
+    }
+  }
   if(id>=500&&id<=511)decorate_harbor_room(g,spec);
   return g;
 }

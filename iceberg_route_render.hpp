@@ -20,7 +20,8 @@
     const bool has_wheel=wheel!=grid_.platforms.end();
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.tram;});
-    const auto ferry=[&](size_t i){return quay_ferry(i)||grid_.template_id==50;};
+    const bool leaf_ferries=grid_.template_id==50;
+    const auto ferry=[&](size_t i){return quay_ferry(i)||leaf_ferries;};
     const bool has_ferries=!grid_.platforms.empty()&&ferry(0);
     const bool has_service_lift=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.service_lift;});
@@ -92,7 +93,9 @@
     const bool bridge_legend=has_path_control||has_bridges;
     constexpr uint32_t valve_color=0xf0a277,bridge_color=0xabc9e4;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
-    constexpr uint32_t ferry_color=0xe4ad68,ferry_route_color=0x6f9eaa;
+    const char *ferry_symbol=leaf_ferries?"◒":"▱";
+    const uint32_t ferry_color=leaf_ferries?0xb6d778:0xe4ad68;
+    constexpr uint32_t ferry_route_color=0x6f9eaa;
     constexpr uint32_t belt_color=0xa0d6df,trolley_color=0xaee1df,wheel_color=0xc5a36d;
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
@@ -333,7 +336,7 @@
     if(has_wheel)mark(wheel->base.x+wheel->base.w*.5,wheel->base.y,"⊕",wheel_color);
     if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
       const auto deck=grid_.platforms[i].at(state_.elapsed);
-      mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,"▱",ferry_color});
+      mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,ferry_symbol,ferry_color});
     }
     if(has_seam) {
       const auto &seam=*grid_.crown_seam;
@@ -427,7 +430,7 @@
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
     if(has_ferries) {
-      const auto name=tr("▱ Prom","▱ Ferry");
+      const auto name=leaf_ferries?tr("◒ Liść","◒ Leaf"):tr("▱ Prom","▱ Ferry");
       paint_text(legend,2,name,ferry_color);
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,separator," · ",0xc7d9df);
