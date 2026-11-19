@@ -98,28 +98,41 @@
 
   void draw_reservoir_floe(const Rect &floe,double age) {
     const int cells=std::max(3,int(floe.w/scale_));
-    const double row=aspect_*scale_;
-    constexpr uint32_t rim=0xb1e9e9,crack=0xf2fafa;
+    const double row=aspect_*scale_,center=floe.x+floe.w*.5;
+    constexpr uint32_t rim=0xb1e9e9,fracture=0xf5fdfd,foam=0xb9eef5;
     if(age>=MovingPlatform::CrackTime&&age<MovingPlatform::RestoreTime) {
       const double fall=age-MovingPlatform::CrackTime;
-      if(fall<.55)for(int i=0;i<5;++i) {
-        const double spread=(i-2)*fall*.55;
-        world_art(floe.x+floe.w*(.14+.17*i)+spread,floe.y+row+fall*fall*11,
-          {i%2?"◇":"▴"},0x6bb8c9);
+      if(fall<.65) {
+        const double spread=std::min(.44*floe.w,.35+fall*4.6);
+        for(int side:{-1,1}) {
+          world_art(center+side*spread,floe.y,{fall<.38?"≈":"·"},foam);
+          if(fall<.36)world_art(center+side*(.6+fall*3.),
+            floe.y-row*(1.+8.*fall*(.36-fall)),{side<0?"╲":"╱"},foam);
+        }
+        for(int i=0;i<5;++i) {
+          const double x=floe.x+floe.w*(.16+.17*i)+(i-2)*fall*.54;
+          const double y=floe.y+row+fall*fall*10+(i%2)*row*.45;
+          world_art(x,y,{i%2?"◇":"▴"},fall<.34?0x9bd8e6:0x6295ac);
+        }
       }
-      if(age>MovingPlatform::RestoreTime-.4)
-        world_text(floe.x+floe.w*.4,floe.y+row,"·∙·",0x7bbfd0);
+      const double remaining=MovingPlatform::RestoreTime-age;
+      if(remaining<.4)
+        world_art(center-2*scale_,floe.y+row,{remaining<.18?"·◇·◇·":" ·◇· "},0x86c8d7);
       return;
     }
+
     const bool cracking=age<MovingPlatform::CrackTime;
-    std::string lip="╶",ice="╲";
+    std::string lip="╶",ice="╲",underside=" ";
     for(int i=1;i<cells-1;++i) {
-      const bool fracture=cracking&&(i==cells/2||(age>.27&&i%4==2));
-      lip+=fracture?"╳":"━";
-      ice+=fracture?"╱":i%4==0?"░":"▒";
+      const bool split=cracking&&(i==cells/2||
+        (age>.19&&i==cells/4)||(age>.33&&i==cells-1-cells/4));
+      lip+=split?"╳":"━";
+      ice+=split?(i<cells/2?"╲":"╱"):i%3==0?"▓":"▒";
+      underside+=split?" ":i%3==0?"▔":"▁";
     }
-    world_text(floe.x,floe.y,lip+"╴",cracking?crack:rim);
-    world_text(floe.x,floe.y+row,ice+"╱",0x629eb6);
+    world_text(floe.x,floe.y,lip+"╴",cracking?fracture:rim);
+    world_art(floe.x,floe.y+row,{ice+"╱"},cracking?0xa0cedd:0x70abc1);
+    world_art(floe.x,floe.y+2*row,{underside},0x4c819a);
   }
 
   void draw_fragile_planter(const Rect &pot,double age) {
