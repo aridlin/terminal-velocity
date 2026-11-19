@@ -27,6 +27,40 @@
     world_art(deck_center-3*scale_,deck.y+row,{"╲──╥──╱"," ╲─╨─╱"},steel);
   }
 
+  void draw_crown_rib(const Rect &beam,double age) {
+    const double row=aspect_*scale_;
+    const int cells=std::max(4,int(beam.w/scale_));
+    const double center=beam.x+beam.w*.5;
+    constexpr uint32_t frame=0x6c8797,steel=0xa7c1ce,warning=0xffca85;
+    const bool cracked=age<MovingPlatform::CrackTime;
+    // The lower beam braces against the lower walkway. The upper beam
+    // hangs from the underside of the token shelf.
+    const double bracket_y=beam.y+row;
+    if(beam.y>40.)
+      draw_scenery_pipe({{beam.x,bracket_y},{beam.x-2.4,bracket_y},
+                         {beam.x-2.4,beam.y+4.}},frame);
+    else
+      draw_scenery_pipe({{beam.x,bracket_y},{beam.x-2.4,bracket_y},
+                         {beam.x-2.4,beam.y-2.},{beam.x-3.6,beam.y-2.}},frame);
+    if(age>=MovingPlatform::CrackTime&&age<MovingPlatform::RestoreTime) {
+      const double fall=age-MovingPlatform::CrackTime;
+      if(fall<.7)for(int side:{-1,1}) {
+        const double x=center+side*(.8+fall*.45)-scale_;
+        world_art(x,beam.y+row+fall*fall*11,
+          {side<0?"═╲":"╱═"},fall<.18?warning:frame);
+      }
+      return;
+    }
+    std::string lip="╞",web="╚";
+    for(int i=1;i<cells-1;++i) {
+      lip+=cracked&&i==cells/2?"╳":"═";
+      web+=i%2==0?"╳":"─";
+    }
+    world_text(beam.x,beam.y,lip+"╡",cracked?warning:steel);
+    world_art(beam.x,beam.y+row,{web+"╝"},frame);
+    if(cracked)world_art(center-scale_,beam.y-row,{"╲╷╱"},warning);
+  }
+
   void draw_crown_service_lift(const MovingPlatform &lift,const Rect &deck) {
     constexpr uint32_t frame=0x587185,cable=0x809bab,steel=0xa6bdc9,amber=0xe4ad68;
     const double row=aspect_*scale_,center=deck.x+deck.w*.5,weight_x=deck.right()+3*scale_;
@@ -111,6 +145,7 @@
       }
     }
     for(const auto &platform:grid_.platforms) {
+      if(platform.fragile)continue;
       const auto deck=platform.at(state_.elapsed);
       if(platform.service_lift)draw_crown_service_lift(platform,deck);
       else if(grid_.room_role==iceberg::RoomRole::Traverse&&state_.adventure.mode!=iceberg::Mode::Campaign)
