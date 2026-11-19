@@ -540,6 +540,7 @@
       line(3,tr("Przegląd nie zapisuje postępu.","Tour progress is never saved."),d.light);
       const int visible=std::min(iceberg::tour_page_size(rows_),count);
       const int first=std::clamp(v.picker_choice-visible/2,0,count-visible);
+      tour_rows_={first,visible,4,edge+1,edge+width-2};
       for(int i=first;i<first+visible;++i) {
         const auto &sample=iceberg::DebugTour[size_t(i)];
         const bool chosen=i==v.picker_choice;
