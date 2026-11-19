@@ -26,6 +26,7 @@ try {
 const inTour=()=>!!(uiFlags&tourFlag);
 const persistentSaveDirectory='/persist';
 let saveDirectory=persistentSaveDirectory;
+let routeLegs=0;
 const accountSlot=()=>started&&selectedSlot===1&&!inTour()&&saveDirectory===persistentSaveDirectory;
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
 let browserSaveStatus=['Gotowe','Ready'],saveActionError=null;
@@ -179,7 +180,16 @@ function translateUI(){
  const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
  const showRoute=!!(overlay&roomMapFlag);
  const timeline=expeditionMap&&!showRoute;
+ const legControls=timeline&&routeLegs!==0;
+ document.querySelector('#touch').toggleAttribute('data-leg-browse',legControls);
+ for(const button of document.querySelectorAll('.route-browse [data-leg-control]'))button.hidden=!legControls;
+ if(legControls){
+  document.querySelector('#touch [data-key="0"]').setAttribute('aria-label',tr('Poprzedni odcinek','Previous leg'));
+  document.querySelector('#touch [data-key="1"]').setAttribute('aria-label',tr('Następny odcinek','Next leg'));
+ }
  for(const [key,available] of [
+  [0,!legControls||!!(routeLegs&1)],
+  [1,!legControls||!!(routeLegs&2)],
   [2,timeline?!!(overlay&previousRouteRoomFlag):!inspecting||hasPreviousPage],
   [3,timeline?!!(overlay&nextRouteRoomFlag):!inspecting||hasNextPage],
  ]){
@@ -318,8 +328,10 @@ const languageToggle=document.querySelector('[data-language-toggle]');
 languageToggle.onclick=()=>selectLanguage(english?'pl':'en');
 window.tvUI=u=>{
  const nextEnglish=!!(u.flags&512);
+ const nextRouteLegs=u.routeLegs??0;
  // The game sends UI state every frame. Only a transition changes the controls.
- if(u.flags===uiFlags&&english===nextEnglish)return;
+ if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs)return;
+ routeLegs=nextRouteLegs;
  const previousSlot=selectedSlot;
  if(started)selectedSlot=1+((u.flags>>>20)&3);
  const blockingFlags=1|2|4|8|64|128;

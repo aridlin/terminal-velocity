@@ -181,6 +181,7 @@ private:
     if (k == 'l') edges_.language = true;
     if (k == 's') edges_.navigate = 1;
     if (k == 'w') edges_.navigate = -1;
+    if (k == 'a' || k == 'd') edges_.browse_leg = k == 'a' ? -1 : 1;
     if (k == 13 || k == 10)
       edges_.confirm = true;
     if (k == 27 || k == 'p')

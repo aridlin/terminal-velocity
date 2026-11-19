@@ -1111,6 +1111,20 @@ int main(){try {
       game.tick(previous_room,0);
       for(int leg_room=0;leg_room<2*iceberg::RoomsPerLeg;++leg_room)game.tick(previous_room,0);
       ui_check(v.route_room_selection==0&&v.route.browsed_leg==-2,"history stops at the first recorded room");
+      game.tick(next_room,0);
+      Controls next_leg;next_leg.browse_leg=1;
+      Controls previous_leg;previous_leg.browse_leg=-1;
+      game.tick(previous_leg,0);
+      ui_check(v.route_room_selection==1,"previous leg leaves the first recorded leg selected");
+      game.tick(next_leg,0);
+      ui_check(v.route_room_selection==9&&v.route.browsed_leg==-1,"a leg step keeps the selected room number in history");
+      game.tick(next_leg,0);
+      ui_check(v.route_room_selection==17&&v.route.browsed_leg==0,"a leg step returns to the active route");
+      game.tick(next_leg,0);game.tick(next_leg,0);
+      ui_check(v.route_room_selection==25&&v.route.browsed_leg==1&&v.route.current==0&&game.depth==16,
+        "future preview clamps leg navigation without moving the courier");
+      game.tick(previous_leg,0);game.tick(previous_room,0);
+      ui_check(v.route_room_selection==16&&v.route.current==0,"room arrows still move one room after a leg step");
       game.tick(open_menu,0);game.tick(enter,0);game.tick(map,0);
       game.tick(previous_room,0);
       ui_check(v.route.browsed_leg==-1,"resuming the same Expedition from the menu retains its session history");
