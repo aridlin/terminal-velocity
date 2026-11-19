@@ -14,7 +14,7 @@
     const bool at_exit=state_.won&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!v.dialogue.active();
     const auto footer=v.save_error?save_failure_hint():at_exit?tr("R — wróć do lampy","R — return to the lamp"):
       state_.player.ledge&&state_.player.ledge_climb_left<=0.?ledge_hint():
-      v.notice_left>0?v.notice:v.prompt.empty()?quest_focus_hint():v.prompt;
+      on_cracking_ice()?cracking_ice_hint():v.notice_left>0?v.notice:v.prompt.empty()?quest_focus_hint():v.prompt;
     const auto lines=wrap(footer,cols_-4);
     const uint32_t warning_color=cell_color({" ",Color::Hazard});
     y=rows_-(lines.size()>2?3:2);
