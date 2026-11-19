@@ -578,6 +578,16 @@ const server=http.createServer((req,res)=>{
     await clickReplyText('YOUR REPLY');
     await page.evaluate(async()=>{for(let frame=0;frame<2;++frame)await new Promise(requestAnimationFrame);});
     assert.ok(await page.evaluate(()=>!!(entryFlags&(1<<26))),'clicking the heading leaves the choice open');
+    const besideReply=await page.evaluate(()=>{
+     const lines=entryFrame.split('\n');
+     const row=lines.findIndex(line=>line.includes("What if I'm late?"));
+     const box=canvas.getBoundingClientRect();
+     return {x:box.right-2.5*box.width/lines[row].length,y:box.top+(row+.5)*box.height/lines.length};
+    });
+    await page.mouse.click(besideReply.x,besideReply.y);
+    await page.evaluate(async()=>{for(let frame=0;frame<2;++frame)await new Promise(requestAnimationFrame);});
+    assert.ok(await page.evaluate(()=>!!(entryFlags&(1<<26))),'empty space beside the reply leaves the choice open');
+    console.log('PASS blank canvas beside a reply keeps the prompt open');
     await clickReplyText("What if I'm late?");
     await page.waitForFunction(()=>entryFrame.includes('COURIER'));
     await page.keyboard.press('Enter');await page.waitForFunction(()=>entryFrame.includes('before you close the counter'));
