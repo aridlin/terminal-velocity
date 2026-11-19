@@ -233,9 +233,9 @@
 
   void draw_crown_sentinel() {
     const auto &boss=state_.crown;
-    const bool stopped=boss.hits>=3, exposed=boss.time>=crown_open_time;
-    const bool warning=boss.time>=crown_warning_time&&boss.time<crown_strike_time;
-    const bool strike=boss.time>=crown_strike_time&&boss.time<crown_open_time;
+    const auto beat=crown_beat(boss);
+    const bool stopped=boss.hits>=3, exposed=beat==CrownBeat::Exposed;
+    const bool warning=beat==CrownBeat::Warning, strike=beat==CrownBeat::Strike;
     const bool airlock=stopped&&boss.airlock_open;
     const double motion=stopped?.7:std::sin(state_.elapsed*5)*.28;
     const uint32_t shell=stopped?0x788996:0xc8cedf;
@@ -709,10 +709,10 @@
     }
     return shown;
   }
-  void draw_dialogue_replies(const iceberg::Dialogue &dialogue) {
+  void draw_dialogue_replies(const iceberg::Dialogue &dialogue,int film_top=-1) {
     const int courier=screen(state_.player.x,state_.player.y).second;
     const auto layout=iceberg::reply_layout(rows_,courier);
-    const int top=layout.top;
+    const int top=film_top>=0?film_top:layout.top;
     reply_first_row_=top+3;
     frame(top,1,cols_-2,layout.height,0xe4ad68);
     paint_text(top+1,3,tr("TWOJA ODPOWIEDŹ","YOUR REPLY"),0xe4ad68,true);
@@ -751,8 +751,14 @@
       paint_text(layout.text_y+i-first,layout.text_x,dialogue_fragment(layout.body[size_t(i)],remaining),0xeee7d6);
     paint_text(layout.top+layout.height-2,layout.text_x,state_.paused&&!state_.journal?tr("E/ENTER wznów","E/ENTER resume"):dialogue.revealing?tr("E/ENTER: tekst od razu","E/ENTER: instant text"):tr("E/ENTER: dalej","E/ENTER: continue"),npc.color);
   }
+#include "iceberg_crown_film_render.hpp"
 #include "iceberg_compact_render.hpp"
   void draw_iceberg() {
+    const auto &dialogue=state_.adventure.dialogue;
+    if(dialogue.active()&&dialogue.cinematic&&!state_.menu&&!state_.journal) {
+      draw_crown_film();
+      return;
+    }
     draw_iceberg_world();
     draw_room_shutter();
     if(cols_<76||rows_<24){draw_iceberg_compact();return;}

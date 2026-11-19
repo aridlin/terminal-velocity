@@ -4,6 +4,31 @@
 #include <stdexcept>
 int main() {
   try {
+    {
+      const auto file=std::filesystem::temp_directory_path()/("tv-transit-fare-"+
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+      iceberg::SessionOptions options;options.mute=true;
+      AdventureSession paid(options,file);
+      paid.begin_campaign(true);
+      paid.profile.district_treasures=iceberg::MasteryTokenFare-1;
+      paid.profile.records[0].best_treasures=iceberg::MasteryTokenFare-2;
+      if(paid.trial_unlocked())throw std::runtime_error("a partial replay must not count its prior toll twice");
+      paid.grid.sweets={{paid.state.player.x+.3,paid.state.player.y+.5}};
+      paid.state.collected.assign(1,false);
+      paid.tick({},1./120);
+      if(!paid.state.collected.front()||!paid.trial_unlocked()||
+        !(paid.profile.cosmetics&iceberg::MasteryTransitPass))
+        throw std::runtime_error("collecting the final transit token must grant the pass immediately");
+      AdventureSession reopened(options,file);
+      reopened.begin_campaign(true);
+      reopened.begin_run(iceberg::Mode::Trial);
+      if(reopened.mode!=iceberg::Mode::Trial||reopened.state.menu)
+        throw std::runtime_error("the transit pass must open the trial after save reload and New Journey");
+      std::error_code ignored;
+      std::filesystem::remove(file,ignored);
+      std::filesystem::remove(file.string()+".bak",ignored);
+      std::cout<<"PASS transit token pickup permanently unlocks trial entry without the mastery quest\n";
+    }
     for(int district=0;district<iceberg::AuthoredDistrictCount;++district) {
       iceberg::SessionOptions options;options.no_save=options.mute=options.seed_override=true;options.seed=73;
       AdventureSession game(options,std::filesystem::temp_directory_path()/"tv-mastery-no-save");

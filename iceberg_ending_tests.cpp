@@ -135,6 +135,21 @@ int main(){try{
   require_end(shield.deaths==1&&shield.crown.hits==0,"the marked sweep hits a courier who stays on the floor");
  }
  {
+  auto follow=game.state;
+  follow.crown.hits=2;follow.crown.cycle=2;
+  follow.player.x=31.;
+  follow.crown.time=crown_follow_warning-1./240;
+  step_crown_sentinel(follow,1./120,false);
+  require_end(follow.crown.target>31.&&crown_beat(follow.crown)==CrownBeat::Warning&&
+              crown_attack_areas(follow.crown)[1].x==27.,
+              "the final follow-up retargets and reverses the floor sweep");
+  follow.crown.time=crown_follow_strike;
+  step_crown_sentinel(follow,1./120,false);
+  require_end(follow.deaths==1&&follow.crown.hits==2,"camping through the second strike is fatal");
+  follow.player.x=crown_core.x;follow.player.y=crown_core.y;
+  follow.crown.time=crown_close_time(2);
+  step_crown_sentinel(follow,1./120,true);
+  require_end(follow.crown.hits==2,"a late dash cannot hit the closed hatch");
   auto beam=game.state;
   beam.crown.hits=1;beam.crown.target=27;
   beam.adventure.door_left=0.;
@@ -168,10 +183,10 @@ int main(){try{
     const int right=int(std::floor((std::nextafter(crown_core.right(),crown_core.left())-core.camera_x)/.4));
     const int top=4+int(std::floor((crown_core.top()-core.camera_y)/(.4*aspect)));
     const int bottom=4+int(std::floor((std::nextafter(crown_core.bottom(),crown_core.top())-core.camera_y)/(.4*aspect)));
-    core.crown.time=crown_open_time-.1;
+    core.crown.time=crown_open_time(0)-.1;
     RenderGrid(game.grid,core,rows,cols,aspect).draw();
     require_end(frame.at(top).at(left).rgb!=0x88e6dc,"the core hatch stays closed during a strike");
-    core.crown.time=crown_open_time;
+    core.crown.time=crown_open_time(0);
     RenderGrid(game.grid,core,rows,cols,aspect).draw();
     require_end(frame.at(top).at(left).glyph=="╭"&&frame.at(bottom).at(right).glyph=="╯"&&
                 frame.at(top).at(left).rgb==0x88e6dc&&
@@ -205,25 +220,29 @@ int main(){try{
   require_end(last_phase.state.crown.hits==2&&last_phase.state.crown.time==0.,
               "the last attack pattern resumes after both shield breaks have saved");
   const int last_deaths=last_phase.state.deaths;
-  for(int i=0;i<500&&last_phase.state.crown.hits<3;++i) {
-    Controls input;
-    const auto &state=last_phase.state;
-    if(state.crown.time<1.55&&state.player.x<32.5)input.move=1;
-    if(state.crown.time>=crown_open_time&&state.player.can_dash()) {
-      input.move=-1;input.dash_pressed=true;
-    }
-    last_phase.tick(input,1./120);
-  }
+  play_crown_sentinel(last_phase);
   require_end(last_phase.state.deaths==last_deaths&&last_phase.state.crown.hits==3&&last_phase.state.adventure.dialogue.active(),
               "ordinary movement and a dash clear the resumed final phase from the entrance");
  }
  play_crown_sentinel(game);
  require_end(game.state.adventure.dialogue.lines.size()>=15&&(game.profile.story&iceberg::CrownSentinelDefeated),
-             "three dodges and dash hits open the full Crown cutscene");
+             "the two follow-up strikes and three dash counters lead into the Crown film");
  {
   AdventureSession resume(options,file);resume.begin_campaign(false);
   require_end(resume.state.crown.hits==3&&resume.state.adventure.dialogue.active(),
               "reloading after victory reopens the cutscene without refighting");
+ }
+ {
+  auto &film=game.state.adventure.dialogue;
+  require_end(film.cinematic,"the final blow cuts from gameplay to the film");
+  std::array<bool,5> shots{};
+  for(int frame=0;frame<5000&&!film.choosing();++frame) {
+    if(!film.active())throw std::runtime_error("the film must stop at the interactive reply");
+    shots[size_t(film.lines[film.page].shot)]=true;
+    game.tick({},.1,true,34,24);
+  }
+  require_end(film.choosing()&&std::all_of(shots.begin(),shots.end(),[](bool seen){return seen;}),
+              "five shots advance on their own at the smallest viewport and wait for the courier reply");
  }
  read_to_reply(game);
  require_end(game.state.crown.airlock_open,"the upper airlock opens at the cutscene cue");

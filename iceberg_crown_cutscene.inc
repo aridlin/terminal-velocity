@@ -19,11 +19,16 @@ inline std::vector<DialogueLine> crown_cutscene(uint64_t story=0) {
     {-1,{"Przekładasz dźwignię. Głośnik czyta pierwszy wiersz, a za szybą otwiera się górna śluza. Przez lód od nabrzeża do Korony widać jedną linię światła.", "You throw the lever. The speaker reads the first line, and the upper airlock opens behind the glass. One line of light runs through the ice from the quay to the Crown."},DialogueCue::CrownAirlock},
     {5,{"Zróbmy kopie i wywieśmy je na każdym przystanku. A potem przynieś te nasiona. Na górze pada na nie prawdziwe słońce.", "Let's make copies and post them at every stop. Then bring me those seeds. There is real sunlight up there now."}},
   };
+  for(size_t i=2;i<9;++i)lines[i].shot=CrownShot::Stairwell;
+  for(size_t i=9;i<15;++i)lines[i].shot=CrownShot::Hearing;
+  lines[15].shot=CrownShot::Quay;
+  lines[16].shot=lines[17].shot=CrownShot::Daybreak;
   if(story&reply_recorded(3)) {
     const bool copies=(story&reply_value(3))!=0;
     DialogueLine witness{4,copies?
       Text{"Kopie, które wysłaliśmy wcześniej, już wracają z dopiskami. Nie wszystkie się zgadzają. Ułożę je obok siebie, z nazwami przystanków.","The copies we sent ahead are already coming back with notes. They don't all agree. I'll put them side by side, with the names of the stops."}:
       Text{"Oryginał spoczywa w czytelni. Została pod nim luźna kartka z pytaniem: kto siedział przy maszynie? Wrócę i podpiszę odpowiedź.","The original is in the reading room. Somebody left a loose sheet underneath asking who sat at the typewriter. I'll go back and sign my answer."}};
+    witness.shot=CrownShot::Hearing;
     lines.insert(lines.end()-3,witness);
   }
   return lines;

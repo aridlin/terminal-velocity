@@ -4,40 +4,39 @@
 #include <queue>
 #include <unordered_map>
 namespace {
-// The fight is won with ordinary input: jump the sweep, leave the locked-on
-// beam, then get to the safe half before attacking the exposed core.
+// Test pilot uses the same inputs as the terminal and browser replays.
+Controls crown_test_input(const GameState &state) {
+  const auto &boss=state.crown;
+  const auto &p=state.player;
+  Controls input;
+  if(crown_beat(boss)==CrownBeat::Exposed&&p.grounded&&p.can_dash()) {
+    input.move=p.x<crown_core.x?1:-1;
+    input.dash_pressed=true;
+    return input;
+  }
+  double mark=23.;
+  if(boss.hits==0) {
+    input.jump_pressed=boss.time>=1.16&&boss.time<1.16+1./120;
+    input.jump_held=boss.time>=1.16&&boss.time<1.60;
+  } else if(boss.hits==1) {
+    mark=boss.time<crown_warning_time?31.:boss.target>27.?23.:31.;
+  } else {
+    mark=boss.time<crown_warning_time?24.2:
+      boss.time<crown_follow_warning?std::max(30.,boss.target+3.):23.;
+  }
+  if(p.x<mark-.35)input.move=1;
+  if(p.x>mark+.35)input.move=-1;
+  return input;
+}
 void play_crown_sentinel(AdventureSession &game,int target_hits=3) {
-  bool jumped=false;
   const int deaths=game.state.deaths;
   for(int i=0;i<2000&&game.state.crown.hits<target_hits;++i) {
     const auto &boss=game.state.crown;
-    const auto &p=game.state.player;
-    Controls input;
-    if(boss.hits==0) {
-      if(p.x<22.9)input.move=1;
-      if(!jumped&&boss.time>=1.47){input.jump_pressed=true;jumped=true;}
-      input.jump_held=jumped&&boss.time<2.32;
-      if(boss.time>=crown_open_time&&p.grounded&&p.can_dash()){input.move=1;input.dash_pressed=true;}
-    } else if(boss.hits==1) {
-      if(boss.time>=.97) {
-        if(boss.target<22.5&&p.x<boss.target+3.8)input.move=1;
-        if(boss.target>=22.5&&p.x>23.3)input.move=-1;
-      }
-      if(boss.time>=crown_open_time&&p.grounded&&p.can_dash()&&p.x<25.) {
-        input.move=1;input.dash_pressed=true;
-      }
-    } else {
-      if(boss.time>=.97) {
-        const double safe=boss.target>=33?boss.target-3.8:boss.target+3.8;
-        if(p.x<safe-.25)input.move=1;
-        if(p.x>safe+.25)input.move=-1;
-      }
-      if(boss.time>=crown_open_time&&p.grounded&&p.can_dash()) {
-        input.move=-1;input.dash_pressed=true;
-      }
-    }
-    game.tick(input,1./120);
-    if(game.state.deaths!=deaths)throw std::runtime_error("Crown attack dodge failed");
+    const double time=boss.time;
+    game.tick(crown_test_input(game.state),1./120);
+    if(game.state.deaths!=deaths)
+      throw std::runtime_error("Crown attack dodge failed at "+std::to_string(time)+
+        " after "+std::to_string(boss.hits)+" hits");
   }
   if(game.state.crown.hits!=target_hits||(target_hits==3&&!game.state.adventure.dialogue.active()))
     throw std::runtime_error("Crown Sentinel target could not be reached with ordinary input");
