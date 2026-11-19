@@ -220,9 +220,10 @@
   }
 #include "iceberg_effects.hpp"
   void draw_crown_core_hatch(uint32_t signal) {
-    const auto [left,top]=screen(crown_core.left(),crown_core.top());
-    const auto [right,bottom]=screen(std::nextafter(crown_core.right(),crown_core.left()),
-                                     std::nextafter(crown_core.bottom(),crown_core.top()));
+    const auto core=crown_core_area(state_.crown.hits);
+    const auto [left,top]=screen(core.left(),core.top());
+    const auto [right,bottom]=screen(std::nextafter(core.right(),core.left()),
+                                     std::nextafter(core.bottom(),core.top()));
     frame(top,left,right-left+1,bottom-top+1,signal);
     const uint32_t glow=int(state_.elapsed*12)%2?0x224747:0x294f50;
     for(int y=std::max(4,top);y<=std::min(rows_-4,bottom);++y)
@@ -237,7 +238,8 @@
     const bool stopped=boss.hits>=3, exposed=beat==CrownBeat::Exposed;
     const bool warning=beat==CrownBeat::Warning, strike=beat==CrownBeat::Strike;
     const bool airlock=stopped&&boss.airlock_open;
-    const double motion=stopped?.7:std::sin(state_.elapsed*5)*.28;
+    const double raise=boss.hits==2?3.6*std::min(1.,boss.time/.48):0.;
+    const double motion=stopped?.7:std::sin(state_.elapsed*5)*.28-raise;
     const uint32_t shell=stopped?0x788996:0xc8cedf;
     const uint32_t signal=stopped?0x596675:exposed?0x88e6dc:warning||strike?0xf48672:0xe4b872;
     for(int side:{-1,1}) {
@@ -301,6 +303,16 @@
     }
     draw_iceberg_landmarks();
     draw_expedition_infrastructure();
+    if(grid_.template_id==iceberg::BreakwaterSurvey) {
+      for(int i=0;i<3;++i) {
+        const double x=28.+i*43.;
+        const double y=54.+.25*std::sin(state_.elapsed*3.+i);
+        const bool lit=i<2;
+        prop_art(x,y,{"   ╷   ",lit?"  ╱◆╲  ":"  ╱◇╲  ","╞═╧═╧═╡"," ╲▓▓▓╱ "},
+          lit?0xe9b26c:0x62838e);
+        if(!lit&&(grid_.switch_flags&1))world_text(x+.8,y-1.1,"⚑",0x88e6dc);
+      }
+    }
     if(grid_.district==3)draw_archive_drawers();
     if(grid_.district==4)draw_garden_ice();
     if(grid_.district==1)for(const auto &jet:grid_.air_fields) {

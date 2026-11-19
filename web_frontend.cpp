@@ -157,7 +157,12 @@ EMSCRIPTEN_KEEPALIVE int web_export_recovery() {
 EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
   if(!web_game||(language!=0&&language!=1))return;
   web_game->profile.language=iceberg::Language(language);
-  if(web_game->state.adventure.dialogue.active()){web_game->state.adventure.dialogue.segment=0;web_game->state.adventure.dialogue.reset_reveal();web_game->frame_dialogue();}
+  if(auto &dialogue=web_game->state.adventure.dialogue;dialogue.active()) {
+    dialogue.segment=0;
+    dialogue.line_seconds=0.;
+    dialogue.reset_reveal();
+    web_game->frame_dialogue();
+  }
   web_game->persist();web_game->sync_view();send_web_ui();
 }
 EMSCRIPTEN_KEEPALIVE int web_validate_import_save() {

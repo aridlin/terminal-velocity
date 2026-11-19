@@ -29,6 +29,54 @@ int main() {
       std::filesystem::remove(file.string()+".bak",ignored);
       std::cout<<"PASS transit token pickup permanently unlocks trial entry without the mastery quest\n";
     }
+    {
+      const auto folder=std::filesystem::temp_directory_path()/("tv-survey-"+
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+      std::filesystem::create_directories(folder);
+      const auto file=folder/"campaign";
+      iceberg::SessionOptions options;options.mute=true;
+      AdventureSession game(options,file);
+      game.begin_campaign(true);
+      const auto door=std::find_if(game.grid.interactions.begin(),game.grid.interactions.end(),[](const auto &node) {
+        return node.kind==InteractionKind::Replay&&node.id==iceberg::SurveyReplay;
+      });
+      if(door==game.grid.interactions.end())throw std::runtime_error("survey entrance missing from Harbor");
+      const auto entry=door->area;
+      game.state.player.x=entry.x;
+      game.state.player.y=entry.bottom()-kPlayerHeight;
+      game.profile.district_treasures=iceberg::SurveyTokenFare-1;
+      game.interact();
+      if(game.profile.revisit.active)throw std::runtime_error("survey opens before the token fare is met");
+      game.grid.sweets={{game.state.player.x+.3,game.state.player.y+.5}};
+      game.state.collected.assign(1,false);
+      game.tick({},1./120);
+      game.interact();
+      if(game.grid.template_id!=iceberg::BreakwaterSurvey||!(game.profile.cosmetics&iceberg::SurveyTransitPass))
+        throw std::runtime_error("the final token should open the survey entrance");
+      AdventureSession resumed(options,file);
+      resumed.begin_campaign(false);
+      if(resumed.grid.template_id!=iceberg::BreakwaterSurvey||!resumed.profile.revisit.active)
+        throw std::runtime_error("a save inside the survey must reopen at its checkpoint");
+      int initial_deaths=resumed.state.deaths;
+      for(const auto target:{Rect{42,44,8,3},Rect{79,34,6,3},Rect{118,31,3,3}}) {
+        const auto path=find_motion_path(resumed.grid,resumed.state,target,
+          [](const GameState &s){return s.player.grounded;});
+        if(!path.reached)throw std::runtime_error("cannot cross the survey to "+std::to_string(target.x));
+        for(const auto &input:path.actions)resumed.tick(input,.1);
+      }
+      resumed.interact();
+      if(resumed.grid.switch_flags!=1)throw std::runtime_error("the dark buoy must be marked before leaving");
+      const auto exit=find_motion_path(resumed.grid,resumed.state,resumed.grid.goal);
+      for(const auto &input:exit.actions)resumed.tick(input,.1);
+      if(!exit.reached||!resumed.state.won||resumed.state.deaths!=initial_deaths)
+        throw std::runtime_error("the survey should be traversable without retries");
+      resumed.advance_room();
+      if(resumed.profile.revisit.active||std::abs(resumed.state.player.x-entry.x)>.01||
+        !(resumed.profile.cosmetics&iceberg::SurveyCourseComplete))
+        throw std::runtime_error("the survey should record completion and return to its entrance");
+      std::filesystem::remove_all(folder);
+      std::cout<<"PASS survey fare, save/resume, platform route, buoy signal and Harbor return\n";
+    }
     for(int district=0;district<iceberg::AuthoredDistrictCount;++district) {
       iceberg::SessionOptions options;options.no_save=options.mute=options.seed_override=true;options.seed=73;
       AdventureSession game(options,std::filesystem::temp_directory_path()/"tv-mastery-no-save");

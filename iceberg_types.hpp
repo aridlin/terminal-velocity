@@ -138,14 +138,27 @@ inline constexpr int MasteryTokenFare = 12;
 // The save already stores permanent unlocks in this field.
 inline constexpr uint32_t MasteryTransitPass = 1u << 24;
 
-inline int mastery_token_progress(const Profile &profile) {
+inline constexpr int SurveyTokenFare = 24;
+inline constexpr uint32_t SurveyTransitPass = 1u << 25;
+inline constexpr uint32_t SurveyCourseComplete = 1u << 26;
+inline constexpr int SurveyReplay = 3;
+inline constexpr int BreakwaterSurvey = 321;
+
+inline int transit_token_progress(const Profile &profile,int fare) {
   int campaign=0;
   for(int i=0;i<DistrictCount;++i) {
-    const int historical=std::min(MasteryTokenFare,profile.records[size_t(i)].best_treasures);
-    const int current=i==profile.district?std::min(MasteryTokenFare,profile.district_treasures):0;
+    const int historical=std::min(fare,profile.records[size_t(i)].best_treasures);
+    const int current=i==profile.district?std::min(fare,profile.district_treasures):0;
     campaign+=std::max(historical,current);
   }
-  return std::clamp(std::max(campaign,profile.expeditions[0].treasures),0,MasteryTokenFare);
+  return std::clamp(std::max(campaign,profile.expeditions[0].treasures),0,fare);
+}
+
+inline int mastery_token_progress(const Profile &profile) {
+  return transit_token_progress(profile,MasteryTokenFare);
+}
+inline bool survey_pass(const Profile &profile) {
+  return (profile.cosmetics&SurveyTransitPass)||transit_token_progress(profile,SurveyTokenFare)==SurveyTokenFare;
 }
 
 enum class DialogueCue { None, CrownAirlock };
@@ -153,7 +166,7 @@ enum class CrownShot { Chamber, Stairwell, Hearing, Quay, Daybreak };
 inline constexpr uint64_t CrownReplyCheckpoint=uint64_t(CrownShot::Daybreak)+1;
 inline constexpr int CrownFilmShift=2;
 inline constexpr double CrownAirlockOpeningSeconds=2.;
-struct DialogueLine { int speaker = 0; Text text; DialogueCue cue = DialogueCue::None; CrownShot shot = CrownShot::Chamber; };
+struct DialogueLine { int speaker = 0; Text text; DialogueCue cue = DialogueCue::None; CrownShot shot = CrownShot::Chamber; int voice = -1; };
 inline constexpr int CourierSpeaker = -2;
 inline constexpr int ReplyPrompt = -3;
 inline constexpr int BriefingReplyBase = DistrictCount + 1; // After the homecomings and Crown hearing.
@@ -215,7 +228,7 @@ struct Dialogue {
   size_t reflow_revealed=0;
   int reply_scene=-1, reply_option=0;
   bool cinematic=false;
-  double shot_seconds=0, subtitle_hold=0;
+  double shot_seconds=0, line_seconds=0;
   void reset_reveal(){visible_characters=byte_cursor=reflow_revealed=0;character_delay=speech_delay=0;revealing=true;reflow_anchor.reset();}
   void reveal_all(){visible_characters=size_t(-1);revealing=false;}
   bool active() const { return page < lines.size(); }

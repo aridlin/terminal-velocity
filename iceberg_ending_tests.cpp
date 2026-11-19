@@ -10,6 +10,26 @@ void read_to_reply(AdventureSession &game) {
   if(!dialogue.choosing())throw std::runtime_error("expected a reply prompt");
 }
 int main(){try{
+ {
+  GameAudio voice;
+  voice.init("assets/audio",false,true);
+  const auto loaded=voice.loaded_clips();
+  std::vector<float> samples(24000);
+  auto peak=[&]{
+    if(!voice.render(samples.data(),samples.size()/2))throw std::runtime_error("offline film audio unavailable");
+    double amplitude=0.;
+    for(float sample:samples)amplitude=std::max(amplitude,std::abs(double(sample)));
+    return amplitude;
+  };
+  voice.film_voice(1,false,.5,true);
+  require_end(voice.loaded_clips()==loaded+1&&peak()>.005,"Crown speech plays an English take through the game mixer");
+  voice.film_voice(1,false,1.,false);
+  require_end(peak()<.00001,"pausing the film silences the current take");
+  voice.film_voice(1,true,1.,true);
+  require_end(voice.loaded_clips()==loaded+1&&peak()>.005,"switching language replaces the take with Polish speech");
+  voice.film_voice(-1,false,0.,false);
+  require_end(voice.loaded_clips()==loaded&&peak()<.00001,"leaving the film releases its speech asset");
+ }
  auto folder=std::filesystem::temp_directory_path()/("tv-ending-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
  std::filesystem::create_directories(folder);auto file=folder/"campaign";
  iceberg::SessionOptions options;options.mute=true;
@@ -225,8 +245,18 @@ int main(){try{
               "ordinary movement and a dash clear the resumed final phase from the entrance");
  }
  play_crown_sentinel(game);
+ {
+  auto last=game.state;
+  last.crown.hits=2;last.crown.time=crown_open_time(2);
+  last.player.x=crown_core.x;last.player.y=48.-kPlayerHeight;
+  step_crown_sentinel(last,1./120,true);
+  require_end(last.crown.hits==2,"a floor dash cannot reach the elevated final core");
+  last.player.y=crown_core_area(2).y;
+  step_crown_sentinel(last,1./120,true);
+  require_end(last.crown.hits==3,"the same dash at the exposed core height breaks the last shield");
+ }
  require_end(game.state.adventure.dialogue.lines.size()>=15&&(game.profile.story&iceberg::CrownSentinelDefeated),
-             "the two follow-up strikes and three dash counters lead into the Crown film");
+             "the three attack patterns and dash counters lead into the Crown film");
  {
   AdventureSession resume(options,file);resume.begin_campaign(false);
   require_end(resume.state.crown.hits==3&&resume.state.adventure.dialogue.active(),

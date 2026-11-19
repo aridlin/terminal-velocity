@@ -21,6 +21,9 @@ struct GameAudio::Impl {
   };
   std::array<Clip, 4> music;
   std::array<Clip, 6> ambience;
+  Clip film_take;
+  int take_id=-1;
+  bool take_polish=false;
   std::array<Clip, 2> climax;
   bool climax_active=false;
   float climax_gain=-1;
@@ -50,11 +53,12 @@ struct GameAudio::Impl {
       for (auto &clip : voices)
         if (clip.loaded)
           ma_sound_uninit(&clip.sound);
+    if (film_take.loaded) ma_sound_uninit(&film_take.sound);
     ma_engine_uninit(&engine);
     if (context_initialized)
       ma_context_uninit(&context);
   }
-  bool load(Clip &clip, const std::filesystem::path &path, ma_uint32 flags) {
+  bool load(Clip &clip, const std::filesystem::path &path, ma_uint32 flags, bool required=true) {
 #ifdef _WIN32
     auto result = ma_sound_init_from_file_w(&engine, path.c_str(), flags,
                                             nullptr, nullptr, &clip.sound);
@@ -65,7 +69,7 @@ struct GameAudio::Impl {
     clip.loaded = result == MA_SUCCESS;
     if (clip.loaded)
       ++clips;
-    else if (failure.empty())
+    else if (required && failure.empty())
       failure = "Brak plików dźwięku. Przywróć folder assets/audio.";
     return clip.loaded;
   }
@@ -178,6 +182,41 @@ void GameAudio::play(AudioCue cue, float strength) {
   ma_sound_set_volume(&voice.sound, impl_->effect_levels[i] * effects_gain_ * voice.strength);
   ma_sound_seek_to_pcm_frame(&voice.sound, 0);
   ma_sound_start(&voice.sound);
+}
+void GameAudio::film_voice(int line, bool polish, double seconds, bool playing) {
+  if (!impl_ || !ready()) return;
+  auto &take=impl_->film_take;
+  if (line!=impl_->take_id || polish!=impl_->take_polish) {
+    if (take.loaded) {
+      ma_sound_uninit(&take.sound);
+      take.loaded=false;
+      --impl_->clips;
+    }
+    impl_->take_id=line;
+    impl_->take_polish=polish;
+    if (line>=0) {
+      auto name=std::string(polish?"pl-":"en-")+std::to_string(line)+".mp3";
+      impl_->load(take,directory_/"crown-film"/name,
+        MA_SOUND_FLAG_NO_SPATIALIZATION|MA_SOUND_FLAG_WAIT_INIT|MA_SOUND_FLAG_DECODE,false);
+    }
+  }
+  if (!take.loaded) return;
+  ma_sound_set_volume(&take.sound,.90f*effects_gain_);
+  if (!playing || muted) {
+    ma_sound_stop(&take.sound);
+    return;
+  }
+  if (ma_sound_is_playing(&take.sound)) return;
+  ma_format format;
+  ma_uint32 channels, rate;
+  ma_uint64 length;
+  if (ma_sound_get_data_format(&take.sound,&format,&channels,&rate,nullptr,0)!=MA_SUCCESS ||
+      ma_sound_get_length_in_pcm_frames(&take.sound,&length)!=MA_SUCCESS) return;
+  const auto frame=ma_uint64(seconds*rate);
+  if (frame<length) {
+    ma_sound_seek_to_pcm_frame(&take.sound,frame);
+    ma_sound_start(&take.sound);
+  }
 }
 void GameAudio::update(AudioScene scene, int track, double dt, bool focused) {
   if (!impl_ && muted)

@@ -2,6 +2,7 @@
 #include "ghost_net.hpp"
 #include "progress.hpp"
 #include "iceberg_types.hpp"
+#include "iceberg_crown_voice.hpp"
 #include "iceberg_save.hpp"
 #include "iceberg_story.hpp"
 #include "iceberg_epilogue_story.hpp"

@@ -46,6 +46,7 @@ public:
             bool initially_muted = false, bool offline = false);
   void update(AudioScene scene, int track, double dt, bool focused = true);
   void play(AudioCue cue, float strength = 1.f);
+  void film_voice(int line, bool polish, double seconds, bool playing);
   void set_mix(float music, float effects, float ambience);
   void set_environment(int district, bool silence = false);
   void set_climax(bool enabled, float intensity = 0);
