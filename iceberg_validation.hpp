@@ -295,7 +295,7 @@ inline void add_expedition_archive_trolley(EngineGrid &room) {
   if(room.district!=3||room.template_id!=45)return;
   // Board from the main walkway and step off at the upper envelope shelf.
   room.platforms.push_back({.base={92,34.4,5,.5},.dx=8.5,.dy=-8,.period=7.2,
-    .phase=.75,.archive_trolley=true});
+    .archive_trolley=true});
   const auto route=verify_route(room);
   if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
   else room.platforms.pop_back();

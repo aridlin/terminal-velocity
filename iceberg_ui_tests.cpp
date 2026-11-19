@@ -541,6 +541,15 @@ int main(){try {
   const auto &trolley=envelope_room.platforms.front();
   auto trolley_view=new_state(envelope_room);
   const auto start_deck=trolley.at(0);
+  const auto upper_deck=trolley.at(3.6);
+  const auto same_deck=[&](const Rect &expected,double time) {
+    const auto actual=trolley.at(time);
+    return actual.x==expected.x&&actual.y==expected.y;
+  };
+  ui_check(same_deck(start_deck,.7)&&same_deck(upper_deck,4.3)&&
+    !same_deck(start_deck,1.2)&&!same_deck(upper_deck,4.8),
+    "the trolley waits briefly at both stops before resuming travel");
+
   trolley_view.player.x=start_deck.x+(start_deck.w-kPlayerWidth)*.5;
   trolley_view.player.y=start_deck.y-kPlayerHeight;
   trolley_view.player.grounded=true;
@@ -554,10 +563,15 @@ int main(){try {
     trolley_view.adventure.language=language;
     const auto label=language==iceberg::Language::English?"▱ Trolley":"▱ Wózek";
     for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
-      RenderGrid(envelope_room,trolley_view,rows,cols,2).draw();
-      ui_check(count_map("▱",0xaee1df)>=1&&count_map("@",0xffd68a)==1&&
-        count_map("┄",0x6f9eaa)>0&&ui_text(frame).find(label)!=std::string::npos,
-        "the room map fits the trolley, route, rider and localized legend");
+      for(double phase:{0.,1.8,3.6,5.4}) {
+        trolley_view.elapsed=phase;
+        RenderGrid(envelope_room,trolley_view,rows,cols,2).draw();
+        ui_check(count_map("▱",0xaee1df)>=1&&count_map("@",0xffd68a)==1&&
+          count_map("○",0xc2accf)>=2&&count_map("┄",0x6f9eaa)>0&&
+          ui_text(frame).find(label)!=std::string::npos&&ui_text(frame).find(language==iceberg::Language::English?
+            "○ Stop":"○ Przystanek")!=std::string::npos,
+          "the trolley map shows the rider, both stops, and its localized legend at every phase");
+      }
     }
   }
   {
