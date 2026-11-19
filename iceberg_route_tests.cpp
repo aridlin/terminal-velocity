@@ -81,6 +81,33 @@ int main() {
       auto legacy=iceworld::make_itinerary(73,0,24,version);
       require(std::none_of(legacy.begin(),legacy.end(),[](int v){return v>=500;}),"published generator versions exclude new rooms");
     }
+    {
+      const std::filesystem::path events_path=path.string()+".events";
+      std::filesystem::remove(events_path);std::filesystem::remove(events_path.string()+".bak");
+      AdventureSession events(options,events_path);
+      events.profile.unlocked=events.run_district=4;
+      auto &run=events.profile.expeditions[0];
+      run.active=true;run.district=4;run.seed=run.origin_seed=73;
+      run.itinerary=iceworld::make_itinerary(run.seed,4,iceberg::RoomsPerLeg);
+      run.itinerary.front()=57;
+      events.begin_run(iceberg::Mode::Endless);
+      const auto [token_x,token_y]=events.grid.sweets.front();
+      events.state.player.x=token_x-kPlayerWidth*.5;
+      events.state.player.y=token_y-kPlayerHeight*.5;
+      events.tick({},1./120);
+      iceberg::Profile saved_events;
+      require(events.state.sweets_count()==1&&events.state.checkpoint==0&&!events.state.won&&
+        iceberg::SaveStore::validate_file(events_path,saved_events)&&
+        saved_events.expeditions[0].collected==1&&saved_events.expeditions[0].treasures==1,
+        "an Expedition token is saved before checkpoint contact or leaving the room");
+      events.state.player.y=events.grid.height()+6;
+      events.tick({},1./120);
+      require(events.state.deaths==1&&iceberg::SaveStore::validate_file(events_path,saved_events)&&
+        saved_events.expeditions[0].deaths==1&&saved_events.expeditions[0].room_deaths==1&&
+        saved_events.expeditions[0].collected==1&&saved_events.expeditions[0].treasures==1,
+        "an ordinary fall saves both retry counts and keeps the collected token");
+      std::filesystem::remove(events_path);std::filesystem::remove(events_path.string()+".bak");
+    }
     options.no_save=true;
     AdventureSession chimney(options,{});
     chimney.profile.unlocked=chimney.run_district=1;
