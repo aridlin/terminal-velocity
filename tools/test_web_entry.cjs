@@ -489,8 +489,9 @@ const server=http.createServer((req,res)=>{
     await clickGameCanvas();
     assert.equal(await page.evaluate(()=>window.canvasConfirms),0,'clicking the paused map does not confirm travel');
     assert.equal(await page.evaluate(()=>entryFrame.includes('A MOMENT TO BREATHE')),false);
-    await page.keyboard.press('p');
+    await page.locator('footer #toolbar').getByRole('button',{name:'Back',exact:true}).click();
     await page.waitForFunction(()=>(uiFlags&(2|128))===2&&entryFrame.includes('A MOMENT TO BREATHE'));
+    assert.equal(await page.locator('footer #toolbar').getByRole('button',{name:'Resume',exact:true}).isVisible(),true);
     await page.locator('footer [data-tap="10"]').click();
     await page.waitForFunction(()=>!!(uiFlags&64)&&entryFrame.includes('QUEST BOOK'));
     assert.equal(await page.evaluate(()=>entryFrame.includes('A MOMENT TO BREATHE')),false);
@@ -935,6 +936,9 @@ const server=http.createServer((req,res)=>{
   await inspectControl.tap();
   await page.waitForFunction(()=>!!(uiFlags&8));
   assert.equal(await retry.isDisabled(),true,'Retry is unavailable while reading an inspection');
+  const toolbarNav=[10,11].map(key=>page.locator('#toolbar [data-tap="'+key+'"]'));
+  for(const button of toolbarNav)assert.equal(await button.isDisabled(),true,'inspection blocks navigation');
+  assert.equal(await page.locator('#toolbar [data-tap="9"]').textContent(),'Back');
   assert.equal(await inspectControl.getAttribute('aria-label'),'Close inspection');
   const pageBack=page.locator('#touch [data-key="2"]'),pageForward=page.locator('#touch [data-key="3"]');
   assert.deepEqual(await page.locator('#touch button:visible').evaluateAll(buttons=>
@@ -953,6 +957,8 @@ const server=http.createServer((req,res)=>{
   await inspectControl.tap();
   await page.waitForFunction(()=>!(uiFlags&8));
   assert.equal(await retry.isEnabled(),true,'closing the inspection restores Retry');
+  for(const button of toolbarNav)assert.equal(await button.isEnabled(),true,'closing inspection restores navigation');
+  assert.equal(await page.locator('#toolbar [data-tap="9"]').textContent(),'Pause');
   assert.equal(await inspectControl.getAttribute('aria-label'),'Inspect');
   assert.equal(await page.locator('#touch-use').isVisible(),true,'Use returns after closing inspection');
   assert.equal(await page.locator('#touch .jump').isVisible(),true,'Jump returns after closing inspection');
