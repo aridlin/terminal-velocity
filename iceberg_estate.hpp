@@ -1,5 +1,10 @@
 #pragma once
 inline constexpr std::array<std::array<int,4>,2> EstateStairwellWalls{{{59,37,2,9},{72,27,2,13}}};
+inline constexpr std::array<std::array<int,4>,2> EstateGutterWalls{{{58,24,2,11},{67,19,2,16}}};
+inline bool has_estate_gutter(const EngineGrid &room) {
+  const auto &wall=EstateGutterWalls.front();
+  return room.template_id==33&&room.solid_at(wall[0],wall[1]);
+}
 // The residential district introduces horizontal tram momentum, then combines
 // it with stairwell reversals and the existing lift/wall techniques.
 inline EngineGrid build_estate_settlement() {

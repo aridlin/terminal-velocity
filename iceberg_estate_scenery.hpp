@@ -80,11 +80,29 @@
       case 4:world_art(p.x,p.y-5,{"╭─────────────────────╮","│ ░░  11   ░░░░░░░░░░ │","├─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┤","╰─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─╯"},d.light);break;
       case 5:world_art(p.x,p.y-6,{"  ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲"," ╱________________╲"," │ ▱▱ ▱▱ ▱▱ ▱▱ ▱▱ │"," ├────────────────┤"," │   │        │   │"},d.accent);break;
       case 7:world_art(p.x-3,p.y-9,{" ╥               ╥"," ║ ╭───────────╮ ║"," ║ │  ▒▒▒▒▒▒▒  │ ║"," ║ │  ▒▒▒▒▒▒▒  │ ║"," ║ ╰─────┬─────╯ ║"," ║       │       ║"},d.stone);break;
-      case 9:world_art(p.x-2,p.y-8,{"╔══╗","║  ║","║  ╚══════╗","╚══════╗  ║","       ║  ║","       ║  ║"},0x657f8a);break;
+      case 9:
+        if(iceworld::has_estate_gutter(grid_))draw_estate_gutters();
+        else world_art(p.x-2,p.y-8,{"╔══╗","║  ║","║  ╚══════╗","╚══════╗  ║","       ║  ║","       ║  ║"},0x657f8a);
+        break;
       default:world_art(p.x,p.y-4,{"  ╲│╱    ╲│╱    ╲│╱","   │      │      │","╭──┴──╮╭──┴──╮╭──┴──╮","╰─────╯╰─────╯╰─────╯"},0x9aab85);break;
       }
     }
   }
+  void draw_estate_gutters() {
+    constexpr uint32_t copper=0xa78e7d;
+    const double row=aspect_*scale_;
+    for(size_t i=0;i<iceworld::EstateGutterWalls.size();++i) {
+      const auto [x,y,w,h]=iceworld::EstateGutterWalls[i];
+      const double center=x+w*.5;
+      const double inlet=y-row;
+      draw_scenery_pipe({{center+(i?6.:-6.),inlet},{center,inlet},{center,double(y)}},copper);
+      world_text(center,inlet,i?"╔":"╗",copper);
+      for(int segment=0;segment*row<h;++segment)
+        world_text(center,y+segment*row,segment>0&&segment%4==0?"╫":"║",copper);
+      if(i)draw_pipe_drip(center,y+h+.05,41.,.8);
+    }
+  }
+
   void draw_estate_stairwells() {
     const double row=aspect_*scale_;
     constexpr uint32_t plaster=0x88788d,mortar=0xc5a6b9,window=0xc9c088;
