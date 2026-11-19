@@ -64,9 +64,28 @@
     const bool has_vents=!grid_.pulses.empty();
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f;
+    struct FieldLandmark {const char *symbol;iceberg::Text legend;uint32_t color;};
+    static constexpr std::array<FieldLandmark,3> field_landmarks{{
+      {"▤",{"▤ Tabliczka","▤ Route sign"},0xe7d8b4},
+      {"✉",{"✉ List","✉ Letter"},0xf2d0a4},
+      {"◖",{"◖ Rura głosowa","◖ Speaking tube"},0xd4bc88}
+    }};
+    const auto field_landmark=[](const auto &node) {
+      if(node.kind!=InteractionKind::Note)return -1;
+      switch(node.id) {
+      case iceberg::CrownShaftPlate:case iceberg::ArchiveTrolleyNotice:return 0;
+      case iceberg::ArchiveDryingLetter:return 1;
+      case iceberg::IrrigationCallBox:return 2;
+      default:return -1;
+      }
+    };
+    std::array<bool,field_landmarks.size()> has_landmark{};
+    for(const auto &node:grid_.interactions)
+      if(const int i=field_landmark(node);i>=0)has_landmark[size_t(i)]=true;
     const int legend_rows=1+int(has_features)+int(fork)+int(has_valves)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
-      +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel);
+      +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel)
+      +int(std::count(has_landmark.begin(),has_landmark.end(),true));
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=has_ferries&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
@@ -309,6 +328,11 @@
       const auto rack=platform.at(state_.elapsed);
       mark(rack.x+rack.w*.5,rack.y,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);
     }
+    for(const auto &node:grid_.interactions)
+      if(const int i=field_landmark(node);i>=0) {
+        const auto &landmark=field_landmarks[size_t(i)];
+        mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,landmark.symbol,landmark.color);
+      }
     // Reserve uncontested positions before moving overlapping markers.
     // Nearby slots keep the displaced icons close to their real positions.
     static constexpr std::pair<int,int> nearby[]={
@@ -375,6 +399,10 @@
       paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
     }
     if(has_wheel)paint_text(legend++,2,tr("⊕ Koło nawadniające","⊕ Irrigation wheel"),wheel_color);
+    for(size_t i=0;i<field_landmarks.size();++i)if(has_landmark[i]) {
+      const auto &landmark=field_landmarks[i];
+      paint_text(legend++,2,landmark.legend.get(state_.adventure.language),landmark.color);
+    }
     if(has_refills) {
       const auto name=tr("▥ Zapas zrywu","▥ Dash refill");
       paint_text(legend,2,name,refill_color);

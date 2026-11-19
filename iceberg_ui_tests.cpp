@@ -412,7 +412,7 @@ int main(){try {
     seam_view.adventure.language=language;
     for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
       RenderGrid(seam_room,seam_view,rows,cols,2).draw();
-      ui_check(count_map("↑",0xc4deeb)==1&&ui_text(frame).find(language==iceberg::Language::English?
+      ui_check(count_marker("↑",0xc4deeb)==2&&ui_text(frame).find(language==iceberg::Language::English?
         "↑ Wall-kick shaft":"↑ Wąski szyb")!=std::string::npos,
         "the room map marks the Crown shaft and fits its localized legend");
     }
@@ -487,6 +487,28 @@ int main(){try {
     ui_check(count_background(0x14394e)==water&&count_background(0x214b62,"≈")>0,
       "broken floes reveal the water surface without changing the basin");
   }
+  for(const auto &[room,sign,letter,tube]:{std::array{45,2,2,0},std::array{57,0,0,2},
+                                         std::array{61,2,0,0},std::array{49,0,0,0}}) {
+    AdventureSession field(options,{});
+    const auto sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [room](const auto &stop){return stop.room==room;});
+    field.start_tour(int(sample-iceberg::DebugTour.begin()));
+    field.state.adventure.map=field.state.adventure.map_room=true;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      field.state.adventure.language=language;
+      const bool en=language==iceberg::Language::English;
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(field.grid,field.state,rows,cols,2).draw();
+        const auto text=ui_text(frame);
+        ui_check(count_marker("▤",0xe7d8b4)==sign&&count_marker("✉",0xf2d0a4)==letter&&
+          count_marker("◖",0xd4bc88)==tube&&count_map("@",0xffd68a)==1&&
+          (text.find(en?"▤ Route sign":"▤ Tabliczka")!=std::string::npos)==bool(sign)&&
+          (text.find(en?"✉ Letter":"✉ List")!=std::string::npos)==bool(letter)&&
+          (text.find(en?"◖ Speaking tube":"◖ Rura głosowa")!=std::string::npos)==bool(tube),
+          "field landmarks and legends coexist with the courier on compact and wide room maps");
+      }
+    }
+  }
   {
     AdventureSession wheel(options,{});
     const auto sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
@@ -513,7 +535,7 @@ int main(){try {
       wheel.state.adventure.language=language;
       for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
         RenderGrid(wheel.grid,wheel.state,rows,cols,2).draw();
-        ui_check(count_map("⊕",0xc5a36d)==1&&count_map("@",0xffd68a)==1&&
+        ui_check(count_marker("⊕",0xc5a36d)==2&&count_map("@",0xffd68a)==1&&
           ui_text(frame).find(language==iceberg::Language::English?"⊕ Irrigation wheel":"⊕ Koło nawadniające")!=std::string::npos,
           "the irrigation map shows the axle and the rider with a localized legend");
       }
