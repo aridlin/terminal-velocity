@@ -231,12 +231,22 @@ struct InspectionLayout {
   int art_x=2,art_y=5,text_x=2,text_y=18,text_width=30,text_rows=3;
   std::vector<std::string> title,body;
   int pages=1;
+  // Offsets into the same whitespace-normalized text at any wrap width.
+  std::vector<size_t> page_starts{0};
+  int page_at(size_t offset) const {
+    return int(std::upper_bound(page_starts.begin(),page_starts.end(),offset)-page_starts.begin())-1;
+  }
 };
 inline InspectionLayout inspection_layout(const std::string &title,const std::string &body,int cols,int rows) {
   InspectionLayout l;l.title=inspection_wrap(title,cols-4);l.art_y=3+int(l.title.size())+1;
   if(cols>=56){l.art_x=2;l.text_x=33;l.text_y=l.art_y;l.text_width=cols-35;l.text_rows=rows-3-l.text_y;}
   else {l.art_x=(cols-28)/2;l.text_x=2;l.text_y=l.art_y+13;l.text_width=cols-4;l.text_rows=rows-3-l.text_y;}
   l.text_rows=std::max(1,l.text_rows);l.body=inspection_wrap(body,l.text_width);
-  l.pages=std::max(1,(int(l.body.size())+l.text_rows-1)/l.text_rows);return l;
+  size_t offset=0;
+  for(size_t line=0;line<l.body.size();++line) {
+    if(line>0&&line%size_t(l.text_rows)==0)l.page_starts.push_back(offset);
+    offset+=l.body[line].size()+1;
+  }
+  l.pages=int(l.page_starts.size());return l;
 }
 }

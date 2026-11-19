@@ -918,7 +918,7 @@ public:
   }
   void inspect_nearby() {
     auto &v=state.adventure;
-    v.inspect_page=0;v.inspect_detail=0;
+    v.inspect_offset=0;v.inspect_detail=0;
     using Art=iceberg::InspectionArt;
     auto describe=[&](std::string title,std::string body,const char *icon,Art art) {
       v.inspect_title=std::move(title);v.inspect_body=std::move(body);v.inspect_icon=icon;v.inspect_art=art;
@@ -1229,10 +1229,13 @@ public:
     }
     if(v.inspecting) {
       auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,columns,rows);
-      v.inspect_page=std::clamp(v.inspect_page,0,layout.pages-1);
-      if(c.inspect||c.pause)v.inspecting=false;
-      else if(c.confirm||c.interact){if(v.inspect_page+1<layout.pages)++v.inspect_page;else v.inspecting=false;}
-      else if(c.navigate)v.inspect_page=std::clamp(v.inspect_page+c.navigate,0,layout.pages-1);
+      const int page=layout.page_at(v.inspect_offset);
+      const bool advance=c.confirm||c.interact;
+      if(c.inspect||c.pause||(advance&&page+1==layout.pages))v.inspecting=false;
+      else {
+        const int selected=std::clamp(page+(advance?1:c.navigate),0,layout.pages-1);
+        if(selected!=page)v.inspect_offset=layout.page_starts[size_t(selected)];
+      }
       audio.update(AudioScene::Paused,music_track(),dt,focused);sync_view();return;
     }
     const bool toggle_overlay=c.pause||c.map||c.journal;

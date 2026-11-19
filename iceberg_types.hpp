@@ -267,7 +267,8 @@ struct View {
   bool inspecting=false;
   std::string inspect_title, inspect_body, inspect_icon;
   InspectionArt inspect_art=InspectionArt::Parcel;
-  int inspect_detail=0, inspect_page=0;
+  int inspect_detail=0;
+  size_t inspect_offset=0;
   double pickup_left=0, pickup_x=0, pickup_y=0;
   int pickup_kind=0;
   double door_left=0, door_open=0;
