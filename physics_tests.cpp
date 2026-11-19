@@ -150,6 +150,25 @@ int main() {
       world_step(state, course, input, 1./120);
       return state.player;
     };
+    auto buffered_combo=new_state(adventure);
+    buffered_combo.player.y=38.-kPlayerHeight;
+    world_step(buffered_combo,adventure,{.dash_pressed=true,.aim_y=1},1./120);
+    for(int i=0;i<12&&!buffered_combo.player.grounded;++i)
+      world_step(buffered_combo,adventure,{},1./120);
+    check(buffered_combo.player.grounded&&buffered_combo.player.landing_dash_left>0&&
+          buffered_combo.player.dash_time_left==0,
+          "a downward dash ends at the floor and starts the landing cooldown");
+    world_step(buffered_combo,adventure,combo,1./120);
+    check(buffered_combo.player.grounded&&buffered_combo.player.landing_dash_left>0&&
+          buffered_combo.player.dash_time_left==0&&buffered_combo.player.dash_jump_left==0,
+          "a paired Dash and Jump waits for the landing cooldown");
+    for(int i=0;i<11;++i)world_step(buffered_combo,adventure,{},1./120);
+    check(buffered_combo.player.dash_jump_left>0&&buffered_combo.player.vx>20&&buffered_combo.player.vy<0,
+          "the paired landing inputs launch a dash jump after the cooldown");
+    auto buffered_jump=land_and_dash(adventure);
+    world_step(buffered_jump,adventure,{.jump_pressed=true},1./120);
+    check(!buffered_jump.player.grounded&&buffered_jump.player.vy<0,
+          "a jump without Dash still takes off during the landing cooldown");
     const auto launched = step_combo(adventure, combo);
     check(launched.dash_jump_left > 0 && launched.vx > 20 && launched.vy < 0,
           "same-tick Dash and Jump launch a grounded dash jump");

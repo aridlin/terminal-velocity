@@ -124,6 +124,7 @@ struct Player {
   double jump_buffer_left = 0.0;
   double dash_buffer_left = 0.0;
   std::pair<int,int> dash_buffer_direction{};
+  bool dash_buffer_jump = false;
   double dash_time_left = 0.0;
   double landing_dash_left = 0.0;
   std::optional<Ledge> ledge;
@@ -824,6 +825,7 @@ void reset_player(GameState &state) {
   state.player.coyote_left = 0.0;
   state.player.jump_buffer_left = 0.0;
   state.player.dash_buffer_left = 0.0;
+  state.player.dash_buffer_jump = false;
   state.player.dash_time_left = 0.0;
   state.player.landing_dash_left = 0.0;
   state.player.ledge.reset();
@@ -992,8 +994,11 @@ void update_step(GameState &state, const EngineGrid &grid,
   if (controls.jump_pressed) {
     player.jump_buffer_left = kJumpBuffer;
   }
+  const bool remember_direction=grid.adventure_level&&!state.reference_movement;
   if (controls.dash_pressed && !grid.dash_locked()) {
     player.dash_buffer_left = kDashBuffer;
+    player.dash_buffer_jump = remember_direction && player.grounded &&
+                              controls.jump_pressed && controls.aim_y == 0;
     const int horizontal=controls.move||controls.aim_y?controls.move:player.facing;
     player.dash_buffer_direction={horizontal,controls.aim_y};
   }
@@ -1004,15 +1009,15 @@ void update_step(GameState &state, const EngineGrid &grid,
 
   bool dash_jump_on_launch = false;
   if (player.dash_buffer_left > 0.0 && player.can_dash()) {
-    const bool remember_direction=grid.adventure_level&&!state.reference_movement;
     double dx=remember_direction?player.dash_buffer_direction.first:controls.move;
     double dy=remember_direction?player.dash_buffer_direction.second:controls.aim_y;
     if (dx == 0.0 && dy == 0.0) {
       dx = static_cast<double>(player.facing);
     }
-    // Dash and Jump can arrive together when the frontend samples its input.
-    dash_jump_on_launch = remember_direction && player.grounded &&
-                          controls.jump_pressed && dy == 0.0;
+    // A paired jump can still be buffered when the landing cooldown ends.
+    dash_jump_on_launch = remember_direction && player.grounded && dy == 0.0 &&
+                          player.jump_buffer_left > 0.0 &&
+                          (controls.jump_pressed || player.dash_buffer_jump);
     const double len = std::hypot(dx, dy);
     dx /= len;
     dy /= len;
@@ -1025,6 +1030,7 @@ void update_step(GameState &state, const EngineGrid &grid,
     player.wall_coyote_left = 0;
     if (!dash_jump_on_launch) player.jump_buffer_left = 0.0;
     player.dash_buffer_left = 0.0;
+    player.dash_buffer_jump = false;
     player.ledge.reset();
     player.ledge_climb_left = 0.0;
   }
@@ -1105,7 +1111,9 @@ void update_step(GameState &state, const EngineGrid &grid,
     player.vy = kWallSlideSpeed;
   }
 
-  if (player.jump_buffer_left > 0.0) {
+  const bool waiting_for_dash_jump = player.grounded && player.dash_buffer_jump &&
+      player.dash_buffer_left > 0.0 && player.landing_dash_left > 0.0;
+  if (player.jump_buffer_left > 0.0 && !waiting_for_dash_jump) {
     if (player.grounded || player.coyote_left > 0.0) {
       player.vy = -kJumpSpeed;
       player.grounded = false;
@@ -1321,8 +1329,11 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
     if (s.crown.hits < 3) s.won = false;
   }
   if (g.adventure_level && !s.reference_movement && !was_grounded && p.grounded &&
-      (spent_dash || p.dash_time_left > 0.))
+      (spent_dash || p.dash_time_left > 0.)) {
     p.landing_dash_left = kLandingDashCooldown;
+    // Ending the dash keeps the next step grounded, with gravity maintaining contact.
+    p.dash_time_left = 0.0;
+  }
   // A carried player must never remain embedded in static terrain.
   for (auto solid : g.solid_rects_near(p.rect()))
     if (p.rect().intersects(solid)) {
