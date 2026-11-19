@@ -408,6 +408,18 @@ inline void add_expedition_stairwells(EngineGrid &room) {
   else room=std::move(original);
 }
 
+inline void add_estate_gutters(EngineGrid &room) {
+  if(room.district!=2||room.template_id!=33)return;
+  auto climb=room;
+  // The downspouts end above the street route, below the token landing.
+  for(auto [x,y,w,h]:iceworld::EstateGutterWalls)climb.add_solid_rect(x,y,w,h);
+  const auto route=verify_route(climb);
+  if(route.complete&&route.deaths==0) {
+    climb.verification_policy=route.policy;
+    room=std::move(climb);
+  }
+}
+
 inline void add_estate_clotheslines(EngineGrid &room) {
   if(room.district!=2||room.template_id!=26)return;
   const size_t original=room.platforms.size();

@@ -575,6 +575,21 @@ int main(){try {
         "the room map marks the Crown shaft and fits its localized legend");
     }
   }
+  {
+    auto gutter=verified_room(33,73,2);
+    add_estate_gutters(gutter);
+    auto view=new_state(gutter);
+    view.adventure.map=view.adventure.map_room=true;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      view.adventure.language=language;
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        RenderGrid(gutter,view,rows,cols,2).draw();
+        ui_check(count_marker("↑",0xc4deeb)==2&&count_map("@",0xffd68a)==1&&
+          ui_text(frame).find(language==iceberg::Language::English?"↑ Gutter climb":"↑ Rynny")!=std::string::npos,
+          "the Estate room map marks the optional gutter climb and retains the courier");
+      }
+    }
+  }
   auto pots=verified_room(51,73,4);
   add_expedition_fragile_pots(pots);
   const size_t first_pot=pots.platforms.size()-2;

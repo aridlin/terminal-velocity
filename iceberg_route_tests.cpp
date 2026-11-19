@@ -250,6 +250,26 @@ int main() {
       require(climber.player.vx<-15&&climber.player.vy<-20&&climber.player.wall_lock_left>0,
         "the new stairwell face supports a wall jump while holding toward it");
     }
+    stairs.itinerary[0]=33;
+    stairs.layout_version=3;
+    estate.load_room();
+    const auto original_gutter=estate.grid;
+    require(!iceworld::has_estate_gutter(estate.grid),"a legacy Estate gutter keeps its original geometry");
+    stairs.layout_version=4;
+    estate.load_room();
+    require(iceworld::has_estate_gutter(estate.grid)&&estate.grid.sweets==original_gutter.sweets&&
+      estate.grid.checkpoint_points==original_gutter.checkpoint_points&&verify_route(estate.grid).complete,
+      "the downspouts keep the lower route and existing tokens and checkpoints");
+    for(size_t i=0;i<iceworld::EstateGutterWalls.size();++i) {
+      const auto [x,y,w,h]=iceworld::EstateGutterWalls[i];
+      auto courier=new_state(estate.grid);
+      courier.player.x=i?x-kPlayerWidth:x+w;
+      courier.player.y=y+h-4;
+      Controls kick;kick.move=i?1:-1;kick.jump_pressed=kick.jump_held=true;
+      world_step(courier,estate.grid,kick,1./120);
+      require(courier.player.wall_lock_left>0&&courier.player.vx*kick.move<-15&&courier.player.vy<-20,
+        "the inner face of each downspout supports a wall kick");
+    }
     AdventureSession crown(options,{});
     crown.begin_campaign(true);
     crown.profile.unlocked=crown.run_district=5;

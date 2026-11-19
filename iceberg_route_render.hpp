@@ -15,6 +15,7 @@
     const bool has_racks=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_rack;});
     const bool has_seam=grid_.crown_seam.has_value();
+    const bool has_gutter=iceworld::has_estate_gutter(grid_);
     const bool has_trolley=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.archive_trolley;});
     const auto wheel=std::find_if(grid_.platforms.begin(),grid_.platforms.end(),
@@ -136,7 +137,7 @@
     const bool tube_landmark=has_landmark[2];
     const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_chart)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
-      +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam)+int(has_wheel)
+      +int(has_fragile)+int(has_ferries)+int(has_trolley)+int(has_seam||has_gutter)+int(has_wheel)
       +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(lesson_signals);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=(has_ferries||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
@@ -384,6 +385,11 @@
       const auto &seam=*grid_.crown_seam;
       mark(seam.x+seam.w*.5,seam.bottom(),"↑",seam_color);
     }
+    if(has_gutter) {
+      const auto &left=iceworld::EstateGutterWalls.front();
+      const auto &right=iceworld::EstateGutterWalls.back();
+      mark((left[0]+left[2]+right[0])*.5,left[1]+left[3],"↑",seam_color);
+    }
     for(const auto &belt:grid_.sorting_belts)if(powered(belt)) {
       const bool right=belt.speed_at(grid_.switch_flags)>0;
       mark(belt.x+belt.width*.5,belt.y,right?"▶":"◀",belt_color,right?1:-1);
@@ -502,7 +508,8 @@
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_cargo_hoist)paint_text(legend++,2,tr("↕ Winda towarowa","↕ Cargo hoist"),service_lift_color);
-    if(has_seam)paint_text(legend++,2,tr("↑ Wąski szyb","↑ Wall-kick shaft"),seam_color);
+    if(has_seam||has_gutter)
+      paint_text(legend++,2,has_gutter?tr("↑ Rynny","↑ Gutter climb"):tr("↑ Wąski szyb","↑ Wall-kick shaft"),seam_color);
     if(has_belts) {
       auto label=tr("◀ ▶ Taśmy","◀ ▶ Belts");
       if(std::any_of(grid_.interactions.begin(),grid_.interactions.end(),belt_control))
