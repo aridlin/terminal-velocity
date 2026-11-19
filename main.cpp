@@ -1385,6 +1385,12 @@ public:
         }
       }
 
+      // Retry ends this frame at the lamp, even if slower rendering left
+      // more physics steps queued with the old held controls.
+      if(input.restart) {
+        accumulator=0.;
+        return;
+      }
       accumulator -= 1.0 / 120.0;
     }
   }
