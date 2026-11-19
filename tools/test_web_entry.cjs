@@ -491,6 +491,13 @@ const server=http.createServer((req,res)=>{
      const button=accounts.buttons.at(-1),rect=canvas.getBoundingClientRect();
      return {x:rect.left+(button.x+3)*rect.width/accounts.width,y:rect.top+(button.y+.5)*rect.height/accounts.height};
     });
+    const blankX=await page.evaluate(()=>{
+     const rect=canvas.getBoundingClientRect();
+     return rect.left+(accounts.width-4)*rect.width/accounts.width;
+    });
+    await page.mouse.click(blankX,returnPoint.y);
+    assert.equal(await page.evaluate(()=>accounts.active),true,'blank canvas does not activate an account action');
+    console.log('PASS blank account canvas does not activate a rendered button');
     await page.mouse.move(returnPoint.x,returnPoint.y);
     await page.mouse.down();
     assert.equal(await page.evaluate(()=>accounts.active),true,'a held press does not activate the account action');

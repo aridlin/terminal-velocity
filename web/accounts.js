@@ -188,7 +188,11 @@ window.TVAccounts=class {
   const cells=new Uint32Array(w*h*4);for(let i=0;i<w*h;i++){cells[i*4]=32;cells[i*4+1]=0xc8bbb8;cells[i*4+2]=0x101923;}
   const text=(x,y,s,color=0xc8bbb8)=>{for(const ch of s){if(x>=w-2)break;let n=(y*w+x++)*4;cells[n]=ch.codePointAt(0);cells[n+1]=color;}};
   const wrap=(y,s)=>{let line='';for(const word of s.split(/\s+/)){if((line+' '+word).length>w-5){text(2,y++,line);line=word;}else line+=(line?' ':'')+word;}if(line)text(2,y++,line);return y;};
-  const button=(y,label,fn)=>{text(2,y,(focus!==this.name&&focus!==this.pass&&this.selected===this.buttons.length?'▸ ':'  ')+'[ '+label+' ]',0xe4ad68);this.buttons.push({x:2,y,w:w-4,fn});};
+  const button=(y,label,fn)=>{
+   const caption=(focus!==this.name&&focus!==this.pass&&this.selected===this.buttons.length?'▸ ':'  ')+'[ '+label+' ]';
+   text(2,y,caption,0xe4ad68);
+   this.buttons.push({x:2,y,w:Math.min([...caption].length,w-4),fn});
+  };
   for(let x=1;x<w-1;x++){text(x,0,'─',0x345866);text(x,h-1,'─',0x345866);}text(2,2,this.tr('POCZTA KURIERSKA — KONTO','COURIER POST — ACCOUNT'),0x9dd4dd);
   this.name.hidden=this.pass.hidden=!form;
   if(form){
@@ -200,7 +204,7 @@ window.TVAccounts=class {
    if(!landscape)wrap(19,this.tr('Tylko login i hasło. Bez adresu e-mail.','Just a username and password. No email.'));
    if(!this.message)wrap(messageRow,this.tr('Login: 3–24 znaki. Hasło: co najmniej 8 znaków.','Username: 3–24 characters. Password: at least 8 characters.'));
   }else if(this.mode==='choose'){
-   wrap(5,this.message);button(landscape?8:10,this.tr('Wczytaj zapis konta','Load account save'),()=>this.choose(true));button(landscape?11:14,this.tr('Wyślij zapis z tej przeglądarki','Use this browser save'),()=>this.choose(false));wrap(landscape?14:18,this.tr('Poprzednia kopia pozostaje zachowana.','The previous copy is kept.'));
+   wrap(5,this.message);button(landscape?8:10,this.tr('Wczytaj zapis konta','Load account save'),()=>this.choose(true));button(landscape?11:14,this.tr('Wyślij zapis z przeglądarki','Use this browser save'),()=>this.choose(false));wrap(landscape?14:18,this.tr('Poprzednia kopia pozostaje zachowana.','The previous copy is kept.'));
   }else{
    text(2,5,this.user||'',0xe4ad68);wrap(8,this.tr('Postęp zapisuje się także na koncie.','Progress also saves to your account.'));button(landscape?10:12,this.tr('Zapisz teraz','Save now'),()=>this.sync());button(landscape?12:16,this.tr('Wyloguj','Sign out'),()=>this.logout());
   }
