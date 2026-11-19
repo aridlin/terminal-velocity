@@ -124,8 +124,8 @@
     return {};
   }
   void world_art(double x,double y,const std::vector<std::string> &lines,uint32_t rgb,bool opaque=false) {
-    // Decoration is behind collision and characters, even when the camera
-    // exposes only a few cells of a large architectural landmark.
+    // Keep drawn terrain clear. The courier sprite covers the scenery
+    // later, leaving its transparent cells intact.
     auto [origin_x,origin_y]=screen(x,y);
     if(origin_x>=cols_||origin_y>=rows_-3||origin_y+int(lines.size())<=4)return;
     for(size_t r=0;r<lines.size();++r) {
@@ -138,8 +138,8 @@
         int sx=origin_x+int(c);
         if(sx<0||sx>=cols_||(!opaque&&glyph[c]==" "))continue;
         double wx=x+c*scale_,wy=y+r*aspect_*scale_;
-        if(grid_.solid_at(int(std::floor(wx)),int(std::floor(wy)))||grid_.hazard_at(int(std::floor(wx)),int(std::floor(wy)))||
-           state_.player.rect().intersects({wx,wy,scale_,aspect_*scale_}))continue;
+        if(grid_.solid_at(int(std::floor(wx)),int(std::floor(wy)))||
+           grid_.hazard_at(int(std::floor(wx)),int(std::floor(wy))))continue;
         put(sy,sx,{glyph[c],Color::Text,false,false,0,rgb});
       }
     }

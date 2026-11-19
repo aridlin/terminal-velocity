@@ -95,8 +95,7 @@
       const double wx=state_.camera_x+x*scale_, row=aspect_*scale_;
       const double wy=state_.camera_y+(y-4)*row;
       if(grid_.solid_at(int(std::floor(wx+.5*scale_)),int(std::floor(wy+.5*row)))||
-         grid_.hazard_at(int(std::floor(wx)),int(std::floor(wy)))||
-         state_.player.rect().intersects({wx,wy,scale_,row}))return;
+         grid_.hazard_at(int(std::floor(wx)),int(std::floor(wy))))return;
       put(y,x,{glyph,Color::Decor,false,false,0,color});
     };
     // Each turn is snapped once so both runs share the same corner cell.

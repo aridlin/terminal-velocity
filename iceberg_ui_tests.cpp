@@ -35,6 +35,30 @@ int main(){try {
     }
   }
   {
+    const auto quay=iceworld::build_harbor_settlement_v4();
+    auto crossing=new_state(quay);
+    crossing.adventure.door_left=0.;
+    crossing.camera_x=54.;
+    crossing.camera_y=32.01;
+    for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
+      crossing.adventure.language=language;
+      for(int columns:{34,110}) {
+        crossing.player.x=66.6;
+        crossing.player.y=39.1;
+        RenderGrid(quay,crossing,24,columns,2.).draw();
+        ui_check(frame.at(12).at(32).glyph=="╮"&&frame.at(12).at(32).rgb==0x5f777b,
+          "the coffee facade stays intact next to the courier's drawn head");
+        ui_check(frame.at(13).at(32).rgb==0xe4ad68,
+          "the courier draws in front of the coffee facade");
+        crossing.player.x=64.1;
+        crossing.player.y=34.05;
+        RenderGrid(quay,crossing,24,columns,2.).draw();
+        ui_check(frame.at(6).at(25).rgb==0x596d73,
+          "the supply main stays continuous above the courier");
+      }
+    }
+  }
+  {
     auto room=game.grid;
     auto state=game.state;
     room.sweets={{8,20},{12,20}};
