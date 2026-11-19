@@ -264,7 +264,7 @@ inline constexpr std::array DebugTour{
   TourStop{2,25,53,44,{"Ściany między bocznymi balkonami","Wall-kick route between side balconies"}},
   TourStop{3,38,52,38,{"Dwie wyrzutnie poczty pneumatycznej","Two pneumatic post launchers"}},
   TourStop{3,39,57,44,{"Wysuwane szuflady kartoteki","Extending catalogue drawers"}},
-  TourStop{3,44,28,50,{"Taśmy odpisów zmieniają kierunek","Copy belts alternate direction"}},
+  TourStop{3,44,28,50,{"Odwróć środkową taśmę przekaźnikiem","Use the relay to reverse the middle belt"}},
   TourStop{4,49,67,48,{"Strąk odbija do bocznej półki","A seedpod launches to the side shelf"}},
   TourStop{4,51,54,44,{"Wiszące donice pękają pod stopami","Hanging planters crack underfoot"}},
   TourStop{4,57,52,50,{"Wjedź czerpakiem koła na półkę z nasionami","Ride a scoop around the wheel to the seed shelf"}},
@@ -283,6 +283,7 @@ inline constexpr std::array DebugTour{
   TourStop{5,63,68,45,{"Skacz po belkach, zanim się załamią","Jump across the beams before they buckle"}},
   TourStop{3,41,19,54,{"Wsiadaj, gdy wagonik zatrzyma się przy pomoście","Board the rail car when it stops at the landing"}},
   TourStop{1,20,54,43,{"Otwórz dopływ i wskocz w strumień pary","Open the supply and jump into the steam"}},
+  TourStop{2,33,66.3,41,{"Odbijaj się między rynnami, by zebrać górny żeton","Wall-kick between the downspouts to reach the upper token"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 inline int tour_page_size(int rows) { return std::max(1,rows-12); }
