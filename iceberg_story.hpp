@@ -273,6 +273,18 @@ inline std::vector<DialogueLine> parcel_delivered() {
 #include "iceberg_jubilee_story.hpp"
 
 namespace iceberg {
+inline constexpr Text CrownShaftDirections{
+  "Skocz i zrób zryw w górę między lampami. Przytrzymaj kierunek do ściany i skocz, gdy jej dotkniesz. Powtórz odbicie wyżej. Z szybu wyjdź w lewo na grań.",
+  "Jump and dash straight up between the lamps. Hold toward a wall and jump when you touch it. Kick off again higher up. Leave the shaft to the left to reach the ridge."
+};
+inline std::vector<DialogueLine> crown_shaft_plate() {
+  return {
+    {-1,{"Notatka Kuby. Irena przyniosła mi zapasową żarówkę zawiniętą w szalik. Chciałem ją od razu wkręcić na górze. Zapytała, jak następna osoba trafi po ciemku do szybu. Została, aż zapaliłem obie lampy.",
+      "Kuba's note. Irena brought me a spare bulb wrapped in a scarf. I was going to fit it upstairs first. She asked how the next person would find the shaft in the dark. She stayed until I'd lit both lamps."}},
+    {CourierSpeaker,{"Obie jeszcze świecą. W szybie będę mieć ścianę pod ręką. U góry odbiję w lewo, na grań.",
+      "Both are still lit. I'll have a wall within reach in the shaft. At the top I'll kick left toward the ridge."}}
+  };
+}
 inline const Text &training_sign(int id,int room=0) {
   if(id==2&&room==601) {
     static const Text ferry{

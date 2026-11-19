@@ -173,6 +173,8 @@ inline void add_crown_seam_shortcut(EngineGrid &room) {
   shortcut.add_solid_rect(80,25,2,16);
   shortcut.add_solid_rect(89,25,2,17);
   shortcut.crown_seam=seam;
+  shortcut.interactions.push_back({{86,42,2,3},InteractionKind::Note,iceberg::CrownShaftPlate,
+    {"Tabliczka przy szybie","Shaft maintenance plate"}});
   const auto route=verify_route(shortcut);
   if(route.complete&&route.deaths==0) {
     shortcut.verification_policy=route.policy;

@@ -984,6 +984,11 @@ public:
       else if(node.id==30){auto lines=iceberg::jubilee_dedication();v.inspect_body=lines[0].text.get(profile.language)+" "+lines[1].text.get(profile.language);}
       else if(node.id==20||node.id==21)v.inspect_body=iceberg::garden_sign(node.id).get(profile.language);
       else if(node.id==22)v.inspect_body=iceberg::crown_sign().get(profile.language);
+      else if(node.id==iceberg::CrownShaftPlate) {
+        v.inspect_title=node.label.get(profile.language);
+        v.inspect_art=Art::Sign;
+        v.inspect_body=iceberg::CrownShaftDirections.get(profile.language);
+      }
       else if(node.id<10)v.inspect_body=iceberg::training_sign(node.id,grid.template_id).get(profile.language);
       else v.inspect_body=t("Kartka zachowała się za osłoną. Możesz odczytać ją w całości, naciskając E.","The sheet survived behind its cover. Press E to read the complete record.");
       break;
@@ -1091,6 +1096,7 @@ public:
       if(node.id==30){talk(iceberg::jubilee_dedication());return;}
       if(node.id==20||node.id==21){talk({{5,iceberg::garden_sign(node.id)}});return;}
       if(node.id==22){talk({{6,iceberg::crown_sign()}});return;}
+      if(node.id==iceberg::CrownShaftPlate){talk(iceberg::crown_shaft_plate());return;}
       if(node.id>=10&&node.id<=12) {
         profile.discoveries|=1u<<(node.id-10);
         talk(iceberg::hidden_testimony(node.id-10));persist();return;
