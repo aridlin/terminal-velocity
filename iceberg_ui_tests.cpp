@@ -816,11 +816,15 @@ int main(){try {
     auto grid=id==601?iceworld::build_harbor_lesson_v4():iceworld::build_room(id,73,id==50?4:0);
     auto state=new_state(grid);
     state.adventure.map=state.adventure.map_room=true;
+    const bool leaf=id==50;
+    const auto ferry_glyph=leaf?"◒":"▱";
+    const uint32_t ferry_rgb=leaf?0xb6d778:0xe4ad68;
+    ui_check(grid.water_basins.size()==size_t(id==601?1:3),"each ferry crossing has its own water basin");
     auto boat_positions=[&](){
       std::vector<int> positions;
       for(size_t row=4;row+7<frame.size();++row)
         for(size_t col=0;col<frame[row].size();++col)
-          if(frame[row][col].glyph=="▱"&&frame[row][col].rgb==0xe4ad68)positions.push_back(int(col));
+          if(frame[row][col].glyph==ferry_glyph&&frame[row][col].rgb==ferry_rgb)positions.push_back(int(col));
       return positions;
     };
     for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
@@ -829,13 +833,14 @@ int main(){try {
       RenderGrid(grid,state,rows,cols,2).draw();
       const auto before=boat_positions();
       ui_check(before.size()==size_t(id==601?1:3)&&count_map("┄",0x6f9eaa)>0&&
-        ui_text(frame).find("▱ Ferry · ┄ Route")!=std::string::npos,
+        ui_text(frame).find(leaf?"◒ Leaf · ┄ Route":"▱ Ferry · ┄ Route")!=std::string::npos&&
+        count_map("≈",0x66bfd7)>0,
         "the compact and wide maps distinguish ferries from fixed decks and show their route");
       state.elapsed=grid.platforms.front().period*.5;
       state.adventure.language=iceberg::Language::Polish;
       RenderGrid(grid,state,rows,cols,2).draw();
       const auto after=boat_positions();
-      ui_check(before.size()==after.size()&&before!=after&&ui_text(frame).find("▱ Prom · ┄ Trasa")!=std::string::npos,
+      ui_check(before.size()==after.size()&&before!=after&&ui_text(frame).find(leaf?"◒ Liść · ┄ Trasa":"▱ Prom · ┄ Trasa")!=std::string::npos,
         "the translated ferry markers follow the crossing phase");
     }
   }
