@@ -39,6 +39,9 @@ int main() {
     key(VK_DOWN, false);
     c = input.consume();
     check(c.fast_fall_pressed && !c.fast_fall, "short Down tap survives the native release");
+    key(VK_NEXT, true);
+    key(VK_NEXT, false);
+    check(input.consume().tour_page==1,"native Page Down reaches Tour navigation");
     key('W', true);
     key('D', true);
     key(VK_SHIFT, true);

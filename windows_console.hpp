@@ -109,6 +109,7 @@ public:
     c.interact = press('E') || press('F');
     c.map = press('J');
     c.language = press('L');
+    c.tour_page = int(press(VK_NEXT)) - int(press(VK_PRIOR));
     c.navigate = int(press('S') || press(VK_DOWN)) - int(press('W') || press(VK_UP));
     c.browse_leg = int(press('D') || press(VK_RIGHT)) - int(press('A') || press(VK_LEFT));
     c.next_seed = press('G');

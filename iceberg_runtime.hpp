@@ -1348,6 +1348,8 @@ public:
         v.picker_choice=c.navigate?(next+count)%count:std::clamp(next,0,count-1);
       }
       if(c.select_level>=1&&c.select_level<=count)v.picker_choice=c.select_level-1;
+      if(v.tour_picker&&c.tour_page)
+        v.picker_choice=std::clamp(v.picker_choice+c.tour_page*iceberg::tour_page_size(last_rows),0,count-1);
       if(v.tour_picker&&c.browse_leg)v.picker_choice=c.browse_leg<0?0:count-1;
       if(c.confirm) {
         if(v.tour_picker)start_tour(v.picker_choice);
@@ -1430,7 +1432,7 @@ public:
     const bool tour_picker=state.menu&&v.tour_picker;
     const bool expedition_timeline=!state.menu&&v.map&&!v.map_room&&mode!=iceberg::Mode::Campaign;
     if(!focused||(!tour_picker&&!expedition_timeline)||c.map||c.journal||c.pause||c.menu_request||
-       c.inspect||(tour_picker&&(c.confirm||c.select_level||c.browse_leg))||
+       c.inspect||(tour_picker&&(c.confirm||c.select_level||c.browse_leg||c.tour_page))||
        c.aim_y!=navigation_repeat_direction)navigation_repeat_direction=0;
     if(!focused)c={};
     v.notice_left=std::max(0.,v.notice_left-dt);

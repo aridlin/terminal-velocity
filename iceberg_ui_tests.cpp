@@ -1179,10 +1179,22 @@ int main(){try {
   down.navigate=1;
   tour_repeat.tick(down,0);
   ui_check(picker.picker_choice==0,"a new Down press still wraps to the first Tour sample");
+  Controls page_down;page_down.tour_page=1;
+  Controls page_up;page_up.tour_page=-1;
+  tour_repeat.tick(page_down,0,true,34,24);
+  ui_check(picker.picker_choice==12,"Page Down moves by the compact Tour list height without starting a sample");
+  tour_repeat.tick(page_down,0,true,34,24);
+  tour_repeat.tick(page_down,0,true,34,24);
+  ui_check(picker.picker_choice==last,"paging forward clamps at the final stop");
+  for(int i=0;i<4;++i)tour_repeat.tick(page_up,0,true,34,24);
+  ui_check(picker.picker_choice==0,"paging backward clamps at the first stop");
+  tour_repeat.tick(page_down,0,true,110,34);
+  ui_check(picker.picker_choice==22,"the wide Tour picker pages by its own visible row count");
   Controls back;back.pause=true;
   tour_repeat.tick(back,0);
   down.navigate=0;
   const int slot=picker.picker_choice;
+  tour_repeat.tick(page_up,0);
   for(int i=0;i<8;++i)tour_repeat.tick(down,.1);
   ui_check(picker.save_picker&&picker.picker_choice==slot,"leaving the Tour picker cancels its held direction");
 
