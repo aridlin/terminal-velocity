@@ -731,10 +731,15 @@ const server=http.createServer((req,res)=>{
       }finally{window.confirm=confirm;}
     }),0,'a late read must never confirm or apply an expired import');
     const invalidPicker=await openPicker();
-    const acceptInvalid=page.waitForEvent('dialog').then(dialog=>dialog.accept());
-    await invalidPicker.setFiles({name:'broken.iceberg',mimeType:'application/octet-stream',buffer:Buffer.from('broken save')});
-    await acceptInvalid;
-    await page.waitForFunction(()=>saveStatus.textContent==='Invalid save file');
+    let invalidPrompts=0;
+    const declineInvalid=async dialog=>{invalidPrompts++;await dialog.dismiss();};
+    page.on('dialog',declineInvalid);
+    try {
+      await invalidPicker.setFiles({name:'broken.iceberg',mimeType:'application/octet-stream',buffer:Buffer.from('broken save')});
+      await page.waitForFunction(()=>saveStatus.textContent==='Invalid save file');
+      assert.equal(invalidPrompts,0,'an invalid save never asks for replacement');
+    }finally{page.off('dialog',declineInvalid);}
+    console.log('PASS invalid imports stop before replacement confirmation');
     await page.evaluate(()=>{
       const save=Module._web_save;
       window.savesAfterRejectedImport=0;
