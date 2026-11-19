@@ -86,6 +86,7 @@ struct Expedition {
   double room_seconds = 0, seconds = 0;
   int room_deaths = 0, deaths = 0, treasures = 0;
   std::vector<int> itinerary;
+  std::vector<std::array<int,RoomsPerLeg>> completed_legs;
 };
 struct Revisit {
   bool active=false;

@@ -29,7 +29,9 @@ Campaign stages are arrival, lesson, route, return, route, return, route, finale
 
 `ContentVersion` belongs to geometry/route identity. Bump it when a published route's physics or geometry changes; new areas alone need not invalidate old rooms. Live ghosts match version, district, mode, template and seed. Records for explicit seeds also carry content version. Incompatible ghosts must never appear together.
 
-The current writer is TVICE5; TVICE2/3 fixtures exercise migration. Preserve legacy TVP1 records in their own file. Any new serialized state requires an explicit format migration and interrupted-write tests. Checkpoint saves must retain moving-platform time, machinery, collected items and itinerary, rather than regenerate a new route on death.
+The current writer is TVICE6. TVICE2/3 fixtures exercise migration. Preserve legacy TVP1 records in their own file. Any new serialized state requires an explicit format migration and interrupted-write tests. Checkpoint saves must retain moving-platform time, machinery, collected items and itinerary, rather than regenerate a new route on death.
+
+Completed Endless legs use local `.routes` and `.routes.bak` companions. They are matched to the checksum of the exact TVICE6 payload. An interrupted write leaves the companion of the previous valid save available. A standalone export or cloud transfer carries the current itinerary and progress. Completed history stays with the installation that recorded it.
 
 ## Verification
 
