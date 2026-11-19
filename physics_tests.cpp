@@ -190,6 +190,24 @@ int main() {
       check(!approach.player.ledge && approach.player.y > hanging.player.y,
             "releasing the direction drops from a ledge");
       approach = hanging;
+      Controls jump_on_release;
+      jump_on_release.jump_pressed=jump_on_release.jump_held=true;
+      world_step(approach, adventure, jump_on_release, 1./120);
+      check(approach.player.ledge&&approach.player.ledge_climb_left>0.,
+            "a jump pressed as the direction is released starts the ledge climb");
+      for(int i=0;i<28;++i)world_step(approach,adventure,{},1./120);
+      check(!approach.player.ledge&&approach.player.grounded&&approach.deaths==0,
+            "the released-direction climb still finishes safely");
+      approach=hanging;
+      jump_on_release.fast_fall=true;
+      world_step(approach,adventure,jump_on_release,1./120);
+      check(!approach.player.ledge,"Down still drops from a ledge even when Jump is also pressed");
+      approach=hanging;
+      jump_on_release.fast_fall=false;
+      jump_on_release.move=-side;
+      world_step(approach,adventure,jump_on_release,1./120);
+      check(!approach.player.ledge,"steering away still drops from a ledge even when Jump is also pressed");
+      approach = hanging;
       toward.jump_pressed = toward.jump_held = true;
       world_step(approach, adventure, toward, 1./120);
       check(approach.player.ledge && approach.player.ledge_climb_left > 0 &&
