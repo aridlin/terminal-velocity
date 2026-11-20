@@ -1615,6 +1615,10 @@ int main(){try {
         const auto normalized=normalize_ui(details);
         const auto current=(en?"Now: ":"Teraz: ")+route.place.get(language);
         const auto next=(en?"Planned: ":"Plan: ")+route.rooms[size_t(route.current+1)].get(language);
+        const auto &run=game.profile.expeditions[mode==iceberg::Mode::Endless?0:1];
+        ui_check(route.detail_rhythm==iceworld::pattern(run.itinerary[size_t(route.current+1)]).rhythm&&
+          normalized.find(current+" "+next+" · ")!=std::string::npos,
+          "the expedition plan shows the next authored traversal type beside the full title");
         ui_check(text.find(title)!=std::string::npos&&text.find(progress)!=std::string::npos&&
           normalized.find(current+" "+next)!=std::string::npos,
           "expedition map shows progress and both complete room names at all supported sizes");
@@ -1758,6 +1762,9 @@ int main(){try {
       ui_check(v.route.browsed_leg==-1&&v.route.current==0&&ui_text(frame).find("Completed leg 2")!=std::string::npos&&
         ui_text(frame).find("Room 8:")!=std::string::npos,
         "browsing back from a new leg opens the completed leg");
+      ui_check(v.route.detail_rhythm==
+          iceworld::pattern(game.profile.expeditions[0].completed_legs.back().back()).rhythm,
+        "a selected historical room shows the type from the stored itinerary");
       ui_check(v.route.browsed_rooms.size()==completed.size()&&
         std::equal(v.route.browsed_rooms.begin(),v.route.browsed_rooms.end(),completed.begin(),[](const auto &a,const auto &b){
           return std::string_view(a.en)==b.en&&std::string_view(a.pl)==b.pl;
@@ -1779,6 +1786,9 @@ int main(){try {
       game.tick(next_leg,0);game.tick(next_leg,0);
       ui_check(v.route_room_selection==25&&v.route.browsed_leg==1&&v.route.current==0&&game.depth==16,
         "future preview clamps leg navigation without moving the courier");
+      ui_check(v.route.detail_rhythm==
+          iceworld::pattern(game.expedition_itinerary(game.next_expedition_seed())[1]).rhythm,
+        "a selected future room shows its type from the next seeded itinerary");
       const auto route_details=[&]{
         std::string details;
         for(const auto &row:frame) {

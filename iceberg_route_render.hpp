@@ -769,9 +769,18 @@
     row=paragraph(row,place,0xffd68a);
     const int count=int(rooms.size());
     const bool browsing=selected>=0&&selected<count&&selected!=current_room;
+    static constexpr std::array<iceberg::Text,6> rhythms{{
+      {"Skoki w biegu","Running jumps"},
+      {"Precyzyjne lądowania","Precise landings"},
+      {"Wspinaczka","Climb"},
+      {"Skoki na czas","Timed jumps"},
+      {"Eksploracja","Exploration"},
+      {"Szerokie lądowania","Wide landings"}
+    }};
+    const auto rhythm=r.detail_rhythm?" · "+rhythms[size_t(*r.detail_rhythm)].get(v.language):std::string{};
     if(browsing) {
       const auto detail=tr("Pokój ","Room ")+std::to_string(selected+1)+": "+rooms[size_t(selected)].get(v.language);
-      row=paragraph(row,detail,0xc7d9df);
+      row=paragraph(row,detail+rhythm,0xc7d9df);
     }
     if(count>0&&(browsing?selected:current_room)==count-1) {
       const auto exit=v.mode==iceberg::Mode::Endless
@@ -780,6 +789,6 @@
       paragraph(row,exit,0xc7d9df);
     } else if(!browsing&&current_room>=0&&current_room+1<count) {
       const auto next=tr("Plan: ","Planned: ")+rooms[size_t(current_room+1)].get(v.language);
-      paragraph(row,next,0xc7d9df);
+      paragraph(row,next+rhythm,0xc7d9df);
     }
   }
