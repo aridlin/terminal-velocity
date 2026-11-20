@@ -445,10 +445,10 @@ addEventListener('keydown',e=>{
   (e.code==='Escape'||e.code==='KeyP'||(e.code==='KeyR'&&!retryButton.disabled))&&
   target?.matches('#toolbar button[data-tap],#fullscreen-buttons button[data-tap],#touch-use');
  const tourPage=e.code==='PageUp'||e.code==='PageDown';
- if(tourPage&&!tourPicker)return;
+ if(tourPage&&!tourPicker&&!awardsOpen)return;
  const menuControl=(uiFlags&1)&&!(uiFlags&(settingsFlag|confirmSaveFlag))&&isMenuSelectionControl(target);
  const menuNavigation=menuControl&&(e.code==='ArrowUp'||e.code==='ArrowDown'||
-  (e.code==='Escape'&&((uiFlags&profilePickerFlag)||awardsOpen))||(awardsOpen&&e.code==='KeyB'));
+  (e.code==='Escape'&&((uiFlags&profilePickerFlag)||awardsOpen))||(awardsOpen&&(e.code==='KeyB'||tourPage)));
  const cancelReplacement=e.code==='Escape'&&(uiFlags&confirmSaveFlag)&&isSaveReplacementControl(target);
  const tourNavigation=tourPicker&&(tourControls.contains(target)||menuControl)&&
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');

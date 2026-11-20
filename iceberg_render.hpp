@@ -724,6 +724,12 @@
     const bool near_end=state_.player.x>93&&state_.player.x<120;
     if(heard&&near_end&&std::fmod(time,6.1)<2.4)
       world_art(122,40,{" ▄▄ "," █▌ ","▐██▌"," ▌▐ "},0x373b3c);
+    const auto &v=state_.adventure;
+    if(v.night_left>0.&&cut) {
+      const double pane=v.night_beat==1?122:v.night_beat==2?108:93;
+      world_art(pane-1,41,{"  ▄▄   "," ▐██▌  "," ▐██▌▣ ","  ▌▐   "},0x343b42);
+      world_text(pane+3,44,"▪",0x91694f);
+    }
     world_art(133,40,{"╔═════╗","║ ▪ ▪ ║","║ ║ ║ ║","║ ║ ║ ║","║ ║ ║ ║","╚═════╝"},0x657578);
   }
   void draw_side_prop(const Interaction &node,double x,double y) {
@@ -793,6 +799,26 @@
       }
       case SideStory::GardenSnailShelter:
         prop_art(x+.3,y,{"╭╮   ╭──╮","╲╰─╮╱  ╱ "," ╲░│░ ╱  ","  ╲│╱    "},0x7a9d78);break;
+      case SideStory::ArchiveLine: {
+        const bool live=state_.adventure.task_items[0]&iceberg::curio_bit(iceberg::Curio::BasementCall);
+        prop_art(x,y,live?std::vector<std::string>{"╔═11═╗","║╭╮ ●║","╚╪═══╝"," ╰╴"}:
+          std::vector<std::string>{"╔═11═╗","║╭╮ ○║","╚╪═══╝"," ╰╴"},live?0xb2a07d:0x748387);
+        break;
+      }
+      case SideStory::NightWindow:
+        prop_art(x+1,y-6.,{"╔═══╤═══╗","║░░ │  ░║","║░  │ ░░║","╚═══╧═══╝"},0x47535a);break;
+      case SideStory::GardenButton:
+        if(!(state_.adventure.task_items[0]&iceberg::curio_bit(iceberg::Curio::GardenButton)))
+          prop_art(x,y+1.,{" ◌ ", "╰─╯"},0xbd9d6a);
+        break;
+      case SideStory::EstateBirdhouse: {
+        const bool closed=state_.adventure.task_items[0]&iceberg::curio_bit(iceberg::Curio::GardenButtonReturned);
+        prop_art(x,y,closed?std::vector<std::string>{" ╱╲ ","╱──╲","│● │","└─┬┘"}:
+          std::vector<std::string>{" ╱╲╱","╱── ","│● │","└─┬┘"},0xb6a184);
+        break;
+      }
+      case SideStory::HarborTicket:
+        prop_art(x,y,{"╔═══╗","║ ▬ ║","╞═══╡","│ ▱ │"},0x8ca5a7);break;
       case SideStory::CrownPunch:
         prop_art(x,y,{"╭───╮","│ ▤ │","╞═══╡","  │  "},0x9ca9b2);break;
       case SideStory::BasementBreaker: {
@@ -818,15 +844,20 @@
     const auto &v=state_.adventure;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     const auto entries=iceberg::award_entries(menu?v.achievement_group:iceberg::AwardGroup::All);
-    const auto earned=[&](size_t i){return bool(v.discoveries&iceberg::achievement_bit(iceberg::Achievement(i)));};
+    const auto earned=[&](size_t i){return bool(v.awards&iceberg::achievement_bit(iceberg::Achievement(i)));};
     const int selected=std::clamp(v.achievement_selection,0,int(entries.size())-1);
     const int visible=std::max(1,rows_-top-6);
     const int start=std::clamp(selected-visible/2,0,std::max(0,int(entries.size())-visible));
-    int total=0;
-    for(size_t i=0;i<iceberg::Achievements.size();++i)total+=earned(i);
+    const auto total=std::count_if(entries.begin(),entries.end(),earned);
     if(menu)center(2,tr("OSIĄGNIĘCIA","ACHIEVEMENTS"),Color::Gold);
-    paint_text(top,2,std::to_string(total)+" / "+std::to_string(iceberg::Achievements.size())+
+    paint_text(top,2,std::to_string(total)+" / "+std::to_string(entries.size())+
       (menu?" · "+iceberg::AwardGroups[size_t(v.achievement_group)].get(v.language):""),d.accent);
+    if(menu&&int(entries.size())>visible) {
+      const auto position=std::to_string(selected+1)+"/"+std::to_string(entries.size());
+      if(cols_>=38)paint_text(top,cols_-2-int(position.size()),position,d.light);
+      if(start>0)paint_text(top+1,cols_-2,"↑",d.accent);
+      if(start+visible<int(entries.size()))paint_text(top+visible,cols_-2,"↓",d.accent);
+    }
     for(int n=start;n<std::min(int(entries.size()),start+visible);++n) {
       const auto i=entries[size_t(n)];
       const auto &award=iceberg::Achievements[i];

@@ -26,6 +26,7 @@ inline EngineGrid build_hidden(int id) {
       {{19,41,4,4},InteractionKind::SideStory,int(SideStory::Intercom),{"Podnieś słuchawkę","Lift the receiver"}},
       {{51,44,4,4},InteractionKind::SideStory,int(SideStory::Tape),{"Uruchom magnetofon","Play the tape"}},
       {{81,47,3,4},InteractionKind::SideStory,int(SideStory::BasementBreaker),{"Przełącz odłącznik","Toggle the breaker"}},
+      {{119,47,2,4},InteractionKind::SideStory,int(SideStory::NightWindow),{"Spójrz w szybę","Look through the window"}},
       {{126,47,4,4},InteractionKind::SideStory,int(SideStory::Roster),{"Skopiuj listę","Make a copy"}},
       {{137,47,4,4},InteractionKind::Return,0,{"Wróć szybem serwisowym","Return by the service shaft"}}};
     return g;

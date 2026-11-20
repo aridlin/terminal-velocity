@@ -13,6 +13,7 @@ int main(){try {
     AdventureSession catalogue(options,{});
     catalogue.profile.language=iceberg::Language::English;
     catalogue.unlock_achievement(iceberg::Achievement::DockChat);
+    catalogue.unlock_achievement(iceberg::Achievement::CrownReached);
     catalogue.sync_view();
     for(const auto &[cols,rows]:std::array<std::pair<int,int>,3>{{{34,24},{60,20},{110,34}}}) {
       RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
@@ -29,6 +30,10 @@ int main(){try {
       RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
       ui_check(ui_text(frame).find("◆ On the shift")!=std::string::npos,
         "earned awards show their name in the scrolling catalogue");
+      catalogue.tick({.navigate=24},0.,true,cols,rows);
+      RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
+      ui_check(ui_text(frame).find("◆ Under the Crown")!=std::string::npos,
+        "a new Journey award is earned and browsable after the original entries");
       catalogue.tick({.pause=true},0.,true,cols,rows);
       ui_check(catalogue.state.menu&&!catalogue.state.adventure.achievement_menu,
         "back returns to the main menu without starting a run");

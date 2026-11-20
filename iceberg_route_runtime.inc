@@ -111,6 +111,7 @@
     if(!on_campaign_route()||!route_forks_enabled()||room!=1)return true;
     const int leg=route_leg();
     if(node.id!=iceworld::harbor_alternate(profile.itinerary,leg,profile.seed))return true;
+    unlock_achievement(iceberg::Achievement::Detour);
     profile.route_choices[size_t(district)]|=1u<<leg;
     profile.route_decisions[size_t(district)]|=1u<<leg;
     advance_room();

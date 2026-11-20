@@ -62,7 +62,7 @@ int main() {
       };
       auto use=[&](InteractionKind kind,int id) {walk_to(side,find(kind,id));interact(side);};
       auto scene=[&](SideStory id){use(InteractionKind::SideStory,int(id));};
-      auto earned=[&](Achievement id){return (side.profile.discoveries&iceberg::achievement_bit(id))!=0;};
+      auto earned=[&](Achievement id){return (iceberg::stored_achievements(side.profile)&iceberg::achievement_bit(id))!=0;};
       const auto read_document=[&](SideStory id,iceberg::SideFlag flag) {
         walk_to(side,find(InteractionKind::SideStory,int(id)));
         const auto record=side.side_document(id);
@@ -137,6 +137,32 @@ int main() {
         "the service shaft returns to the same Estate entrance and awards the roster");
       require_quest(side.profile.district_deaths==district_retries&&side.profile.district_seconds==district_time,
         "leaving a detour restores the same clean district attempt");
+      const auto before_line=side.profile;
+      side.district=3;side.stage=0;side.load_room();
+      read_document(SideStory::ArchiveCopy,iceberg::SideFlag::ArchiveCopy);
+      require_quest(earned(Achievement::PaperTrail),"following all three clues earns the paper trail award");
+      scene(SideStory::ArchiveLine);
+      require_quest(side.state.adventure.dialogue.active()&&earned(Achievement::NightLine),
+        "the basement intercom makes the unplugged receiver answer in the Archive");
+      finish_dialogue(side);
+      side.district=2;side.stage=0;side.load_room();
+      walk_to(side,{67,44,1,4});
+      interact(side);
+      require_quest(side.profile.hidden_room==basement,"the same basement entrance remains reachable after the Archive call");
+      scene(SideStory::NightWindow);
+      require_quest(earned(Achievement::LastPassenger)&&side.state.adventure.night_beat==1&&
+        side.state.adventure.night_left>0.,"the dark observation window reveals the passenger after the call");
+      const auto return_side=Rect{99,46,4,5};
+      walk_to(side,return_side);
+      require_quest(side.state.adventure.night_beat>=2,
+        "moving away from the observation window brings the passenger closer");
+      auto path=std::filesystem::temp_directory_path()/"tv-extended-awards.iceberg";
+      iceberg::SaveStore save(path);
+      iceberg::Profile loaded;
+      require_quest(save.save(side.profile)&&save.load(loaded)&&loaded.task_items==side.profile.task_items&&
+        (iceberg::stored_achievements(loaded)&iceberg::achievement_bit(Achievement::LastPassenger)),
+        "old and extended awards and encounter state round-trip through the existing TVICE6 format");
+      side.profile=before_line;side.district=2;side.stage=0;side.load_room(true);
       side.tick({.restart=true},1./120);
       require_quest(side.profile.district_deaths==district_retries+1&&side.profile.district_seconds>district_time,
         "retrying on the regular district route still affects its record");
