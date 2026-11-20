@@ -91,6 +91,10 @@
     });
     const auto irena_color=iceberg::Npcs[4].color;
     if(irena!=grid_.interactions.end())add_feature("◉ Irena",irena_color);
+    const auto outfitter=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
+      return node.kind==InteractionKind::Outfitter;
+    });
+    if(outfitter!=grid_.interactions.end())add_feature(tr("¤ Sklep","¤ Outfitter"),0xbea181);
     if(!boost_symbols.empty())add_feature(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
     uint64_t steam_controls=0;
     for(const auto &field:grid_.air_fields)
@@ -441,6 +445,8 @@
     }
     if(irena!=grid_.interactions.end())
       mark(irena->area.x+irena->area.w*.5,irena->area.y+irena->area.h*.5,"◉",irena_color);
+    if(outfitter!=grid_.interactions.end())
+      mark(outfitter->area.x+outfitter->area.w*.5,outfitter->area.y+outfitter->area.h*.5,"¤",0xbea181);
     if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
       const auto deck=grid_.platforms[i].at(state_.elapsed);
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,ferry_symbol,ferry_color});

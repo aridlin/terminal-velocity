@@ -63,5 +63,6 @@ inline EngineGrid build_epilogue() {
   g.interactions.push_back({{48,45,3,4},InteractionKind::Epilogue,0,{"Posadź nasiona Celiny","Plant Celina's seeds"}});
   g.interactions.push_back({{120,45,3,4},InteractionKind::Epilogue,1,{"Doręcz odpis spisu","Deliver the register copy"}});
   g.interactions.push_back({{190,45,3,4},InteractionKind::Board,6,{"Zakończ obchód","Finish the round"}});
+  g.interactions.push_back({{96,45,4,4},InteractionKind::Outfitter,0,{"Sklep portowy","Harbor outfitter"}});
   return g;
 }

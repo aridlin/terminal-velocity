@@ -154,6 +154,30 @@ inline int transit_token_progress(const Profile &profile,int fare) {
   return std::clamp(std::max(campaign,profile.expeditions[0].treasures),0,fare);
 }
 
+// Bits 8–15 carry the best earned balance, and bits 27–29 carry shop purchases.
+inline constexpr unsigned OutfitterEarnedShift=8;
+inline constexpr uint32_t OutfitterEarnedMask=255u<<OutfitterEarnedShift;
+inline constexpr uint32_t HarborScarf=1u<<27, DockBoots=1u<<28, SignalSatchel=1u<<29;
+struct OutfitterItem { Text name; int price; uint32_t flag; };
+inline constexpr std::array OutfitterItems{
+  OutfitterItem{{"Szalik portowy","Harbor scarf"},3,HarborScarf},
+  OutfitterItem{{"Buty dokerskie","Dock boots"},6,DockBoots},
+  OutfitterItem{{"Torba sygnałowa","Signal satchel"},10,SignalSatchel}
+};
+inline int outfitter_earned(const Profile &profile) {
+  return std::max(int((profile.cosmetics&OutfitterEarnedMask)>>OutfitterEarnedShift),
+    transit_token_progress(profile,255));
+}
+inline int outfitter_balance(const Profile &profile) {
+  int balance=outfitter_earned(profile);
+  for(const auto &item:OutfitterItems)if(profile.cosmetics&item.flag)balance-=item.price;
+  return std::max(0,balance);
+}
+inline void remember_outfitter_tokens(Profile &profile) {
+  profile.cosmetics=(profile.cosmetics&~OutfitterEarnedMask)|
+    (uint32_t(outfitter_earned(profile))<<OutfitterEarnedShift);
+}
+
 inline int mastery_token_progress(const Profile &profile) {
   return transit_token_progress(profile,MasteryTokenFare);
 }
@@ -230,6 +254,7 @@ struct Dialogue {
   std::optional<size_t> reflow_anchor=std::nullopt;
   size_t reflow_revealed=0;
   int reply_scene=-1, reply_option=0;
+  int outfitter_item=-1, outfitter_tokens=0;
   bool cinematic=false;
   double shot_seconds=0, line_seconds=0;
   void reset_reveal(){visible_characters=byte_cursor=reflow_revealed=0;character_delay=speech_delay=0;revealing=true;reflow_anchor.reset();}

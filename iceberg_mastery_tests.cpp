@@ -30,6 +30,50 @@ int main() {
       std::cout<<"PASS transit token pickup permanently unlocks trial entry without the mastery quest\n";
     }
     {
+      const auto folder=std::filesystem::temp_directory_path()/("tv-outfitter-"+
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+      std::filesystem::create_directories(folder);
+      const auto file=folder/"campaign";
+      iceberg::SessionOptions options;options.mute=true;
+      AdventureSession shop(options,file);
+      shop.begin_campaign(true);
+      const auto stall=std::find_if(shop.grid.interactions.begin(),shop.grid.interactions.end(),[](const auto &node){
+        return node.kind==InteractionKind::Outfitter;
+      });
+      if(stall==shop.grid.interactions.end())throw std::runtime_error("outfitter missing from Lower Harbor");
+      shop.state.player.x=stall->area.x+1.;
+      shop.state.player.y=stall->area.bottom()-kPlayerHeight;
+      shop.state.player.grounded=true;
+      const Controls use{.interact=true},confirm{.confirm=true},previous{.navigate=-1};
+      shop.profile.district_treasures=2;
+      shop.tick(use,1./120);shop.tick(previous,1./120);shop.tick(confirm,1./120);
+      if(shop.profile.cosmetics&iceberg::HarborScarf||iceberg::outfitter_balance(shop.profile)!=2)
+        throw std::runtime_error("a purchase cannot exceed the token balance");
+      shop.tick(Controls{.pause=true},1./120);
+      shop.profile.district_treasures=iceberg::SurveyTokenFare;
+      shop.tick(use,1./120);
+      for(const auto &item:iceberg::OutfitterItems) {
+        const int before=iceberg::outfitter_balance(shop.profile);
+        shop.tick(previous,1./120);shop.tick(confirm,1./120);
+        if(!(shop.profile.cosmetics&item.flag)||iceberg::outfitter_balance(shop.profile)!=before-item.price)
+          throw std::runtime_error("buying gear must debit its price exactly once");
+        shop.tick(previous,1./120);shop.tick(confirm,1./120);
+        if(iceberg::outfitter_balance(shop.profile)!=before-item.price)
+          throw std::runtime_error("an owned item cannot be charged again");
+        shop.tick(previous,1./120);shop.tick(confirm,1./120);
+      }
+      if(shop.state.adventure.dialogue.active()||!shop.trial_unlocked()||!iceberg::survey_pass(shop.profile))
+        throw std::runtime_error("shopping must preserve both transit unlocks and provide a way to close the shop");
+      AdventureSession reopened(options,file);
+      reopened.begin_campaign(true);
+      const auto all=iceberg::HarborScarf|iceberg::DockBoots|iceberg::SignalSatchel;
+      if((reopened.profile.cosmetics&all)!=all||iceberg::outfitter_balance(reopened.profile)!=5||
+         !reopened.trial_unlocked()||!iceberg::survey_pass(reopened.profile))
+        throw std::runtime_error("gear and the remaining balance must survive a save reload and a fresh Journey");
+      std::filesystem::remove_all(folder);
+      std::cout<<"PASS outfitter purchases preserve both passes and survive reload without double charges\n";
+    }
+    {
       const auto folder=std::filesystem::temp_directory_path()/("tv-survey-"+
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
       std::filesystem::create_directories(folder);
