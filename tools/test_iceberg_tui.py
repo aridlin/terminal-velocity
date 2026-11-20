@@ -30,7 +30,8 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
     try:
         expect(t,'ROZPOCZNIJ PODRÓŻ')
         t.send('l');expect(t,'BEGIN JOURNEY')
-        t.send('\r');expect(t,'LOWER HARBOR')
+        t.send('\x1bOM');expect(t,'LOWER HARBOR')
+        assert 'BEGIN JOURNEY' not in screen(t),screen(t)
         t.send('i');deadline=time.monotonic()+.6
         def dash_spent():return any(c.fg=='83c5ce' for row in t.screen.buffer.values() for c in row.values())
         while not dash_spent() and time.monotonic()<deadline:pump([t],.02)
@@ -47,8 +48,14 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         t.send('e');expect(t,'HELENA')
         expect(t,'You')
         for _ in range(20):
-            if 'E/ENTER' not in screen(t):break
-            t.send('e');pump([t],.10)
+            frame=screen(t)
+            if 'YOUR REPLY' in frame:
+                t.send('\r')
+            elif 'E/ENTER' in frame:
+                t.send('e')
+            else:
+                break
+            pump([t],.10)
         t.send('\t');expect(t,"QUEST BOOK")
         t.send('\t');pump([t],.10)
         t.send('j');expect(t,'JOURNEY MAP')
@@ -76,5 +83,7 @@ with tempfile.TemporaryDirectory(prefix='tv-iceberg-pty-') as folder:
         expect(t,'CONTINUE JOURNEY')
         t.send('\r');expect(t,'LOWER HARBOR')
         t.send('p');expect(t,'A MOMENT TO BREATHE')
+        t.send('\x1bOM');pump([t],.20)
+        assert 'A MOMENT TO BREATHE' not in screen(t),screen(t)
     finally:t.close()
 print('PASS actual PTY: bilingual menu, basic vertical dash, dialogue, journal/map, settings, resize, endless, continue, terminal restoration')

@@ -35,9 +35,15 @@ public:
           pending_.clear();
         break;
       }
+      bool ss3 = pending_[1] == 'O';
       char final = pending_[end];
       std::string body = pending_.substr(2, end - 2);
       pending_.erase(0, end + 1);
+      if (ss3 && final == 'M' && body.empty()) {
+        // Application keypad Enter has no matching release sequence.
+        key(13, 1, false);
+        continue;
+      }
       if (final == 'I' && body.empty()) {
         focused = true;
         continue;
@@ -201,7 +207,7 @@ private:
     if (k == 'w') edges_.navigate = -1;
     if (k == 57354 || k == 57355) edges_.tour_page = k == 57354 ? -1 : 1;
     if (k == 'a' || k == 'd') edges_.browse_leg = k == 'a' ? -1 : 1;
-    if (k == 13 || k == 10)
+    if (k == 13 || k == 10 || (k == 57414 && event == 1))
       edges_.confirm = true;
     if (k == 27 || k == 'p')
       edges_.pause = true;

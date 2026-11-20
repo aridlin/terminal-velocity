@@ -128,7 +128,18 @@ int main() {
     require(ui.select_level == 1 && ui.confirm, "SSH legacy menu controls");
     legacy.feed("\x1b[6~");
     require(legacy.consume(.01).tour_page==1,"SSH basic Page Down reaches Tour navigation");
+    legacy.feed("\x1b[M");
+    require(!legacy.consume(.01).confirm, "CSI M is not keypad Enter");
+    legacy.feed("\x1bO");
+    require(!legacy.consume(.01).confirm, "partial keypad Enter waits for its final byte");
+    legacy.feed("M");
+    require(legacy.consume(.01).confirm, "SSH basic application keypad Enter confirms");
     SshInput keys;
+    keys.feed("\x1b[?11u\x1b[57414;1:1u\x1b[57414;1:3u");
+    require(keys.consume(.01).confirm, "SSH enhanced keypad Enter keeps a short tap");
+    require(!keys.consume(.01).confirm, "SSH enhanced keypad Enter is a single edge");
+    keys.feed("\x1b[57414;1:2u\x1b[57414;1:3u");
+    require(!keys.consume(.01).confirm, "SSH enhanced keypad Enter ignores repeat and release");
     keys.feed("\x1b[?11u\x1b[100;");
     require(keys.consume(.01).move == 0,
             "partial network sequence is retained");
