@@ -63,14 +63,29 @@ int main() {
       auto use=[&](InteractionKind kind,int id) {walk_to(side,find(kind,id));interact(side);};
       auto scene=[&](SideStory id){use(InteractionKind::SideStory,int(id));};
       auto earned=[&](Achievement id){return (side.profile.discoveries&iceberg::achievement_bit(id))!=0;};
-      scene(SideStory::HarborStub);
+      const auto read_document=[&](SideStory id,iceberg::SideFlag flag) {
+        walk_to(side,find(InteractionKind::SideStory,int(id)));
+        const auto record=side.side_document(id);
+        const double elapsed=side.state.elapsed;
+        for(bool copy:{false,true}) {
+          side.tick(copy?Controls{.interact=true}:Controls{.inspect=true},.1,true,34,24);
+          require_quest(side.state.adventure.inspecting&&side.has_side_flag(flag)==copy&&
+            side.state.adventure.inspect_title==record->title.get(side.profile.language)&&
+            side.state.adventure.inspect_body.starts_with(record->body.get(side.profile.language)),
+            "the complete document is available before and after copying at the smallest viewport");
+          side.tick({.move=1},.1,true,34,24);
+          require_quest(side.state.elapsed==elapsed,"reading a clue freezes physics even on the opening frame");
+          side.tick({.inspect=true},.1,true,34,24);
+        }
+      };
+      read_document(SideStory::HarborStub,iceberg::SideFlag::HarborStub);
       side.district=2;side.stage=0;side.load_room();
       const auto basement=iceberg::UnnumberedFloor;
       const auto entrance=find(InteractionKind::Secret,basement);
       use(InteractionKind::Secret,basement);
       require_quest(side.profile.hidden_room==-1&&!earned(Achievement::LostFloor),
         "one clue leaves the optional stairwell locked");
-      scene(SideStory::EstatePlate);
+      read_document(SideStory::EstatePlate,iceberg::SideFlag::EstatePlate);
       use(InteractionKind::Secret,basement);
       require_quest(side.profile.hidden_room==basement&&earned(Achievement::LostFloor),
         "matching clues open the optional stairwell");
@@ -79,7 +94,7 @@ int main() {
       require_quest(!earned(Achievement::WitnessTape),"starting the tape leaves the award pending");
       finish_dialogue(side);
       require_quest(earned(Achievement::WitnessTape),"finishing the tape earns the award");
-      scene(SideStory::Roster);
+      read_document(SideStory::Roster,iceberg::SideFlag::Roster);
       require_quest(!earned(Achievement::BelowTheRoster),"copying the roster leaves its return award pending");
       const auto return_shaft=std::find_if(side.grid.interactions.rbegin(),side.grid.interactions.rend(),
         [](const Interaction &node){return node.kind==InteractionKind::Return;});

@@ -1228,6 +1228,16 @@ public:
       notice(t("Podejdź do przedmiotu lub postaci, żeby obejrzeć z bliska.","Approach an object or character to inspect it."));return;
     }
     const auto &node=grid.interactions[size_t(at)];
+    if(node.kind==InteractionKind::SideStory) {
+      if(const auto document=side_document(iceberg::SideStory(node.id))) {
+        auto body=document->body.get(profile.language);
+        if(!has_side_flag(document->flag))
+          body+=t(" Zamknij podgląd i naciśnij E, aby zrobić odpis.",
+                  "Close inspection and press E to make a copy.");
+        describe(document->title.get(profile.language),std::move(body),"▤",Art::File);
+        return;
+      }
+    }
     v.inspect_title=node.label.get(profile.language);v.inspect_icon="▤";v.inspect_art=Art::Door;v.inspect_detail=node.id;
     switch(node.kind) {
     case InteractionKind::Npc:case InteractionKind::Rescue:
@@ -1813,7 +1823,7 @@ public:
         const auto previous_room=room_revision;
         interact();
         // A room-changing interaction consumes this frame's movement.
-        if(room_revision!=previous_room||v.dialogue.active()||state.menu){sync_view();return;}
+        if(room_revision!=previous_room||v.dialogue.active()||v.inspecting||state.menu){sync_view();return;}
       }
       if(state.won&&(c.confirm||c.interact||(first_exit&&c.move>0&&v.door_open>=1.))) {
         advance_room();
