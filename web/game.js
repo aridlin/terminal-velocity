@@ -152,7 +152,8 @@ const previousRouteRoomFlag=1<<29,nextRouteRoomFlag=1<<30;
 const routeDirectionSelector='.route-browse [data-key],#touch .directions [data-key]';
 const expeditionMapOpen=()=>(overlayFlags()&(128|expeditionFlag|tourFlag))===(128|expeditionFlag);
 const expeditionTimelineOpen=()=>expeditionMapOpen()&&!(overlayFlags()&roomMapFlag);
-const isExpeditionMapAction=element=>expeditionMapOpen()&&element instanceof Element&&
+const canSwitchMap=()=>(overlayFlags()&(128|tourFlag))===128;
+const isMapViewAction=element=>canSwitchMap()&&element instanceof Element&&
  element.matches('.map-view-switch,#touch-inspect,#touch-use');
 const isTimelineDirection=element=>expeditionTimelineOpen()&&element instanceof Element&&element.matches(routeDirectionSelector);
 const timelineShortcuts=new Set(['KeyB','KeyJ','KeyP','Escape']);
@@ -312,12 +313,17 @@ function translateUI(){
  }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
  for(const controls of document.querySelectorAll('.route-browse'))controls.hidden=!timeline;
- const mapViewLabel=showRoute?tr('Oś trasy','Timeline'):tr('Plan pokoju','Room map');
- const mapViewAction=showRoute?tr('Pokaż oś trasy','Show route timeline'):tr('Pokaż plan pokoju','Show room map');
+ const switchingMap=canSwitchMap();
+ const [mapViewLabel,mapViewAction]=expeditionMap
+  ?showRoute?tr(['Oś trasy','Pokaż oś trasy'],['Timeline','Show route timeline'])
+            :tr(['Plan pokoju','Pokaż plan pokoju'],['Room map','Show room map'])
+  :showRoute?tr(['Dzielnice','Pokaż mapę dzielnic'],['District map','Show district map'])
+  :overlay&2048?tr(['Plan pokoju','Pokaż plan pokoju'],['Room map','Show room map'])
+               :tr(['Trasa','Pokaż trasę podróży'],['Journey route','Show campaign route']);
  for(const button of document.querySelectorAll('.map-view-switch')){
-  button.hidden=!expeditionMap;
-  if(!expeditionMap)continue;
-  button.textContent=mapViewLabel;
+  button.hidden=!switchingMap;
+  if(!switchingMap)continue;
+  button.textContent='B · '+mapViewLabel;
   button.setAttribute('aria-label',mapViewAction);
  }
  touchInspect.hidden=showingPause||(reading&&!questRecordOpen())||
@@ -338,15 +344,9 @@ function translateUI(){
  }else if(browsingQuests){
   touchInspect.textContent=tr('Zakładka','Tab');
   inspectLabel=tr('Następna zakładka','Next quest tab');
- }else if(overlay&128){
-  if(expeditionMap){
-   touchInspect.textContent=mapViewLabel;
-   inspectLabel=mapViewAction;
-  }else if(overlay&roomMapFlag)touchInspect.textContent=tr('Dzielnice','Districts');
-  else if(overlay&2048){
-   touchInspect.textContent=tr('Pokój','Room');
-   inspectLabel=tr('Pokaż plan pokoju','Show room map');
-  }else touchInspect.textContent=tr('Trasa','Route');
+ }else if(switchingMap){
+  touchInspect.textContent='B · '+mapViewLabel;
+  inspectLabel=mapViewAction;
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
@@ -375,7 +375,7 @@ window.tvUI=u=>{
  if(tourPicker!==!!u.tourPicker)clearInput();
  tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
- const hadMapActionFocus=isExpeditionMapAction(document.activeElement);
+ const hadMapActionFocus=isMapViewAction(document.activeElement);
  const hadSettingsFocus=settingsKeys.contains(document.activeElement);
  const hadTourFocus=tourControls.contains(document.activeElement);
  const hadMenuFocus=(uiFlags&1)&&!(uiFlags&(settingsFlag|confirmSaveFlag))&&
@@ -414,7 +414,7 @@ window.tvUI=u=>{
  }
  translateUI();
  if(!accounts?.active&&((hadTimelineFocus&&!expeditionTimelineOpen())||
-    (hadMapActionFocus&&!expeditionMapOpen())||
+    (hadMapActionFocus&&!canSwitchMap())||
     (hadSettingsFocus&&settingsKeys.hidden)||(hadTourFocus&&tourControls.hidden)||
     (hadMenuFocus&&menuSelection.hidden)||(hadReplacementFocus&&saveReplacement.hidden)))
   canvas.focus({preventScroll:true});
@@ -447,9 +447,9 @@ addEventListener('keydown',e=>{
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  const timelineDirection=isTimelineDirection(target);
- const mapAction=isExpeditionMapAction(target);
+ const mapAction=isMapViewAction(target);
  const mapShortcut=(timelineDirection||mapAction)&&timelineShortcuts.has(e.code);
- const timelineNavigation=(timelineDirection||(mapAction&&expeditionTimelineOpen()))&&e.code.startsWith('Arrow');
+ const timelineNavigation=(timelineDirection||(mapAction&&!(overlayFlags()&roomMapFlag)))&&e.code.startsWith('Arrow');
  if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
     !pauseActionShortcut&&!settingsBack&&!menuNavigation&&!cancelReplacement&&!tourNavigation&&
     !mapShortcut&&!timelineNavigation)return;
