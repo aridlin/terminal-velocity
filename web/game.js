@@ -552,6 +552,9 @@ for(const button of document.querySelectorAll('[data-key]')){
   if(!isTimelineDirection(button))canvas.focus();
   tap(action());
  });
+ // Pointer events own game controls. Suppress the touch compatibility click,
+ // which the browser can otherwise retarget to a footer link after resize.
+ button.addEventListener('touchstart',e=>{if(e.cancelable)e.preventDefault();},{passive:false});
  button.addEventListener('pointerdown',e=>{
   if(e.button!==0||button.disabled||accounts?.active||!started||importPending)return;
   e.preventDefault();

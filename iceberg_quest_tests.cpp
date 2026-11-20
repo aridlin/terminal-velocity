@@ -247,6 +247,9 @@ int main() {
       walk_to(side,platform_exit);interact(side);
       require_quest(side.profile.hidden_room<0&&side.state.player.rect().intersects(hatch_area),
         "the waiting room exit returns to the cabinet in the Archive");
+      require_quest(side.state.adventure.platform_reflection.empty()&&
+        !side.state.adventure.platform_listening&&side.state.adventure.platform_departure==0.,
+        "leaving the waiting room clears its transient presentation");
       side.profile=before_line;side.district=2;side.stage=0;side.load_room(true);
       side.tick({.restart=true},1./120);
       require_quest(side.profile.district_deaths==district_retries+1&&side.profile.district_seconds>district_time,

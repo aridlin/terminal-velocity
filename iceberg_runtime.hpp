@@ -535,6 +535,9 @@ public:
     state.adventure.door_left=.42;state.adventure.door_open=0;state.adventure.machinery_left=0;
     state.adventure.lamp_left=0;state.adventure.npc_reaction_left=0;
     state.adventure.water_splash_left=0;state.adventure.garden_snail_left=0;
+    state.adventure.platform_listening=false;
+    state.adventure.platform_wait=state.adventure.platform_departure=state.adventure.pressure_test_left=0.;
+    state.adventure.platform_reflection.clear();state.adventure.platform_sample_left=0.;
     state.ssh=options.remote;
     if(resume && mode==iceberg::Mode::Campaign && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       if(grid.template_id==iceberg::CrownSentinel) {
