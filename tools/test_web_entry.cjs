@@ -458,7 +458,7 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>!(uiFlags&2)&&document.activeElement===canvas);
     await page.keyboard.press('p');
     await page.waitForFunction(()=>!!(uiFlags&2));
-    await pause.focus();
+    await page.locator('#toolbar > [data-tap="9"]').focus();
     await page.keyboard.press('p');
     await page.waitForFunction(()=>!(uiFlags&2)&&document.activeElement===canvas);
     console.log('PASS Escape and P resume from focused game controls and restore movement focus');
