@@ -2,9 +2,12 @@
 // a drawing convention. A fork replaces exactly one non-quest traversal cell.
   int route_leg() const {return stage<=3?0:stage<=5?1:2;}
   uint32_t next_expedition_seed() const {return iceberg::mix(run_seed+1);}
-  std::vector<int> expedition_itinerary(uint32_t seed) const {
+  std::vector<int> expedition_itinerary(uint32_t seed,std::span<const int> preceding={}) const {
     const auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
-    return iceworld::make_itinerary(seed,district,iceberg::RoomsPerLeg,e.layout_version,mode);
+    return iceworld::make_itinerary(seed,district,iceberg::RoomsPerLeg,e.layout_version,mode,preceding);
+  }
+  std::vector<int> next_expedition_itinerary() const {
+    return expedition_itinerary(next_expedition_seed(),profile.expeditions[0].itinerary);
   }
   bool route_forks_enabled() const {
     return mode==iceberg::Mode::Campaign&&profile.layout_version>=4&&district==0;
@@ -90,7 +93,7 @@
             if(selected<int(leg.size()))r.detail_rhythm=iceworld::pattern(leg[size_t(selected)]).rhythm;
           };
           if(r.browsed_leg<0)browse(e.completed_legs[size_t(page)]);
-          else if(r.browsed_leg>0)browse(expedition_itinerary(next_expedition_seed()));
+          else if(r.browsed_leg>0)browse(next_expedition_itinerary());
         }
       }
       if(timeline) {

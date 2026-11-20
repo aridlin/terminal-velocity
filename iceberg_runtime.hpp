@@ -1099,7 +1099,8 @@ public:
             std::copy(itinerary.begin(),itinerary.end(),leg.begin());
             expedition.completed_legs.push_back(leg);
           } else expedition.completed_legs.clear();
-          room=0;run_seed=next_expedition_seed();itinerary.clear();
+          itinerary=next_expedition_itinerary();
+          room=0;run_seed=next_expedition_seed();
         }
         load_room();persist();
       }

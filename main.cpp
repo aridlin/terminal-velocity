@@ -37,6 +37,7 @@
 #include <memory>
 #include <optional>
 #include <random>
+#include <span>
 #include <string>
 #include <thread>
 #include <vector>
