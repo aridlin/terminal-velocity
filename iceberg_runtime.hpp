@@ -1696,7 +1696,7 @@ public:
       const auto courier=state.player.rect();
       for(size_t i=0;i<grid.platforms.size();++i) {
         const auto &deck=grid.platforms[i];
-        if(deck.pressure_piston||deck.seed_tray) {
+        if(deck.pressure_piston||deck.seed_tray||deck.chute_leaf) {
           const int stop=deck.stop(state.elapsed);
           if(stop!=0&&stop!=deck.stop(old_elapsed)) {
             const auto platform=deck.at(state.elapsed);
@@ -1704,7 +1704,7 @@ public:
                                              platform.y-courier.bottom());
             const double gain=1.-distance/12.;
             if(deck.pressure_piston)piston_dock_gain=std::max(piston_dock_gain,gain);
-            else if(gain>0.)audio.play(AudioCue::Wood1,float(.7*gain));
+            else if(gain>0.)audio.play(deck.chute_leaf?AudioCue::Cloth:AudioCue::Wood1,float(.7*gain));
           }
         }
         if(deck.swing_length>0.&&state.player.support==int(i)&&

@@ -374,60 +374,65 @@ int main() {
     piston_state.player.support=-1;
     piston_run.tick({},1./120.);
     check(piston_silent(),"distant pressure pistons do not play a docking cue");
-    AdventureSession tray_run(vent_options,{});
-    const auto seed_bank=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
-      [](const auto &stop){return stop.room==iceberg::GardenSeedBank;});
-    check(seed_bank!=iceberg::DebugTour.end(),"Debug Tour includes the Seed Bank");
-    tray_run.start_tour(int(seed_bank-iceberg::DebugTour.begin()));
-    check(tray_run.grid.platforms.size()==1&&tray_run.grid.platforms.front().seed_tray,
-      "the Seed Bank sound test has a working tray");
-    tray_run.profile.music_volume=tray_run.profile.ambience_volume=0.f;
-    tray_run.profile.effects_volume=1.f;
-    tray_run.audio.init("assets/audio",false,true);
-    auto &tray_state=tray_run.state;
-    const auto &tray=tray_run.grid.platforms.front();
-    const auto tray_silent=[&] {
-      if(!tray_run.audio.render(frames.data(),48000))throw std::runtime_error("could not mix tray cue");
-      return std::none_of(frames.begin(),frames.end(),[](float x){return std::abs(x)>.0001f;});
-    };
-    tray_run.tick({},1./120.);
-    check(tray_silent(),"entering while the seed tray is docked stays quiet");
-    const auto ride_tray=[&](double time) {
-      tray_state.elapsed=time;
-      const auto platform=tray.at(time);
-      auto &player=tray_state.player;
-      player.x=platform.x+(platform.w-kPlayerWidth)*.5;
-      player.y=platform.y-kPlayerHeight;
-      player.support=0;
-      player.grounded=true;
-    };
-    ride_tray(tray.period*.5-.1);
-    tray_run.tick({},1./120.);
-    check(tray_silent(),"the moving seed tray stays quiet between landings");
-    ride_tray(tray.period*.5-.004);
-    tray_state.paused=true;
-    tray_run.tick({},.1);
-    check(tray_silent(),"pausing does not trigger a tray cue");
-    tray_state.paused=false;
-    GameAudio tray_sound;
-    tray_sound.init("assets/audio",false,true);
-    tray_sound.set_mix(0.f,1.f,0.f);
-    for(double landing:{tray.period*.5,tray.period}) {
-      ride_tray(landing-.004);
-      tray_run.tick({},1./120.);
-      tray_sound.play(AudioCue::Wood1,.7f);
-      check(tray_sound.render(expected.data(),48000)&&!tray_silent()&&
-        std::equal(expected.begin(),expected.end(),frames.begin(),[](float a,float b){return std::abs(a-b)<.00001f;}),
-        "the seed tray plays the recorded wood cue on arrival");
-      tray_run.tick({},1./120.);
-      check(tray_silent(),"the tray stays quiet after the docking cue");
+    for(const auto &[room,cue]:{std::pair{iceberg::GardenSeedBank,AudioCue::Wood1},
+                                std::pair{58,AudioCue::Cloth}}) {
+      AdventureSession garden_ride(vent_options,{});
+      const auto stop=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+        [&](const auto &sample){return sample.room==room;});
+      check(stop!=iceberg::DebugTour.end(),"Debug Tour includes the docked Gardens ride");
+      garden_ride.start_tour(int(stop-iceberg::DebugTour.begin()));
+      check(garden_ride.grid.platforms.size()==1&&(garden_ride.grid.platforms.front().seed_tray||garden_ride.grid.platforms.front().chute_leaf),
+        "the Gardens sound test has a working ride");
+      garden_ride.profile.music_volume=garden_ride.profile.ambience_volume=0.f;
+      garden_ride.profile.effects_volume=1.f;
+      garden_ride.audio.init("assets/audio",false,true);
+      auto &ride_state=garden_ride.state;
+      const auto &deck=garden_ride.grid.platforms.front();
+      const auto ride_silent=[&] {
+        if(!garden_ride.audio.render(frames.data(),48000))throw std::runtime_error("could not mix Gardens docking cue");
+        return std::none_of(frames.begin(),frames.end(),[](float x){return std::abs(x)>.0001f;});
+      };
+      // The spawn is on a ledge. Exclude the unrelated first landing cue.
+      ride_state.player.grounded=true;
+      garden_ride.tick({},1./120.);
+      check(ride_silent(),"entering while the Gardens ride is docked stays quiet");
+      const auto position_rider=[&](double time) {
+        ride_state.elapsed=time;
+        const auto platform=deck.at(time);
+        auto &player=ride_state.player;
+        player.x=platform.x+(platform.w-kPlayerWidth)*.5;
+        player.y=platform.y-kPlayerHeight;
+        player.support=0;
+        player.grounded=true;
+      };
+      position_rider(deck.period*.5-.1);
+      garden_ride.tick({},1./120.);
+      check(ride_silent(),"the moving Gardens ride stays quiet between landings");
+      position_rider(deck.period*.5-.004);
+      ride_state.paused=true;
+      garden_ride.tick({},.1);
+      check(ride_silent(),"pausing does not trigger a Gardens docking cue");
+      ride_state.paused=false;
+      GameAudio dock_recording;
+      dock_recording.init("assets/audio",false,true);
+      dock_recording.set_mix(0.f,1.f,0.f);
+      for(double landing:{deck.period*.5,deck.period}) {
+        position_rider(landing-.004);
+        garden_ride.tick({},1./120.);
+        dock_recording.play(cue,.7f);
+        check(dock_recording.render(expected.data(),48000)&&!ride_silent()&&
+          std::equal(expected.begin(),expected.end(),frames.begin(),[](float a,float b){return std::abs(a-b)<.00001f;}),
+          "the Gardens ride plays the recorded docking cue on arrival");
+        garden_ride.tick({},1./120.);
+        check(ride_silent(),"the Gardens ride stays quiet after the docking cue");
+      }
+      ride_state.elapsed=deck.period-.004;
+      ride_state.player.x=4.;
+      ride_state.player.y=56.-kPlayerHeight;
+      ride_state.player.support=-1;
+      garden_ride.tick({},1./120.);
+      check(ride_silent(),"a distant Gardens ride is inaudible");
     }
-    tray_state.elapsed=tray.period-.004;
-    tray_state.player.x=4.;
-    tray_state.player.y=56.-kPlayerHeight;
-    tray_state.player.support=-1;
-    tray_run.tick({},1./120.);
-    check(tray_silent(),"a distant seed tray is inaudible");
     GameAudio silent;
     silent.init("missing-audio", true);
     check(!silent.ready() && silent.error().empty(),
