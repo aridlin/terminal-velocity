@@ -114,16 +114,30 @@ int main() {
     world_step(landed, adventure, dash, 1./120);
     check(landed.player.dash_time_left == 0 && landed.player.dash_buffer_left > 0,
           "a dash pressed on landing is buffered");
-    for (int i = 0; i < 11; ++i)
+    for (int i = 0; i < 12; ++i)
       world_step(landed, adventure, {}, 1./120);
+    check(landed.player.dash_time_left == 0. && landed.player.landing_dash_left > 0.,
+          "a buffered dash is still held 13 ticks after landing");
+    world_step(landed, adventure, {}, 1./120);
     check(landed.player.dash_time_left > 0 && landed.player.vx > 20,
-          "the buffered dash fires when the landing cooldown expires");
+          "the buffered dash fires on the first tick beyond the 110 ms landing cooldown");
+    auto early = new_state(adventure);
+    early.player.y = 40 - kPlayerHeight - .34;
+    early.player.vy = 10;
+    early.player.dash_available = false;
+    world_step(early, adventure, {.dash_pressed=true,.aim_y=-1}, 1./120);
+    check(!early.player.grounded && early.player.dash_buffer_left > 0.,
+          "an upward dash can queue shortly before touchdown");
+    for (int i = 0; i < 18 && early.player.dash_time_left <= 0.; ++i)
+      world_step(early, adventure, {}, 1./120);
+    check(early.player.dash_time_left > 0. && std::abs(early.player.vx) < 1e-6 && early.player.vy < -20.,
+          "the longer landing delay preserves a pre-landing tap and its direction");
     auto vertical = land_and_dash(adventure);
     Controls up;
     up.aim_y = -1;
     up.dash_pressed = true;
     world_step(vertical, adventure, up, 1./120);
-    for (int i = 0; i < 11; ++i)
+    for (int i = 0; i < 13; ++i)
       world_step(vertical, adventure, {}, 1./120);
     check(vertical.player.dash_time_left > 0 && std::abs(vertical.player.vx) < 1e-6 &&
           vertical.player.vy < -20,
@@ -135,7 +149,7 @@ int main() {
     diagonal.aim_y=-1;
     diagonal.dash_pressed=true;
     world_step(reaimed, adventure, diagonal, 1./120);
-    for (int i=0;i<10;++i)
+    for (int i=0;i<12;++i)
       world_step(reaimed, adventure, {}, 1./120);
     check(reaimed.player.dash_time_left>0&&reaimed.player.vx<-20&&reaimed.player.vy<-20,
           "a second dash tap replaces the buffered direction with its diagonal aim");
@@ -162,7 +176,7 @@ int main() {
     check(buffered_combo.player.grounded&&buffered_combo.player.landing_dash_left>0&&
           buffered_combo.player.dash_time_left==0&&buffered_combo.player.dash_jump_left==0,
           "a paired Dash and Jump waits for the landing cooldown");
-    for(int i=0;i<11;++i)world_step(buffered_combo,adventure,{},1./120);
+    for(int i=0;i<13;++i)world_step(buffered_combo,adventure,{},1./120);
     check(buffered_combo.player.dash_jump_left>0&&buffered_combo.player.vx>20&&buffered_combo.player.vy<0,
           "the paired landing inputs launch a dash jump after the cooldown");
     auto buffered_jump=land_and_dash(adventure);
