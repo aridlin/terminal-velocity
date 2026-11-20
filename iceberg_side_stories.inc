@@ -12,7 +12,7 @@
     if(grid.template_id==100||grid.template_id==600) {
       add({2,44,2,4},SideStory::HarborStub,{"Bloczek pocztowy","Postal counterfoil"});
     } else if(grid.template_id==101) {
-      add({23,44,3,4},SideStory::HeatworksMug,{"Sprawdź kubek na rurze","Check the mug on the pipe"});
+      add({29,44,3,4},SideStory::HeatworksMug,{"Sprawdź kubek na rurze","Check the mug on the pipe"});
     } else if(grid.template_id==102) {
       add({34,44,4,4},SideStory::EstatePlate,{"Blaszka pod schodami","Plate under the stairs"});
       add({104,30,4,4},SideStory::Casting,{"Podnieś odlew","Pick up the casting"});
