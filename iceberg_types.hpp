@@ -15,10 +15,11 @@ inline constexpr int RoomsPerLeg = 8;
 inline constexpr int UnnumberedFloor=3;
 inline constexpr uint64_t BasementCircuitCut=1;
 inline constexpr double GardenSnailWalkTime=4.;
-enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter };
+enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench };
 // Side-story state uses the top of the second task word. Existing room tasks
 // use their original indices and retain the same save representation.
 enum class SideFlag : uint64_t {
+  HeatworksMugTaken=1ull<<50, HeatworksMugReturned=1ull<<51,
   GardenSnailFound=1ull<<52, GardenSnailWatered=1ull<<53,
   RosterPosted=1ull<<54, RosterSealed=1ull<<55,
   HarborStub=1ull<<56, EstatePlate=1ull<<57, ArchiveCopy=1ull<<58, Casting=1ull<<59,
@@ -318,6 +319,7 @@ inline constexpr int EstateTramReplyScene = HoistCrewReplyScene + 1;
 inline constexpr int ArchiveCopiesReplyScene = EstateTramReplyScene + 1;
 inline constexpr int ArchiveShelterReplyScene = ArchiveCopiesReplyScene + 1;
 inline constexpr int EstateRosterReplyScene = ArchiveShelterReplyScene + 1;
+inline constexpr int HeatworksMugReplyScene = EstateRosterReplyScene + 1;
 inline constexpr bool expedition_reply_scene(int scene) {
   return scene==IrrigationReplyScene||scene==HoistCrewReplyScene||
     scene==EstateTramReplyScene||scene==ArchiveCopiesReplyScene||scene==ArchiveShelterReplyScene;

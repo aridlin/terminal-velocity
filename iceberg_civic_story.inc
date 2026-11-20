@@ -213,6 +213,20 @@ inline const CivicReply &civic_reply(int scene,int option) {
     }};
     return replies[size_t(option)];
   }
+  if(scene==HeatworksMugReplyScene) {
+    static const std::array<CivicReply,2> replies{{
+      {{"Kto cię zmienia?","Who takes over from you?"},
+       {"Kto przejmie obieg, kiedy pójdziesz spać?","Who takes over the circuit when you go to sleep?"},
+       {1,{"Ania. Od miesiąca trzyma pół nocnej zmiany, a w rozpisce figuruje jako pomoc. Dziś wpisałem ją jako prowadzącą. Jak będą chcieli skreślić, niech sami staną przy kotle.",
+           "Ania. She's covered half the night shift for a month. The rota calls her an assistant. Today I put her down as lead. If they want to cross it out, they can stand by the boiler themselves."}}},
+      {{"Dlaczego grzejesz w nocy?","Why keep the heat on?"},
+       {"Na kartce jest mowa o ciepłym obiegu. Dlaczego zostawiacie go otwarty w nocy?",
+        "Your note mentions the hot circuit. Why do you leave it open overnight?"},
+       {1,{"Kiedyś zamknąłem go punktualnie. Rano kurtki suszące się na rurach były sztywne. Od tamtej pory czekam, aż załoga zdejmie ostatnią. Ania zna kolejność.",
+           "I shut it on time once. In the morning the coats drying on the pipes were stiff. Now I wait until the crew takes the last one down. Ania knows the order."}}},
+    }};
+    return replies[size_t(option)];
+  }
   if(scene==EstateRosterReplyScene) {
     static const std::array<CivicReply,2> replies{{
       {{"Wywieś liczbę","Post the count"},

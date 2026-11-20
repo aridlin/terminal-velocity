@@ -814,7 +814,11 @@ public:
       }
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
-      if(scene==iceberg::EstateRosterReplyScene) {
+      if(scene==iceberg::HeatworksMugReplyScene) {
+        remember_side_flag(iceberg::SideFlag::HeatworksMugReturned);
+        audio.play(AudioCue::Stone1,.55f);
+        persist();
+      } else if(scene==iceberg::EstateRosterReplyScene) {
         remember_side_flag(option==0?iceberg::SideFlag::RosterPosted:iceberg::SideFlag::RosterSealed);
         persist();
       } else if(tour_scene<0&&!iceberg::expedition_reply_scene(scene)) {
@@ -848,6 +852,7 @@ public:
       if(shot!=dialogue.lines[dialogue.page].shot)dialogue.shot_seconds=0.;
       dialogue.reset_reveal();if(dialogue.instant)dialogue.reveal_all();
       if(dialogue.choosing()&&dialogue.reply_scene!=iceberg::EstateRosterReplyScene&&
+         dialogue.reply_scene!=iceberg::HeatworksMugReplyScene&&
          !iceberg::expedition_reply_scene(dialogue.reply_scene)) {
         if(dialogue.reply_scene>=iceberg::HarborMissionReplyBase) {
           if(tour_scene<0) {
@@ -1236,6 +1241,14 @@ public:
     if(node.kind==InteractionKind::SideStory) {
       using iceberg::SideStory;
       using iceberg::SideFlag;
+      if(node.id==int(SideStory::HeatworksMug)) {
+        describe(t("Kubek na rurze","Mug on the pipe"),HeatworksMugNote.get(profile.language),"♨",Art::File);return;
+      }
+      if(node.id==int(SideStory::HeatworksMugBench)) {
+        const bool returned=has_side_flag(SideFlag::HeatworksMugReturned);
+        describe(t("Stół Witka","Witek’s bench"),returned?HeatworksMugRota.get(profile.language):
+          t("E — oddaj Witkowi kubek.","Press E to give Witek his mug."),"♨",Art::File);return;
+      }
       if(node.id==int(SideStory::GardensPot)&&has_side_flag(SideFlag::GardenSnailFound)) {
         describe(t("Doniczka","Pot"),garden_snail_pot_text().get(profile.language),"♧",Art::Seeds);return;
       }
@@ -1992,6 +2005,8 @@ public:
       using iceberg::SideStory;
       using iceberg::SideFlag;
       const auto prop=SideStory(grid.interactions[size_t(at)].id);
+      if(prop==SideStory::HeatworksMugBench&&has_side_flag(SideFlag::HeatworksMugReturned))
+        v.prompt=t("[E] Przeczytaj rozpiskę","[E] Read the shift rota");
       if(prop==SideStory::GardensPot&&has_side_flag(SideFlag::GardenSnailFound))
         v.prompt=t("[E] Obejrzyj doniczkę","[E] Inspect the pot");
       if(prop==SideStory::GardenSnailTap&&has_side_flag(SideFlag::GardenSnailWatered))
