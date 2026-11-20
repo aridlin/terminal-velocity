@@ -309,7 +309,7 @@ int main(int argc,char **argv) {
       check(session.tour_scene<0,"debug tour waits for an in-flight account action");
       session.profile_action_busy=false;
       press({.new_run=true});
-      check(session.tour_scene==int(iceberg::DebugTourLatest)&&session.grid.template_id==iceberg::GardenSeedBank,
+      check(session.tour_scene==int(iceberg::DebugTourLatest)&&session.grid.template_id==iceberg::DebugTour[iceberg::DebugTourLatest].room,
         "N opens the latest sample from the picker");
       session.end_tour();
       check(session.save_revision==write_count&&bytes(path)==first_save&&bytes(secondary)==second_save&&bytes(tertiary)==third_save,
@@ -787,7 +787,10 @@ int main(int argc,char **argv) {
     }
     check(true,"Hanging Beds retains the original route, tokens and lamps across 32 seeds");
     AdventureSession seed_bank(options,{});
-    seed_bank.start_tour(int(iceberg::DebugTourLatest));
+    const auto bank_stop=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==iceberg::GardenSeedBank;});
+    check(bank_stop!=iceberg::DebugTour.end(),"the Seed Bank still has a Debug Tour stop");
+    seed_bank.start_tour(int(bank_stop-iceberg::DebugTour.begin()));
     check(seed_bank.grid.template_id==iceberg::GardenSeedBank&&seed_bank.grid.platforms.size()==1&&
           seed_bank.grid.platforms.front().seed_tray,"the Seed Bank tour opens by the working tray");
     const auto tray_step=[&](Controls input,int count=1) {
