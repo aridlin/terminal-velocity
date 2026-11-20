@@ -954,6 +954,29 @@ int main(){try {
     }
   }
   {
+    auto room=verified_room(421,73,1);
+    add_heatworks_twin_pistons(room);
+    auto view=new_state(room);
+    view.adventure.map=view.adventure.map_room=true;
+    const auto &first=room.platforms[3];
+    view.player.x=first.base.x+first.base.w/2-kPlayerWidth/2;
+    view.player.y=first.at(0).y-kPlayerHeight;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      view.adventure.language=language;
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        view.elapsed=.4;
+        RenderGrid(room,view,rows,cols,2).draw();
+        ui_check(count_map("↕",0xb5d599)==2&&count_map("○",0xc2accf)==2&&count_map("@",0xffd68a)==1&&
+          ui_text(frame).find(language==iceberg::Language::English?"↕ Pressure piston · ○ Dock":"↕ Tłok · ○ Postój")!=std::string::npos,
+          "Twin Pistons map shows both docked decks, both vacant stops, and an overlapping courier");
+        view.elapsed=1.5;
+        RenderGrid(room,view,rows,cols,2).draw();
+        ui_check(count_map("↕",0xe4ad68)==2&&count_map("↕",0xb5d599)==0&&count_map("○",0xc2accf)==4,
+          "Twin Pistons map marks all four stops while both decks travel");
+      }
+    }
+  }
+  {
     AdventureSession wheel(options,{});
     const auto sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
       [](const auto &stop){return stop.room==57;});
