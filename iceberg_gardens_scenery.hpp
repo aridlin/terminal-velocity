@@ -233,6 +233,53 @@
     world_art(right,deck.y+row,{rise>.025?"↑":rise<-.025?"↓":"◆"},rim_color);
   }
 
+  void draw_garden_trunk_stairs() {
+    const auto &stairs=iceworld::pattern(53);
+    const double row=aspect_*scale_;
+    const auto trunk_x=[](double y) { return 47.+5.*std::sin((y-9.)*.088)+.1*y; };
+    const auto bark=[&](double y,double left,double right,uint32_t shade,uint32_t edge,bool trunk) {
+      const auto [start,row_index]=screen(left,y);
+      const int width=int(std::ceil((right-left)/scale_));
+      if(width<=0||row_index<4||row_index>=rows_-3)return;
+      const int grain_start=int(std::floor(left/scale_));
+      for(int x=std::max(0,start);x<std::min(cols_,start+width);++x) {
+        const auto &base=buffer_[row_index][x];
+        if(base.color==Color::Solid||base.color==Color::Player||base.color==Color::Hazard)continue;
+        const int index=x-start;
+        const int seam=(grain_start+index)%11;
+        const bool left_edge=index==0,right_edge=index==width-1;
+        const char *grain=trunk?(seam==2||seam==3?"│":seam==8?"╎":"░"):
+          (seam==2?"╱":seam==8?"╲":"▒");
+        if(left_edge)grain=trunk?"╎":"╲";
+        if(right_edge)grain=trunk?"│":"╱";
+        put(row_index,x,{grain,Color::Decor,false,false,0,left_edge||right_edge?edge:shade});
+      }
+    };
+    const auto graft=[&](const iceworld::Pad &ledge) {
+      const double center=ledge.x+ledge.w*.5;
+      if(!grid_.solid_at(int(center),ledge.y))return;
+      const double lip=ledge.y+(grid_.solid_at(int(center),ledge.y+1)?2.:1.);
+      const double joint=std::min(61.8,lip+std::clamp(std::abs(center-trunk_x(lip))*.27,3.,10.));
+      if(joint<=lip)return;
+      const double root=trunk_x(joint);
+      for(double y=lip;y<=joint;y+=row) {
+        const double t=std::clamp((y-lip)/(joint-lip),0.,1.);
+        const double next=std::min(1.,t+row/(joint-lip));
+        const double from=std::lerp(center,root,t*t);
+        const double to=std::lerp(center,root,next*next);
+        const double radius=std::lerp(ledge.w*.26,1.7,t);
+        bark(y,std::min(from,to)-radius,std::max(from,to)+radius,0x3c4c37,0x606d4b,false);
+      }
+    };
+    for(const auto &ledge:stairs.path)graft(ledge);
+    for(const auto &ledge:stairs.optional)graft(ledge);
+    for(double y=8.;y<62.;y+=row) {
+      const double center=trunk_x(y);
+      const double radius=3.1+y*.026+std::max(0.,y-52.)*.19;
+      bark(y,center-radius,center+radius,0x475140,0x71815b,true);
+    }
+  }
+
   void draw_garden_landmarks() {
     const auto &d=iceberg::Districts[4];double clock=state_.adventure.presentation_time;
     auto greenhouse=[&](double x,double y){world_art(x,y,{
@@ -253,6 +300,8 @@
       bed(9,43);bed(29,33);bed(73,27);bed(116,33);
       world_art(49,30,{"    ╭──────╮","╭───┤ ░░░░ ├───╮","│   │ ░░░░ │   │","│   ╰──┬───╯   │","│      ║       │","╰══════╩═══════╯"},d.stone);
       world_art(96,39,{"╭────────────────────╮",tr("│  ZAMYKAĆ ZA SOBĄ   │","│ CLOSE BEHIND YOU   │"),"╰─────────┬──────────╯","          │"},d.light);
+    } else if(grid_.template_id==53) {
+      draw_garden_trunk_stairs();
     } else {
       for(size_t i=0;i<grid_.route_points.size();++i){auto [x,y]=grid_.route_points[i];
         if((grid_.template_id==50||grid_.template_id==57)&&std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[&](const MovingPlatform &p){
@@ -263,7 +312,7 @@
         if(i%3==2)world_art(x,y+2,{"╲       ╱"," ╲ ╭─╮ ╱","  ╲│ │╱","   │ │","  ╱│ │╲"," ╱ ╰─╯ ╲"},d.shadow);
       }
       int id=grid_.template_id;
-      if(id==49||id==53)world_art(36,8,{"    ╭───╮","╭───┤   ├────╮","╰╮  │   │   ╭╯"," │╲ │   │ ╱ │"," │ ╲│   │╱  │"," │  │   │   │","╭╯  │   │   ╰╮","╰───┤   ├────╯","    │   │","    │   │","   ╱│   │╲","  ╱ ╰───╯ ╲"},d.stone);
+      if(id==49)world_art(36,8,{"    ╭───╮","╭───┤   ├────╮","╰╮  │   │   ╭╯"," │╲ │   │ ╱ │"," │ ╲│   │╱  │"," │  │   │   │","╭╯  │   │   ╰╮","╰───┤   ├────╯","    │   │","    │   │","   ╱│   │╲","  ╱ ╰───╯ ╲"},d.stone);
       if(id==55||id==52)world_art(46,47,{"╭────────────────────────────────╮","│  ≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋≋   │","│     ╲        ╲        ╲        │","╰────────────────────────────────╯"},d.shadow);
       if(id==52&&!grid_.growth.empty()) {
         draw_scenery_pipe({{81.5,40.5},{81.5,44},{86,44},{86,42}},0x5f8790);
