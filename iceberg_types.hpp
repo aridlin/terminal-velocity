@@ -255,6 +255,7 @@ struct TourStop {
 inline constexpr int CrownShaftPlate = 41;
 inline constexpr int ArchiveTrolleyNotice = 42;
 inline constexpr int ArchiveDryingLetter = 43;
+inline constexpr int ArchiveGlassRoom = 36;
 inline constexpr int IrrigationCallBox = 44;
 inline constexpr int CrownSentinel = 701;
 inline constexpr uint64_t CrownArenaReached = uint64_t(1) << 46;
@@ -289,6 +290,7 @@ inline constexpr std::array DebugTour{
   TourStop{2,33,66.3,41,{"Odbijaj się między rynnami, by zebrać górny żeton","Wall-kick between the downspouts to reach the upper token"}},
   TourStop{4,58,50,38,{"Gdy zapali się strzałka, wskocz na liść w rynnie","Jump onto the flume leaf when the arrow lights"}},
   TourStop{2,35,42,49,{"Odbijaj się od markiz, by sięgnąć żetonów","Bounce off the awnings to reach the tokens"}},
+  TourStop{3,ArchiveGlassRoom,50,46,{"Skacz, zanim szyby pękną pod stopami","Jump again before the glass breaks"}},
   TourStop{1,421,58.5,47,{"Wskocz na tłok, gdy zapali się dolna lampka","Board a piston when its lower lamp lights"}},
   TourStop{4,54,57.5,48,{"Wskocz do donicy i wysiądź przy górnej grządce","Ride the planter and jump to the upper bed"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
