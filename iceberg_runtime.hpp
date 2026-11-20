@@ -1649,7 +1649,7 @@ public:
     stepper.advance(state,grid,c,dt);
     update_water_splash(before,old_deaths,dt);
     if(!state.won)v.door_open=std::max(0.,v.door_open-dt*4.5);
-    feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,dt,audio);
+    feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,old_elapsed,dt,audio);
     harbor_step(before,old_deaths);
     if(state.checkpoint!=old_cp)v.lamp_left=.8;
     // Spatially restrained machinery cues follow actual motion/timing.

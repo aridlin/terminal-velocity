@@ -512,7 +512,7 @@ struct App {
     bool hadpending = stepper.pending.jump_pressed ||
                       stepper.pending.dash_pressed || jump_edge || dash_edge;
     stepper.advance(state, grid, c, dt);
-    feedback_step(state, grid, before, deaths, pickups, cp, was_won, dt, sound);
+    feedback_step(state, grid, before, deaths, pickups, cp, was_won, elapsed, dt, sound);
     finish_chapter(state, grid, progress);
     elapsed = state.elapsed;
     if (hadpending && !stepper.pending.jump_pressed &&
