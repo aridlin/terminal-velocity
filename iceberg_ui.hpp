@@ -3,6 +3,16 @@
 #include "iceberg_story.hpp"
 
 namespace iceberg {
+inline constexpr std::array<Text,6> AwardGroups{{
+  {"Wszystkie","All"},{"Podróż","Journey"},{"Umiejętności","Skill"},
+  {"Potknięcia","Mishaps"},{"Wybryki","Oddities"},{"Sekrety","Secrets"}
+}};
+inline std::vector<size_t> award_entries(AwardGroup group) {
+  std::vector<size_t> entries;
+  for(size_t i=0;i<Achievements.size();++i)
+    if(group==AwardGroup::All||Achievements[i].group==group)entries.push_back(i);
+  return entries;
+}
 inline bool browsing_campaign_leg(const View &view) {
   return view.mode==Mode::Campaign&&view.map&&view.map_route&&!view.map_room&&
     view.route.available&&view.route_page>=0&&view.route_page!=view.route.leg;

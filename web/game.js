@@ -36,6 +36,7 @@ let saveDirectory=persistentSaveDirectory;
 let routeLegs=0;
 let travelDistrict=-1;
 let tourPicker=false;
+let awardsOpen=false;
 const accountSlot=()=>started&&selectedSlot===1&&!inTour()&&saveDirectory===persistentSaveDirectory;
 const startupError=()=>tr('Błąd uruchamiania — odśwież stronę','Startup failed — reload the page');
 let browserSaveStatus=['Gotowe','Ready'],saveActionError=null;
@@ -240,7 +241,10 @@ function translateUI(){
  saveReplacement.hidden=!replacingSave;
  tourControls.hidden=!tourPicker;
  menuSelection.hidden=!inMenu||inSettings||replacingSave;
- menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile;
+ menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile&&!awardsOpen;
+ menuSelection.querySelector('[data-tap="8"]').hidden=awardsOpen;
+ document.querySelector('#open-achievements').hidden=choosingProfile||awardsOpen;
+ document.querySelector('#filter-achievements').hidden=!awardsOpen;
  if(replacingSave){
   const replace=document.querySelector('#replace-save');
   replace.dataset.tap=replacingRun?'6':'8';
@@ -371,8 +375,9 @@ window.tvUI=u=>{
  const nextTravelDistrict=u.travelDistrict??-1;
  const travelChanged=nextTravelDistrict!==travelDistrict;
  // The game sends UI state every frame. Only a transition changes the controls.
- if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&!travelChanged&&tourPicker===!!u.tourPicker)return;
- if(tourPicker!==!!u.tourPicker)clearInput();
+ if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&!travelChanged&&tourPicker===!!u.tourPicker&&awardsOpen===!!u.awardsOpen)return;
+ if(tourPicker!==!!u.tourPicker||awardsOpen!==!!u.awardsOpen)clearInput();
+ awardsOpen=!!u.awardsOpen;
  tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
  const hadMapActionFocus=isMapViewAction(document.activeElement);
@@ -441,7 +446,7 @@ addEventListener('keydown',e=>{
  if(tourPage&&!tourPicker)return;
  const menuControl=(uiFlags&1)&&!(uiFlags&(settingsFlag|confirmSaveFlag))&&isMenuSelectionControl(target);
  const menuNavigation=menuControl&&(e.code==='ArrowUp'||e.code==='ArrowDown'||
-  (e.code==='Escape'&&(uiFlags&profilePickerFlag)));
+  (e.code==='Escape'&&((uiFlags&profilePickerFlag)||awardsOpen))||(awardsOpen&&e.code==='KeyB'));
  const cancelReplacement=e.code==='Escape'&&(uiFlags&confirmSaveFlag)&&isSaveReplacementControl(target);
  const tourNavigation=tourPicker&&(tourControls.contains(target)||menuControl)&&
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');
@@ -572,7 +577,8 @@ for(const b of document.querySelectorAll('[data-tap]'))b.onclick=event=>{
  const adjustsSetting=settingsKeys.contains(b)&&key!==25;
  const pagesTour=tourPicker&&(key===28||key===29);
  if(event.detail!==0||(!adjustsSetting&&!pagesTour))canvas.focus({preventScroll:true});
- tap(key);
+ if(b.id==='open-achievements')tap(key,8);
+ else tap(key);
 };
 function clearInput(){keyboard.clear();pointers.clear();canvasPress=null;held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function updateBrowserSaveStatus(status){

@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -11,6 +12,15 @@ inline constexpr int DistrictCount = 6;
 // Content registry boundary: increment when another district is fully authored.
 inline constexpr int AuthoredDistrictCount = 6;
 inline constexpr int RoomsPerLeg = 8;
+inline constexpr int UnnumberedFloor=3;
+enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch };
+// Side-story state uses the top of the second task word. Existing room tasks
+// use their original indices and retain the same save representation.
+enum class SideFlag : uint64_t {
+  HarborStub=1ull<<56, EstatePlate=1ull<<57, ArchiveCopy=1ull<<58, Casting=1ull<<59,
+  CastingReturned=1ull<<60, BellRung=1ull<<61, Roster=1ull<<62
+};
+inline constexpr uint64_t side_flag(SideFlag flag) {return static_cast<uint64_t>(flag);}
 enum class Language { Polish, English };
 enum class Mode { Campaign, Endless, Trial };
 enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret, Interlude };
@@ -185,18 +195,56 @@ inline bool survey_pass(const Profile &profile) {
   return (profile.cosmetics&SurveyTransitPass)||transit_token_progress(profile,SurveyTokenFare)==SurveyTokenFare;
 }
 
-enum class Achievement { FirstToken, DashJump, Gear, Survey, Journey };
-struct AchievementInfo { Text title,condition; };
-inline constexpr std::array Achievements{
-  AchievementInfo{{"Pierwszy żeton","First token"},{"Zbierz żeton","Collect a token"}},
-  AchievementInfo{{"Zryw w górę","Dash and lift"},{"Wykonaj skok ze zrywu","Land a dash jump"}},
-  AchievementInfo{{"Na miarę","Fitted out"},{"Kup wyposażenie","Buy a piece of gear"}},
-  AchievementInfo{{"Do latarni","To the breakwater"},{"Ukończ objazd latarni","Finish Breakwater Survey"}},
-  AchievementInfo{{"Ponad Koroną","Beyond the Crown"},{"Ukończ podróż","Complete the Journey"}}
+enum class Achievement {
+  FirstToken, DashJump, Gear, Survey, Journey, FirstDoor, DockChat, FirstDistrict,
+  FirstFall, RoughRoom, MadeItAnyway, CleanDistrict, Mastery, CleanMastery, CrownClean,
+  WallBounce, FerryRide, VineRide, BalconyRide, SaltBath, AllGear, FirstTestimony,
+  ThreeTestimonies, BeltReverse, SiliconeReturn, LostFloor, WitnessTape, BelowTheRoster, RingAgain
 };
-inline constexpr unsigned AchievementShift=16;
-inline constexpr uint32_t AchievementMask=((1u<<Achievements.size())-1u)<<AchievementShift;
-inline constexpr uint32_t achievement_bit(Achievement id) {return 1u<<(AchievementShift+unsigned(id));}
+enum class AwardGroup { All, Journey, Skill, Mishaps, Oddities, Secrets };
+struct AchievementInfo { Text title,condition; AwardGroup group; bool hidden=false; };
+inline constexpr std::array Achievements{
+  AchievementInfo{{"Pierwszy żeton","First token"},{"Zbierz żeton.","Collect a token."},AwardGroup::Journey},
+  AchievementInfo{{"Zryw w górę","Dash and lift"},{"Wykonaj skok ze zrywu.","Perform a dash jump."},AwardGroup::Skill},
+  AchievementInfo{{"Na miarę","Fitted out"},{"Kup wyposażenie.","Buy a piece of gear."},AwardGroup::Journey},
+  AchievementInfo{{"Do latarni","To the breakwater"},{"Ukończ objazd latarni.","Finish Breakwater Survey."},AwardGroup::Secrets},
+  AchievementInfo{{"Ponad Koroną","Beyond the Crown"},{"Ukończ podróż.","Complete the Journey."},AwardGroup::Journey},
+  AchievementInfo{{"Pierwszy próg","First threshold"},{"Opuść nabrzeże i wejdź na trasę.","Leave the quay and enter the route."},AwardGroup::Journey},
+  AchievementInfo{{"Na zmianie","On the shift"},{"Porozmawiaj z dokerem.","Talk to a dockworker."},AwardGroup::Journey},
+  AchievementInfo{{"Dalej w głąb","Further in"},{"Ukończ pierwszą dzielnicę.","Finish your first district."},AwardGroup::Journey},
+  AchievementInfo{{"Pierwsze potknięcie","First setback"},{"Wróć do lampy po upadku lub trafieniu.","Return to a lamp after a fall or hit."},AwardGroup::Mishaps},
+  AchievementInfo{{"Znajoma lampa","Familiar lamp"},{"Daj się złapać przeszkodzie w pokoju, w którym masz już pięć powrotów.","Get caught by a hazard in a room with at least five returns."},AwardGroup::Mishaps},
+  AchievementInfo{{"I tak poszło","Made it anyway"},{"Ukończ pokój po co najmniej pięciu powrotach.","Finish a room after at least five returns."},AwardGroup::Mishaps},
+  AchievementInfo{{"Bez potknięcia","Clean district"},{"Ukończ dzielnicę bez powrotów.","Finish a district without a retry."},AwardGroup::Skill},
+  AchievementInfo{{"Z pieczęcią","Stamped and filed"},{"Ukończ próbę mistrzowską.","Complete a Mastery Trial."},AwardGroup::Skill},
+  AchievementInfo{{"Bez poprawek","No corrections"},{"Ukończ próbę bez powrotów.","Complete a Mastery Trial without a retry."},AwardGroup::Skill},
+  AchievementInfo{{"W nienaruszonym stanie","Pristine delivery"},{"Pokonaj Strażnika Korony bez powrotu.","Defeat the Crown Sentinel without a retry."},AwardGroup::Skill},
+  AchievementInfo{{"Rykoszet","Ricochet"},{"Odbij się od ściany ze zrywu.","Perform a dash wall bounce."},AwardGroup::Skill},
+  AchievementInfo{{"Na pokładzie","All aboard"},{"Wejdź na prom w Dolnym Porcie.","Board a Lower Harbor ferry."},AwardGroup::Journey},
+  AchievementInfo{{"Zielona linia","The green line"},{"Chwyć się pnącza w Ogrodach.","Catch a swing vine in the Gardens."},AwardGroup::Journey},
+  AchievementInfo{{"Winda pod drzwi","Doorstep service"},{"Podjedź na ruchomym balkonie w Osiedlu.","Ride a cable balcony in the Estate."},AwardGroup::Journey},
+  AchievementInfo{{"Pranie w porcie","Port laundry"},{"Zrób plusk w Dolnym Porcie.","Make a splash in Lower Harbor."},AwardGroup::Oddities},
+  AchievementInfo{{"Pełny ekwipunek","Fully kitted"},{"Kup wszystkie trzy rzeczy od handlarza.","Buy all three outfitter items."},AwardGroup::Skill},
+  AchievementInfo{{"Poza protokołem","Off the record"},{"Odszukaj pierwsze ukryte świadectwo.","Find your first hidden testimony."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Trzy wersje","Three accounts"},{"Odkryj wszystkie trzy ukryte świadectwa.","Find all three hidden testimonies."},AwardGroup::Secrets,true},
+  AchievementInfo{{"W drugą stronę","Special delivery in reverse"},{"Odwróć środkową taśmę w Archiwum.","Reverse the middle conveyor in the Archive."},AwardGroup::Oddities},
+  AchievementInfo{{"Nie do tego formularza","Wrong form entirely"},{"Zanieś Grażynie osobliwy odlew.","Bring the peculiar casting to Grażyna."},AwardGroup::Oddities,true},
+  AchievementInfo{{"Piętro bez numeru","The unnumbered floor"},{"Otwórz przejście pod budynkiem.","Open the passage below the building."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Poczekaj na trzeci głos","Wait for the third voice"},{"Odsłuchaj całą ukrytą taśmę.","Listen to the full hidden tape."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Pod spisem","Below the roster"},{"Wróć z podziemia z kopią listy.","Return from below with a copy of the roster."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Chyba nie słyszą","Maybe they didn't hear"},{ "Zadzwoń ponownie po usłyszeniu komunikatu dzwonka alarmowego.","Ring the emergency bell again after hearing its announcement."},AwardGroup::Oddities,true}
+};
+static_assert(Achievements.size()<=29);
+inline constexpr uint32_t achievement_bit(Achievement id) {
+  // Bits 0–2 hold the original hidden testimonies. Keep all five released award bits.
+  const unsigned index=unsigned(id);
+  return 1u<<(index<16?index+16:index-13);
+}
+inline constexpr uint32_t AchievementMask=[] {
+  uint32_t mask=0;
+  for(size_t i=0;i<Achievements.size();++i)mask|=achievement_bit(Achievement(i));
+  return mask;
+}();
 inline constexpr double AchievementToastTime=3.8;
 inline uint32_t achievement_progress(const Profile &profile) {
   uint32_t flags=profile.discoveries&AchievementMask;
@@ -206,6 +254,21 @@ inline uint32_t achievement_progress(const Profile &profile) {
   include(Achievement::Gear,profile.cosmetics&(HarborScarf|DockBoots|SignalSatchel));
   include(Achievement::Survey,profile.cosmetics&SurveyCourseComplete);
   include(Achievement::Journey,profile.finished);
+  include(Achievement::FirstDoor,profile.stage>0||profile.district>0||profile.finished);
+  include(Achievement::FirstDistrict,profile.records[0].complete);
+  include(Achievement::CleanDistrict,std::any_of(profile.records.begin(),profile.records.end(),
+    [](const Record &record){return record.complete&&record.best_deaths==0;}));
+  const auto any_mastery=[&](const auto &matches) {
+    return std::any_of(profile.trials.begin(),profile.trials.end(),matches)||
+      std::any_of(profile.challenges.begin(),profile.challenges.end(),
+        [&](const SeedRecord &record){return matches(record.record);});
+  };
+  include(Achievement::Mastery,any_mastery([](const Record &record){return record.complete;}));
+  include(Achievement::CleanMastery,any_mastery([](const Record &record){return record.complete&&record.best_deaths==0;}));
+  constexpr uint32_t gear=HarborScarf|DockBoots|SignalSatchel;
+  include(Achievement::AllGear,(profile.cosmetics&gear)==gear);
+  include(Achievement::FirstTestimony,(profile.discoveries&7)!=0);
+  include(Achievement::ThreeTestimonies,(profile.discoveries&7)==7);
   return flags;
 }
 
@@ -409,6 +472,9 @@ struct View {
   int machinery_kind=0;
   uint64_t machinery_changed=0;
   double presentation_time=0, npc_reaction_left=0, lamp_left=0, death_left=0;
+  bool achievement_menu=false;
+  int achievement_selection=0;
+  AwardGroup achievement_group=AwardGroup::All;
   int achievement_toast=-1;
   double achievement_left=0;
   static constexpr double water_splash_duration=.42;

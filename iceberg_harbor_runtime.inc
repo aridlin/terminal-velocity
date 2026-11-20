@@ -3,6 +3,7 @@
 // checkpoint persistence, so no separate unsaved mission state is needed.
   bool harbor_interact(const Interaction &node) {
     if(node.kind==InteractionKind::DockWorker) {
+      unlock_achievement(iceberg::Achievement::DockChat);
       static constexpr iceberg::Text lines[]={
         {"Mewy znów polują na mój obiad.","The gulls are after my lunch again."},
         {"Nie wszystko, co przecieka, jest statkiem.","Some leaks don't even come with a boat."},

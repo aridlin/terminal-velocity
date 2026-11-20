@@ -188,6 +188,8 @@
       } else if(grid_.template_id==201) {
         world_art(46,37,{"┌──────────────┐","│ ▤▤▤▤▤▤▤▤▤▤▤▤ │","│ ▤▤▤▤▤▤▤▤▤▤▤▤ │","│              │",(state_.adventure.discoveries&4)?"│  41  /  41   │":"│  41  /  40   │","│              │","│    ○    ▣    │","└──────┬───────┘","       │"},0x7e939b);
         world_art(8,32,{"┌─────────────────────────────────────────────────────────────────┐","│                                                                 │"},0x28363c);
+      } else if(grid_.template_id==200+iceberg::UnnumberedFloor) {
+        draw_unnumbered_floor();
       } else {
         const auto &lift=grid_.platforms.front();
         const auto deck=lift.at(state_.elapsed);
@@ -483,6 +485,10 @@
           draw_heatworks_relay(node.area.right()+.4,y,grid_.platforms.front());
         auto [sx,sy]=screen(x,y-.001);++sy;
         resident_sprite(node.id,sx,sy);
+      } else if(node.kind==InteractionKind::SideStory) {
+        draw_side_prop(node,x+area.w*.5,y);
+      } else if(node.kind==InteractionKind::Secret&&node.id==iceberg::UnnumberedFloor) {
+        prop_art(x+area.w*.5,y,{"╔═════╗","║│   │║","║│   ○║","║│   │║","╚═════╝"},0x746e62);
       } else if(node.kind==InteractionKind::DockWorker) {
         draw_dock_worker(x,y,std::fmod(state_.adventure.presentation_time+node.id,2.4));
       } else if(node.kind==InteractionKind::Carry) {
@@ -662,15 +668,112 @@
       line(rows_-2,tr("↑↓ · ENTER wybierz · P wróć","↑↓ · ENTER select · P back"),d.accent);
     }
   }
+  void draw_unnumbered_floor() {
+    const double time=state_.elapsed;
+    draw_scenery_pipe({{0,25},{41,25},{41,29},{106,29},{106,33},{145,33}},0x516266);
+    draw_scenery_pipe({{18,25},{18,39},{21,39},{21,42}},0x697171);
+    draw_scenery_pipe({{53,29},{53,38},{55,38},{55,45}},0x536165);
+    draw_scenery_pipe({{91,29},{91,47}},0x536165);
+    for(const auto &[x,floor]:std::array<std::pair<int,int>,6>{{{14,45},{32,48},{56,48},{79,51},{103,51},{132,51}}}) {
+      world_art(x-2,31,{"╔═══╗","╚═╤═╝"},0x617173);
+      const double phase=std::fmod(time+x*.13,4.);
+      const bool on=x<65||phase>.37;
+      if(on) {
+        world_text(x-1,32,"•••",x<65?0xc69e6e:0x907c62);
+        for(int row=34;row<floor;row+=2) {
+          const double spread=(row-31)*.28;
+          world_text(x-spread,row,"·",0x514f47);
+          world_text(x+spread,row,"·",0x514f47);
+        }
+      }
+    }
+    for(double x:{24.,43.,83.,118.})
+      world_art(x,38,{"╔═══╗","║│││║","║│││║","║│││║","║│││║","╚═══╝"},0x434c50);
+    const auto deck=grid_.platforms.front().at(time);
+    draw_scenery_pipe({{71.5,29},{71.5,deck.y}},0x5a6262);
+    const double drip=std::fmod(time,1.9);
+    if(drip<1.4)world_text(108,33+12*drip*drip,drip>1.25?"∿":"╵",0x8aabae);
+    const bool heard=state_.adventure.discoveries&iceberg::achievement_bit(iceberg::Achievement::WitnessTape);
+    const bool near_end=state_.player.x>93&&state_.player.x<120;
+    if(heard&&near_end&&std::fmod(time,6.1)<2.4)
+      world_art(122,40,{" ▄▄ "," █▌ ","▐██▌"," ▌▐ "},0x373b3c);
+    world_art(133,40,{"╔═════╗","║ ▪ ▪ ║","║ ║ ║ ║","║ ║ ║ ║","║ ║ ║ ║","╚═════╝"},0x657578);
+  }
+  void draw_side_prop(const Interaction &node,double x,double y) {
+    using iceberg::SideStory;
+    const auto type=SideStory(node.id);
+    switch(type) {
+      case SideStory::HarborStub:
+        prop_art(x,y,{"╭─────╮","│ 11▤ │","╰──┬──╯"},0xa8997c);break;
+      case SideStory::EstatePlate:
+        prop_art(x,y,{"╔═══╗","║11 ║","║↓↶ ║","╚═══╝"},0xa09579);break;
+      case SideStory::ArchiveCopy:
+        prop_art(x,y,{"╭─┬───╮","│11▤▥ │","╰─────╯"},0x8e9da2);break;
+      case SideStory::Casting:
+        if(!(state_.adventure.task_items[1]&iceberg::side_flag(iceberg::SideFlag::Casting)))
+          prop_art(x,y,{" ╭╮ "," ││ ","╭┴┴╮","╰──╯"},0xd0a199);
+        break;
+      case SideStory::Intercom:
+        prop_art(x,y,{"╔═══╗","║▤ ◦║","║╭╮ ║","╚╪╝═╝"},0x7e9590);break;
+      case SideStory::Tape:
+        prop_art(x,y,{"╔═══════╗","║◎───◎ ▪║","╟───────╢","║ ▤▤▤▤  ║","╚═══════╝"},0x9caa92);break;
+      case SideStory::Roster:
+        prop_art(x,y,{"╭───────╮","│ ▤▤▤▤  │","╞═══════╡","│ ▱ ▱ ▱ │","┴───────┴"},0xaa9679);break;
+      case SideStory::EmergencyBell:
+        prop_art(x,y,{"╭───╮","│ ⌂ │","╰─┬─╯","  │  "},0xa49e89);break;
+      case SideStory::HeatworksMug:
+        prop_art(x,y,{"╭──╮╮","╰──╯╯"},0xc2a58a);break;
+      case SideStory::GardensPot:
+        prop_art(x,y,{" ╭──╮ ","╱░░░░╲","╘════╛"},0xba886e);break;
+      case SideStory::CrownPunch:
+        prop_art(x,y,{"╭───╮","│ ▤ │","╞═══╡","  │  "},0x9ca9b2);break;
+    }
+  }
+  void draw_award_entries(bool menu,int top) {
+    const auto &v=state_.adventure;
+    const auto &d=iceberg::Districts[size_t(grid_.district)];
+    const auto entries=iceberg::award_entries(menu?v.achievement_group:iceberg::AwardGroup::All);
+    const auto earned=[&](size_t i){return bool(v.discoveries&iceberg::achievement_bit(iceberg::Achievement(i)));};
+    const int selected=std::clamp(v.achievement_selection,0,int(entries.size())-1);
+    const int visible=std::max(1,rows_-top-6);
+    const int start=std::clamp(selected-visible/2,0,std::max(0,int(entries.size())-visible));
+    int total=0;
+    for(size_t i=0;i<iceberg::Achievements.size();++i)total+=earned(i);
+    if(menu)center(2,tr("OSIĄGNIĘCIA","ACHIEVEMENTS"),Color::Gold);
+    paint_text(top,2,std::to_string(total)+" / "+std::to_string(iceberg::Achievements.size())+
+      (menu?" · "+iceberg::AwardGroups[size_t(v.achievement_group)].get(v.language):""),d.accent);
+    for(int n=start;n<std::min(int(entries.size()),start+visible);++n) {
+      const auto i=entries[size_t(n)];
+      const auto &award=iceberg::Achievements[i];
+      const auto title=award.hidden&&!earned(i)?tr("Ukryte osiągnięcie","Hidden achievement"):award.title.get(v.language);
+      auto label=glyphs(std::string(n==selected?"▸ ":"  ")+(earned(i)?"◆ ":"◇ ")+title);
+      std::string line;
+      for(int x=0;x<std::min(int(label.size()),cols_-4);++x)
+        line+=x==cols_-5&&int(label.size())>cols_-4?"…":label[size_t(x)];
+      paint_text(top+1+n-start,2,line,earned(i)?0xffd68a:d.light);
+    }
+    const auto i=entries[size_t(selected)];
+    const auto &award=iceberg::Achievements[i];
+    int y=rows_-4;
+    if(!award.hidden||earned(i))
+      for(const auto &line:wrap(award.condition.get(v.language),cols_-4))
+        if(y<rows_-2)paint_text(y++,2,line,0xa8bfc2);
+    const auto controls=menu?(cols_<48?tr("↑↓ · B grupa · P wróć","↑↓ · B group · P back"):
+      tr("↑↓ wybór · B grupa · P wróć","↑↓ select · B group · P back")):
+      tr("↑↓ · B zakładka · TAB wróć","↑↓ · B tab · TAB back");
+    paint_text(rows_-2,2,controls,d.light);
+  }
   void draw_iceberg_menu() {
     auto &v=state_.adventure;
     if(v.save_picker||v.tour_picker){draw_profile_picker();return;}
+    if(v.achievement_menu){draw_award_entries(true,4);return;}
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     frame(4,2,cols_-4,rows_-7,d.stone);
-    center(6,"T E R M I N A L   V E L O C I T Y",Color::Gold);
-    center(8,tr("P O D   P O W I E R Z C H N I Ą","B E N E A T H   T H E   S U R F A C E"),Color::Player);
+    const bool compact=rows_<25;
+    center(compact?4:6,"T E R M I N A L   V E L O C I T Y",Color::Gold);
+    if(!compact)center(8,tr("P O D   P O W I E R Z C H N I Ą","B E N E A T H   T H E   S U R F A C E"),Color::Player);
     bool wide=rows_>=30&&cols_>=100;
-    int first=wide?13:rows_>=30?16:10;
+    int first=wide?13:rows_>=30?16:compact?7:10;
     if(wide) {
       const char *city[]={
         "                    ▄╱╲▄",
@@ -701,26 +804,26 @@
       const char *art[]={"             ▄╱╲▄             ","         ▄▄╱░░░░╲▄▄           ","  ∿∿∿∿∿╱░░░░░░░░░░╲∿∿∿∿∿    ","       ╲▒▤▒▒░╬░▒▒▤▒╱          ","        ╲▒▒▒▒▒▒▒▒▒╱           "};
       for(int i=0;i<5;++i)center(10+i,art[i],Color::Ice);
     }
-    std::array<std::string,6> labels{
+    std::array<std::string,7> labels{
       v.can_continue?tr("KONTYNUUJ PODRÓŻ","CONTINUE JOURNEY"):tr("ROZPOCZNIJ PODRÓŻ","BEGIN JOURNEY"),
       tr("NOWA HISTORIA","NEW STORY"),v.endless_resume?tr("WZNÓW WYPRAWĘ BEZ KOŃCA","RESUME ENDLESS EXPEDITION"):tr("WYPRAWA BEZ KOŃCA","ENDLESS EXPEDITION"),
       v.trial_resume?tr("WZNÓW PRÓBĘ MISTRZOWSKĄ","RESUME MASTERY TRIAL"):
         v.trial_replay?tr("POWTÓRZ PRÓBĘ MISTRZOWSKĄ","REPLAY MASTERY TRIAL"):tr("PRÓBA MISTRZOWSKA","MASTERY TRIAL"),
       tr("USTAWIENIA","SETTINGS"),
-      tr("TRASY KLASYCZNE","CLASSIC COURSES")};
+      tr("TRASY KLASYCZNE","CLASSIC COURSES"),tr("OSIĄGNIĘCIA","ACHIEVEMENTS")};
     auto menu_line=[&](int row,const std::string &line,Color color=Color::Text){
       if(wide)text(row,cols_/2+1,line,color);else center(row,line,color);
     };
-    for(int i=0;i<6;++i)menu_line(first+i,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+"  "+labels[size_t(i)],v.selected==i?Color::Gold:Color::Text);
+    for(int i=0;i<int(labels.size());++i)menu_line(first+i,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+"  "+labels[size_t(i)],v.selected==i?Color::Gold:Color::Text);
     if(v.selected==2||v.selected==3) {
-      int r=std::min(first+7,rows_-7);
+      int r=first+7;
       menu_line(r,tr("J zmień dzielnicę · ","J change district · ")+iceberg::Districts[size_t(v.run_district)].name.get(v.language),Color::Player);
       const auto &record=v.trials[size_t(v.run_district)];
       if(v.selected==3&&record.complete)menu_line(r+1,trial_record_lines(record,cols_).front(),Color::Gold);
       else if(v.selected==2)menu_line(r+1,tr("Najdalsza wyprawa: ","Farthest expedition: ")+std::to_string(v.endless_best),Color::Gold);
     }
-    center(rows_-5,tr("W/S wybór  ENTER graj  R nowa wyprawa  L język  Q wyjście","W/S choose  ENTER play  R new expedition  L language  Q quit"),Color::Text);
-    if(v.notice_left>0)center(rows_-4,v.notice,Color::Gold);
+    center(compact?rows_-3:rows_-5,tr("W/S wybór  ENTER graj  R nowa wyprawa  L język  Q wyjście","W/S choose  ENTER play  R new expedition  L language  Q quit"),Color::Text);
+    if(v.notice_left>0)center(compact?rows_-2:rows_-4,v.notice,Color::Gold);
     if(v.confirm_new) {
       frame(9,5,cols_-10,8,d.accent);
       center(11,restart_title(),Color::Gold);
@@ -812,16 +915,7 @@
       narrow?tr("Cele","Awards"):tr("Osiągnięcia","Achievements")};
     std::string tabline;for(int i=0;i<4;++i){if(i)tabline+=" · ";tabline+=i==v.journal_tab?"["+tabs[size_t(i)]+"]":tabs[size_t(i)];}
     paint_text(3,2,tabline,d.light);
-    if(v.journal_tab==3) {
-      for(size_t i=0;i<iceberg::Achievements.size();++i) {
-        const auto &award=iceberg::Achievements[i];
-        const bool unlocked=v.discoveries&iceberg::achievement_bit(iceberg::Achievement(i));
-        paint_text(5+int(i)*2,2,(unlocked?"◆ ":"◇ ")+award.title.get(l),unlocked?0xffd68a:d.light);
-        paint_text(6+int(i)*2,4,award.condition.get(l),0xa8bfc2);
-      }
-      paint_text(rows_-2,2,tr("B zakładka · TAB wróć","B tab · TAB return"),d.light);
-      return;
-    }
+    if(v.journal_tab==3) {draw_award_entries(false,5);return;}
     auto entries=iceberg::journal_entries(v);
     if(entries.empty()) {
       int y=7;for(const auto &line:wrap(v.journal_tab==1?tr("Ukończone zadania i ich skutki pojawią się tutaj.","Completed tasks and their outcomes will appear here."):tr("Znalezione dokumenty możesz tutaj przeczytać ponownie.","Documents you find can be read again here."),cols_-4))paint_text(y++,2,line,0xeee7d6);

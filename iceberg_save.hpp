@@ -121,7 +121,7 @@ class SaveStore {
     q.itinerary.resize(count);
     for (int &id : q.itinerary) if (!(data >> id) || !valid_room_id(id)) return false;
     if (magic!="TVICE2" && !(data >> q.at_content_boundary))return false;
-    if (!(data >> q.hidden_room >> q.visit_district) || q.hidden_room < -1 || q.hidden_room > 2 || q.visit_district < -1 || q.visit_district >= DistrictCount) return false;
+    if (!(data >> q.hidden_room >> q.visit_district) || q.hidden_room < -1 || q.hidden_room > UnnumberedFloor || q.visit_district < -1 || q.visit_district >= DistrictCount) return false;
     for (auto &e : q.expeditions) {
       if (!(data >> e.active >> e.seed >> e.district >> e.room >> e.depth >> e.checkpoint >>
         e.collected >> e.switches >> e.room_seconds >> e.seconds >> e.room_deaths >> e.deaths >> e.treasures >> count)) return false;
