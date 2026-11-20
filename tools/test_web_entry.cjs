@@ -38,6 +38,46 @@ const server=http.createServer((req,res)=>{
   await loadingPage.waitForFunction(()=>!document.querySelector('#start').disabled);
   assert.equal(await loadingPage.locator('html').getAttribute('lang'),'pl','explicit choice during loading wins');
   await loadingContext.close();console.log('PASS explicit language choice during module loading');
+  const entryHtml=fs.readFileSync(path.join(root,'web/dist/index.html'),'utf8');
+  const oldRelease='111111111111',newRelease='222222222222';
+  for(const startWhileChecking of [false,true]){
+   const page=await browser.newPage({locale:'en-US'});
+   let current=oldRelease,releaseCheck;
+   await page.route('**/releases/*/*',route=>{
+    const asset=new URL(route.request().url()).pathname.replace(/^\/releases\/[a-f0-9]{12}\//,'/');
+    return route.continue({url:url+asset});
+   });
+   await page.route(url+'/',async route=>{
+    if(releaseCheck&&route.request().resourceType()==='fetch')await releaseCheck;
+    await route.fulfill({contentType:'text/html',body:entryHtml.replace('<head>','<head><base href="./releases/'+current+'/">')});
+   });
+   await page.route('**/language.php',route=>route.fulfill({json:{language:'en'}}));
+   const firstCheck=page.waitForResponse(response=>response.url()===url+'/'&&response.request().resourceType()==='fetch',{timeout:5000});
+   await page.goto(url);
+   await firstCheck;
+   await page.waitForFunction(()=>!document.querySelector('#start').disabled&&!checkingRelease);
+   current=newRelease;
+   let finishCheck;
+   if(startWhileChecking)releaseCheck=new Promise(resolve=>{finishCheck=resolve;});
+   const returned=page.waitForRequest(request=>request.url()===url+'/'&&request.resourceType()==='fetch');
+   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+   await returned;
+   if(startWhileChecking){
+    await page.locator('#start').click();
+    await page.waitForFunction(()=>started);
+    finishCheck();
+    await page.waitForFunction(()=>!checkingRelease);
+    assert.match(await page.locator('base').getAttribute('href'),new RegExp(oldRelease),
+     'a delayed update response keeps the already started session');
+   }else{
+    await page.waitForFunction(release=>document.querySelector('base').href.includes(release),newRelease);
+    await page.waitForFunction(()=>!document.querySelector('#start').disabled);
+    await page.locator('#start').click();
+    await page.waitForFunction(()=>started);
+   }
+   await page.close();
+  }
+  console.log('PASS returning to an idle tab refreshes the release, while starting during the check preserves the game');
   for(const asset of ['terminal-velocity.js','terminal-velocity.wasm','terminal-velocity.data']){
    const offline=await browser.newPage({locale:'en-US'});
    await offline.route('**/'+asset,route=>route.abort('failed'));

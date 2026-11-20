@@ -1304,4 +1304,33 @@ for(const button of document.querySelectorAll('#account,#account-fullscreen')){
 setInterval(syncSave,5000);
 if(accounts)setInterval(()=>{if(accountSlot()&&!accountBooting&&!importPending)accounts.sync();},15000);
 
+// The live entry names its versioned assets in <base>. Check it while the
+// start screen is idle so a returning player does not launch an old build.
+const entryRelease=page=>/^\.\/releases\/([a-f0-9]{12})\/$/.exec(
+ page.querySelector('base[href]')?.getAttribute('href')||'')?.[1];
+const loadedRelease=entryRelease(document);
+let checkingRelease=false;
+async function refreshIdleEntry(){
+ if(!loadedRelease||started||checkingRelease||document.hidden)return;
+ checkingRelease=true;
+ const controller=new AbortController();
+ const deadline=setTimeout(()=>controller.abort(),2500);
+ try{
+  const response=await fetch(location.href,{cache:'no-store',mode:'same-origin',redirect:'error',signal:controller.signal});
+  if(!response.ok)return;
+  const entry=new DOMParser().parseFromString(await response.text(),'text/html');
+  const latest=entryRelease(entry);
+  // A pending network response must never reload a game that has started.
+  if(latest&&latest!==loadedRelease&&!started&&!document.hidden)location.reload();
+ }catch{}finally{
+  clearTimeout(deadline);
+  checkingRelease=false;
+ }
+}
+if(loadedRelease){
+ addEventListener('focus',refreshIdleEntry);
+ addEventListener('pageshow',refreshIdleEntry);
+ document.addEventListener('visibilitychange',refreshIdleEntry);
+}
+
 translateUI();resize();watchEngineLoad();
