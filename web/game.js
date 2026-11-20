@@ -438,7 +438,8 @@ addEventListener('keydown',e=>{
  const target=e.target instanceof Element?e.target:null;
  const settingsBack=e.code==='Escape'&&settingsKeys.contains(target);
  const pauseScreen=pauseScreenOpen();
- const resumeShortcut=pauseScreen&&(e.code==='Escape'||e.code==='KeyP')&&
+ const pauseActionShortcut=pauseScreen&&
+  (e.code==='Escape'||e.code==='KeyP'||(e.code==='KeyR'&&!retryButton.disabled))&&
   target?.matches('#toolbar button[data-tap],#fullscreen-buttons button[data-tap],#touch-use');
  const tourPage=e.code==='PageUp'||e.code==='PageDown';
  if(tourPage&&!tourPicker)return;
@@ -454,7 +455,7 @@ addEventListener('keydown',e=>{
  const mapShortcut=(timelineDirection||mapAction)&&timelineShortcuts.has(e.code);
  const timelineNavigation=(timelineDirection||(mapAction&&expeditionTimelineOpen()))&&e.code.startsWith('Arrow');
  if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !resumeShortcut&&!settingsBack&&!menuNavigation&&!cancelReplacement&&!tourNavigation&&
+    !pauseActionShortcut&&!settingsBack&&!menuNavigation&&!cancelReplacement&&!tourNavigation&&
     !mapShortcut&&!timelineNavigation)return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
@@ -464,7 +465,7 @@ addEventListener('keydown',e=>{
   if(shiftKeys.size===1)dashShift=e.code;
   return;
  }
- if(resumeShortcut)canvas.focus({preventScroll:true});
+ if(pauseActionShortcut)canvas.focus({preventScroll:true});
  tap(keyMap[e.code]);
  keyboard.add(e.code);
  recompute();
