@@ -1744,10 +1744,11 @@ const server=http.createServer((req,res)=>{
    'leaving the Debug Tour returns focus to the game');
   await page.keyboard.press('Enter');
   await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 1/'));
-  const secondTourRow=await page.locator('#game').evaluate(game=>{
-   const box=game.getBoundingClientRect();
+  const secondTourRow=await (await page.waitForFunction(()=>{
+   if(!canvasFit||!window.tourPickerHeading?.includes('DEBUG TOUR 1/'))return null;
+   const box=canvas.getBoundingClientRect();
    return {x:box.x+box.width/2,y:box.y+5.5*box.height/canvasFit.h};
-  });
+  })).jsonValue();
   await page.touchscreen.tap(secondTourRow.x,secondTourRow.y);
   await page.waitForFunction(()=>window.tourPickerHeading?.includes('DEBUG TOUR 2/'));
   assert.equal(await page.evaluate(()=>tourPicker&&!inTour()),true,'a row tap selects without starting the sample');
