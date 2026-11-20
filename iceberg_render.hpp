@@ -766,11 +766,17 @@
       }
     const auto shadow=[&](double x,double y,uint32_t color) {
       const auto [col,head]=screen(x,y);
-      const auto shape=std::array{"▄","█","╱"};
-      for(int i=0;i<int(shape.size());++i) {
-        const int row=head+i;
-        if(row>top&&row<bottom&&row>=first_row&&row<=last_row&&col>left&&col<right)
-          glass_cell(row,col,shape[size_t(i)],color);
+      const std::array<std::array<const char *,3>,3> shape{{
+        {{"","▄",""}},{{"▐","█","▌"}},{{"╱","","╲"}}
+      }};
+      for(int y=0;y<int(shape.size());++y) {
+        const int row=head+y;
+        if(row<=top||row>=bottom||row<first_row||row>last_row)continue;
+        for(int x=0;x<3;++x) {
+          const int cell=col+x-1;
+          const auto glyph=shape[size_t(y)][size_t(x)];
+          if(*glyph&&cell>left&&cell<right)glass_cell(row,cell,glyph,color);
+        }
       }
     };
     if(!cleared&&v.platform_reflection.size()>=11) {
