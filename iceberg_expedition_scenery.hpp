@@ -210,6 +210,22 @@
 
   void draw_heatworks_turbine(const AirField &fan) {
     const double row=aspect_*scale_,floor=fan.area.bottom(),time=state_.elapsed;
+    if(fan.ax==0.) {
+      const double center=fan.area.x+fan.area.w*.5;
+      const double pressure=fan.strength(time);
+      const auto color=pressure>.6?0xcbe5a5:0xa18472;
+      draw_scenery_pipe({{center,62.},{center,floor+3.8},{center-2.,floor+3.8}},0x71818a);
+      world_art(center-4*scale_,floor-3*row,{"╞╪╪╪╪╪╪╪╡",
+        " ╲‒◍‒◍‒╱ ","  ╰═╤═╯  "},color);
+      const int count=3+int(pressure*11.);
+      for(int i=0;i<count;++i) {
+        const double rise=std::fmod(time*(.64+.5*pressure)+i*.126,1.);
+        const double x=fan.area.x+fan.area.w*(.5+.34*std::sin(i*3.1+rise*8.));
+        world_text(x,floor-rise*fan.area.h,i%3==0?"↑":"┆",pressure>.65?0xbce5d7:0x557989);
+      }
+      world_text(center+4*scale_,floor-3*row,pressure>.6?"↑":"○",color);
+      return;
+    }
     const double x=fan.area.x-13*scale_,y=floor-9*row;
     const double pressure=fan.strength(time);
     const bool jump_now=fan.strength(time+.25)>=.86;
@@ -254,12 +270,80 @@
     }
   }
 
+  void draw_steam_chimney(const AirField &jet,double pressure) {
+    const auto &pattern=iceworld::pattern(grid_.template_id);
+    const auto &area=jet.area;
+    const double center=area.x+area.w*.5;
+    const double intake=area.bottom()+2.4,cap=area.y-7.;
+    const double left=area.x-2.,base=61.8;
+    double right=area.right()+1.6;
+    for(const auto &shelf:pattern.optional)right=std::max(right,shelf.x+shelf.w-.8);
+    const auto [start,top]=screen(left,cap);
+    const auto end=screen(right,cap).first;
+    const auto foot=screen(left,base).second;
+    constexpr uint32_t iron=0x79858e,frame=0x53626b,grating=0x3a474f;
+    const auto steel=[&](int x,int y,const char *glyph,uint32_t color) {
+      if(x<0||x>=cols_||y<4||y>=rows_-3)return;
+      const auto material=buffer_[y][x].color;
+      if(material==Color::Solid||material==Color::Player||material==Color::Hazard)return;
+      put(y,x,{glyph,Color::Decor,false,false,0,color});
+    };
+    const auto beam=[&](int from,int to,int y,uint32_t color) {
+      if(y<4||y>=rows_-3)return;
+      for(int x=std::max(0,from);x<=std::min(cols_-1,to);++x)
+        steel(x,y,x==from?"╞":x==to?"╡":(x-from)%8==0?"╪":"═",color);
+    };
+    for(int y=std::max(4,top);y<=std::min(rows_-4,foot);++y) {
+      steel(start,y,(y-top)%6==0?"╫":"║",iron);
+      steel(end,y,(y-top)%6==0?"╫":"║",iron);
+      if((y-top)%6==0)beam(start+1,end-1,y,grating);
+    }
+    beam(start,end,top,iron);
+    beam(start,end,foot,iron);
+    for(const auto &shelf:pattern.optional) {
+      const double anchor=shelf.x+shelf.w*.66;
+      if(!grid_.solid_at(int(anchor),shelf.y))continue;
+      const auto [x,y]=screen(anchor,shelf.y+1.);
+      beam(x,end,y,iron);
+      beam(x+2,end,y+1,frame);
+      beam(x+4,end,y+2,frame);
+    }
+
+    const auto [nozzle,lip]=screen(center,area.bottom());
+    const int boiler=screen(center,intake).second;
+    for(int y=std::max(4,lip);y<=std::min(rows_-4,boiler);++y)
+      steel(nozzle,y,(y-lip)%3==0?"╫":"║",iron);
+    beam(start,nozzle,boiler,iron);
+    beam(nozzle,end,boiler,iron);
+    static constexpr const char *drum[4][9]={
+      {"╭","─","─","─","╨","─","─","─","╮"},
+      {"│"," ","▪"," ","▪"," ","▪"," ","│"},
+      {"╡"," ","▥"," ","▥"," ","▥"," ","╞"},
+      {"╰","─","┬","─","─","─","┬","─","╯"}};
+    const int drum_x=screen(center+5.2,intake).first;
+    for(int dy=0;dy<4;++dy)for(int dx=0;dx<9;++dx)
+      steel(drum_x-4+dx,boiler-2+dy,drum[dy][dx],iron);
+    for(int y=std::max(4,boiler+2);y<=std::min(rows_-4,foot);++y) {
+      steel(drum_x-2,y,"│",frame);
+      steel(drum_x+2,y,"│",frame);
+    }
+    const auto [dial,dial_y]=screen(center+2.1,area.bottom()+.15);
+    beam(nozzle,dial-2,dial_y+1,iron);
+    for(int dy=0;dy<3;++dy)for(int dx=-2;dx<=2;++dx) {
+      static constexpr const char *casework[3][5]={
+        {"╭","─","─","─","╮"},{"╡"," "," "," ","│"},{"╰","─","─","─","╯"}};
+      steel(dial+dx,dial_y+dy,casework[dy][dx+2],iron);
+    }
+    steel(dial,dial_y+1,pressure>.55?"╱":pressure>.18?"│":"╲",pressure>.55?0xb4e3e3:0xb7a788);
+  }
+
   void draw_expedition_steam_lift(const AirField &jet) {
     const auto &area=jet.area;
     const double row=aspect_*scale_,bottom=area.bottom(),center=area.x+area.w*.5;
     const double time=state_.elapsed;
     const bool powered=jet.active(grid_.switch_flags);
     const double pressure=powered?jet.strength(time):0.;
+    if(!jet.enabled_by&&(grid_.template_id==18||grid_.template_id==22))draw_steam_chimney(jet,pressure);
     constexpr uint32_t guide=0x4d7881,metal=0x739da3,steam=0xb4e3e3;
     if(jet.enabled_by) {
       const auto supply=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[&](const auto &node){

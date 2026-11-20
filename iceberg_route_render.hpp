@@ -12,7 +12,7 @@
     const bool has_gust=has_wind&&!turbine;
     const double wind_strength=has_gust?wind->strength(state_.elapsed):0.;
     const bool wind_lull=has_gust&&std::abs(wind_strength)<.2;
-    const char *wind_symbol=!has_wind?"":turbine?"↗":wind_lull?"○":wind->ax*wind_strength<0?"←":"→";
+    const char *wind_symbol=!has_wind?"":turbine?(wind->ax==0.?"↑":"↗"):wind_lull?"○":wind->ax*wind_strength<0?"←":"→";
     const uint32_t wind_color=wind_lull?0x8c9bb1:0xb4d7e4;
     const bool has_ice=!grid_.ice_strips.empty()||
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy&&!platform.fragile;});

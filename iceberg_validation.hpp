@@ -584,6 +584,73 @@ inline void add_heatworks_turbine(EngineGrid &room) {
   else room.air_fields.pop_back();
 }
 
+inline void add_heatworks_pressure_hazards(EngineGrid &room) {
+  if(room.district!=1)return;
+  struct Outlet { int room;double x,floor,period,phase; };
+  // The service lanes have room to jump. The warehouse and cool-down
+  // routes keep their warning outlets on the higher maintenance shelves.
+  static constexpr Outlet outlets[]{
+    {12,73.,42.,4.5,.21},{17,73.8,43.,4.8,.58},{19,88.,33.,5.3,.37},
+    {420,93.3,39.,4.7,.26},{425,63.3,33.,5.2,.41},{425,95.8,31.,5.2,.85}
+  };
+  const auto original=room.pulses.size();
+  for(const auto &outlet:outlets)if(outlet.room==room.template_id)
+    room.pulses.push_back({{outlet.x,outlet.floor-2.5,1.5,2.5},outlet.period,outlet.phase});
+  if(room.pulses.size()==original)return;
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.pulses.resize(original);
+}
+
+inline void add_heatworks_boiler_wall_fan(EngineGrid &room) {
+  if(room.district!=1||room.template_id!=14)return;
+  auto fan_room=room;
+  fan_room.add_solid_rect(75,45,3,1);
+  fan_room.air_fields.push_back({.area={75.,30.,2.8,15.},.ay=-165.,.period=5.,.phase=.46,.turbine=true});
+  const auto route=verify_route(fan_room);
+  if(route.complete&&route.deaths==0) {
+    fan_room.verification_policy=route.policy;
+    room=std::move(fan_room);
+  }
+}
+
+inline void add_heatworks_service_bypass(EngineGrid &room) {
+  if(room.district!=1||room.template_id!=16)return;
+  auto bypass=room;
+  bypass.air_fields.push_back({.area={107.,23.,2.9,17.},.ay=-162.,.enabled_by=1});
+  bypass.switch_flags|=1;
+  const auto route=verify_route(bypass);
+  if(!route.complete||route.deaths!=0)return;
+  room.air_fields=std::move(bypass.air_fields);
+  room.interactions.push_back({{102.,37.,3,3},InteractionKind::Valve,0,
+    {"Uruchom boczny obieg","Open the bypass feed"}});
+}
+
+inline void add_heatworks_service_gallery(EngineGrid &room) {
+  if(room.district!=1||room.template_id!=424)return;
+  const auto original=room.pulses.size();
+  // The pressure rise is visible from the approach to each catwalk.
+  room.pulses.push_back({{91.,48.,1.7,3.},5.1,.33});
+  room.pulses.push_back({{129.,40.,1.7,3.},4.6,.71});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.pulses.resize(original);
+}
+
+inline void add_heatworks_return_fan(EngineGrid &room) {
+  if(room.district!=1||room.template_id!=422)return;
+  auto fan_room=room;
+  // Install the fan in an extension of the turnback landing. The draft
+  // rises to the right of the first shelf, which it would otherwise hit.
+  fan_room.add_solid_rect(114,39,5,1);
+  fan_room.air_fields.push_back({.area={116.75,19.,2.7,20.},.ay=-177.,.period=5.4,.phase=.25,.turbine=true});
+  const auto route=verify_route(fan_room);
+  if(route.complete&&route.deaths==0) {
+    fan_room.verification_policy=route.policy;
+    room=std::move(fan_room);
+  }
+}
+
 inline void add_expedition_steam(EngineGrid &room) {
   if(room.district!=1||(room.template_id!=18&&room.template_id!=22))return;
   if(room.template_id==18)room.air_fields.push_back({{59.2,29.,2.6,19.},0.,-165.,4.8,0.});

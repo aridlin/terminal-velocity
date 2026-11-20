@@ -282,12 +282,21 @@ public:
     }
     return course;
   }
-  static void apply_expedition_mechanics(EngineGrid &room) {
+  static void apply_heatworks_mechanics(EngineGrid &room) {
+    if(room.district!=1)return;
     add_expedition_steam(room);
     add_heatworks_cargo_hoists(room);
     add_heatworks_twin_pistons(room);
     add_heatworks_pressure_bypass(room);
     add_heatworks_turbine(room);
+    add_heatworks_return_fan(room);
+    add_heatworks_service_gallery(room);
+    add_heatworks_pressure_hazards(room);
+    add_heatworks_boiler_wall_fan(room);
+    add_heatworks_service_bypass(room);
+  }
+  static void apply_expedition_mechanics(EngineGrid &room) {
+    apply_heatworks_mechanics(room);
     add_expedition_trams(room);
     add_expedition_stairwells(room);
     add_estate_clotheslines(room);
@@ -420,7 +429,10 @@ public:
         int leg=stage==2?0:stage==4?1:2;
         grid=verified_room(route_room_id(leg,room),
           iceberg::mix(profile.seed ^ unsigned(district*104729+leg*31+room)),district);
-        if(profile.layout_version>=4)add_garden_vines_and_traps(grid);
+        if(profile.layout_version>=4) {
+          apply_heatworks_mechanics(grid);
+          add_garden_vines_and_traps(grid);
+        }
       } else {
         auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
         if(e.itinerary.size()!=iceberg::RoomsPerLeg)
