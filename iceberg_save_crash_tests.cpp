@@ -12,6 +12,25 @@ int main() {
   previous.started=true;previous.seed=73;previous.story=219;
   previous.expeditions[0].active=true;
   for(int n=0;n<128;++n)previous.challenges.push_back({unsigned(n),n%2,iceberg::ContentVersion,{50.+n,n%4,n,true}});
+  {
+    const auto detour_path=folder/"detour.dat";
+    iceberg::SaveStore detour_store(detour_path);
+    auto detour=previous;
+    detour.district=2;detour.hidden_room=iceberg::UnnumberedFloor;
+    detour.expeditions[0].completed_legs.push_back({0,1,2,3,4,5,6,7});
+    detour.expeditions[0].depth=iceberg::RoomsPerLeg;
+    if(!detour_store.save(detour,true))return 3;
+    iceberg::Profile reloaded;
+    if(!detour_store.load(reloaded)||reloaded.hidden_room!=detour.hidden_room||
+       reloaded.expeditions[0].completed_legs!=detour.expeditions[0].completed_legs)return 3;
+    const auto portable=folder/"detour.backup";
+    if(!iceberg::SaveStore::write_backup(portable,reloaded)||
+       !iceberg::SaveStore::read_backup(portable,reloaded)||reloaded.hidden_room!=detour.hidden_room||
+       reloaded.expeditions[0].completed_legs!=detour.expeditions[0].completed_legs)return 3;
+    reloaded.hidden_room=-1;
+    if(!detour_store.save(reloaded,true)||!detour_store.load(reloaded)||reloaded.hidden_room!=-1)return 3;
+    std::cout<<"PASS basement resumes from current saves and portable backups, and clears on return\n";
+  }
   int old_count=0,new_count=0;
   for(int attempt=0;attempt<200;++attempt) {
     if(!store.save(previous))return 1;

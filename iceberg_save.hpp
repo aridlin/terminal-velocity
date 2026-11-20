@@ -13,6 +13,9 @@ class SaveStore {
   std::filesystem::path path_;
   static constexpr size_t MaxProfileBytes=65536;
   static constexpr int MaxExpeditionDepth=10000000;
+  // Current builds resume this detour. Older TVICE6 readers parse the same
+  // token as -1 and resume the saved parent room. Their own writes use -1.
+  static constexpr const char *BasementRoomToken="-01";
   static constexpr size_t max_history_bytes(size_t legs) {return 64+legs*(4*RoomsPerLeg+1);}
   static bool sync_file(const std::filesystem::path &file) {
 #ifdef _WIN32
@@ -121,7 +124,11 @@ class SaveStore {
     q.itinerary.resize(count);
     for (int &id : q.itinerary) if (!(data >> id) || !valid_room_id(id)) return false;
     if (magic!="TVICE2" && !(data >> q.at_content_boundary))return false;
-    if (!(data >> q.hidden_room >> q.visit_district) || q.hidden_room < -1 || q.hidden_room > UnnumberedFloor || q.visit_district < -1 || q.visit_district >= DistrictCount) return false;
+    std::string hidden_room;
+    if(!(data>>hidden_room>>q.visit_district)||q.visit_district<-1||q.visit_district>=DistrictCount)return false;
+    std::istringstream hidden_id(hidden_room);
+    if(!(hidden_id>>q.hidden_room)||!hidden_id.eof()||q.hidden_room<-1||q.hidden_room>UnnumberedFloor)return false;
+    if(magic=="TVICE6"&&hidden_room==BasementRoomToken)q.hidden_room=UnnumberedFloor;
     for (auto &e : q.expeditions) {
       if (!(data >> e.active >> e.seed >> e.district >> e.room >> e.depth >> e.checkpoint >>
         e.collected >> e.switches >> e.room_seconds >> e.seconds >> e.room_deaths >> e.deaths >> e.treasures >> count)) return false;
@@ -288,7 +295,10 @@ class SaveStore {
     body << p.itinerary.size() << '\n';
     for (int id : p.itinerary) body << id << ' ';
     body << '\n';
-    body << p.at_content_boundary << ' ' << p.hidden_room << ' ' << p.visit_district << '\n';
+    body << p.at_content_boundary << ' ';
+    if(p.hidden_room==UnnumberedFloor)body << BasementRoomToken;
+    else body << p.hidden_room;
+    body << ' ' << p.visit_district << '\n';
     for (const auto &e : p.expeditions) {
       body << e.active << ' ' << e.seed << ' ' << e.district << ' ' << e.room << ' ' << e.depth << ' ' << e.checkpoint << ' '
         << e.collected << ' ' << e.switches << ' ' << e.room_seconds << ' ' << e.seconds << ' ' << e.room_deaths << ' '
