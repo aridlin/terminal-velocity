@@ -60,8 +60,7 @@
       if(std::abs(player.x-x)<7.&&std::abs(player.y-y)<5.5)
         return tr("Przytrzymaj skok, by złapać","Hold jump to grab vine");
     }
-    if(player.grounded&&iceworld::nearby_traversal_inspection(grid_,state_))
-      return tr("[B] Obejrzyj z bliska","[B] Inspect nearby");
+    if(*view.traversal_hint.pl)return "[B] "+view.traversal_hint.get(view.language);
     if(view.notice_left>0)return view.notice;
     return quest_focus_hint();
   }

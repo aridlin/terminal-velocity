@@ -43,7 +43,8 @@ enum class Mode { Campaign, Endless, Trial };
 enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret, Interlude };
 enum class Rhythm { Flow, Precision, Vertical, Timing, Explore, Recovery };
 enum class Mechanic { None, Current, Steam, Conveyor, Echo, Growth, Wind };
-enum class InspectionArt { Parcel, Valve, Signal, Address, File, Seeds, Speaker, Thermometer, Sign, Dedication, Board, Door, Coin, Refill, Lamp, Character, Delivery, Chart };
+enum class InspectionArt { Parcel, Valve, Signal, Address, File, Seeds, Speaker, Thermometer, Sign, Dedication, Board, Door, Coin, Refill, Lamp, Character, Delivery, Chart, Traversal };
+enum class TraversalStudy { Sling, Piston, Turbine, Vent, Balcony, Cornice, Rack, Scanner, Vine, Flytrap, Ice, Wind, Count };
 struct Text {
   const char *pl = "";
   const char *en = "";
@@ -631,6 +632,7 @@ struct View {
   int reacting_npc=-1;
   Dialogue dialogue;
   std::string prompt, notice, room_name;
+  Text traversal_hint;
   double notice_left = 0;
   bool entry_notice = false;
   float music_volume = .65f, effects_volume = .75f, ambience_volume = .55f;

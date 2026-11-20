@@ -149,6 +149,12 @@ public:
   void sync_view() {
     auto &v=state.adventure;
     v.save_slot=save_slot;v.tour_scene=tour_scene;
+    v.traversal_hint={};
+    if(state.player.grounded) {
+      if(const auto *guide=iceworld::nearby_traversal_inspection(grid,state);
+         guide&&near_interaction()<0&&!iceworld::nearby_small_inspection(grid,state))
+        v.traversal_hint=guide->title;
+    }
     v.language=profile.language;v.mode=mode;v.district=grid.district;v.stage=stage;v.room=room;v.depth=depth;
     v.story=profile.story;v.journey_district=district;v.can_travel=(profile.story&(uint64_t(1)<<8))||profile.quests[2]==3||profile.finished||profile.at_content_boundary;
     v.unlocked=profile.unlocked;v.finished=profile.finished;v.at_content_boundary=profile.at_content_boundary;v.can_continue=profile.started;
@@ -1270,8 +1276,8 @@ public:
     }
     int at=near_interaction();
     if(at<0) {
-      auto close=[&](double x,double y){return std::hypot(state.player.x+.45-x,state.player.y+.6-y)<2.8;};
-      for(size_t i=0;i<grid.sweets.size();++i)if(!state.collected[i]&&close(grid.sweets[i].first,grid.sweets[i].second)) {
+      const auto small=iceworld::nearby_small_inspection(grid,state);
+      if(small==Art::Coin) {
         const auto tokens=std::to_string(iceberg::mastery_token_progress(profile))+"/"+
           std::to_string(iceberg::MasteryTokenFare);
         const auto body=trial_unlocked()?
@@ -1286,14 +1292,15 @@ public:
           " Spend tokens at the Lower Harbor outfitter.");
         describe(t("Żeton transportowy","Transit token"),body+survey+shop,"◉",Art::Coin);return;
       }
-      for(size_t i=0;i<grid.refills.size();++i)if(close(grid.refills[i].first,grid.refills[i].second)) {
+      if(small==Art::Refill) {
         describe(t("Ogniwo zrywu","Dash cell"),t("Szklana osłona chroni naładowany rdzeń. Dotknij go, żeby odzyskać zryw w powietrzu. Puste ogniwo odnowi się po chwili.","A glass casing protects a charged core. Touch it to restore an airborne dash. An empty cell recharges after a moment."),"▥",Art::Refill);return;
       }
-      for(auto [x,y]:grid.checkpoint_points)if(close(x,y)) {
+      if(small==Art::Lamp) {
         describe(t("Lampa powrotna","Return lamp"),t("Światło zapamiętuje bezpieczne miejsce na trasie. Po upadku wrócisz tutaj. Listy, naprawy i sprawy mieszkańców zostają załatwione.","The light marks a safe place on your route. A fall returns you here. Collected letters, repairs and completed character tasks stay done."),"▣",Art::Lamp);return;
       }
       if(const auto *mechanism=iceworld::nearby_traversal_inspection(grid,state)) {
-        describe(mechanism->title.get(profile.language),mechanism->body.get(profile.language),"▤",Art::Sign);
+        describe(mechanism->title.get(profile.language),mechanism->body.get(profile.language),"▤",Art::Traversal);
+        v.inspect_detail=int(mechanism->study);
         return;
       }
     }
