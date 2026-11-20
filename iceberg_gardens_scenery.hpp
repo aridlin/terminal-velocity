@@ -74,10 +74,15 @@
     world_text(pivot-2*scale_,y-row,"╞═══╡",iron);
     world_text(pivot,y-row,"┬",iron);
     world_text(pivot,y,"◉",0xbacaa0);
-    const bool ready=platform.stop(state_.elapsed)==-1;
+    const int stop=platform.stop(state_.elapsed);
+    const bool ready=stop==-1;
     draw_scenery_pipe({{58,48},{58,45.2}},iron);
     prop_art(58,43.7,{"╭─╮",ready?"│→│":"│○│","╰┬╯"},
       ready?0xc1dfa2:0x77918b);
+    // The upper light hangs from the lip the courier jumps onto.
+    draw_scenery_pipe({{69.4,41.},{69.4,42.}},iron);
+    prop_art(69.4,44.4,{"╭┴╮",stop==1?"│↗│":"│○│","╰─╯"},
+      stop==1?0xc1dfa2:0x77918b);
   }
 
   void draw_hanging_planter(const MovingPlatform &platform,const Rect &deck) {
