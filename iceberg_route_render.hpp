@@ -161,6 +161,9 @@
     if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
       [](const PulseHazard &hazard){return hazard.kind==PulseKind::Masonry;}))
       add_feature(tr("▼ Gruz","▼ Falling masonry"),0xec8a86);
+    if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
+      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Scanner;}))
+      add_feature(tr("║ Skaner","║ Scanner"),0xe9808a);
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t piston_docked_color=0xb5d599;
     const bool glass_catwalk=grid_.template_id==iceberg::ArchiveGlassRoom&&has_fragile;
@@ -499,10 +502,15 @@
     }
     for(const auto &vent:grid_.pulses) {
       const bool active=vent.active(state_.elapsed),warning=vent.warning(state_.elapsed);
-      mark(vent.area.x+vent.area.w*.5,vent.area.bottom(),
-        vent.kind==PulseKind::Flytrap?(active?"▲":warning?"!":"▽"):
-        vent.kind==PulseKind::Masonry?(active?"▼":warning?"!":"◇"):
-        active?"♨":warning?"↑":"╧",active?vent_active:warning?vent_warning:vent_idle);
+      const auto area=active?vent.damage_area(state_.elapsed):vent.area;
+      const char *symbol;
+      switch(vent.kind) {
+        case PulseKind::Flytrap:symbol=active?"▲":warning?"!":"▽";break;
+        case PulseKind::Masonry:symbol=active?"▼":warning?"!":"◇";break;
+        case PulseKind::Scanner:symbol=active?"║":warning?"!":"○";break;
+        default:symbol=active?"♨":warning?"↑":"╧";break;
+      }
+      mark(area.x+area.w*.5,area.bottom(),symbol,active?vent_active:warning?vent_warning:vent_idle);
     }
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];

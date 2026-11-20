@@ -108,11 +108,48 @@ void test_estate_balcony_and_masonry() {
   require(drop.active(run.elapsed)&&run.deaths==1,"the falling block hits when it reaches the courier");
 }
 
+void test_archive_rack_and_scanner() {
+  constexpr double dt=1./120.;
+  auto room=verified_room(37,73,3);
+  AdventureSession::apply_archive_mechanics(room);
+  require(room.platforms.size()==1&&room.platforms.front().archive_rack,"the catalogue shaft has working rack transport");
+  auto run=new_state(room);
+  run.spawn_x=62.;run.spawn_y=48.-kPlayerHeight;
+  reset_player(run);
+  for(int i=0;i<2;++i)world_step(run,room,{},dt);
+  for(int i=0;i<110&&run.player.support!=0;++i) {
+    const auto steer=run.player.x<65.9?1:run.player.x>66.5?-1:0;
+    world_step(run,room,{.move=steer,.jump_held=true,.jump_pressed=i==0},dt);
+  }
+  require(run.deaths==0&&run.player.support==0,"a normal jump boards the archive rack");
+  for(int i=0;i<260&&run.player.y>41.5;++i)world_step(run,room,{},dt);
+  require(run.deaths==0&&run.player.y<41.5&&run.player.support==0,"the archive rack carries a neutral rider to the upper level");
+
+  auto desk=verified_room(40,73,3);
+  AdventureSession::apply_archive_mechanics(desk);
+  require(desk.pulses.size()==1&&desk.pulses.front().kind==PulseKind::Scanner,"the archive desk is guarded by a scanner");
+  const auto &scanner=desk.pulses.front();
+  const double left=scanner.period*(1.012-scanner.phase),right=scanner.period*(1.20-scanner.phase);
+  require(scanner.damage_area(right).x>scanner.damage_area(left).x+4.,"the damaging strip sweeps from left to right");
+  run=new_state(desk);
+  run.player.x=scanner.area.x+.16;run.player.y=scanner.area.bottom()-kPlayerHeight;
+  run.elapsed=scanner.period*(1.90-scanner.phase);
+  world_step(run,desk,{},dt);
+  require(scanner.warning(run.elapsed)&&run.deaths==0,"the scanner warning leaves the desk safe");
+  run.elapsed=right;
+  world_step(run,desk,{},dt);
+  require(scanner.active(run.elapsed)&&run.deaths==0,"a beam at the far side does not hit the cleared desk");
+  run.elapsed=left;
+  world_step(run,desk,{},dt);
+  require(scanner.active(run.elapsed)&&run.deaths==1,"only contact with the moving beam triggers a retry");
+}
+
 int main() {
   try {
     test_heatworks_route_machinery();
     test_garden_vine_and_flytrap();
     test_estate_balcony_and_masonry();
+    test_archive_rack_and_scanner();
     for(unsigned seed=0;seed<10000;++seed) {
       auto itinerary=iceworld::make_itinerary(seed,0,24,4);
       for(int leg=0;leg<3;++leg) {

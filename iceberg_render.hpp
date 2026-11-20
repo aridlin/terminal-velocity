@@ -465,6 +465,7 @@
     for(const auto &pulse:grid_.pulses) {
       if(pulse.kind==PulseKind::Flytrap)draw_flytrap(pulse);
       else if(pulse.kind==PulseKind::Masonry)draw_falling_masonry(pulse);
+      else if(pulse.kind==PulseKind::Scanner)draw_archive_scanner(pulse);
       else draw_pulse_vent(pulse);
     }
     for(size_t i=0;i<grid_.enemies.size();++i)if(!state_.defeated[i]) {
