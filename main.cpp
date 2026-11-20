@@ -469,11 +469,13 @@ struct GrowingBridge {
     return (switches&flag)==flag?std::floor(area.w*amount):0.;
   }
 };
-enum class PulseKind { Steam, Flytrap, Masonry, Scanner, Surge };
+enum class PulseKind { Steam, Flytrap, Masonry, Scanner, Surge, Arc };
 struct PulseHazard {
   Rect area;
   double period=4,phase=0;
   PulseKind kind=PulseKind::Steam;
+  uint64_t cut_by=0;
+  bool powered(uint64_t switches) const {return (switches&cut_by)==0;}
   double cycle(double t) const {return std::fmod(t/period+phase,1.);}
   static constexpr double active_span=.24;
   bool active(double t) const {return cycle(t)<active_span;}
@@ -485,7 +487,7 @@ struct PulseHazard {
       const double sweep=std::clamp(cycle(t)/active_span,0.,1.);
       return {area.x+(area.w-width)*sweep,area.y,width,area.h};
     }
-    if(kind==PulseKind::Surge) {
+    if(kind==PulseKind::Surge||kind==PulseKind::Arc) {
       const double angle=std::acos(-1.)*std::clamp(cycle(t)/active_span,0.,1.);
       const double rise=std::lerp(.35,area.h,std::sin(angle));
       return {area.x,area.bottom()-rise,area.w,std::min(rise,2.)};
@@ -1466,7 +1468,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
         }
       }
     }
-  for(const auto &pulse:g.pulses)if(pulse.active(s.elapsed)&&p.rect().intersects(pulse.damage_area(s.elapsed))) {
+  for(const auto &pulse:g.pulses)if(pulse.powered(g.switch_flags)&&pulse.active(s.elapsed)&&p.rect().intersects(pulse.damage_area(s.elapsed))) {
     ++s.deaths;reset_player(s);return;
   }
   if (g.template_id == iceberg::CrownSentinel) {

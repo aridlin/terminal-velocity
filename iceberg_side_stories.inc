@@ -99,6 +99,17 @@
       return true;
     }
     switch(story) {
+      case SideStory::BasementBreaker: {
+        grid.switch_flags^=iceberg::BasementCircuitCut;
+        const bool cut=grid.switch_flags&iceberg::BasementCircuitCut;
+        if(cut)remember_side_flag(SideFlag::BasementPowerCut);
+        else profile.task_items[1]&=~iceberg::side_flag(SideFlag::BasementPowerCut);
+        audio.play(AudioCue::Metal1);
+        notice(cut?t("Zasilanie odcięte. Zostały lampy awaryjne.","Power cut. Emergency lamps only."):
+          t("Zasilanie wróciło. Uwaga na przewód.","Power restored. Watch the cable."),3);
+        persist();
+        break;
+      }
       case SideStory::RosterDesk:
         if(has_side_flag(SideFlag::RosterPosted)||has_side_flag(SideFlag::RosterSealed))inspect_nearby();
         else talk({{3,{"Poznaję ten ślad po ołówku. Pilnowałam Zosi w pralni, kiedy jej mama poszła po wodę.",

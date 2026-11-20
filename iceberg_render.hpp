@@ -471,6 +471,7 @@
       else if(pulse.kind==PulseKind::Masonry)draw_falling_masonry(pulse);
       else if(pulse.kind==PulseKind::Scanner)draw_archive_scanner(pulse);
       else if(pulse.kind==PulseKind::Surge)draw_harbor_surge(pulse);
+      else if(pulse.kind==PulseKind::Arc)draw_basement_arc(pulse);
       else draw_pulse_vent(pulse);
     }
     for(size_t i=0;i<grid_.enemies.size();++i)if(!state_.defeated[i]) {
@@ -668,15 +669,41 @@
       line(rows_-2,tr("↑↓ · ENTER wybierz · P wróć","↑↓ · ENTER select · P back"),d.accent);
     }
   }
+  void draw_basement_arc(const PulseHazard &arc) {
+    const auto &area=arc.area;
+    const bool powered=arc.powered(grid_.switch_flags);
+    const double time=state_.elapsed;
+    const bool live=powered&&arc.active(time),warning=powered&&arc.warning(time);
+    const uint32_t lamp=live?0xffdf92:warning?0xf3a75d:powered?0x9c725a:0x515655;
+    prop_art(area.x,area.bottom(),{"╭╮","╘╛"},lamp);
+    prop_art(area.right(),area.bottom(),{"╭╮","╘╛"},lamp);
+    if(live) {
+      const auto span=arc.damage_area(time);
+      for(int i=0;i<5;++i) {
+        const double x=span.x+(i+.2)*span.w/5.;
+        const double flicker=(std::sin(time*43.+i*2.)+1.)*.5;
+        world_text(x,span.y+flicker*span.h*.7,i%2?"╱":"≈",i%2?0xffd588:0xfff4d2);
+      }
+    } else if(warning) {
+      world_text(area.x+area.w*.5,area.bottom()-2.5,"!",lamp);
+      world_text(area.x+.4,area.bottom()-1.3,"·",lamp);
+      world_text(area.right()-1.2,area.bottom()-1.3,"·",lamp);
+    }
+  }
   void draw_unnumbered_floor() {
     const double time=state_.elapsed;
     draw_scenery_pipe({{0,25},{41,25},{41,29},{106,29},{106,33},{145,33}},0x516266);
     draw_scenery_pipe({{18,25},{18,39},{21,39},{21,42}},0x697171);
     draw_scenery_pipe({{53,29},{53,38},{55,38},{55,45}},0x536165);
-    draw_scenery_pipe({{91,29},{91,47}},0x536165);
+    draw_scenery_pipe({{91,29},{91,44},{87,44},{87,50.6}},0x536165);
+    const bool cut=grid_.switch_flags&iceberg::BasementCircuitCut;
     for(const auto &[x,floor]:std::array<std::pair<int,int>,6>{{{14,45},{32,48},{56,48},{79,51},{103,51},{132,51}}}) {
       world_art(x-2,31,{"╔═══╗","╚═╤═╝"},0x617173);
       const double phase=std::fmod(time+x*.13,4.);
+      if(cut&&x>=65) {
+        world_text(x-1,32,"▪",0x945c57);
+        continue;
+      }
       const bool on=x<65||phase>.37;
       if(on) {
         world_text(x-1,32,"•••",x<65?0xc69e6e:0x907c62);
@@ -727,6 +754,13 @@
         prop_art(x,y,{" ╭──╮ ","╱░░░░╲","╘════╛"},0xba886e);break;
       case SideStory::CrownPunch:
         prop_art(x,y,{"╭───╮","│ ▤ │","╞═══╡","  │  "},0x9ca9b2);break;
+      case SideStory::BasementBreaker: {
+        const bool cut=grid_.switch_flags&iceberg::BasementCircuitCut;
+        draw_scenery_pipe({{x,y-.5},{x,39},{91,39}},0x657173);
+        prop_art(x,y,cut?std::vector<std::string>{"╔═══╗","║ ○ ║","║ ╲ ║","╚═══╝"}:
+          std::vector<std::string>{"╔═══╗","║ ● ║","║ ╱ ║","╚═══╝"},cut?0x8a9290:0xd6a76e);
+        break;
+      }
       case SideStory::RosterDesk: {
         const auto flags=state_.adventure.task_items[1];
         if(flags&iceberg::side_flag(iceberg::SideFlag::RosterPosted))
