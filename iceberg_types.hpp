@@ -286,6 +286,7 @@ inline constexpr std::array DebugTour{
   TourStop{1,23,61.0,32,{"Gdy turbina zapali strzałkę, skocz wzdłuż podmuchu","Jump with the turbine draft when the arrow lights"}},
   TourStop{2,33,66.3,41,{"Odbijaj się między rynnami, by zebrać górny żeton","Wall-kick between the downspouts to reach the upper token"}},
   TourStop{4,58,50,38,{"Gdy zapali się strzałka, wskocz na liść w rynnie","Jump onto the flume leaf when the arrow lights"}},
+  TourStop{2,35,42,49,{"Odbijaj się od markiz, by sięgnąć żetonów","Bounce off the awnings to reach the tokens"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 inline int tour_page_size(int rows) { return std::max(1,rows-12); }

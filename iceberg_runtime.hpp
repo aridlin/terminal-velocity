@@ -277,6 +277,7 @@ public:
     add_expedition_stairwells(room);
     add_estate_clotheslines(room);
     add_estate_gutters(room);
+    add_estate_awnings(room);
     add_expedition_drawers(room);
     add_archive_stack_shuttles(room);
     add_expedition_post_launchers(room);

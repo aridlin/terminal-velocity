@@ -20,6 +20,31 @@
           std::vector<std::string>{"╭┴┬╮","╰▥▥╯"," ╵╵ "},garment?0x9bb9c0:0xc38da7);
     }
   }
+  void draw_estate_awning(const SpringPad &awning,size_t index) {
+    constexpr uint32_t frame=0xb78980,canvas=0xad6675,stripe=0xe8c79d;
+    const double row=aspect_*scale_;
+    const double support_y=awning.y+row;
+    const double anchor_x=awning.x<50.?43.:63.;
+    const double anchor_y=awning.x<50.?49.:36.;
+    draw_scenery_pipe({{anchor_x,anchor_y},{anchor_x,support_y},{awning.right()-scale_,support_y}},frame);
+
+    const double age=state_.elapsed-state_.last_spring_time;
+    const bool moving=state_.last_spring==int(index)&&age<.24;
+    const int cells=std::max(4,int(awning.w/scale_));
+    const int center=cells/2;
+    for(int i=0;i<cells;++i) {
+      const double x=awning.x+i*scale_;
+      const bool edge=i==0||i==cells-1;
+      const bool bowed=moving&&age<.085&&!edge;
+      const double y=awning.y+(bowed?row:0.);
+      world_text(x,y,edge?(i==0?"╭":"╮"):bowed?(i<center?"╲":"╱"):"━",
+                 i%2==0?stripe:canvas);
+      world_art(x,y+row,{edge?"│":i%2==0?"▥":"▒"},i%2==0?stripe:canvas);
+    }
+    if(moving&&age>=.085)
+      world_art(awning.x+center*scale_,awning.y-row,{age<.16?"✧":"·"},stripe);
+  }
+
   void draw_estate_landmarks() {
     const auto &d=iceberg::Districts[2];
     if(grid_.room_role==iceberg::RoomRole::Settlement) {
