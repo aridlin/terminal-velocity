@@ -758,6 +758,31 @@ int main(){try {
   examination.dash_lock=1;examination.switch_flags=1;
   RenderGrid(examination,refill_view,24,34,2).draw();
   ui_check(count_map("▥",0x8ee0dd)==0,"the map omits dash refills while dashing is locked");
+  for(int id:{18,22}) {
+    auto chimney=verified_room(id,73,1);
+    add_expedition_steam(chimney);
+    ui_check(chimney.air_fields.size()==1,"the Heatworks fixture retains its timed lift");
+    const auto &lift=chimney.air_fields.front();
+    auto view=new_state(chimney);
+    view.adventure.mode=iceberg::Mode::Endless;
+    view.camera_x=lift.area.x-4.3;
+    view.camera_y=lift.area.bottom()-1.1;
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      for(const auto [phase,needle,color]:{std::tuple{.75,"╲",0xb7a788u},
+          std::tuple{.50,"│",0xb7a788u},std::tuple{.25,"╱",0xb4e3e3u}}) {
+        view.elapsed=(1.+phase-lift.phase)*lift.period;
+        RenderGrid(chimney,view,rows,cols,2).draw();
+        const auto count=[&](const char *glyph,uint32_t rgb) {
+          int found=0;
+          for(auto line=frame.begin()+4;line!=frame.end()-3;++line)
+            for(const auto &cell:*line)found+=cell.glyph==glyph&&cell.rgb==rgb;
+          return found;
+        };
+        ui_check(count(needle,color)==1&&count("▥",0x79858e)==3,
+          "the steam chimney shows the boiler and the current pressure at each supported width");
+      }
+    }
+  }
   const auto pressure_lifts=iceworld::build_heatworks_sequence(false);
   const auto &vent=pressure_lifts.pulses.front();
   auto vent_view=new_state(pressure_lifts);
