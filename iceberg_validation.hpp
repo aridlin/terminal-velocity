@@ -164,6 +164,36 @@ inline EngineGrid verified_room(int id,uint32_t seed,int district,bool expert=fa
   return recovery_room_for(candidate);
 }
 
+inline void add_crown_exposed_ridge(EngineGrid &room) {
+  if(room.district!=5||room.room_role!=iceberg::RoomRole::Traverse)return;
+  const auto &layout=iceworld::pattern(room.template_id);
+  if(iceworld::district_of(layout)!=5||layout.optional.size()<3)return;
+  const auto &low=layout.optional[0],&mid=layout.optional[1],&high=layout.optional[2];
+  if(room.air_fields.empty()) {
+    const double west=std::min({low.x,mid.x,high.x})-1.5;
+    const double east=std::max({low.x+low.w,mid.x+mid.w,high.x+high.w})+1.5;
+    const double top=std::min({low.y,mid.y,high.y})-5.;
+    const double bottom=std::min(low.y+.5,double(room.height()));
+    const double gust=layout.rhythm==iceberg::Rhythm::Recovery?22.:36.;
+    room.air_fields.push_back({{west,top,east-west,bottom-top},gust,0.,6.9,.08*(room.template_id%5),0,true});
+    const auto route=verify_route(room);
+    if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+    else room.air_fields.pop_back();
+  }
+  if(room.template_id==63)return; // This route already has two breakable ribs.
+  const double edge=low.x+low.w,gap=mid.x-edge;
+  const double length=std::min(5.4,gap-.8);
+  if(length<2.)return;
+  auto shelf=room;
+  shelf.platforms.push_back({.base={edge+.25,low.y-2.2,length,.5},.fragile=true,.rime_shelf=true});
+  shelf.ice_strips.push_back({low.x+.6,double(low.y),low.w-1.2,.5});
+  const auto route=verify_route(shelf);
+  if(route.complete&&route.deaths==0) {
+    shelf.verification_policy=route.policy;
+    room=std::move(shelf);
+  }
+}
+
 inline void add_crown_seam_shortcut(EngineGrid &room) {
   if(room.district!=5||room.template_id!=61)return;
   auto shortcut=room;

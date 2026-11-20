@@ -317,6 +317,16 @@ public:
     add_archive_reference_carriers(room);
     add_archive_scan_rails(room);
   }
+  static void apply_crown_mechanics(EngineGrid &room) {
+    if(room.district!=5)return;
+    strengthen_expedition_wind(room);
+    add_fractured_ribs(room);
+    add_overhang_windbreak(room);
+    add_crown_seam_shortcut(room);
+    add_ridge_crosswind(room);
+    add_shutter_service_lift(room);
+    add_crown_exposed_ridge(room);
+  }
   static void apply_expedition_mechanics(EngineGrid &room) {
     apply_heatworks_mechanics(room);
     apply_estate_mechanics(room);
@@ -331,12 +341,7 @@ public:
     add_garden_hanging_planter(room);
     add_garden_seed_tray(room);
     add_garden_vines_and_traps(room);
-    strengthen_expedition_wind(room);
-    add_fractured_ribs(room);
-    add_overhang_windbreak(room);
-    add_crown_seam_shortcut(room);
-    add_ridge_crosswind(room);
-    add_shutter_service_lift(room);
+    apply_crown_mechanics(room);
   }
   void refresh_slots() {
     auto &v=state.adventure;
@@ -445,6 +450,7 @@ public:
           apply_heatworks_mechanics(grid);
           apply_estate_mechanics(grid);
           apply_archive_mechanics(grid);
+          apply_crown_mechanics(grid);
           add_garden_vines_and_traps(grid);
         }
       } else {

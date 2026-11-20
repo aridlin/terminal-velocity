@@ -408,6 +408,7 @@
         draw_archive_glass(r,platform.crack_age(state_,i,state_.elapsed));
         continue;
       }
+      if(platform.rime_shelf) {draw_rime_shelf(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile&&grid_.district==5){draw_crown_rib(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile){draw_fragile_planter(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.tram) {

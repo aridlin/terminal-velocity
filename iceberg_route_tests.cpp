@@ -144,12 +144,49 @@ void test_archive_rack_and_scanner() {
   require(scanner.active(run.elapsed)&&run.deaths==1,"only contact with the moving beam triggers a retry");
 }
 
+void test_crown_wind_and_rime() {
+  constexpr double dt=1./120.;
+  auto room=verified_room(64,73,5);
+  AdventureSession::apply_crown_mechanics(room);
+  require(room.air_fields.size()==1&&room.air_fields.front().reverses&&room.ice_strips.size()==1,
+    "the Roofs have a reversing gust and an icy ledge");
+  const auto &wind=room.air_fields.front();
+  const auto velocity=[&](double phase) {
+    auto run=new_state(room);
+    run.elapsed=(1.+phase-wind.phase)*wind.period;
+    run.player.x=wind.area.x+wind.area.w*.5;
+    run.player.y=wind.area.y+1.;
+    for(int i=0;i<12;++i)world_step(run,room,{},dt);
+    return run.player.vx;
+  };
+  require(velocity(.25)>0.&&velocity(.75)<0.,"the gust pushes an airborne courier in both directions");
+  require(room.platforms.size()==1&&room.platforms.front().rime_shelf,"the icy side passage has a brittle shelf");
+  auto run=new_state(room);
+  run.spawn_x=58.;run.spawn_y=26.-kPlayerHeight;
+  reset_player(run);
+  for(int i=0;i<2;++i)world_step(run,room,{},dt);
+  for(int i=0;i<120&&run.player.support!=0;++i) {
+    const int steer=run.player.x<62.73?1:run.player.x>63.27?-1:0;
+    world_step(run,room,{.move=steer,.jump_held=true,.jump_pressed=i==0},dt);
+  }
+  require(run.deaths==0&&run.player.support==0,"a normal jump reaches the rime shelf in the gust");
+  const auto &shelf=room.platforms.front();
+  require(shelf.available(run,0,run.elapsed),"the shelf gives the courier time to jump away");
+  for(int i=0;i<80&&shelf.available(run,0,run.elapsed);++i) {
+    const int steer=run.player.x<62.73?1:run.player.x>63.27?-1:0;
+    world_step(run,room,{.move=steer},dt);
+  }
+  require(!shelf.available(run,0,run.elapsed)&&run.player.support!=0&&run.deaths==0,
+    "a held landing breaks the rime and drops the courier");
+}
+
 int main() {
   try {
     test_heatworks_route_machinery();
     test_garden_vine_and_flytrap();
     test_estate_balcony_and_masonry();
     test_archive_rack_and_scanner();
+    test_crown_wind_and_rime();
     for(unsigned seed=0;seed<10000;++seed) {
       auto itinerary=iceworld::make_itinerary(seed,0,24,4);
       for(int leg=0;leg<3;++leg) {

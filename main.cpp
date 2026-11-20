@@ -375,7 +375,7 @@ struct MovingPlatform {
   bool chute_leaf = false;
   double swing_pivot = 0, swing_length = 0;
   bool pressure_piston = false;
-  bool seed_tray = false, estate_balcony = false;
+  bool seed_tray = false, estate_balcony = false, rime_shelf = false;
   static constexpr double CrackTime = .55, RestoreTime = 2.9;
   double crack_age(const GameState &state, size_t index, double time) const {
     const double start = state.platform_armed_at[index];
