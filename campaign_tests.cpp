@@ -329,6 +329,48 @@ int main() {
     ride.player.support=-1;
     planter_run.tick({},1./120.);
     check(planter_silent(),"an empty planter makes no arrival sound");
+    AdventureSession piston_run(vent_options,{});
+    const auto piston_stop=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==421;});
+    check(piston_stop!=iceberg::DebugTour.end(),"the Twin Pistons sound test has a playable room");
+    piston_run.start_tour(int(piston_stop-iceberg::DebugTour.begin()));
+    piston_run.profile.music_volume=piston_run.profile.ambience_volume=0.f;
+    piston_run.profile.effects_volume=1.f;
+    piston_run.audio.init("assets/audio",false,true);
+    auto &piston_state=piston_run.state;
+    const auto &piston=piston_run.grid.platforms[3];
+    const auto piston_silent=[&] {
+      check(piston_run.audio.render(frames.data(),48000),"mix the piston audio");
+      return std::none_of(frames.begin(),frames.end(),[](float x){return std::abs(x)>.0001f;});
+    };
+    piston_run.tick({},1./120.);
+    check(piston_silent(),"entering at an already docked piston stays quiet");
+    piston_state.elapsed=piston.period*.5-.004;
+    const auto rising=piston.at(piston_state.elapsed);
+    piston_state.player.x=rising.x+(rising.w-kPlayerWidth)*.5;
+    piston_state.player.y=rising.y-kPlayerHeight;
+    piston_state.player.support=3;
+    piston_state.player.grounded=true;
+    piston_state.paused=true;
+    piston_run.tick({},.1);
+    check(piston_silent(),"a paused pressure piston does not announce its arrival");
+    piston_state.paused=false;
+    piston_run.tick({},1./120.);
+    GameAudio piston_sound;
+    piston_sound.init("assets/audio",false,true);
+    piston_sound.set_mix(0.f,1.f,0.f);
+    piston_sound.play(AudioCue::Metal2,.7f);
+    check(piston_sound.render(expected.data(),48000)&&!piston_silent()&&
+      std::equal(expected.begin(),expected.end(),frames.begin(),[](float a,float b){return std::abs(a-b)<.00001f;}),
+      "the nearest pressure piston plays one recorded metal contact on arrival");
+    piston_run.tick({},1./120.);
+    check(piston_silent(),"dwelling at the landing does not replay the piston cue");
+    piston_state.elapsed=piston.period-.004;
+    piston_state.player.x=4.;
+    piston_state.player.y=55.-kPlayerHeight;
+    piston_state.player.support=-1;
+    piston_run.tick({},1./120.);
+    check(piston_silent(),"distant pressure pistons do not play a docking cue");
     GameAudio silent;
     silent.init("missing-audio", true);
     check(!silent.ready() && silent.error().empty(),

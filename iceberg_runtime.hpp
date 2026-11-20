@@ -1679,21 +1679,33 @@ public:
          !grid.platforms[size_t(state.player.support)].fragile)audio.play(AudioCue::Lift,.7f);
       if(before.support>=0&&state.player.support<0&&state.player.vy<-10&&
          !grid.platforms[size_t(before.support)].fragile)audio.play(AudioCue::Lift,.45f);
+      double piston_dock_gain=0.;
+      const auto courier=state.player.rect();
       for(size_t i=0;i<grid.platforms.size();++i) {
         const auto &deck=grid.platforms[i];
+        if(deck.pressure_piston) {
+          const int stop=deck.stop(state.elapsed);
+          if(stop!=0&&stop!=deck.stop(old_elapsed)) {
+            const auto platform=deck.at(state.elapsed);
+            const double distance=std::hypot(platform.x+platform.w*.5-courier.x-courier.w*.5,
+                                             platform.y-courier.bottom());
+            piston_dock_gain=std::max(piston_dock_gain,1.-distance/12.);
+          }
+        }
         if(deck.swing_length>0.&&state.player.support==int(i)&&
            deck.stop(old_elapsed)!=1&&deck.stop(state.elapsed)==1)audio.play(AudioCue::Wood2,.7f);
         if(deck.fragile&&deck.available(state,i,old_elapsed)&&!deck.available(state,i,state.elapsed)&&
            std::hypot(deck.base.x-state.player.x,deck.base.y-state.player.y)<16)
           audio.play(AudioCue::Stone2,.65f);
       }
+      // Both pistons dock together. The nearest one determines the cue.
+      if(piston_dock_gain>0.)audio.play(AudioCue::Metal2,float(.7*piston_dock_gain));
       double valve_warning=0.;
       for(const auto &vent:grid.pulses) {
         if(vent.active(state.elapsed)&&!vent.active(old_elapsed)) {
           const double distance=std::hypot(vent.area.x-state.player.x,vent.area.y-state.player.y);
           if(distance<22)audio.play(AudioCue::Steam,float(1-distance/22));
         } else if(vent.warning(state.elapsed)&&!vent.warning(old_elapsed)) {
-          const auto courier=state.player.rect();
           const double distance=std::hypot(vent.area.x+vent.area.w*.5-courier.x-courier.w*.5,
                                           vent.area.bottom()-courier.bottom());
           valve_warning=std::max(valve_warning,1.-distance/15.);
