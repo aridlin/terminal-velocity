@@ -451,6 +451,11 @@ public:
       grid.interactions.push_back({{x,floor-4.,3,4},InteractionKind::Replay,iceberg::SurveyReplay,
         {"Objazd latarni przyboju","Breakwater survey"}});
     }
+    if(grid.template_id==100||grid.template_id==600||grid.template_id==330) {
+      const Rect stall=grid.template_id==600?Rect{72,39,4,4}:
+        grid.template_id==100?Rect{72,44,3,4}:Rect{96,45,4,4};
+      grid.interactions.push_back({stall,InteractionKind::Outfitter,0,{"Sklep portowy","Harbor outfitter"}});
+    }
     grid.protect_exit();
     configure_route_room();
     auto old_view=state.adventure;
@@ -716,10 +721,31 @@ public:
     film.segment=std::max(film.segment,segment);
     if(film.line_seconds>=duration)dialogue_next();
   }
+  void offer_outfitter_item(int index) {
+    talk({{iceberg::ReplyPrompt,{}}});
+    auto &dialogue=state.adventure.dialogue;
+    dialogue.outfitter_item=index;
+    dialogue.outfitter_tokens=iceberg::outfitter_balance(profile);
+    dialogue.reply_option=1;
+  }
   void dialogue_next() {
     auto &dialogue=state.adventure.dialogue;
     if(!dialogue.active())return;
     if(dialogue.choosing()) {
+      if(dialogue.outfitter_item>=0) {
+        const int index=dialogue.outfitter_item;
+        const auto &item=iceberg::OutfitterItems[size_t(index)];
+        if(dialogue.reply_option==1) {
+          if(index+1<int(iceberg::OutfitterItems.size()))offer_outfitter_item(index+1);
+          else dialogue={};
+        } else if(!(profile.cosmetics&item.flag)&&iceberg::outfitter_balance(profile)>=item.price) {
+          iceberg::remember_outfitter_tokens(profile);
+          profile.cosmetics|=item.flag;
+          persist();audio.play(AudioCue::Cloth);
+          offer_outfitter_item(index);
+        }
+        return;
+      }
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
       if(tour_scene<0&&!iceberg::expedition_reply_scene(scene)) {
@@ -815,6 +841,7 @@ public:
   void begin_campaign(bool fresh) {
     persist();
     if(fresh) {
+      iceberg::remember_outfitter_tokens(profile);
       auto previous=profile;
       auto language=profile.language;
       float music=profile.music_volume,effects=profile.effects_volume,ambience=profile.ambience_volume;
@@ -883,6 +910,7 @@ public:
         restarted.layout_version=e.layout_version;
         restarted.itinerary=std::move(e.itinerary);
       }
+      if(!trial)iceberg::remember_outfitter_tokens(profile);
       run_seconds=0;run_deaths=run_treasures=0;e=std::move(restarted);
     }
     stage=2;run_active=true;load_room(resume);state.menu=false;persist();
@@ -1097,7 +1125,9 @@ public:
         const auto survey=t(" Objazd latarni przyboju w Dolnej Przystani: "," Breakwater Survey in Lower Harbor: ")+
           std::to_string(iceberg::survey_pass(profile)?iceberg::SurveyTokenFare:
             iceberg::transit_token_progress(profile,iceberg::SurveyTokenFare))+"/"+std::to_string(iceberg::SurveyTokenFare)+".";
-        describe(t("Żeton transportowy","Transit token"),body+survey,"◉",Art::Coin);return;
+        const auto shop=t(" Żetony wydasz w sklepie w Dolnej Przystani.",
+          " Spend tokens at the Lower Harbor outfitter.");
+        describe(t("Żeton transportowy","Transit token"),body+survey+shop,"◉",Art::Coin);return;
       }
       for(size_t i=0;i<grid.refills.size();++i)if(close(grid.refills[i].first,grid.refills[i].second)) {
         describe(t("Ogniwo zrywu","Dash cell"),t("Szklana osłona chroni naładowany rdzeń. Dotknij go, żeby odzyskać zryw w powietrzu. Puste ogniwo odnowi się po chwili.","A glass casing protects a charged core. Touch it to restore an airborne dash. An empty cell recharges after a moment."),"▥",Art::Refill);return;
@@ -1224,6 +1254,9 @@ public:
           std::to_string(count)+"/"+std::to_string(iceberg::SurveyTokenFare)+t(" żetony."," tokens.");
       }
       break;
+    case InteractionKind::Outfitter:
+      v.inspect_art=Art::Coin;v.inspect_body=t("Kup wyposażenie za żetony. Zebrane żetony nadal liczą się do obu wejściówek.",
+        "Buy gear with tokens. Spending them leaves your progress toward both passes intact.");break;
     case InteractionKind::Board:
       v.inspect_art=Art::Board;v.inspect_body=grid.template_id==330?node.label.get(profile.language):iceberg::route_title(district,stage).get(profile.language);break;
     default:v.inspect_body=t("E — użyj. Możesz zamknąć ten widok bez wykonywania działania.","E — use. You can close this view without performing the action.");break;
@@ -1235,6 +1268,7 @@ public:
     int at=near_interaction();if(at<0)return;
     const auto node=grid.interactions[size_t(at)];
     if(choose_route(node)||harbor_interact(node))return;
+    if(node.kind==InteractionKind::Outfitter) {offer_outfitter_item(0);return;}
     if(node.kind==InteractionKind::Epilogue) {
       if(grid.template_id!=330)return;
       auto bit=uint64_t(1)<<node.id;
@@ -1521,6 +1555,9 @@ public:
     if(v.dialogue.active()&&state.journal&&!c.pause&&(c.map||c.journal))
       v.dialogue={}; // Let the requested overlay consume the input.
     if(v.dialogue.active()) {
+      if(v.dialogue.outfitter_item>=0&&c.pause) {
+        v.dialogue={};discard_pending_movement();sync_view();return;
+      }
       const bool reading_journal=state.journal;
       if(!reading_journal&&state.paused&&(c.confirm||c.interact)){
         state.paused=false;audio.update(AudioScene::Paused,music_track(),dt,focused);return;

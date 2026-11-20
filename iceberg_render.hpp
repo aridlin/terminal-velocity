@@ -477,6 +477,9 @@
         world_art(x,y-3.2,{"╭─────╮","│ ▥▥▥ │","│  ▱  │","╰─────╯"},d.accent);
       } else if(node.kind==InteractionKind::RouteChoice) {
         prop_art(x+node.area.w*.5,y,{"╭─B─╮","│   │","│ ↗ │","│   │","╰───╯"},0x91d4ce);
+      } else if(node.kind==InteractionKind::Outfitter) {
+        prop_art(x+area.w*.5,y,{"╭───────────╮",tr("│   SPRZĘT  │","│   GEAR    │"),
+          "╞╤═╤═╤═╤═╤═╡","│ ♧ ▥  ◆    │","╘═╧═══════╧═╛"},0xbea181);
       } else if(node.kind==InteractionKind::Board) {
         prop_art(x+node.area.w*.5,y,{"╭─────╮","│ ≋≋≋ │","│ ≋≋  │","╰┬───┬╯"," │   │ "},d.accent);
       } else if(node.kind==InteractionKind::SurveyChart) {
@@ -838,12 +841,27 @@
     const int top=film_top>=0?film_top:layout.top;
     reply_first_row_=top+3;
     frame(top,1,cols_-2,layout.height,0xe4ad68);
-    paint_text(top+1,3,tr("TWOJA ODPOWIEDŹ","YOUR REPLY"),0xe4ad68,true);
+    const bool shop=dialogue.outfitter_item>=0;
+    const auto language=state_.adventure.language;
+    const auto title=shop?tr("SKLEP PORTOWY","HARBOR OUTFITTER")+std::string(" · ◉ ")+
+      std::to_string(dialogue.outfitter_tokens):tr("TWOJA ODPOWIEDŹ","YOUR REPLY");
+    paint_text(top+1,3,title,0xe4ad68,true);
+    std::array<std::string,2> choices;
+    if(shop) {
+      const auto &item=iceberg::OutfitterItems[size_t(dialogue.outfitter_item)];
+      paint_text(top+2,3,item.name.get(language)+" · "+std::to_string(item.price)+" ◉",0xeee7d6);
+      paint_text(top+4,5,item.effect.get(language),0x9dd4dd);
+      const int shortfall=item.price-dialogue.outfitter_tokens;
+      choices[0]=(state_.adventure.cosmetics&item.flag)?tr("Kupione","Owned"):
+        shortfall>0?tr("Brakuje ","Need ")+std::to_string(shortfall)+" ◉":tr("Kup","Buy");
+      choices[1]=dialogue.outfitter_item+1<int(iceberg::OutfitterItems.size())?
+        tr("Następny przedmiot","Next item"):tr("Zamknij sklep","Close shop");
+    } else for(int i=0;i<2;++i)choices[size_t(i)]=iceberg::civic_reply(dialogue.reply_scene,i).choice.get(language);
     for(int i=0;i<2;++i) {
       int row=reply_first_row_+i*2;
       const bool selected=i==dialogue.reply_option;
       paint_text(row,3,selected?"▸":" ",0xe4ad68);
-      for(const auto &line:wrap(iceberg::civic_reply(dialogue.reply_scene,i).choice.get(state_.adventure.language),cols_-8))
+      for(const auto &line:wrap(choices[size_t(i)],cols_-8))
         paint_text(row++,5,line,selected?0xe4ad68:0xeee7d6,selected);
     }
     paint_text(top+7,3,state_.paused?tr("E/ENTER wznów","E/ENTER resume"):

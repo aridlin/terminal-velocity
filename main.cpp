@@ -417,7 +417,7 @@ struct Patrol {
     return {left + (z < w ? z : 2 * w - z), y, 1.1, 1.0};
   }
 };
-enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence, Epilogue, RouteChoice, DockWorker, SurveyChart };
+enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence, Epilogue, RouteChoice, DockWorker, SurveyChart, Outfitter };
 struct Interaction {
   Rect area;
   InteractionKind kind;
@@ -1190,17 +1190,20 @@ void update_step(GameState &state, const EngineGrid &grid,
   }
 
   const bool ice=grid.on_ice(player);
+  const bool better_grip=ice&&remember_direction&&state.adventure.mode!=iceberg::Mode::Trial&&
+    (state.adventure.cosmetics&iceberg::DockBoots);
+  const double ice_accel=better_grip?72.:46.,ice_friction=better_grip?34.:20.;
   if (controls.move != 0 && player.wall_lock_left <= 0.0) {
     player.facing = controls.move;
     const double apex_bonus =
         (std::abs(player.vy) < 3.0 && !player.grounded) ? kApexAccelBonus : 0.0;
-    const double accel = player.grounded ? (ice ? 46.0 : kMoveAccel) : kAirAccel + apex_bonus;
+    const double accel = player.grounded ? (ice ? ice_accel : kMoveAccel) : kAirAccel + apex_bonus;
     const double target = controls.move * kMaxRunSpeed;
     if (!(player.momentum_left > 0 && !player.grounded &&
           player.vx * controls.move > kMaxRunSpeed))
       player.vx += clamp(target - player.vx, -accel * dt, accel * dt);
   } else if (player.grounded) {
-    player.vx = approach_zero(player.vx, (ice ? 20.0 : kGroundFriction) * dt);
+    player.vx = approach_zero(player.vx, (ice ? ice_friction : kGroundFriction) * dt);
   } else if (controls.move == 0 && player.wall_lock_left <= 0.0) {
     player.vx = approach_zero(player.vx, 24.0 * dt);
   }
@@ -1342,11 +1345,14 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       }
     }
   }
+  const bool wider_reach=g.adventure_level&&!s.reference_movement&&s.adventure.mode!=iceberg::Mode::Trial&&
+    (s.adventure.cosmetics&iceberg::SignalSatchel);
+  const double refill_reach=wider_reach?.85:.5;
   for (size_t i = 0; i < g.refills.size(); ++i) {
     s.refill_cooldown[i] = std::max(0., s.refill_cooldown[i] - dt);
     auto [x, y] = g.refills[i];
     if (s.refill_cooldown[i] == 0 && !p.dash_available &&
-        p.rect().intersects({x - .5, y - .5, 1, 1})) {
+        p.rect().intersects({x-refill_reach,y-refill_reach,2*refill_reach,2*refill_reach})) {
       p.dash_available = true;
       s.refill_cooldown[i] = 2.5;
     }

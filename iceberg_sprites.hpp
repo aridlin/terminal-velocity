@@ -53,7 +53,8 @@
   }
   void courier_sprite(int x,int feet,uint32_t coat) {
     const auto &p=state_.player;const auto &v=state_.adventure;
-    uint32_t skin=0xe0b394,bag=0x9b7864,boot=0xc1cbd0,leg=0x55616f;
+    uint32_t skin=0xe0b394,bag=(v.cosmetics&iceberg::SignalSatchel)?0xd47755:0x9b7864;
+    uint32_t boot=(v.cosmetics&iceberg::DockBoots)?0xa693d8:0xc1cbd0,leg=0x55616f;
     uint32_t body=p.can_dash()&&!grid_.dash_locked()?0xf5cd79:0x83c5ce;
     std::vector<std::array<uint32_t,4>> pixels{{0,coat,coat,0},{0,skin,0x51474b,0},
       {bag,body,body,0},{bag,body,body,skin},{0,leg,leg,0},{boot,0,boot,0}};
@@ -72,6 +73,7 @@
     if(v.pickup_left>.4&&p.grounded) {
       pixels={{0,0,0,0},{0,coat,coat,0},{bag,skin,body,0},{bag,body,body,skin},{0,leg,leg,skin},{boot,0,boot,0}};
     }
+    if(v.cosmetics&iceberg::HarborScarf)pixels[1][0]=0x7bd9b7;
     if(p.facing<0)for(auto &row:pixels)std::reverse(row.begin(),row.end());
     pixel_sprite(feet-3,x,pixels);
     if(v.cosmetics&0x3f0000u)paint_text(feet-2,x+1,"✦",0xf3ce82);
