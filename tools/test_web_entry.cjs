@@ -472,6 +472,12 @@ const server=http.createServer((req,res)=>{
     console.log('PASS Escape and P resume from focused game controls and restore movement focus');
     await page.keyboard.press('p');
     await page.waitForFunction(()=>!!(uiFlags&2));
+    await page.locator('#toolbar > [data-tap="9"]').focus();
+    await page.keyboard.press('r');
+    await page.waitForFunction(()=>!(uiFlags&2)&&document.activeElement===canvas);
+    console.log('PASS R retries from the focused pause control and restores movement focus');
+    await page.keyboard.press('p');
+    await page.waitForFunction(()=>!!(uiFlags&2));
     await page.keyboard.press('F2');
     const accountFocus=()=>page.evaluate(()=>{
      if(document.activeElement===accounts.name)return 'name';
