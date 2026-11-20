@@ -369,6 +369,39 @@ int main(){try {
   ui_check(count_marker("↶",0x91d4ce)==2&&count_marker("▣",0xd7e8cd)==1&&
     ui_text(frame).find("▣ Exit")!=std::string::npos,
     "a revisited course distinguishes the early return from the course's exit");
+  {
+    AdventureSession flume(options,{});
+    const auto sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==58;});
+    ui_check(sample!=iceberg::DebugTour.end(),"the Leaf Chute water has a playable tour sample");
+    flume.start_tour(int(sample-iceberg::DebugTour.begin()));
+    const auto leaf=std::find_if(flume.grid.platforms.begin(),flume.grid.platforms.end(),
+      [](const auto &platform){return platform.chute_leaf;});
+    ui_check(leaf!=flume.grid.platforms.end(),"the Leaf Chute sample contains its flume platform");
+    constexpr double mid_ride=2.8;
+    const auto deck=leaf->at(mid_ride);
+    flume.state.player.x=deck.x+deck.w*.5;
+    flume.state.player.y=deck.y-kPlayerHeight;
+    for(const auto &[cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      update_camera(flume.state,flume.grid,cols,rows-7,2,10);
+      const auto water_columns=[&](double time) {
+        flume.state.elapsed=time;
+        RenderGrid(flume.grid,flume.state,rows,cols,2).draw();
+        std::vector<int> foam;
+        int surface=0;
+        for(size_t y=0;y<frame.size();++y)for(size_t x=0;x<frame[y].size();++x) {
+          const auto &cell=frame[y][x];
+          if(cell.background!=0x174e63)continue;
+          ++surface;
+          if(cell.rgb==0xa8e4ed)foam.push_back(int(y)*cols+int(x));
+        }
+        ui_check(surface>=8&&foam.size()>=2,"a visible blue surface marks the flume at each supported size");
+        return foam;
+      };
+      const auto initial=water_columns(mid_ride);
+      ui_check(initial!=water_columns(mid_ride+.25),"flume foam moves while the camera stays fixed");
+    }
+  }
   AdventureSession features(options,"/tmp/tv-ui-room-features-unused");features.begin_campaign(true);
   features.profile.unlocked=3;features.run_district=3;
   auto &archive=features.profile.expeditions[0];

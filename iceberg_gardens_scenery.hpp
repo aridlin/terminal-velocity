@@ -29,15 +29,20 @@
     const auto trough_y=[&](double x) {
       return upper+(lower-upper)*(x-start)/(end-start)+2*row;
     };
-    for(double x=start;x<=end;x+=scale_) {
+    constexpr uint32_t water=0x174e63,foam=0xa8e4ed;
+    constexpr int ripple_length=13;
+    const int phase=int(std::fmod(state_.elapsed*8.5/scale_,ripple_length));
+    int column=0;
+    for(double x=start;x<=end;x+=scale_,++column) {
       const double y=trough_y(x);
-      const bool drop=std::floor(y/row)!=std::floor((y+(lower-upper)*scale_/(end-start))/row);
+      const auto [sx,sy]=screen(x,y-row);
+      const int next_y=screen(x+scale_,trough_y(x+scale_)-row).second;
+      const bool drop=next_y>sy;
+      const int ripple=(column+ripple_length-phase)%ripple_length;
+      const char *glyph=ripple==0?"≈":ripple<=2?"∿":drop?"╲":"─";
+      if(sy>=4&&sy<rows_-3)put(sy,sx,{glyph,Color::Text,false,false,0,ripple<=2?foam:0x62b9cd,water});
       world_text(x,y,drop?"╲":"─",0x6d947f);
       world_text(x,y+row,drop?"╲":"━",0x5c7873);
-    }
-    for(int i=0;i<13;++i) {
-      const double x=start+std::fmod(state_.elapsed*8.5+i*2.83,end-start);
-      world_text(x,trough_y(x)-row,i%3==0?"∿":"·",0x80c3b7);
     }
     draw_scenery_pipe({{54,38},{54,trough_y(start)},{start,trough_y(start)}},0x718c7e);
     // Raise the downstream lamp above the arriving leaf and its rider.
@@ -268,8 +273,7 @@
       if((id==57&&!draw_irrigation_wheel())||id==81)wheel(88,25);
       if(id==48||id==59)world_art(67,8,{"     ╭───────────────╮","  ╭──┤░░░░░░░░░░░░░░░├──╮","  ╰──┴───────────────┴──╯","    ╲       │       ╱","     ╲      │      ╱"},d.stone);
       for(const auto &platform:grid_.platforms)
-        if(platform.chute_leaf)draw_leaf_chute(platform);
-        else if(platform.swing_length>0.)draw_hanging_planter_frame(platform);
+        if(platform.swing_length>0.)draw_hanging_planter_frame(platform);
       if(id==51||id==54||id==58)for(int i=0;i<4;++i)world_art(35+i*21,22-i*2,{"┬       ┬","│ ╭─╮   │","│╭╯ ╰╮  │","╰┤   ├──╯"," ╰───╯"},d.stone);
     }
     for(const auto &bridge:grid_.growth) {

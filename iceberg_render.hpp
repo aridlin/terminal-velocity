@@ -361,7 +361,10 @@
       }
     }
     if(grid_.district==3)draw_archive_drawers();
-    if(grid_.district==4)draw_garden_ice();
+    if(grid_.district==4) {
+      for(const auto &platform:grid_.platforms)if(platform.chute_leaf)draw_leaf_chute(platform);
+      draw_garden_ice();
+    }
     if(grid_.district==1)for(const auto &jet:grid_.air_fields) {
       if(jet.turbine) {
         draw_heatworks_turbine(jet);
