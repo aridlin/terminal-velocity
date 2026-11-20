@@ -225,7 +225,7 @@
       if(cell==' ')cell='s';
     }
     std::vector<std::array<int,3>> cracking_spans;
-    std::vector<std::pair<int,int>> broken_floes;
+    std::vector<std::pair<int,int>> broken_floes,broken_beams;
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       if(platform.archive_rack||platform.service_lift||platform.cargo_hoist) {
@@ -258,6 +258,7 @@
       const auto deck=platform.at(state_.elapsed);
       if(!platform.available(state_,i,state_.elapsed)) {
         if(platform.icy)broken_floes.emplace_back(column(deck.x+deck.w*.5),row(deck.y));
+        else if(grid_.district==5)broken_beams.emplace_back(column(deck.x+deck.w*.5),row(deck.y));
         continue;
       }
       char tile=platform.icy?'i':'=';
@@ -467,6 +468,16 @@
               buffer_[first+y+1][left+x].background==water_depth_background)
         place(gap,0,1);
     }
+    for(const auto &[x,y]:broken_beams) {
+      const Marker gap{x,y,1,"×",gap_color};
+      const auto place_in_space=[&](int dx,int dy) {
+        const int to_x=x+dx,to_y=y+dy;
+        return to_x>=0&&to_x<width&&to_y>=0&&to_y<map_rows&&
+          map[size_t(to_y)][size_t(to_x)]==' '&&place(gap,dx,dy);
+      };
+      if(place_in_space(0,0))continue;
+      for(const auto &[dx,dy]:nearby)if(place_in_space(dx,dy))break;
+    }
     int legend=top+height-legend_rows;
     if(fork) {
       paint_text(legend++,2,tr("@ Ty · ◆ Lampa","@ You · ◆ Lamp"),0xc7d9df);
@@ -580,7 +591,7 @@
       paint_text(legend,separator," · ",0xc7d9df);
       const auto cracking=has_brittle_ice?tr("╍ Pęka","╍ Cracks"):tr("╍ Pękają","╍ Cracking");
       paint_text(legend,separator+3,cracking,cracking_color);
-      if(has_brittle_ice) {
+      if(has_brittle_ice||grid_.district==5) {
         const int end=separator+3+int(glyphs(cracking).size());
         paint_text(legend,end," · ",0xc7d9df);
         paint_text(legend,end+3,tr("× Przerwa","× Gap"),gap_color);

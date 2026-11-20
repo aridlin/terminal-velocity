@@ -32,7 +32,10 @@
     const int cells=std::max(4,int(beam.w/scale_));
     const double center=beam.x+beam.w*.5;
     constexpr uint32_t frame=0x6c8797,steel=0xa7c1ce,warning=0xffca85;
+    constexpr uint32_t caution=0xe5a55e,dark=0x866048;
     const bool cracked=age<MovingPlatform::CrackTime;
+    const bool broken=!cracked&&age<MovingPlatform::RestoreTime;
+    const double remaining=MovingPlatform::RestoreTime-age;
     // The lower beam braces against the lower walkway. The upper beam
     // hangs from the underside of the token shelf.
     const double bracket_y=beam.y+row;
@@ -42,23 +45,38 @@
     else
       draw_scenery_pipe({{beam.x,bracket_y},{beam.x-2.4,bracket_y},
                          {beam.x-2.4,beam.y-2.},{beam.x-3.6,beam.y-2.}},frame);
-    if(age>=MovingPlatform::CrackTime&&age<MovingPlatform::RestoreTime) {
+    // The warning is bolted to the shoe at the root, so it remains
+    // readable when the span breaks away. The outline marks an empty shoe.
+    const double shoe_x=beam.x-2.4;
+    world_art(shoe_x+scale_,bracket_y-row,{broken?"◇":"◈","╧"},
+      cracked?warning:broken&&remaining>=.4?dark:caution);
+    if(broken) {
       const double fall=age-MovingPlatform::CrackTime;
-      if(fall<.7)for(int side:{-1,1}) {
-        const double x=center+side*(.8+fall*.45)-scale_;
-        world_art(x,beam.y+row+fall*fall*11,
-          {side<0?"═╲":"╱═"},fall<.18?warning:frame);
+      if(fall<.65) {
+        for(int side:{-1,1}) {
+          const double x=center+side*(.8+fall*.65)-scale_;
+          world_art(x,beam.y+row+fall*fall*14,
+            {side<0?"═╲":"╱═"},fall<.18?warning:frame);
+        }
+        if(fall<.32)world_art(center-scale_,beam.y+row*(1.+2.*fall),
+          {fall<.14?"·✦·":" · "},warning);
+      }
+      if(remaining<.4) {
+        const double rise=remaining/.4;
+        world_art(shoe_x,bracket_y+(1.+rise)*row,{"╎"},steel);
+        world_art(beam.x,bracket_y+rise*row,{"╵"},caution);
       }
       return;
     }
-    std::string lip="╞",web="╚";
+    std::string lip="╞",web="╩";
     for(int i=1;i<cells-1;++i) {
-      lip+=cracked&&i==cells/2?"╳":"═";
-      web+=i%2==0?"╳":"─";
+      const bool split=cracked&&i==cells/2;
+      lip+=split?"╳":"═";
+      web+=split&&age>.23?"╲":i%2==0?"╳":"─";
     }
     world_text(beam.x,beam.y,lip+"╡",cracked?warning:steel);
     world_art(beam.x,beam.y+row,{web+"╝"},frame);
-    if(cracked)world_art(center-scale_,beam.y-row,{"╲╷╱"},warning);
+    if(cracked)world_art(center-scale_,beam.y-row,{age>.27?"╲✦╱":"╲╷╱"},warning);
   }
 
   void draw_crown_service_lift(const MovingPlatform &lift,const Rect &deck) {

@@ -709,6 +709,29 @@ int main(){try {
     ui_check(count_map("×",0x85c0cd)==0&&count_background(0x214b62,"┅")>0,
       "the gap disappears when the floe recovers");
   }
+  AdventureSession ribs_session(options,{});
+  const auto ribs_sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+    [](const auto &stop){return stop.room==63;});
+  ribs_session.start_tour(int(ribs_sample-iceberg::DebugTour.begin()));
+  auto rib_view=ribs_session.state;
+  rib_view.adventure.map=rib_view.adventure.map_room=true;
+  rib_view.elapsed=1.8;
+  rib_view.platform_armed_at[0]=1.;
+  for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      rib_view.adventure.language=language;
+      const bool en=language==iceberg::Language::English;
+      RenderGrid(ribs_session.grid,rib_view,rows,cols,2).draw();
+      ui_check(count_map("×",0x85c0cd)==1&&count_map("@",0xffd68a)==1&&
+        ui_text(frame).find(en?"× Gap":"× Przerwa")!=std::string::npos,
+        "the Crown map shows a broken rib and preserves the courier at compact and wide sizes");
+      auto recovered=rib_view;
+      recovered.elapsed=4.;
+      RenderGrid(ribs_session.grid,recovered,rows,cols,2).draw();
+      ui_check(count_map("×",0x85c0cd)==0,
+        "a reseated Crown rib removes the map gap at the existing recovery time");
+    }
+  }
   for(const auto &[room,sign,letter,tube]:{std::array{45,2,2,0},std::array{57,0,0,2},
                                          std::array{61,2,0,0},std::array{49,0,0,0}}) {
     AdventureSession field(options,{});
