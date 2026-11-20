@@ -392,10 +392,6 @@ int main() {
         if(!garden_ride.audio.render(frames.data(),48000))throw std::runtime_error("could not mix Gardens docking cue");
         return std::none_of(frames.begin(),frames.end(),[](float x){return std::abs(x)>.0001f;});
       };
-      // The spawn is on a ledge. Exclude the unrelated first landing cue.
-      ride_state.player.grounded=true;
-      garden_ride.tick({},1./120.);
-      check(ride_silent(),"entering while the Gardens ride is docked stays quiet");
       const auto position_rider=[&](double time) {
         ride_state.elapsed=time;
         const auto platform=deck.at(time);
@@ -405,6 +401,9 @@ int main() {
         player.support=0;
         player.grounded=true;
       };
+      position_rider(0.);
+      garden_ride.tick({},1./120.);
+      check(ride_silent(),"an already docked Gardens ride stays quiet");
       position_rider(deck.period*.5-.1);
       garden_ride.tick({},1./120.);
       check(ride_silent(),"the moving Gardens ride stays quiet between landings");
