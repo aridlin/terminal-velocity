@@ -85,6 +85,54 @@ int main(){try {
     game.tick(inspect,0,true,34,24);
   }
   std::cout<<"PASS inspection reflow keeps the active passage in both languages\n";
+  struct MechanicSample {int district,room;const iceworld::TraversalInspection *guide;};
+  const std::array samples{
+    MechanicSample{0,501,&iceworld::CargoSling},
+    MechanicSample{1,421,&iceworld::PressurePiston},
+    MechanicSample{1,23,&iceworld::TurbineDraft},
+    MechanicSample{1,424,&iceworld::SteamVent},
+    MechanicSample{2,27,&iceworld::CableBalcony},
+    MechanicSample{2,28,&iceworld::LooseMasonry},
+    MechanicSample{3,47,&iceworld::RisingRack},
+    MechanicSample{3,40,&iceworld::Scanner},
+    MechanicSample{4,48,&iceworld::SwingVineGuide},
+    MechanicSample{4,48,&iceworld::Flytrap},
+    MechanicSample{4,55,&iceworld::BrittleIce},
+    MechanicSample{5,68,&iceworld::Crosswind}
+  };
+  for(const auto &[district,room,guide]:samples) {
+    game.grid=verified_room(room,73,district);
+    AdventureSession::apply_expedition_mechanics(game.grid);
+    game.state=new_state(game.grid);
+    bool found=false;
+    for(int y=2;y<game.grid.height()&&!found;++y)for(int x=1;x<game.grid.width()-1&&!found;++x) {
+      if(!game.grid.solid_at(x,y)||game.grid.solid_at(x,y-1)||game.grid.solid_at(x,y-2))continue;
+      game.state.player.x=x+.05;
+      game.state.player.y=y-kPlayerHeight;
+      if(game.near_interaction()>=0||iceworld::nearby_traversal_inspection(game.grid,game.state)!=guide)continue;
+      game.inspect_nearby();
+      found=game.state.adventure.inspecting&&game.state.adventure.inspect_title==guide->title.get(game.profile.language);
+      game.state.adventure.inspecting=false;
+    }
+    if(!found)throw std::runtime_error("missing accessible field guide: "+guide->title.get(iceberg::Language::English));
+    const auto items=game.profile.task_items;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      game.profile.language=language;
+      game.sync_view();
+      game.tick({.inspect=true},1./120,true,34,24);
+      const auto &view=game.state.adventure;
+      require_inspect(view.inspecting&&view.inspect_title==guide->title.get(language)&&
+        view.inspect_body==guide->body.get(language),"B opens the guide for the nearby authored mechanism");
+      require_inspect(game.state.elapsed==0.&&game.profile.task_items==items,
+        "reading a field guide does not advance hazards or change progression");
+      game.tick({.inspect=true},0.,true,34,24);
+      require_inspect(!view.inspecting,"B closes the field guide");
+    }
+    std::cout<<"PASS grounded inspection in room "<<room<<" for "<<guide->title.en<<'\n';
+  }
+  game.grid=iceworld::build_settlement(0);
+  game.state=new_state(game.grid);
+
   game.grid.interactions={{{5,40,3,4},InteractionKind::Note,0,{"Tablica","Sign"}}};
   game.state.player.x=5;game.state.player.y=41;
   Controls inspect;inspect.inspect=true;

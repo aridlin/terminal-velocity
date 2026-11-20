@@ -549,9 +549,10 @@ struct PulseHazard {
   }
 };
 struct SwingVine {
+  static constexpr double MaxAngle=.86;
   double x,y,length,phase;
   std::pair<double,double> tip(double time) const {
-    const double angle=.86*std::sin(time*1.85+phase);
+    const double angle=MaxAngle*std::sin(time*1.85+phase);
     return {x+length*std::sin(angle),y+length*std::cos(angle)};
   }
   Rect rider(double time) const {
@@ -988,6 +989,7 @@ void reset_player(GameState &state) {
 }
 
 #include "iceberg_crown_boss.hpp"
+#include "iceberg_traversal_inspection.hpp"
 
 void move_axis(const EngineGrid &grid, Player &player, double dt, char axis) {
   if (axis == 'x') {

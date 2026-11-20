@@ -1292,6 +1292,10 @@ public:
       for(auto [x,y]:grid.checkpoint_points)if(close(x,y)) {
         describe(t("Lampa powrotna","Return lamp"),t("Światło zapamiętuje bezpieczne miejsce na trasie. Po upadku wrócisz tutaj. Listy, naprawy i sprawy mieszkańców zostają załatwione.","The light marks a safe place on your route. A fall returns you here. Collected letters, repairs and completed character tasks stay done."),"▣",Art::Lamp);return;
       }
+      if(const auto *mechanism=iceworld::nearby_traversal_inspection(grid,state)) {
+        describe(mechanism->title.get(profile.language),mechanism->body.get(profile.language),"▤",Art::Sign);
+        return;
+      }
     }
     if(at<0||grid.interactions[size_t(at)].kind==InteractionKind::Secret) {
       notice(t("Podejdź do przedmiotu lub postaci, żeby obejrzeć z bliska.","Approach an object or character to inspect it."));return;
