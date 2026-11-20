@@ -665,6 +665,66 @@ int main(){try {
   archive.active=true;archive.district=3;archive.seed=archive.origin_seed=75;
   archive.itinerary={38,36,37,39,40,41,42,43};
   features.begin_run(iceberg::Mode::Endless);features.tick(map,1./120);
+  {
+    using iceberg::Achievement;
+    for(const auto &[district,stage,secret]:{
+        std::tuple{0,0,0},std::tuple{0,1,1},std::tuple{0,7,2},
+        std::tuple{2,0,iceberg::UnnumberedFloor},std::tuple{3,0,iceberg::NightPlatform}}) {
+      AdventureSession entrances(options,{});
+      entrances.begin_campaign(true);
+      entrances.profile.story=63;
+      entrances.district=district;
+      entrances.stage=stage;
+      if(secret==iceberg::NightPlatform)entrances.remember_side_flag(iceberg::SideFlag::ArchiveCarbonPrinted);
+      entrances.load_room();
+      const auto node=std::find_if(entrances.grid.interactions.begin(),entrances.grid.interactions.end(),
+        [secret](const auto &item){return item.kind==InteractionKind::Secret&&item.id==secret;});
+      ui_check(node!=entrances.grid.interactions.end(),"the existing hidden entrance is present in its source room");
+      auto &v=entrances.state.adventure;
+      v.map=v.map_room=true;
+      for(auto language:{iceberg::Language::English,iceberg::Language::Polish})
+        for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+          v.language=language;
+          const auto label=language==iceberg::Language::English?"↪ Known entrance":"↪ Znane wejście";
+          const auto marked=[&] {
+            RenderGrid(entrances.grid,entrances.state,rows,cols,2).draw();
+            return ui_text(frame).find(label)!=std::string::npos&&
+              std::any_of(frame.begin(),frame.end(),[](const auto &line){
+                return std::any_of(line.begin(),line.end(),[](const auto &cell){
+                  return cell.glyph=="↪"&&cell.rgb==0xd3a5cf&&cell.bold;
+                });
+              });
+          };
+          const auto original_awards=v.awards;
+          const auto original_discoveries=v.discoveries;
+          ui_check(!marked(),"the room map does not reveal a hidden entrance before discovery");
+          if(secret<iceberg::UnnumberedFloor)v.discoveries|=1u<<secret;
+          else {
+            const auto award=secret==iceberg::UnnumberedFloor?Achievement::LostFloor:Achievement::PlatformFound;
+            v.awards[iceberg::achievement_word(award)]|=iceberg::achievement_bit(award);
+          }
+          ui_check(marked(),"a known entrance has a map marker and a localized legend");
+          v.mode=iceberg::Mode::Endless;
+          ui_check(!marked(),"the expedition map does not advertise unavailable campaign entrances");
+          v.mode=iceberg::Mode::Campaign;
+          v.awards=original_awards;
+          v.discoveries=original_discoveries;
+        }
+      if(node->platform>=0&&secret<iceberg::UnnumberedFloor) {
+        v.discoveries|=1u<<secret;
+        const auto &lift=entrances.grid.platforms[size_t(node->platform)];
+        const auto pin_row=[&](double phase) {
+          entrances.state.elapsed=lift.period*phase;
+          RenderGrid(entrances.grid,entrances.state,34,110,2).draw();
+          for(size_t y=0;y<frame.size();++y)for(const auto &cell:frame[y])
+            if(cell.glyph=="↪"&&cell.rgb==0xd3a5cf&&cell.bold)return int(y);
+          return -1;
+        };
+        const int low=pin_row(.25),high=pin_row(.75);
+        ui_check(low>high&&high>=0,"the known entrance marker follows the Harbor pump lift");
+      }
+    }
+  }
   auto count_map=[&](const char *glyph,uint32_t rgb) {
     int count=0;
     for(size_t y=4;y+7<frame.size();++y)for(const auto &cell:frame[y])

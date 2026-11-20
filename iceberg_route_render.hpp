@@ -122,7 +122,18 @@
     const auto return_door=[](const auto &node){return node.kind==InteractionKind::Return;};
     const bool has_return=std::any_of(grid_.interactions.begin(),grid_.interactions.end(),return_door);
     const bool return_only=has_return&&!show_goal&&!settlement;
-    constexpr uint32_t return_color=0x91d4ce;
+    constexpr uint32_t return_color=0x91d4ce,known_entrance_color=0xd3a5cf;
+    const auto known_entrance=[&](const auto &node) {
+      const auto &view=state_.adventure;
+      if(view.mode!=iceberg::Mode::Campaign||node.kind!=InteractionKind::Secret)return false;
+      if(node.id==iceberg::UnnumberedFloor)
+        return iceberg::has_award(view.awards,iceberg::Achievement::LostFloor);
+      if(node.id==iceberg::NightPlatform)
+        return iceberg::has_award(view.awards,iceberg::Achievement::PlatformFound);
+      return node.id>=0&&node.id<iceberg::UnnumberedFloor&&(view.discoveries&(1u<<node.id));
+    };
+    if(std::any_of(grid_.interactions.begin(),grid_.interactions.end(),known_entrance))
+      add_feature(tr("↪ Znane wejście","↪ Known entrance"),known_entrance_color);
     const auto missing=show_goal?grid_.goal_requires&~grid_.switch_flags:0;
     const auto required_valve=[missing](const auto &node) {
       return node.kind==InteractionKind::Valve&&(missing&(uint64_t(1)<<node.id));
@@ -437,6 +448,10 @@
       if(board||return_door(node))
         mark(node.area.x+node.area.w*.5,node.area.y+node.area.h*.5,board?"▤":"↶",
           board?0xd7e8cd:return_color,board?1:-1);
+      if(known_entrance(node)) {
+        const auto entrance=node.at(grid_.platforms,state_.elapsed);
+        mark(entrance.x+entrance.w*.5,entrance.y+entrance.h*.5,"↪",known_entrance_color);
+      }
     }
     for(size_t i=0;i<grid_.checkpoint_points.size();++i)if(i!=active) {
       const auto [x,y]=grid_.checkpoint_points[i];
