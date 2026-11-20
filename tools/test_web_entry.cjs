@@ -454,7 +454,16 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>!!(uiFlags&2));
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(()=>document.activeElement.dataset.tap),'12','Tab reaches the toolbar while paused');
-    await page.locator('#game').focus();
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(()=>!(uiFlags&2)&&document.activeElement===canvas);
+    await page.keyboard.press('p');
+    await page.waitForFunction(()=>!!(uiFlags&2));
+    await pause.focus();
+    await page.keyboard.press('p');
+    await page.waitForFunction(()=>!(uiFlags&2)&&document.activeElement===canvas);
+    console.log('PASS Escape and P resume from focused game controls and restore movement focus');
+    await page.keyboard.press('p');
+    await page.waitForFunction(()=>!!(uiFlags&2));
     await page.keyboard.press('F2');
     const accountFocus=()=>page.evaluate(()=>{
      if(document.activeElement===accounts.name)return 'name';
