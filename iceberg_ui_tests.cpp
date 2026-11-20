@@ -732,6 +732,56 @@ int main(){try {
         "a reseated Crown rib removes the map gap at the existing recovery time");
     }
   }
+  {
+    AdventureSession gust(options,{});
+    const auto tour=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==68;});
+    gust.start_tour(int(tour-iceberg::DebugTour.begin()));
+    auto view=gust.state;
+    view.adventure.map=view.adventure.map_room=true;
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{56,20},std::pair{110,34}}) {
+      for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+        view.adventure.language=language;
+        const bool en=language==iceberg::Language::English;
+        for(const auto &[time,glyph]:{std::pair{0.,"○"},std::pair{1.8,"→"},std::pair{5.4,"←"}}) {
+          view.elapsed=time;
+          const bool lull=time==0.;
+          const uint32_t tint=lull?0x222d40:0x2c3c54,marker=lull?0x8c9bb1:0xb4d7e4;
+          const auto label=std::string(glyph)+(lull?(en?" Lull":" Cisza"):(en?" Wind":" Wiatr"));
+          RenderGrid(gust.grid,view,rows,cols,2).draw();
+          ui_check(count_background(tint)>8&&count_map(glyph,marker)==1&&count_map("@",0xffd68a)==1&&
+            ui_text(frame).find(label)!=std::string::npos,
+            "Ridge Sensors map shows the same lane through a lull, east gust and west gust");
+        }
+      }
+    }
+
+    auto sheltered=verified_room(70,73,5);
+    strengthen_expedition_wind(sheltered);
+    add_overhang_windbreak(sheltered);
+    view=new_state(sheltered);
+    view.adventure.map=view.adventure.map_room=true;
+    view.elapsed=1.5;
+    RenderGrid(sheltered,view,34,110,2).draw();
+    int last_gust_row=-1,last_terrain_row=-1;
+    for(size_t y=4;y+7<frame.size();++y)for(const auto &cell:frame[y]) {
+      if(cell.background==0x2c3c54)last_gust_row=int(y);
+      if(cell.glyph=="▪"&&cell.rgb==0x8ba2ae)last_terrain_row=int(y);
+    }
+    ui_check(last_gust_row>=0&&last_terrain_row>last_gust_row+1,
+      "the overhang room-map tint leaves the sheltered terrain below the gust unshaded");
+
+    auto shutters=iceworld::build_crown_sequence(false);
+    view=new_state(shutters);
+    view.adventure.map=view.adventure.map_room=true;
+    view.elapsed=1.5;
+    RenderGrid(shutters,view,24,34,2).draw();
+    ui_check(count_background(0x2c3c54)>0,"the active Crown campaign lane is marked");
+    shutters.switch_flags|=2;
+    RenderGrid(shutters,view,24,34,2).draw();
+    ui_check(count_background(0x2c3c54)==0&&count_background(0x222d40)==0,
+      "disabling the campaign gust removes its room-map footprint");
+  }
   for(const auto &[room,sign,letter,tube]:{std::array{45,2,2,0},std::array{57,0,0,2},
                                          std::array{61,2,0,0},std::array{49,0,0,0}}) {
     AdventureSession field(options,{});
