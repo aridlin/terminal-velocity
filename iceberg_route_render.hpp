@@ -832,7 +832,19 @@
         legend=paragraph(y+3,"B: "+r.alternatives[size_t(leg)].get(v.language),0x91d4ce);
       }
       clipped(legend,5,(wide?tr("< > tutaj   [ ] odwiedzone","< > here   [ ] visited"):tr("▶ tutaj   ● odwiedzone","▶ here   ● visited")),0xc7d9df);
-      if(legend+1<bottom-1)clipped(legend+1,5,(wide?tr("( ) nieodwiedzone","( ) not recorded as visited"):tr("○ nieodwiedzone","○ no visit recorded")),0x607887);
+      if(legend+1<bottom-1) {
+        const int missing_legs=endless_leg-1-r.completed_legs;
+        const bool history_edge=v.mode==iceberg::Mode::Endless&&v.tour_scene<0&&
+          r.browsed_leg==-r.completed_legs&&missing_legs>0;
+        if(history_edge) {
+          const auto missing=missing_legs==1?tr("Brak odcinka 1","Missing leg 1"):
+            tr("Brak odcinków 1–","Missing legs 1–")+std::to_string(missing_legs);
+          clipped(legend+1,5,missing,0xc7d9df);
+        } else {
+          clipped(legend+1,5,wide?tr("( ) nieodwiedzone","( ) not recorded as visited"):
+            tr("○ nieodwiedzone","○ no visit recorded"),0x607887);
+        }
+      }
     }
     const auto current=tr("Teraz: ","Now: ")+r.place.get(v.language);
     if(campaign) {

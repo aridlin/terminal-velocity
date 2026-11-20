@@ -2175,6 +2175,30 @@ int main(){try {
       game.tick(open_menu,0);game.tick(enter,0);game.tick(map,0);game.tick(tab,0);
       game.tick(previous_room,0);
       ui_check(v.route.browsed_leg==-1,"resuming the same Expedition from the menu retains its session history");
+      auto &completed_legs=game.profile.expeditions[0].completed_legs;
+      completed_legs.erase(completed_legs.begin());
+      game.tick(enter,0);game.tick(previous_leg,0);
+      const auto historical_id=completed_legs.front().front();
+      ui_check(v.route.detail_feature.get(iceberg::Language::English)==
+        iceworld::expedition_feature(historical_id).name.get(iceberg::Language::English)&&
+        *v.route.detail_feature.en,"recovered historical rooms show their actual authored mechanics");
+      for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+        game.profile.language=language;game.sync_view();
+        const bool en=language==iceberg::Language::English;
+        for(auto [cols,rows]:{std::pair{34,24},std::pair{56,20},std::pair{110,34}}) {
+          RenderGrid(game.grid,game.state,rows,cols,2).draw();
+          const auto text=normalize_ui(ui_text(frame));
+          ui_check(text.find(en?"Completed leg 2":"Ukończony odcinek 2")!=std::string::npos&&
+            text.find(en?"Missing leg 1":"Brak odcinka 1")!=std::string::npos,
+            "a partially recovered journal names the missing early history");
+        }
+      }
+      game.tick(previous_leg,0);
+      ui_check(v.route.browsed_leg==-1,"the timeline does not create pages for unavailable legs");
+      completed_legs.clear();game.tick(enter,0);
+      RenderGrid(game.grid,game.state,24,34,2).draw();
+      ui_check(ui_text(frame).find("Missing legs 1–2")!=std::string::npos,
+        "an older save without a journal explains why past legs are unavailable");
       game.tick(map,0);
     }
   }
