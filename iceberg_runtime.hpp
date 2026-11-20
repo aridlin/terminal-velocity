@@ -305,9 +305,9 @@ public:
     add_estate_balconies(room);
     add_estate_masonry(room);
   }
-  static void apply_archive_mechanics(EngineGrid &room) {
+  static void apply_archive_mechanics(EngineGrid &room,bool expedition=false) {
     if(room.district!=3)return;
-    add_expedition_drawers(room);
+    if(expedition)add_expedition_drawers(room);
     add_archive_glass_catwalk(room);
     add_archive_stack_shuttles(room);
     add_expedition_post_launchers(room);
@@ -320,7 +320,7 @@ public:
   static void apply_expedition_mechanics(EngineGrid &room) {
     apply_heatworks_mechanics(room);
     apply_estate_mechanics(room);
-    apply_archive_mechanics(room);
+    apply_archive_mechanics(room,true);
     add_expedition_ice(room);
     add_leaf_chute_flume(room);
     add_reservoir_ice(room);

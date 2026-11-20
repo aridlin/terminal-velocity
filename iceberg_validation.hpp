@@ -358,10 +358,10 @@ inline void add_expedition_post_launchers(EngineGrid &room) {
 }
 
 inline void add_archive_reference_carriers(EngineGrid &room) {
-  if(room.district!=3)return;
+  if(room.district!=3||(room.template_id==39&&!room.growth.empty()))return;
   struct Carrier { int room;double x,upper,lower,w; };
   static constexpr Carrier plans[]{
-    {37,66.,42.3,48.4,8.},{40,44.,30.6,37.,6.5},{42,65.,43.0,49.3,9.},
+    {37,66.,42.3,48.4,8.},{39,51.,34.7,44.8,4.},{40,44.,30.6,37.,6.5},{42,65.,43.0,49.3,9.},
     {43,52.9,35.5,43.,6.4},{46,67.2,36.,47.,6.4}
   };
   for(const auto &plan:plans)if(plan.room==room.template_id) {
