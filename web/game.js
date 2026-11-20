@@ -133,6 +133,7 @@ function clearPresses(){
  for(const pointer of pointers.values())pointer.pending=0;
 }
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
+const pauseScreenOpen=()=>(overlayFlags()&(2|8|64|128))===2;
 const settingsFlag=1<<4;
 const confirmSaveFlag=1<<5;
 const doorReadyFlag=1<<10;
@@ -190,7 +191,7 @@ function translateUI(){
  const choosingProfile=!!(uiFlags&profilePickerFlag);
  const inSettings=!!(uiFlags&settingsFlag);
  const overlay=overlayFlags();
- const showingPause=(overlay&(2|8|64|128))===2;
+ const showingPause=pauseScreenOpen();
  const reading=!!(overlay&4);
  const choosingReply=!!(overlay&replyChoiceFlag);
  const inspecting=!!(overlay&8);
@@ -427,7 +428,9 @@ addEventListener('keydown',e=>{
  if(composingKey(e)){dashShift='';return;}
  const target=e.target instanceof Element?e.target:null;
  const settingsBack=e.code==='Escape'&&settingsKeys.contains(target);
- const pauseScreen=(uiFlags&(2|64|128))===2;
+ const pauseScreen=pauseScreenOpen();
+ const resumeShortcut=pauseScreen&&(e.code==='Escape'||e.code==='KeyP')&&
+  target?.matches('#toolbar button[data-tap],#fullscreen-buttons button[data-tap],#touch-use');
  const tourPage=e.code==='PageUp'||e.code==='PageDown';
  if(tourPage&&!tourPicker)return;
  const tourNavigation=tourPicker&&tourControls.contains(target)&&
@@ -437,7 +440,7 @@ addEventListener('keydown',e=>{
  const mapShortcut=(timelineDirection||isExpeditionMapAction(target))&&timelineShortcuts.has(e.code);
  const timelineNavigation=timelineDirection&&e.code.startsWith('Arrow');
  if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !settingsBack&&!tourNavigation&&!mapShortcut&&!timelineNavigation)return;
+    !resumeShortcut&&!settingsBack&&!tourNavigation&&!mapShortcut&&!timelineNavigation)return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
@@ -446,6 +449,7 @@ addEventListener('keydown',e=>{
   if(shiftKeys.size===1)dashShift=e.code;
   return;
  }
+ if(resumeShortcut)canvas.focus({preventScroll:true});
  tap(keyMap[e.code]);
  keyboard.add(e.code);
  recompute();
