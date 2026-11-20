@@ -394,7 +394,7 @@ window.tvUI=u=>{
   // Cancel only contacts for obsolete destinations; independent inputs stay active.
   for(const [id,pointer] of pointers)
    if((doorChanged&&pointer.doorConfirm)||(travelChanged&&pointer.travelConfirm)||
-      (routeReturnChanged&&pointer.button?.id==='touch-use'))finishPointer(id,false);
+      (routeReturnChanged&&pointer.mapConfirm))finishPointer(id,false);
  }
  travelDistrict=nextTravelDistrict;
  lastBlocked=!!(u.flags&(blockingFlags|doorReadyFlag));
@@ -538,9 +538,12 @@ for(const button of document.querySelectorAll('[data-key]')){
   const doorConfirm=!!doorwayContext(uiFlags)&&(button.id==='touch-use'||
    (button.id==='touch-inspect'&&!!(uiFlags&forkDoorFlag)));
   const travelConfirm=button.id==='touch-use'&&travelDistrict>=0;
-  const onRelease=doorConfirm||travelConfirm||
+  const mapConfirm=(button.id==='touch-use'&&readOnlyMapOpen())||
+   (expeditionTimelineOpen()&&button.matches('.route-browse [data-key="8"]'));
+  const onRelease=doorConfirm||travelConfirm||mapConfirm||
    (button.id==='touch-use'&&(confirmingReply||!!(uiFlags&confirmSaveFlag)));
-  const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,doorConfirm,travelConfirm,pending:0};
+  const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,
+   doorConfirm,travelConfirm,mapConfirm,pending:0};
   pointers.set(e.pointerId,pointer);
   button.classList.add('held');
   if(!onRelease)pointerPress(pointer);

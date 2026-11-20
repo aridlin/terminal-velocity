@@ -1732,6 +1732,15 @@ const server=http.createServer((req,res)=>{
     assert.equal(await action.evaluate(button=>document.activeElement===button),true);
     await page.keyboard.press('b');
     await page.waitForFunction(()=>!(uiFlags&(1<<17))&&window.expeditionFrame?.includes('Room 8:'));
+    const mapTouch=await page.context().newCDPSession(page);
+    const mapActionPoint=await point(action,1);
+    try{
+     await mapTouch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[mapActionPoint]});
+     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+     assert.equal(await action.getAttribute('aria-label'),'Return to current room');
+     await mapTouch.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+     assert.equal(await action.getAttribute('aria-label'),'Return to current room');
+    }finally{await mapTouch.detach();}
     await action.tap();
     await page.waitForFunction(()=>!!(uiFlags&128)&&window.expeditionFrame?.includes('Planned:')&&
      !window.expeditionFrame?.includes('Room 8:'));
