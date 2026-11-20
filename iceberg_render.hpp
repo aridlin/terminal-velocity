@@ -422,6 +422,7 @@
       if(platform.archive_trolley){draw_archive_trolley(r);continue;}
       if(platform.cargo_hoist){draw_heatworks_hoist(platform,r);continue;}
       if(platform.pressure_piston){draw_pressure_piston(platform,r);continue;}
+      if(platform.harbor_sling){draw_harbor_sling(platform,r);continue;}
       if(quay_ferry(i)){draw_quay_ferry(i,r);continue;}
       if(grid_.template_id==50||platform.chute_leaf){draw_leaf_ferry(platform,r);continue;}
       if(platform.irrigation_scoop){draw_irrigation_scoop(r);continue;}
@@ -467,6 +468,7 @@
       if(pulse.kind==PulseKind::Flytrap)draw_flytrap(pulse);
       else if(pulse.kind==PulseKind::Masonry)draw_falling_masonry(pulse);
       else if(pulse.kind==PulseKind::Scanner)draw_archive_scanner(pulse);
+      else if(pulse.kind==PulseKind::Surge)draw_harbor_surge(pulse);
       else draw_pulse_vent(pulse);
     }
     for(size_t i=0;i<grid_.enemies.size();++i)if(!state_.defeated[i]) {

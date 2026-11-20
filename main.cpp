@@ -375,7 +375,7 @@ struct MovingPlatform {
   bool chute_leaf = false;
   double swing_pivot = 0, swing_length = 0;
   bool pressure_piston = false;
-  bool seed_tray = false, estate_balcony = false, rime_shelf = false;
+  bool seed_tray = false, estate_balcony = false, rime_shelf = false, harbor_sling = false;
   static constexpr double CrackTime = .55, RestoreTime = 2.9;
   double crack_age(const GameState &state, size_t index, double time) const {
     const double start = state.platform_armed_at[index];
@@ -388,7 +388,7 @@ struct MovingPlatform {
   }
   double offset(double t) const {
     const double cycle=t/period+phase;
-    if(!tram&&!archive_trolley&&!cargo_hoist&&!chute_leaf&&!pressure_piston&&!seed_tray&&!estate_balcony&&swing_length<=0.)
+    if(!tram&&!archive_trolley&&!cargo_hoist&&!chute_leaf&&!pressure_piston&&!seed_tray&&!estate_balcony&&!harbor_sling&&swing_length<=0.)
       return std::sin(cycle*6.283185307179586);
     const double half_cycle=std::fmod(cycle,1.)*2;
     const double travel=std::clamp((std::fmod(half_cycle,1.)-.22)/.78,0.,1.);
@@ -469,7 +469,7 @@ struct GrowingBridge {
     return (switches&flag)==flag?std::floor(area.w*amount):0.;
   }
 };
-enum class PulseKind { Steam, Flytrap, Masonry, Scanner };
+enum class PulseKind { Steam, Flytrap, Masonry, Scanner, Surge };
 struct PulseHazard {
   Rect area;
   double period=4,phase=0;
@@ -484,6 +484,11 @@ struct PulseHazard {
       constexpr double width=.6;
       const double sweep=std::clamp(cycle(t)/active_span,0.,1.);
       return {area.x+(area.w-width)*sweep,area.y,width,area.h};
+    }
+    if(kind==PulseKind::Surge) {
+      const double angle=std::acos(-1.)*std::clamp(cycle(t)/active_span,0.,1.);
+      const double rise=std::lerp(.35,area.h,std::sin(angle));
+      return {area.x,area.bottom()-rise,area.w,std::min(rise,2.)};
     }
     if(kind!=PulseKind::Masonry)return area;
     constexpr double height=.85;

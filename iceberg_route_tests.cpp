@@ -180,6 +180,42 @@ void test_crown_wind_and_rime() {
     "a held landing breaks the rime and drops the courier");
 }
 
+void test_harbor_sling_and_surge() {
+  constexpr double dt=1./120.;
+  auto dock=verified_room(501,73,0);
+  AdventureSession::apply_harbor_mechanics(dock);
+  require(dock.platforms.size()==1&&dock.platforms.front().harbor_sling,"a cargo sling connects the dairy's loading ramps");
+  auto run=new_state(dock);
+  run.spawn_x=45.;run.spawn_y=39.-kPlayerHeight;
+  reset_player(run);
+  for(int i=0;i<2;++i)world_step(run,dock,{},dt);
+  for(int i=0;i<115&&run.player.support!=0;++i) {
+    const int steer=run.player.x<48.53?1:run.player.x>49.07?-1:0;
+    world_step(run,dock,{.move=steer,.jump_held=true,.jump_pressed=i==0},dt);
+  }
+  require(run.deaths==0&&run.player.support==0,"a normal jump can reach the cargo sling");
+  for(int i=0;i<450&&run.player.y>32.5;++i)world_step(run,dock,{},dt);
+  require(run.deaths==0&&run.player.support==0&&run.player.y<=32.5,
+    "the cargo sling travels from the lower berth to the upper ramp");
+
+  auto crossing=verified_room(504,73,0);
+  AdventureSession::apply_harbor_mechanics(crossing);
+  require(crossing.pulses.size()==1&&crossing.pulses.front().kind==PulseKind::Surge&&crossing.water_basins.size()==3,
+    "the ferry crossing gains a surge in its existing water channel");
+  const auto &wave=crossing.pulses.front();
+  const double active=wave.period*(1.12-wave.phase);
+  const double warning=wave.period*(1.9-wave.phase);
+  require(wave.damage_area(active).top()<wave.area.bottom()-2.,"the surge rises from the water toward the deck");
+  run=new_state(crossing);
+  run.player.x=wave.area.x+.25;run.player.y=wave.area.y+.25;
+  run.elapsed=warning;
+  world_step(run,crossing,{},dt);
+  require(wave.warning(run.elapsed)&&run.deaths==0,"the narrow channel stays clear during the foam warning");
+  run.elapsed=active;
+  world_step(run,crossing,{},dt);
+  require(wave.active(run.elapsed)&&run.deaths==1,"an active crest can catch a low jump near the quay");
+}
+
 int main() {
   try {
     test_heatworks_route_machinery();
@@ -187,6 +223,7 @@ int main() {
     test_estate_balcony_and_masonry();
     test_archive_rack_and_scanner();
     test_crown_wind_and_rime();
+    test_harbor_sling_and_surge();
     for(unsigned seed=0;seed<10000;++seed) {
       auto itinerary=iceworld::make_itinerary(seed,0,24,4);
       for(int leg=0;leg<3;++leg) {

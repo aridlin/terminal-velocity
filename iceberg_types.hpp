@@ -357,12 +357,14 @@ inline constexpr std::array DebugTour{
   TourStop{3,40,82,20,{"Poczekaj, aż skaner minie biurko", "Wait for the scanner to clear the desk"}},
   TourStop{5,64,58.,26,{"Poczekaj na spokojny wiatr. Lód pod stopami pęka.",
     "Wait for a lull. The ice shelf cracks underfoot."}},
+  TourStop{0,501,45,39,{"Wejdź na zawiesie i zeskocz na wyższą rampę","Ride the cargo sling and jump to the upper loading ramp"}},
+  TourStop{0,504,25,52,{"Piana przy nabrzeżu zapowiada falę", "Foam at the quay warns of a surge"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 // Keep the quick action pointed at the newest featured sample, independently of list order.
 inline constexpr auto DebugTourLatest = [] {
   for(size_t i=0;i<DebugTour.size();++i)
-    if(DebugTour[i].room==64)return i;
+    if(DebugTour[i].room==501)return i;
   return DebugTour.size();
 }();
 static_assert(DebugTourLatest<DebugTour.size());
