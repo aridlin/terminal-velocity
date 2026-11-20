@@ -127,14 +127,42 @@ let expeditionNodes=null;
 window.tvExpeditionNodes=(first,count,row,left,stride,width)=>{
  expeditionNodes=count?{first,count,row,left,stride,width}:null;
 };
-const tap=(...keys)=>{for(const k of keys){completedPresses|=1<<k;pressed|=1<<k;}};
+let dashEdgeOrder=0,completedDash=null;
+function dashEdge(){
+ const axis=(negative,positive)=>{
+  const mask=(1<<negative)|(1<<positive);
+  const direction=(held&mask)||(pressed&mask);
+  return Number(!!(direction&(1<<positive)))-Number(!!(direction&(1<<negative)));
+ };
+ // Encode the nine aim combinations as 1–9. Zero is an unspecified aim.
+ return {aim:1+(axis(0,1)+1)+3*(axis(2,3)+1),order:++dashEdgeOrder};
+}
+function queuedDashAim(){
+ if(!(pressed&(1<<5)))return 0;
+ let latest=completedDash;
+ for(const pointer of pointers.values())
+  if(pointer.dash&&(!latest||pointer.dash.order>latest.order))latest=pointer.dash;
+ return latest?.aim??0;
+}
+const tap=(...keys)=>{
+ for(const key of keys){
+  if(key===5)completedDash=dashEdge();
+  completedPresses|=1<<key;
+  pressed|=1<<key;
+ }
+};
 function pointerPress(pointer){
+ if(pointer.key===5)pointer.dash=dashEdge();
  pointer.pending|=1<<pointer.key;
  pressed|=1<<pointer.key;
 }
 function clearPresses(){
  pressed=completedPresses=0;
- for(const pointer of pointers.values())pointer.pending=0;
+ completedDash=null;
+ for(const pointer of pointers.values()){
+  pointer.pending=0;
+  pointer.dash=null;
+ }
 }
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
 const pauseScreenOpen=()=>(overlayFlags()&(2|8|64|128))===2;
@@ -487,6 +515,7 @@ function finishPointer(id,completed,event){
  if(!pointer)return;
  pointers.delete(id);
  if(completed){
+  if(pointer.dash&&(!completedDash||pointer.dash.order>completedDash.order))completedDash=pointer.dash;
   completedPresses|=pointer.pending;
   if(pointer.releaseKey!==null&&!accounts?.active&&!importPending&&!pointer.button.disabled&&
      pointer.button.contains(document.elementFromPoint(event.clientX,event.clientY)))
@@ -540,7 +569,7 @@ for(const button of document.querySelectorAll('[data-key]')){
   const onRelease=doorConfirm||travelConfirm||mapConfirm||
    (button.id==='touch-use'&&(confirmingReply||!!(uiFlags&confirmSaveFlag)));
   const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,
-   x:e.clientX,y:e.clientY,doorConfirm,travelConfirm,mapConfirm,pending:0};
+   x:e.clientX,y:e.clientY,doorConfirm,travelConfirm,mapConfirm,pending:0,dash:null};
   pointers.set(e.pointerId,pointer);
   button.classList.add('held');
   if(!onRelease)pointerPress(pointer);
@@ -968,7 +997,7 @@ function frame(now){
  if(started&&accounts?.active)accounts.draw();
  else if(started&&!importPending){
   Module._web_profile_action_busy(accountBooting||accounts?.busy?1:0);
-  Module._web_tick(dt,held,pressed,cols,rows,focused?1:0);
+  Module._web_tick(dt,held,pressed,cols,rows,focused?1:0,queuedDashAim());
   clearPresses();
  }
  last=now;
