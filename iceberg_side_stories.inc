@@ -27,6 +27,33 @@
       add({97,30,4,4},SideStory::CrownPunch,{"Sprawdź kasownik","Test the ticket punch"});
     }
   }
+  struct SideDocument {
+    iceberg::SideFlag flag;
+    iceberg::Text title, body;
+  };
+  static std::optional<SideDocument> side_document(iceberg::SideStory story) {
+    using iceberg::SideFlag;
+    using iceberg::SideStory;
+    switch(story) {
+      case SideStory::HarborStub:
+        return SideDocument{SideFlag::HarborStub,{"Bloczek pocztowy","Postal counterfoil"},
+          {"ZWROT 11 — dozorczyni: najpierw pociągnąć w dół, potem w lewo. Nie doręczać po 00:07.",
+           "RETURN 11 — caretaker: pull down, then left. Do not deliver after 00:07."}};
+      case SideStory::EstatePlate:
+        return SideDocument{SideFlag::EstatePlate,{"Blaszka pod schodami","Plate under the stairs"},
+          {"Pod numerem 11: rysa w dół, druga w lewo. Zawiasy są na ścianie obok.",
+           "Under number 11: a scratch down, a second to the left. The hinges are on the wall beside it."}};
+      case SideStory::ArchiveCopy:
+        return SideDocument{SideFlag::ArchiveCopy,{"Odpis z teczki 11","Copy from folder 11"},
+          {"TEKA 11 — zatarte polecenie: w dół, potem w lewo. Zlecenie wpłynęło po zakończeniu akcji.",
+           "FOLDER 11 — erased instruction: down, then left. Order received after the operation ended."}};
+      case SideStory::Roster:
+        return SideDocument{SideFlag::Roster,{"Lista lokatorów","Tenant roster"},
+          {"TRZYNAŚCIE NAZWISK. Czternasty wiersz jest wgnieciony od ołówka: «Zosia, zastępcza kołyska w pralni».",
+           "THIRTEEN NAMES. Pencil marks dent the fourteenth line: ‘Zosia, spare cot in the laundry.’"}};
+      default:return std::nullopt;
+    }
+  }
   bool side_story_interact(const Interaction &node) {
     using iceberg::Achievement;
     using iceberg::SideFlag;
@@ -43,22 +70,16 @@
       return true;
     }
     if(node.kind!=InteractionKind::SideStory)return false;
-    const auto read=[&](SideFlag flag,const std::string &line) {
-      remember_side_flag(flag);notice(line,7);audio.play(AudioCue::Paper);persist();
-    };
-    switch(SideStory(node.id)) {
-      case SideStory::HarborStub:
-        read(SideFlag::HarborStub,t("ZWROT 11 — dozorczyni: najpierw pociągnąć w dół, potem w lewo. Nie doręczać po 00:07.",
-          "RETURN 11 — caretaker: pull down, then left. Do not deliver after 00:07."));
-        break;
-      case SideStory::EstatePlate:
-        read(SideFlag::EstatePlate,t("Pod numerem 11: rysa w dół, druga w lewo. Zawiasy są na ścianie obok.",
-          "Under number 11: a scratch down, a second to the left. The hinges are on the wall beside it."));
-        break;
-      case SideStory::ArchiveCopy:
-        read(SideFlag::ArchiveCopy,t("TEKA 11 — zatarte polecenie: w dół, potem w lewo. Zlecenie wpłynęło po zakończeniu akcji.",
-          "FOLDER 11 — erased instruction: down, then left. Order received after the operation ended."));
-        break;
+    const auto story=SideStory(node.id);
+    if(const auto document=side_document(story)) {
+      if(!has_side_flag(document->flag)) {
+        remember_side_flag(document->flag);
+        persist();
+      }
+      inspect_nearby();
+      return true;
+    }
+    switch(story) {
       case SideStory::Casting:
         remember_side_flag(SideFlag::Casting);
         animate_pickup(node,0);
@@ -85,10 +106,6 @@
                     "VOICE FROM ABOVE: You have thirteen. Heat thirteen. At 00:07 the door will give you the number."}},
               {-1,{"Wentylator staje. Od drugiej strony ktoś dyktuje twoje kroki. Liczy o jeden do przodu.",
                     "The fan stops. Someone on the other side calls out your footsteps. They're one step ahead."}}},FinishBasementTape);
-        break;
-      case SideStory::Roster:
-        read(SideFlag::Roster,t("TRZYNAŚCIE NAZWISK. Czternasty wiersz jest wgnieciony od ołówka: «Zosia, zastępcza kołyska w pralni».",
-          "THIRTEEN NAMES. Pencil marks dent the fourteenth line: ‘Zosia, spare cot in the laundry.’"));
         break;
       case SideStory::EmergencyBell:
         audio.play(AudioCue::Metal2,.8f);
@@ -117,6 +134,7 @@
         notice(t("Kasownik wybija datę na pustym bilecie. Jutrzejszą, bez roku.",
           "The punch stamps a blank ticket. Tomorrow's date, with the year missing."),6);
         break;
+      default:return false;
     }
     return true;
   }
