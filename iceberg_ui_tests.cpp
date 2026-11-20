@@ -1488,6 +1488,31 @@ int main(){try {
   ui_check(picker.picker_choice==0,"paging backward clamps at the first stop");
   tour_repeat.tick(page_down,0,true,110,34);
   ui_check(picker.picker_choice==22,"the wide Tour picker pages by its own visible row count");
+  {
+    const int previous=picker.picker_choice;
+    const auto channel=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==52;});
+    picker.picker_choice=int(channel-iceberg::DebugTour.begin());
+    picker.language=iceberg::Language::English;
+    RenderGrid(tour_repeat.grid,tour_repeat.state,24,34,2).draw();
+    const auto narrow=ui_text(frame);
+    std::string interior;
+    for(const auto &row:frame) {
+      for(size_t x=1;x+1<row.size();++x)interior+=row[x].glyph;
+      interior+=' ';
+    }
+    const auto preview=normalize_ui(interior);
+    ui_check(narrow.find("The channel beneath the green…")!=std::string::npos&&
+             preview.find("The channel beneath the greenhouse")!=std::string::npos,
+      "the compact Tour marks the abbreviated list title and wraps the full title in its preview");
+    ui_check(preview.find(channel->change.en)!=std::string::npos,
+      "the full Tour title leaves the sample instructions readable");
+    RenderGrid(tour_repeat.grid,tour_repeat.state,28,38,2).draw();
+    ui_check(ui_text(frame).find("The channel beneath the greenhouse")!=std::string::npos&&
+             ui_text(frame).find(iceberg::Districts[size_t(channel->district)].name.get(picker.language))!=std::string::npos,
+      "a wider Tour keeps its full list title and district");
+    picker.picker_choice=previous;
+  }
   Controls back;back.pause=true;
   tour_repeat.tick(back,0);
   down.navigate=0;
