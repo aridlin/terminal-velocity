@@ -13,6 +13,10 @@
 namespace {
 constexpr int W = 1280, H = 720;
 constexpr double PPU = 30.0;
+
+bool is_confirm_key(SDL_Scancode key) {
+  return key == SDL_SCANCODE_RETURN || key == SDL_SCANCODE_KP_ENTER;
+}
 struct RGBA {
   Uint8 r, g, b, a = 255;
 };
@@ -432,7 +436,7 @@ struct App {
       clear_input();
       return;
     }
-    if ((k == SDL_SCANCODE_RETURN || k == SDL_SCANCODE_SPACE) && mode != Play) {
+    if ((is_confirm_key(k) || k == SDL_SCANCODE_SPACE) && mode != Play) {
       if (mode == Menu || mode == Win) {
         bool finished = mode == Win && grid.chapter == 3;
         if (mode == Win && grid.chapter)
@@ -1177,7 +1181,7 @@ int terminal_window_main(int argc,char **argv) {
           c.dash_pressed|=key==SDL_SCANCODE_X||key==SDL_SCANCODE_LSHIFT||key==SDL_SCANCODE_RSHIFT;
           c.interact|=key==SDL_SCANCODE_E||key==SDL_SCANCODE_F;
           c.inspect|=key==SDL_SCANCODE_B;
-          c.confirm|=key==SDL_SCANCODE_RETURN;
+          c.confirm|=is_confirm_key(key);
           c.restart|=key==SDL_SCANCODE_R;c.new_run|=key==SDL_SCANCODE_N;
           c.pause|=key==SDL_SCANCODE_P||key==SDL_SCANCODE_ESCAPE;
           c.menu_request|=key==SDL_SCANCODE_M;c.journal|=key==SDL_SCANCODE_TAB;
