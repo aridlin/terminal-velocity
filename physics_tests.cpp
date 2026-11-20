@@ -451,6 +451,28 @@ int main() {
           "a hazard respawn ends a slow frame at the checkpoint");
     step.advance(s, course, falling, 1./120);
     check(s.deaths==1&&s.player.x>s.spawn_x,"held movement resumes on the next frame after a fall");
+    {
+      auto room=iceworld::build_room(8,37,0);
+      auto runner=new_state(room);
+      const auto checkpoint=std::find_if(room.checkpoint_points.begin(),room.checkpoint_points.end(),
+        [&](const auto &point){
+          const Rect courier{point.first,point.second,kPlayerWidth,kPlayerHeight};
+          return std::ranges::any_of(room.sweets,[&](const auto &token){
+            return courier.intersects(token_pickup_bounds(token.first,token.second));
+          });
+        });
+      check(checkpoint!=room.checkpoint_points.end(),
+            "the Harbor checkpoint overlaps an uncollected token");
+      runner.checkpoint=int(checkpoint-room.checkpoint_points.begin());
+      runner.spawn_x=checkpoint->first;
+      runner.spawn_y=checkpoint->second;
+      FixedStepper retry;
+      retry.advance(runner,room,{.restart=true},.1);
+      check(runner.deaths==1&&runner.sweets_count()==0&&retry.accumulator==0.,
+            "the retry tick does not pick up a token at the return lamp");
+      retry.advance(runner,room,{},1./120);
+      check(runner.sweets_count()==1,"a live step at the lamp collects the overlapping token");
+    }
     s = new_state(course);
     step = FixedStepper{};
     int jumps = 0, dashes = 0;

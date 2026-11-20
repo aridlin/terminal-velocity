@@ -1595,6 +1595,12 @@ public:
       const int deaths=state.deaths;
       if (!state.won || input.restart) {
         world_step(state, grid, input, 1.0 / 120.0);
+        // Stop at the checkpoint. The respawn position starts making contact
+        // with room objects on the next live step.
+        if(state.deaths!=deaths) {
+          accumulator=0.;
+          return;
+        }
         for (size_t i = 0; i < grid.sweets.size(); ++i) {
           auto [x, y] = grid.sweets[i];
           const Rect pickup=grid.adventure_level?token_pickup_bounds(x,y):Rect{x-.35,y-.35,1.1,1.1};
@@ -1629,12 +1635,6 @@ public:
         }
       }
 
-      // End a respawn at the checkpoint. Any remaining steps in this frame
-      // would reuse the movement input from before the respawn.
-      if(state.deaths!=deaths) {
-        accumulator=0.;
-        return;
-      }
       accumulator -= 1.0 / 120.0;
     }
   }
