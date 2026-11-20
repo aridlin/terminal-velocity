@@ -47,6 +47,8 @@
       [](const auto &platform){return platform.service_lift;});
     const bool has_cargo_hoist=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.cargo_hoist;});
+    const bool has_pressure_piston=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.pressure_piston;});
     const auto powered=[](const SortingBelt &belt){return belt.speed!=0;};
     const bool has_belts=std::any_of(grid_.sorting_belts.begin(),grid_.sorting_belts.end(),powered);
     const auto belt_control=[&](const auto &node) {
@@ -164,7 +166,7 @@
     const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_chart)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
       +int(has_fragile)+int(has_ferries||has_chute_leaf)+int(has_trolley)+int(has_seam||has_gutter)+int(has_wheel)
-      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(lesson_signals);
+      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(has_pressure_piston)+int(lesson_signals);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=(has_ferries||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
@@ -253,7 +255,7 @@
     std::vector<std::pair<int,int>> broken_floes,broken_beams;
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
-      if(platform.archive_rack||platform.service_lift||platform.cargo_hoist) {
+      if(platform.archive_rack||platform.service_lift||platform.cargo_hoist||platform.pressure_piston) {
         const int x=column(platform.base.x+platform.base.w*.5);
         const double range=std::abs(platform.dy);
         for(int y=row(platform.base.y-range);y<=row(platform.base.y+range);++y)
@@ -445,7 +447,7 @@
       const bool right=belt.speed_at(grid_.switch_flags)>0;
       mark(belt.x+belt.width*.5,belt.y,right?"▶":"◀",belt_color,right?1:-1);
     }
-    for(const auto &platform:grid_.platforms)if(platform.service_lift||platform.cargo_hoist) {
+    for(const auto &platform:grid_.platforms)if(platform.service_lift||platform.cargo_hoist||platform.pressure_piston) {
       const auto deck=platform.at(state_.elapsed);
       mark(deck.x+deck.w*.5,deck.y,"↕",service_lift_color);
     }
@@ -575,6 +577,7 @@
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_cargo_hoist)paint_text(legend++,2,tr("↕ Winda towarowa","↕ Cargo hoist"),service_lift_color);
+    if(has_pressure_piston)paint_text(legend++,2,tr("↕ Tłok","↕ Pressure piston"),service_lift_color);
     if(has_seam||has_gutter)
       paint_text(legend++,2,has_gutter?tr("↑ Rynny","↑ Gutter climb"):tr("↑ Wąski szyb","↑ Wall-kick shaft"),seam_color);
     if(has_belts) {

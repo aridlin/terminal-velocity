@@ -283,6 +283,7 @@ public:
   static void apply_expedition_mechanics(EngineGrid &room) {
     add_expedition_steam(room);
     add_heatworks_cargo_hoists(room);
+    add_heatworks_twin_pistons(room);
     add_heatworks_pressure_bypass(room);
     add_heatworks_turbine(room);
     add_expedition_trams(room);

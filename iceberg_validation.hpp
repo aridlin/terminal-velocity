@@ -510,6 +510,23 @@ inline void add_heatworks_cargo_hoists(EngineGrid &room) {
   room.interactions.push_back({{11,53,2,3},InteractionKind::Npc,1,{"Porozmawiaj","Talk"}});
 }
 
+inline void add_heatworks_twin_pistons(EngineGrid &room) {
+  if(room.district!=1||room.template_id!=421)return;
+  const size_t original=room.platforms.size();
+  // These decks fit between the existing token shelves. Both swing lifts
+  // and fixed landings on the original through-route remain in place.
+  room.platforms.push_back({.base={62,40.25,4,.5},.dy=6.75,.period=6.4,
+    .phase=.5,.pressure_piston=true});
+  room.platforms.push_back({.base={76,33.25,5,.5},.dy=5.25,.period=6.4,
+    .pressure_piston=true});
+  const auto route=verify_route(room);
+  if(!route.complete||route.deaths!=0) {
+    room.platforms.resize(original);
+    return;
+  }
+  room.verification_policy=route.policy;
+}
+
 inline void add_heatworks_pressure_bypass(EngineGrid &room) {
   if(room.district!=1||room.template_id!=20)return;
   auto bypass=room;
