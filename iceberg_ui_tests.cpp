@@ -400,6 +400,31 @@ int main(){try {
       };
       const auto initial=water_columns(mid_ride);
       ui_check(initial!=water_columns(mid_ride+.25),"flume foam moves while the camera stays fixed");
+      flume.state.adventure.map=flume.state.adventure.map_room=true;
+      for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+        flume.state.adventure.language=language;
+        const bool en=language==iceberg::Language::English;
+        const auto ready_dock=[&](double time,int ready) {
+          flume.state.elapsed=time;
+          RenderGrid(flume.grid,flume.state,rows,cols,2).draw();
+          const auto text=ui_text(frame);
+          ui_check(text.find(en?"≈ Flume":"≈ Rynna")!=std::string::npos&&
+            text.find(en?"● Ready · ○ Empty":"● Gotowe · ○ Pusto")!=std::string::npos,
+            "the compact flume map explains the blue route and both dock states");
+          int water=0,glyphs_on_water=0;
+          for(const auto &row:frame)for(const auto &cell:row)if(cell.background==0x174e63) {
+            ++water;
+            glyphs_on_water+=cell.glyph=="≈"&&cell.rgb==0x66bfd7;
+          }
+          ui_check(water>=3&&glyphs_on_water>0&&count_marker("◒",0xb6d778)==2&&
+            count_marker("●",0xa9db8b)==ready+1&&count_marker("○",0xc2accf)==3-ready,
+            "the flume map keeps water, leaf, and correct dock state visible");
+        };
+        ready_dock(0.,1);
+        ready_dock(leaf->period*.25,0);
+        ready_dock(leaf->period*.5,1);
+      }
+      flume.state.adventure.map=flume.state.adventure.map_room=false;
     }
   }
   AdventureSession features(options,"/tmp/tv-ui-room-features-unused");features.begin_campaign(true);

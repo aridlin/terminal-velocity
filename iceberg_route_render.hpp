@@ -140,6 +140,7 @@
     const char *ferry_symbol=leaf_ferries?"◒":"▱";
     const uint32_t ferry_color=leaf_ferries?0xb6d778:0xe4ad68;
     constexpr uint32_t ferry_route_color=0x6f9eaa;
+    constexpr uint32_t flume_route_color=0x66bfd7;
     constexpr uint32_t belt_color=0xa0d6df,trolley_color=0xaee1df,wheel_color=0xc5a36d;
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
@@ -172,9 +173,9 @@
     const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_chart)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
       +int(has_fragile)+int(has_ferries||has_chute_leaf)+int(has_trolley)+int(has_seam||has_gutter)+int(has_wheel)
-      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(has_pressure_piston||has_seed_tray)+int(lesson_signals);
+      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(has_pressure_piston||has_seed_tray)+int(lesson_signals)+int(has_chute_leaf);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
-    const int title_rows=(has_ferries||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
+    const int title_rows=(has_ferries||has_chute_leaf||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
     const int left=(cols_-width)/2,first=top+title_rows+1;
     int title_row=top;
@@ -273,7 +274,7 @@
           const double fraction=n/8.-1;
           auto &cell=map[size_t(row(platform.base.y+platform.dy*fraction))]
                         [size_t(column(center+platform.dx*fraction))];
-          if(cell==' ')cell='s';
+          if(cell==' ')cell=platform.chute_leaf?'u':'s';
         }
       }
       if(platform.tram) {
@@ -348,6 +349,7 @@
       case ':':paint_text(first+y,left+x,"┆",0x718c9d);break;
       case '-':paint_text(first+y,left+x,"┄",0x887b96);break;
       case 's':paint_text(first+y,left+x,"┄",ferry_route_color);break;
+      case 'u':put(first+y,left+x,{"≈",Color::Text,false,false,0,flume_route_color,0x174e63});break;
       case 'b':paint_text(first+y,left+x,"═",belt_color);break;
       case 'g':paint_text(first+y,left+x,"═",bridge_color);break;
       case 'i':paint_text(first+y,left+x,"━",0xa6e9ea);break;
@@ -578,7 +580,15 @@
       paint_text(legend,2,name,leaf?0xb6d778:ferry_color);
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,separator," · ",0xc7d9df);
-      paint_text(legend++,separator+3,tr("┄ Trasa","┄ Route"),ferry_route_color);
+      paint_text(legend++,separator+3,has_chute_leaf?tr("≈ Rynna","≈ Flume"):tr("┄ Trasa","┄ Route"),
+        has_chute_leaf?flume_route_color:ferry_route_color);
+    }
+    if(has_chute_leaf) {
+      const auto ready=tr("● Gotowe","● Ready");
+      paint_text(legend,2,ready,ChuteLampReady);
+      const int separator=2+iceberg::cell_length(ready);
+      paint_text(legend,separator," · ",0xc7d9df);
+      paint_text(legend++,separator+3,tr("○ Pusto","○ Empty"),stop_color);
     }
     if(lesson_signals) {
       const auto board=tr("→/← Skacz","→/← Jump");
