@@ -59,6 +59,26 @@
     world_art(left,deck.y+row,{frame+"╝"},0xa08770);
   }
 
+  void draw_pressure_piston(const MovingPlatform &piston,const Rect &deck) {
+    const double row=aspect_*scale_,left=deck.x,center=deck.x+deck.w*.5;
+    const double lower=piston.base.y+piston.dy,upper=piston.base.y-piston.dy;
+    const double head=lower+1.5*row;
+    constexpr uint32_t iron=0x786b62,ram=0xc7a481,amber=0xf0b966;
+    for(double y=upper;y<=head;y+=row) {
+      world_art(left-scale_,y,{"│"},iron);
+      world_art(left+deck.w,y,{"│"},iron);
+    }
+    world_art(center-2*scale_,head,{"╔═╧═╗","║ ▒ ║","╚═╤═╝"},iron);
+    for(double y=deck.y+row;y<head;y+=row)world_art(center,y,{"║"},ram);
+    const int stop=piston.stop(state_.elapsed);
+    draw_hoist_lamp(left-scale_,lower-row,stop==1);
+    draw_hoist_lamp(left-scale_,upper-row,stop==-1);
+    const int cells=std::max(2,int(deck.w/scale_));
+    std::string cap="╞";
+    for(int i=1;i<cells-1;++i)cap+=i%2?"━":"╪";
+    world_text(left,deck.y,cap+"╡",stop==0?ram:amber);
+  }
+
   void draw_archive_drawers() {
     const double row=aspect_*scale_;
     for(const auto &drawer:grid_.growth) {

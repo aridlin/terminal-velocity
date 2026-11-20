@@ -776,6 +776,51 @@ int main(int argc,char **argv) {
         throw std::runtime_error("Hanging Beds route changed for seed "+std::to_string(seed));
     }
     check(true,"Hanging Beds retains the original route, tokens and lamps across 32 seeds");
+    AdventureSession pistons(options,{});
+    const auto piston_stop=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==421;});
+    check(piston_stop!=iceberg::DebugTour.end(),"Debug Tour includes Twin Pistons");
+    pistons.start_tour(int(piston_stop-iceberg::DebugTour.begin()));
+    check(pistons.grid.platforms.size()==5&&pistons.grid.platforms[3].pressure_piston&&
+          pistons.grid.platforms[4].pressure_piston,
+      "Twin Pistons retains all three through-route decks and gains two pressure lifts");
+    const auto &left=pistons.grid.platforms[3],&right=pistons.grid.platforms[4];
+    check(left.stop(.4)==1&&right.stop(.4)==-1&&left.stop(3.4)==-1&&right.stop(3.4)==1,
+      "the pressure lifts pause at opposite landings");
+
+    const auto drive=[&](Controls input,int count=1){
+      for(int i=0;i<count;++i)pistons.tick(input,.1);
+    };
+    const auto jump_right=[&](int strides){
+      drive({.move=1,.jump_held=true,.jump_pressed=true});
+      drive({.move=1,.jump_held=true},strides);
+      drive({.move=-1,.jump_held=true});
+    };
+    drive({},2);
+    jump_right(2);
+    drive({},8);
+    check(pistons.state.player.support==3,"an ordinary jump boards the first pressure lift");
+    drive({},19);
+    check(pistons.state.player.support==3&&std::abs(pistons.state.player.rect().bottom()-33.5)<.01,
+      "the first pressure lift carries the courier to its upper stop");
+    jump_right(5);drive({},3);
+    jump_right(5);drive({},15);
+    check(pistons.state.player.support==4&&std::abs(pistons.state.player.rect().bottom()-28.)<.01,
+      "the second lift carries the courier from the middle shelf to its upper stop");
+    jump_right(5);drive({},3);drive({.move=1},3);
+    check(pistons.state.deaths==0&&pistons.state.player.grounded&&pistons.state.collected[3]&&
+          pistons.state.collected[4]&&std::abs(pistons.state.player.rect().bottom()-28.)<.01,
+      "both pistons lead to two original tokens without a dash or retry");
+
+    for(unsigned seed=0;seed<16;++seed) {
+      auto room=verified_room(421,iceberg::mix(seed),1);
+      const auto tokens=room.sweets,lamps=room.checkpoint_points;
+      add_heatworks_twin_pistons(room);
+      if(room.platforms.size()!=5||room.sweets!=tokens||room.checkpoint_points!=lamps||
+         !verify_route(room).complete)
+        throw std::runtime_error("Twin Pistons route changed for seed "+std::to_string(seed));
+    }
+    check(true,"Twin Pistons keeps the lower route, tokens, and checkpoints across 16 seeds");
     auto chute=verified_room(58,iceberg::mix(73),4);
     check(chute.platforms.empty(),"older Leaf Chute layouts retain the stepped descent");
     add_expedition_ice(chute);

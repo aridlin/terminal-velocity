@@ -19,6 +19,7 @@
     };
     if(motif>=0&&motif<int(art.size()))world_art(a.x-1,a.y-double(art[size_t(motif)].size())*aspect_*scale_-.7,art[size_t(motif)],d.stone);
     for(const auto &platform:grid_.platforms) {
+      if(platform.pressure_piston)continue;
       auto deck=platform.at(state_.elapsed);
       world_art(deck.x+1,deck.y+.8,{"╲__________╱","  ∿∿∿∿∿∿∿∿"},d.shadow);
     }
