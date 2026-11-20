@@ -78,17 +78,26 @@
       r.available=!e.itinerary.empty();r.current=room;r.place=grid.room_name;
       r.visited=(1u<<unsigned(room+1))-1;
       for(int id:e.itinerary)r.rooms.push_back(iceworld::pattern(id).name);
+      const bool timeline=v.map&&!v.map_room;
+      const int selected=v.route_room_selection<0?-1:v.route_room_selection%iceberg::RoomsPerLeg;
       if(mode==iceberg::Mode::Endless&&run_active) {
         r.completed_legs=int(e.completed_legs.size());
-        if(v.map&&!v.map_room&&v.route_room_selection>=0) {
+        if(timeline&&selected>=0) {
           const int page=v.route_room_selection/iceberg::RoomsPerLeg;
           r.browsed_leg=page-r.completed_legs;
-          if(r.browsed_leg<0) {
-            for(int id:e.completed_legs[size_t(page)])r.browsed_rooms.push_back(iceworld::pattern(id).name);
-          } else if(r.browsed_leg>0) {
-            for(int id:expedition_itinerary(next_expedition_seed()))r.browsed_rooms.push_back(iceworld::pattern(id).name);
-          }
+          const auto browse=[&](const auto &leg) {
+            for(int id:leg)r.browsed_rooms.push_back(iceworld::pattern(id).name);
+            if(selected<int(leg.size()))r.detail_rhythm=iceworld::pattern(leg[size_t(selected)]).rhythm;
+          };
+          if(r.browsed_leg<0)browse(e.completed_legs[size_t(page)]);
+          else if(r.browsed_leg>0)browse(expedition_itinerary(next_expedition_seed()));
         }
+      }
+      if(timeline&&r.browsed_leg==0) {
+        const int shown=selected>=0&&selected!=room?selected:room+1;
+        const bool mastery_course=mode==iceberg::Mode::Trial&&shown==int(e.itinerary.size())-1;
+        if(!mastery_course&&shown>=0&&shown<int(e.itinerary.size()))
+          r.detail_rhythm=iceworld::pattern(e.itinerary[size_t(shown)]).rhythm;
       }
       if(mode==iceberg::Mode::Trial&&!r.rooms.empty())r.rooms.back()=iceworld::MasteryCourseName;
     }
