@@ -368,10 +368,12 @@ struct RouteView {
   bool branching=false, available=false;
   Text place;
 };
+enum class TourStopSource { Course, Settlement, Basement };
 struct TourStop {
   int district,room;
   double entry_x, entry_floor;
   Text change;
+  TourStopSource source=TourStopSource::Course;
 };
 inline constexpr int CrownShaftPlate = 41;
 inline constexpr int ArchiveTrolleyNotice = 42;
@@ -429,12 +431,16 @@ inline constexpr std::array DebugTour{
     "Wait for a lull. The ice shelf cracks underfoot."}},
   TourStop{0,501,45,39,{"Wejdź na zawiesie i zeskocz na wyższą rampę","Ride the cargo sling and jump to the upper loading ramp"}},
   TourStop{0,504,25,52,{"Piana przy nabrzeżu zapowiada falę", "Foam at the quay warns of a surge"}},
+  TourStop{2,200+UnnumberedFloor,79,51,{"Piwnica: przełącz odłącznik przed przewodem","Basement: try the breaker before the live cable"},TourStopSource::Basement},
+  TourStop{2,102,61,48,{"Pokaż Grażynie odpis listy lokatorów","Show Grażyna the copy of the roster"},TourStopSource::Settlement},
+  TourStop{4,104,104,50,{"Podnieś doniczkę i pomóż ślimakowi","Lift the pot and help the snail"},TourStopSource::Settlement},
+  TourStop{1,101,29,48,{"Zabierz kubek z rury i oddaj go Witkowi","Take the mug from the pipe and return it to Witek"},TourStopSource::Settlement},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 // Keep the quick action pointed at the newest featured sample, independently of list order.
 inline constexpr auto DebugTourLatest = [] {
   for(size_t i=0;i<DebugTour.size();++i)
-    if(DebugTour[i].room==501)return i;
+    if(DebugTour[i].room==101&&DebugTour[i].source==TourStopSource::Settlement)return i;
   return DebugTour.size();
 }();
 static_assert(DebugTourLatest<DebugTour.size());
