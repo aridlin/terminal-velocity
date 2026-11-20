@@ -15,6 +15,23 @@ void test_garden_vine_and_flytrap() {
   Controls jump{.move=1,.jump_held=true,.jump_pressed=true};
   for(int i=0;i<23;++i){world_step(run,room,jump,dt);jump.jump_pressed=false;}
   require(run.player.vine==0,"a held jump catches the vine just past the edge of the terrace");
+  auto charged=run;
+  world_step(charged,room,{.move=1,.dash_pressed=true},dt);
+  require(charged.player.vine<0&&!charged.player.dash_available&&charged.player.dash_time_left>0.,
+    "a charged dash releases the vine and fires on the same tick");
+  auto spent=new_state(room);
+  spent.spawn_x=run.spawn_x;spent.spawn_y=run.spawn_y;
+  reset_player(spent);
+  for(int i=0;i<64;++i)world_step(spent,room,{},dt);
+  for(int i=0;i<=25;++i)
+    world_step(spent,room,{.move=i==4?0:1,.jump_held=true,.jump_pressed=i==0,.dash_pressed=i==4},dt);
+  require(spent.player.vine==0&&!spent.player.dash_available,"an airborne dash can reach the vine with an empty charge");
+  world_step(spent,room,{.move=1,.dash_pressed=true},dt);
+  require(spent.player.vine==0&&!spent.player.dash_available&&spent.player.dash_time_left==0.,
+    "pressing an empty dash preserves the vine grip");
+  world_step(spent,room,{.move=1,.jump_held=true,.jump_pressed=true},dt);
+  require(spent.player.vine<0&&!spent.player.dash_available&&spent.player.vy<-20.,
+    "jump still releases a rider who has no dash charge");
   for(int i=0;i<60;++i)world_step(run,room,{},dt);
   const double momentum=run.player.vx;
   world_step(run,room,{.move=1,.jump_held=true,.jump_pressed=true},dt);
