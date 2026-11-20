@@ -749,9 +749,9 @@ int main(){try {
     }
   }
   vent_view.adventure.map=false;
-  vent_view.camera_y=vent.area.y-3.3;
-  vent_view.elapsed=(1.+.90-vent.phase)*vent.period;
   for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+    vent_view.camera_y=vent.area.y-3.3;
+    vent_view.elapsed=(1.+.90-vent.phase)*vent.period;
     for(int edge:{0,cols-1}) {
       vent_view.camera_x=edge==0?vent.area.right()-.2:vent.area.x-.4*edge-.05;
       RenderGrid(pressure_lifts,vent_view,rows,cols,2).draw();
@@ -759,6 +759,24 @@ int main(){try {
         const auto &cell=row[size_t(edge)];
         return cell.glyph=="▴"&&cell.rgb==0xf1c66f;
       }),"steam buildup remains visible at either clipped viewport edge");
+    }
+    // Keep only the top row of the burst in the viewport.
+    vent_view.camera_x=vent.area.x-4.05;
+    vent_view.camera_y=vent.area.y-(rows-8)*.8-.05;
+    const int right=int((vent.area.right()-.001-vent_view.camera_x)/.4);
+    for(const auto [phase,edge,color]:{std::tuple{.40,"",0u},
+        std::tuple{.83,"┊",0xc39b58u},std::tuple{.10,"▌",0xeb6a74u}}) {
+      vent_view.elapsed=(1.+phase-vent.phase)*vent.period;
+      RenderGrid(pressure_lifts,vent_view,rows,cols,2).draw();
+      const auto &row=frame[size_t(rows-4)];
+      if(!color) {
+        ui_check(row[10].rgb!=0xc39b58u&&row[size_t(right)].rgb!=0xc39b58u,
+          "an idle vent shows no warning above its hidden nozzle");
+      } else {
+        ui_check(row[10].glyph==(phase==.10?"▐":edge)&&row[10].rgb==color&&
+          row[size_t(right)].glyph==edge&&row[size_t(right)].rgb==color,
+          "warning edges remain visible where steam will burst above a hidden nozzle");
+      }
     }
   }
   auto seam_room=verified_room(61,73,5);

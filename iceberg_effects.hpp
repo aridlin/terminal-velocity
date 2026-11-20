@@ -82,13 +82,17 @@
     const double pressure=(vent.cycle(time)-PulseHazard::warning_start)/(1-PulseHazard::warning_start);
     const int pressure_rows=warning?std::min(steam_rows,1+int(pressure*steam_rows)):0;
     const int ripple=int(time*14);
+    const bool warning_above_nozzle=warning&&bottom>=rows_-3;
     for(int y=std::max(4,top);y<std::min(bottom,rows_-3);++y) {
-      if(!active&&y<bottom-pressure_rows)continue;
+      const bool above_pressure=y<bottom-pressure_rows;
+      if(!active&&above_pressure&&!warning_above_nozzle)continue;
       for(int x=std::max(0,left);x<=std::min(right,cols_-1);++x) {
         const bool core=x==middle;
         if(active) {
           const char *steam=core?((y+ripple)%2?"∿":"│"):x==left?"▐":x==right?"▌":"░";
           put(y,x,{steam,Color::Text,false,false,0,core?0xffb7a4:vent_active});
+        } else if(above_pressure) {
+          if(x==left||x==right)put(y,x,{"┊",Color::Text,false,false,0,0xc39b58});
         } else if(core||x==left||x==right) {
           const char *steam=core?"↑":y==bottom-pressure_rows?"▴":"┊";
           put(y,x,{steam,Color::Text,false,false,0,vent_warning});
