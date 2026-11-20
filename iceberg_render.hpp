@@ -582,11 +582,17 @@
   }
   void draw_iceberg_inspection() {
     const auto &v=state_.adventure;
-    auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,cols_,rows_);
-    frame(0,0,cols_,rows_,0x8c7559);
-    paint_text(1,2,tr("OGLĘDZINY","INSPECT"),0x9dd4dd,true);
+    auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,cols_,rows_,
+      v.inspect_art==iceberg::InspectionArt::Achievement);
+    const bool award=v.inspect_art==iceberg::InspectionArt::Achievement;
+    const auto accent=award&&v.inspect_detail?0xffd17du:0x9dd4ddu;
+    frame(0,0,cols_,rows_,award?accent:0x8c7559u);
+    paint_text(1,2,award?v.inspect_icon+" "+(v.inspect_detail?
+      tr("RZADKIE OSIĄGNIĘCIE","RARE ACHIEVEMENT"):tr("OSIĄGNIĘCIE","ACHIEVEMENT")):
+      tr("OGLĘDZINY","INSPECT"),accent,true);
     for(size_t i=0;i<layout.title.size();++i)paint_text(3+int(i),2,layout.title[i],0xf5cd79,true);
     auto art=iceberg::inspection_art(v.inspect_art,v.inspect_detail);
+    if(award)art={"╭─────╮","│  "+v.inspect_icon+"  │","╰─┬─┬─╯","  ╰─╯"};
     for(size_t y=0;y<art.size();++y) {
       auto line=glyphs(art[y]);
       for(size_t x=0;x<line.size();++x) {
@@ -1044,7 +1050,10 @@
       const auto i=entries[size_t(n)];
       const auto &award=iceberg::Achievements[i];
       const auto title=award.hidden&&!earned(i)?tr("Ukryte osiągnięcie","Hidden achievement"):award.title.get(v.language);
-      auto label=glyphs(std::string(n==selected?"▸ ":"  ")+(earned(i)?"◆ ":"◇ ")+title);
+      const bool concealed=award.hidden&&!earned(i);
+      const auto icon=concealed?"?":award.icon;
+      const uint32_t ink=earned(i)?(award.rare?0xffba64u:0xffd68au):d.light;
+      auto label=glyphs(std::string(n==selected?"▸ ":"  ")+icon+" "+(earned(i)?"◆ ":"◇ ")+title);
       std::string line;
       for(int x=0;x<std::min(int(label.size()),cols_-4);++x)
         line+=x==cols_-5&&int(label.size())>cols_-4?"…":label[size_t(x)];
@@ -1054,14 +1063,15 @@
         const auto glyph_line=glyphs(line);
         for(int x=0;x<int(glyph_line.size());++x)
           put(top+1+n-start,x+2,{glyph_line[size_t(x)],Color::Decor,true,false,0,
-             earned(i)?0xffd68au:d.light,0x20313a});
-      } else paint_text(top+1+n-start,2,line,earned(i)?0xffd68a:d.light);
+             ink,0x20313a});
+      } else paint_text(top+1+n-start,2,line,ink);
     }
     const auto i=entries[size_t(selected)];
     const auto &award=iceberg::Achievements[i];
     int y=rows_-(menu?7:4);
     if(menu) {
-      const auto status=earned(i)?tr("◆ Zdobyte","◆ Unlocked"):tr("◇ Zablokowane","◇ Locked");
+      const auto status=earned(i)?(award.rare?tr("◆ Zdobyte · rzadkie","◆ Unlocked · rare"):
+        tr("◆ Zdobyte","◆ Unlocked")):tr("◇ Zablokowane","◇ Locked");
       paint_text(y++,2,status,earned(i)?0xffd68a:d.accent);
     }
     if(!award.hidden||earned(i)) {
@@ -1353,23 +1363,33 @@
 #include "iceberg_compact_render.hpp"
   void draw_achievement_toast() {
     const auto &v=state_.adventure;
-    if(v.achievement_toast<0||v.achievement_left<=0.||state_.menu||state_.paused||
-       v.map||state_.journal||v.inspecting||v.dialogue.active()||v.tour_scene>=0)return;
+    if(state_.menu||state_.paused||state_.journal||!iceberg::achievement_toast_visible(v))return;
     const double progress=std::min({(iceberg::AchievementToastTime-v.achievement_left)/.24,
       v.achievement_left/.26,1.});
-    constexpr int width=28,height=4;
+    constexpr int width=28,height=5;
     const int left=cols_-width-2,bottom=rows_-3;
     const int top=bottom-height+int(std::ceil(height*(1.-progress*progress*(3.-2.*progress))));
-    const auto &name=iceberg::Achievements[size_t(v.achievement_toast)].title.get(v.language);
+    const auto &award=iceberg::Achievements[size_t(v.achievement_toast)];
+    const auto &name=award.title.get(v.language);
+    const uint32_t rim=award.rare?0xffd17d:0xc4aa73;
+    if(award.rare) {
+      const double fade=progress*(.8+.2*std::cos((iceberg::AchievementToastTime-v.achievement_left)*7.));
+      const auto glow=blend_light(0x18242b,0x845429,fade);
+      for(int y=std::max(4,top-1);y<std::min(bottom,top+height+1);++y)
+        for(int x=left-1;x<=left+width;++x)
+          if(y==top-1||y==top+height||x==left-1||x==left+width)
+            put(y,x,{" ",Color::Decor,false,false,0,0,glow});
+    }
     for(int y=std::max(4,top);y<std::min(bottom,top+height);++y) {
       const bool border=y==top||y==top+height-1;
       for(int x=left;x<left+width;++x) {
         const char *glyph=border?(x==left||x==left+width-1?"+":"─"):
           (x==left||x==left+width-1?"│":" ");
-        put(y,x,{glyph,Color::Decor,false,false,0,0xc4aa73,0x18242b});
+        put(y,x,{glyph,Color::Decor,false,false,0,rim,0x18242b});
       }
     }
-    if(top+1<bottom)paint_text(top+1,left+2,tr("✧ OSIĄGNIĘCIE","✧ ACHIEVEMENT"),0xc4aa73,true);
+    if(top+1<bottom)paint_text(top+1,left+2,std::string(award.icon)+" "+
+      (award.rare?tr("RZADKIE OSIĄGNIĘCIE","RARE ACHIEVEMENT"):tr("OSIĄGNIĘCIE","ACHIEVEMENT")),rim,true);
     if(top+2<bottom) {
       const auto letters=glyphs(name);
       std::string title;
@@ -1377,6 +1397,7 @@
         title+=x==width-5&&int(letters.size())>width-4?"…":letters[size_t(x)];
       paint_text(top+2,left+2,title,0xffe3a5,true);
     }
+    if(top+3<bottom)paint_text(top+3,left+2,tr("B · opis","B · details"),0xa5c1c4);
   }
   void draw_iceberg() {
     const auto &dialogue=state_.adventure.dialogue;

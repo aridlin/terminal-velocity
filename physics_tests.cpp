@@ -57,6 +57,24 @@ int main() {
     check(s.player.grounded &&
               std::abs(s.player.y - (40 - kPlayerHeight)) < 1e-6,
           "stable resting contact");
+    {
+      auto rally=flat();
+      rally.adventure_level=true;
+      const double x=rally.spawn_x,y=rally.spawn_y;
+      rally.sweets={{x-.87,y+.8},{x-.94,y+.8},{x+kPlayerWidth+.87,y+.8},
+                   {x+kPlayerWidth+.94,y+.8},{x+.45,y-1.14},{x+.45,y-1.26}};
+      auto runner=new_state(rally);
+      FixedStepper step;
+      step.advance(runner,rally,{},1./120);
+      // An edge of the silhouette counts. A token outside the courier does not.
+      check(runner.collected[0]&&runner.collected[1]&&runner.collected[2]&&
+            runner.collected[3]&&runner.collected[4]&&!runner.collected[5],
+            "token pickup reaches both sides and the top of the drawn sprite");
+      rally.sweets={{x-1.06,y+.8},{x+kPlayerWidth+1.06,y+.8}};
+      runner=new_state(rally);
+      step.advance(runner,rally,{},1./120);
+      check(runner.sweets_count()==0,"a near miss outside the token hitbox stays uncollected");
+    }
     Controls c;
     c.move = 1;
     ticks(s, g, c, 120);

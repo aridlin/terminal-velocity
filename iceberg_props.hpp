@@ -4,7 +4,8 @@
     world_art(center_x-width*scale_*.5,feet_y-lines.size()*aspect_*scale_,lines,color);
   }
   void token_art(double x,double y,uint32_t color) {
-    prop_art(x,y+1.2,{" ▄▄▄ ","▐ ▪ ▌"," ▀▀▀ "},color);
+    const auto bounds=token_pickup_bounds(x,y);
+    world_art(bounds.x,bounds.y,{" ▄▄▄ ","▐ ▪ ▌"," ▀▀▀ "},color);
     if(int(state_.elapsed*3+x)%9==0)world_text(x-.15,y-.8,"╱",0xf7dfa4);
   }
   void refill_art(double x,double y,bool empty) {

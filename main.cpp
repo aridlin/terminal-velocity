@@ -106,6 +106,11 @@ struct Rect {
   }
 };
 
+// The five-column, three-row token sprite spans this area at the game cell scale.
+Rect token_pickup_bounds(double x,double y) {
+  return {x-1.,y-1.2,2.,2.4};
+}
+
 struct Ledge {
   int col, row, side;
   double edge() const { return col + (side < 0 ? 1. : 0.); }
@@ -1592,8 +1597,8 @@ public:
         world_step(state, grid, input, 1.0 / 120.0);
         for (size_t i = 0; i < grid.sweets.size(); ++i) {
           auto [x, y] = grid.sweets[i];
-          if (!state.collected[i] &&
-              state.player.rect().intersects({x - .35, y - .35, 1.1, 1.1})) {
+          const Rect pickup=grid.adventure_level?token_pickup_bounds(x,y):Rect{x-.35,y-.35,1.1,1.1};
+          if (!state.collected[i] && state.player.rect().intersects(pickup)) {
             state.collected[i] = true;
             state.player.dash_available = true;
           }
