@@ -1152,12 +1152,12 @@ int terminal_window_main(int argc,char **argv) {
         }
         if(args.smoke&&frames==60) {
           for(auto type:{SDL_KEYDOWN,SDL_KEYUP})
-            for(auto key:{SDL_SCANCODE_LEFT,SDL_SCANCODE_DOWN,SDL_SCANCODE_X}) {
+            for(auto key:{SDL_SCANCODE_RIGHT,SDL_SCANCODE_DOWN,SDL_SCANCODE_X}) {
               SDL_Event tap{};tap.type=type;tap.key.keysym.scancode=key;
               SDL_PushEvent(&tap);
             }
           for(auto type:{SDL_KEYDOWN,SDL_KEYUP}) {
-            SDL_Event steer{};steer.type=type;steer.key.keysym.scancode=SDL_SCANCODE_RIGHT;
+            SDL_Event steer{};steer.type=type;steer.key.keysym.scancode=SDL_SCANCODE_LEFT;
             SDL_PushEvent(&steer);
           }
         }
@@ -1246,7 +1246,7 @@ int terminal_window_main(int argc,char **argv) {
         const bool fresh_focus_move=c.move==1&&c.move_pressed==1;
         if(args.smoke){
           if(frames==60)smoke_tap=c.move==0&&c.aim_y==0&&c.dash_pressed&&
-            c.move_pressed==1&&c.aim_pressed==1&&c.dash_pressed_direction==std::pair{-1,1};
+            c.move_pressed==-1&&c.aim_pressed==1&&c.dash_pressed_direction==std::pair{1,1};
           c.move=1;c.jump_held=true;
         }
         int w,h;SDL_GetRendererOutputSize(ren,&w,&h);
