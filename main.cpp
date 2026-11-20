@@ -197,6 +197,7 @@ struct InputState {
   double up = 0.0;
   double dash = 0.0;
   bool jump_pressed = false;
+  bool confirm_pressed = false;
   bool dash_pressed = false;
   bool restart_pressed = false;
   bool quit_pressed = false;
@@ -204,6 +205,7 @@ struct InputState {
   void begin_frame() {
     tour_page = 0;
     jump_pressed = false;
+    confirm_pressed = false;
     dash_pressed = false;
     restart_pressed = false;
     quit_pressed = false;
@@ -230,6 +232,10 @@ struct InputState {
       }
       jump = kInputHold;
       up = kInputHold;
+      break;
+    case '\r':
+    case '\n':
+      confirm_pressed = true;
       break;
     case 'x':
     case 'k':
@@ -1721,6 +1727,11 @@ void read_input(InputState &input) {
 
   for (ssize_t i = 0; i < n; ++i) {
     unsigned char ch = static_cast<unsigned char>(buffer[i]);
+    if (ch == 27 && i + 2 < n && buffer[i + 1] == 'O' && buffer[i + 2] == 'M') {
+      input.press('\r');
+      i += 2;
+      continue;
+    }
     if (ch == 27 && i + 2 < n && buffer[i + 1] == '[') {
       const char code = buffer[i + 2];
       if (i + 3 < n && buffer[i + 3] == '~' && (code == '5' || code == '6')) {
@@ -1867,7 +1878,7 @@ public:
     c.menu_request = press(KEY_M);
     c.pause = press(KEY_ESC) || press(KEY_P);
     c.journal = press(KEY_TAB);
-    c.confirm = press(KEY_ENTER);
+    c.confirm = press(KEY_ENTER) || press(KEY_KPENTER);
     c.debug = press(KEY_F3);
     c.new_run = press(KEY_N) ||
                 (press(KEY_R) && (key(KEY_LEFTCTRL) || key(KEY_RIGHTCTRL)));
@@ -2039,7 +2050,7 @@ public:
     }
     read_input(terminal_);
     Controls controls = terminal_.controls();
-    controls.confirm = terminal_.jump_pressed;
+    controls.confirm = terminal_.jump_pressed || terminal_.confirm_pressed;
     controls.tour_page = terminal_.tour_page;
     terminal_.decay(dt);
     return controls;
