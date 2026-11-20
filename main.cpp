@@ -200,97 +200,131 @@ struct HeldKeys {
 };
 
 struct InputState {
-  int tour_page = 0;
-  double left = 0.0;
-  double right = 0.0;
-  double jump = 0.0;
-  double down = 0.0;
-  double up = 0.0;
-  double dash = 0.0;
-  bool jump_pressed = false;
-  bool confirm_pressed = false;
-  bool dash_pressed = false;
-  bool restart_pressed = false;
-  bool quit_pressed = false;
-  std::optional<std::pair<int,int>> dash_direction{};
+  double left=0.,right=0.,jump=0.,down=0.,up=0.,dash=0.;
+  bool focused=true;
+  Controls edges{};
+  std::string pending;
+  double escape_age=0.;
 
-  void begin_frame() {
-    tour_page = 0;
-    jump_pressed = false;
-    confirm_pressed = false;
-    dash_pressed = false;
-    dash_direction.reset();
-    restart_pressed = false;
-    quit_pressed = false;
-  }
+  void begin_frame() { edges={}; }
+  void clear_held() { left=right=jump=down=up=dash=0.; }
 
-  void press(char key) {
-    switch (key) {
-    case 'a':
-      left = kInputHold;
-      break;
-    case 'd':
-      right = kInputHold;
-      break;
-    case 's':
-      down = kInputHold;
-      break;
-    case 'i':
-      up = kInputHold;
-      break;
-    case 'w':
-    case ' ':
-      if (jump <= 0.0) {
-        jump_pressed = true;
+  void press(unsigned key) {
+    if(!focused)return;
+    if(key>='A'&&key<='Z')key+='a'-'A';
+    switch(key) {
+    case 'a': left=kInputHold;edges.browse_leg=-1;break;
+    case 'd': right=kInputHold;edges.browse_leg=1;break;
+    case 's': down=kInputHold;edges.navigate=1;break;
+    case 'i': up=kInputHold;break;
+    case 'w': edges.navigate=-1;break;
+    case ' ': edges.confirm|=jump<=0.;break;
+    case '\r': case '\n': edges.confirm=true;break;
+    case 'x': case 'k':
+      if(dash<=0.) {
+        edges.dash_pressed=true;
+        edges.dash_pressed_direction=std::pair{int(right>0.)-int(left>0.),int(down>0.)-int(up>0.)};
       }
-      jump = kInputHold;
-      up = kInputHold;
+      dash=kInputHold;
       break;
-    case '\r':
-    case '\n':
-      confirm_pressed = true;
-      break;
-    case 'x':
-    case 'k':
-      if (dash <= 0.0) {
-        dash_pressed = true;
-        dash_direction=std::pair{int(right>0.)-int(left>0.),int(down>0.)-int(up>0.)};
-      }
-      dash = kInputHold;
-      break;
-    case 'r':
-      restart_pressed = true;
-      break;
-    case 'q':
-      quit_pressed = true;
-      break;
+    case 'r': edges.restart=true;break;
+    case 'q': case 3: edges.quit=true;break;
+    case 'e': case 'f': edges.interact=true;break;
+    case 'b': edges.inspect=true;break;
+    case 'j': edges.map=true;break;
+    case 'm': edges.menu_request=true;break;
+    case 'p': case 27: edges.pause=true;break;
+    case '\t': edges.journal=true;break;
+    case 'l': edges.language=true;break;
+    case 'u': edges.mute_audio=true;break;
+    case 'n': edges.new_run=true;break;
+    case 'g': edges.next_seed=true;break;
+    case 'v': edges.debug=true;break;
     default:
+      if(key>='1'&&key<='7')edges.select_level=int(key-'0');
       break;
+    }
+    if(key=='w'||key==' ') {
+      edges.jump_pressed|=jump<=0.;
+      jump=up=kInputHold;
     }
   }
 
+  void feed(std::string_view bytes) {
+    if(bytes.empty())return;
+    escape_age=0.;
+    pending.append(bytes);
+    size_t i=0;
+    while(i<pending.size()) {
+      if(pending[i]!=27) {
+        press(static_cast<unsigned char>(pending[i++]));
+        continue;
+      }
+      if(i+1==pending.size())break;
+      const char prefix=pending[i+1];
+      if(prefix!='['&&prefix!='O'){press(27);++i;continue;}
+      size_t end=i+2;
+      while(end<pending.size()&&(pending[end]<0x40||pending[end]>0x7e))++end;
+      if(end==pending.size())break;
+      const auto body=std::string_view(pending).substr(i+2,end-i-2);
+      switch(pending[end]) {
+      case 'A': press('w');break;
+      case 'B': press('s');break;
+      case 'C': press('d');break;
+      case 'D': press('a');break;
+      case 'I':
+        if(prefix=='['&&body.empty())focused=true;
+        break;
+      case 'O':
+        if(prefix=='['&&body.empty()) {
+          focused=false;
+          clear_held();
+          edges={.focus_lost=true};
+        }
+        break;
+      case 'M':
+        if(prefix=='O'&&body.empty())press('\r');
+        break;
+      case 'R':
+        if(prefix=='O'&&body.empty())press('v');
+        break;
+      case '~':
+        if(focused) {
+          if(body=="5"||body=="6")edges.tour_page=body=="5"?-1:1;
+          if(body=="13")press('v');
+        }
+        break;
+      }
+      i=end+1;
+    }
+    pending.erase(0,i);
+    if(pending.size()>128)pending.clear();
+  }
+
   Controls controls() const {
-    Controls controls{
-        static_cast<int>(right > 0.0) - static_cast<int>(left > 0.0),
-        jump > 0.0,
-        jump_pressed,
-        dash_pressed,
-        down > 0.0,
-        restart_pressed,
-        quit_pressed,
-        static_cast<int>(down > 0.0) - static_cast<int>(up > 0.0),
-    };
-    controls.dash_pressed_direction=dash_direction;
-    return controls;
+    Controls c=edges;
+    c.move=int(right>0.)-int(left>0.);
+    c.aim_y=int(down>0.)-int(up>0.);
+    c.jump_held=jump>0.;
+    c.fast_fall=down>0.;
+    return c;
+  }
+
+  Controls consume(double dt) {
+    if(!pending.empty()&&(escape_age+=dt)>.12) {
+      if(pending=="\x1b")press(27);
+      pending.clear();
+      escape_age=0.;
+    }
+    const auto c=controls();
+    begin_frame();
+    decay(dt);
+    return c;
   }
 
   void decay(double dt) {
-    left = std::max(0.0, left - dt);
-    right = std::max(0.0, right - dt);
-    jump = std::max(0.0, jump - dt);
-    down = std::max(0.0, down - dt);
-    up = std::max(0.0, up - dt);
-    dash = std::max(0.0, dash - dt);
+    for(auto *held:{&left,&right,&jump,&down,&up,&dash})
+      *held=std::max(0.,*held-dt);
   }
 };
 
@@ -1819,43 +1853,10 @@ private:
 };
 
 void read_input(InputState &input) {
-  input.begin_frame();
   char buffer[128];
-  const ssize_t n = read(STDIN_FILENO, buffer, sizeof(buffer));
-  if (n <= 0) {
-    return;
-  }
-
-  for (ssize_t i = 0; i < n; ++i) {
-    unsigned char ch = static_cast<unsigned char>(buffer[i]);
-    if (ch == 27 && i + 2 < n && buffer[i + 1] == 'O' && buffer[i + 2] == 'M') {
-      input.press('\r');
-      i += 2;
-      continue;
-    }
-    if (ch == 27 && i + 2 < n && buffer[i + 1] == '[') {
-      const char code = buffer[i + 2];
-      if (i + 3 < n && buffer[i + 3] == '~' && (code == '5' || code == '6')) {
-        input.tour_page = code == '5' ? -1 : 1;
-        i += 3;
-        continue;
-      }
-      if (code == 'A')
-        input.press('w');
-      if (code == 'B')
-        input.press('s');
-      if (code == 'C')
-        input.press('d');
-      if (code == 'D')
-        input.press('a');
-      i += 2;
-      continue;
-    }
-    if (ch >= 'A' && ch <= 'Z') {
-      ch = static_cast<unsigned char>(ch - 'A' + 'a');
-    }
-    input.press(static_cast<char>(ch));
-  }
+  ssize_t n;
+  while((n=read(STDIN_FILENO,buffer,sizeof(buffer)))>0)
+    input.feed(std::string_view(buffer,size_t(n)));
 }
 
 class EvdevInput {
@@ -2131,7 +2132,7 @@ class TuiInput {
 public:
   explicit TuiInput(InputMode mode)
       : mode_(mode), ssh_(mode == InputMode::SshBasic) {
-    if (mode != InputMode::Ssh && mode != InputMode::SshBasic)
+    if (mode==InputMode::Evdev||mode==InputMode::Auto)
       evdev_ = std::make_unique<EvdevInput>();
   }
 
@@ -2176,18 +2177,15 @@ public:
       return c;
     }
     read_input(terminal_);
-    Controls controls = terminal_.controls();
-    controls.confirm = terminal_.jump_pressed || terminal_.confirm_pressed;
-    controls.tour_page = terminal_.tour_page;
-    terminal_.decay(dt);
-    return controls;
+    focused=terminal_.focused;
+    return terminal_.consume(dt);
   }
 
   bool basic_ssh() const {
     return (mode_ == InputMode::Ssh || mode_ == InputMode::SshBasic) &&
            !ssh_.enhanced;
   }
-  void clear() { ssh_.clear(); }
+  void clear() { ssh_.clear();terminal_.clear_held();terminal_.begin_frame(); }
   std::string label() const {
     if (mode_ == InputMode::Ssh || mode_ == InputMode::SshBasic)
       return ssh_.enhanced ? "SSH • press/release" : "SSH • A/D bieg, S stop";
