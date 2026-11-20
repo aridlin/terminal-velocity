@@ -25,13 +25,13 @@
     const double left=platform.base.x-platform.dx,right=platform.base.right()+platform.dx;
     const uint32_t rail=0x566f83,steel=0x87b3c5;
     draw_scenery_pipe({{left,track_y-row},{left,track_y},{right,track_y},{right,track_y-row}},rail);
-    const double offset=platform.offset(state_.elapsed);
+    const int docked=platform.stop(state_.elapsed);
     const double stop_lamps[]={left+.8,right-.8};
     for(int stop=0;stop<2;++stop) {
       const auto x=stop_lamps[stop];
-      const bool docked=stop==0?offset<=-1.:offset>=1.;
+      const bool ready=docked==(stop==0?-1:1);
       world_art(x,deck.y-.8*row,{"│","╨"},rail);
-      world_text(x,deck.y-1.6*row,docked?"●":"○",docked?0xb5dba0:rail);
+      world_text(x,deck.y-1.6*row,ready?"●":"○",ready?ArchiveTrolleyDocked:rail);
     }
 
     const int width=std::max(4,int(std::round(deck.w/scale_)));

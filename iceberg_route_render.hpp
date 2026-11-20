@@ -137,6 +137,7 @@
     const bool bridge_legend=has_path_control||has_bridges;
     constexpr uint32_t valve_color=0xf0a277,bridge_color=0xabc9e4;
     constexpr uint32_t tram_color=0xefcd74,stop_color=0xc2accf;
+    const uint32_t tram_ready_color=grid_.district==3?ArchiveTrolleyDocked:tram_color;
     const char *ferry_symbol=leaf_ferries?"◒":"▱";
     const uint32_t ferry_color=leaf_ferries?0xb6d778:0xe4ad68;
     constexpr uint32_t ferry_route_color=0x6f9eaa;
@@ -410,9 +411,11 @@
     }
     for(const auto &platform:grid_.platforms)if(platform.tram) {
       const auto car=platform.at(state_.elapsed);
-      const double center=platform.base.x+platform.base.w*.5,range=std::abs(platform.dx);
-      mark(center-range,platform.base.y,"○",stop_color,-1);
-      mark(center+range,platform.base.y,"○",stop_color);
+      const double center=platform.base.x+platform.base.w*.5;
+      const int stop=platform.stop(state_.elapsed);
+      for(int side:{-1,1})
+        mark(center+side*platform.dx,platform.base.y,side==stop?"●":"○",
+          side==stop?tram_ready_color:stop_color,side);
       // The car sits above the track so a docked car leaves both stops visible.
       mark_cell({column(car.x+car.w*.5),std::max(0,row(car.y)-1),1,"▰",tram_color});
     }
@@ -570,9 +573,13 @@
     if(has_trams) {
       const auto name=grid_.district==3?tr("▰ Wagonik","▰ Shuttle"):tr("▰ Tramwaj","▰ Tram");
       paint_text(legend,2,name,tram_color);
-      const int separator=2+int(glyphs(name).size());
-      paint_text(legend,separator," · ",0xc7d9df);
-      paint_text(legend++,separator+3,tr("○ Przystanek","○ Stop"),stop_color);
+      const auto ready=tr("● Gotowe","● Ready");
+      int x=2+iceberg::cell_length(name);
+      paint_text(legend,x," · ",0xc7d9df);
+      paint_text(legend,x+3,ready,tram_ready_color);
+      x+=3+iceberg::cell_length(ready);
+      paint_text(legend,x," · ",0xc7d9df);
+      paint_text(legend++,x+3,tr("○ Pusto","○ Empty"),stop_color);
     }
     if(has_ferries||has_chute_leaf) {
       const bool leaf=leaf_ferries||has_chute_leaf;

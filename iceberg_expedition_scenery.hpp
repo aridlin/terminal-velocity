@@ -6,9 +6,9 @@
     std::string rail="╞";
     for(int i=1;i<int((right-left)/scale_)-1;++i)rail+=(i%4==0?"╪":"═");
     world_art(left,track_y,{rail+"╡"},0x71647d);
-    const double travel=platform.offset(state_.elapsed);
-    world_art(left+2*scale_,tram.y+row,{"╥","║",travel<=-1?"●":"○","╨"},travel<=-1?0xefcd74:0x71647d);
-    world_art(right-scale_,tram.y+row,{"╥","║",travel>=1?"●":"○","╨"},travel>=1?0xefcd74:0x71647d);
+    const int docked=platform.stop(state_.elapsed);
+    world_art(left+2*scale_,tram.y+row,{"╥","║",docked==-1?"●":"○","╨"},docked==-1?0xefcd74:0x71647d);
+    world_art(right-scale_,tram.y+row,{"╥","║",docked==1?"●":"○","╨"},docked==1?0xefcd74:0x71647d);
 
     std::string roof="╭",windows="│",sill="╰";
     const int cells=std::max(4,int(tram.w/scale_));
