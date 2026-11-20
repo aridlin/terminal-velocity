@@ -213,6 +213,21 @@ inline const CivicReply &civic_reply(int scene,int option) {
     }};
     return replies[size_t(option)];
   }
+  if(scene==ArchiveShelterReplyScene) {
+    static const std::array<CivicReply,2> replies{{
+      {{"Pokaż nakaz opłat","Show the charging order"},
+       {"Nazwiska mogą zostać tutaj. Wywiesisz nakaz kierownika?",
+        "The names can stay here. Will you put up the manager's order?"},
+       {4,{"Wywieszę go obok mojej prośby o koce. Podpisałam ją tego samego ranka. Chcę, żeby ludzie mogli przeczytać obie kartki obok siebie.",
+           "I'll put it up beside my request for blankets. I signed it that same morning. I want people to be able to read both sheets side by side."}}},
+      {{"Zapytaj rodziny","Ask the families"},
+       {"Zanim zamkniesz spis, zapytaj rodziny, co chcą ujawnić.",
+        "Before you seal the register, ask the families what they want made public."},
+       {4,{"Róża chce, żeby zostało świadectwo, że tu była. Adresu córki nie chce podawać. Zacznę od niej, kiedy przyjdzie po płaszcz.",
+           "Róża wants there to be a record that she was here. She wants her daughter's address kept private. I'll start with her when she comes for her coat."}}},
+    }};
+    return replies[size_t(option)];
+  }
   if(scene==EpilogueReplyScene)return epilogue_reply(option);
   if(scene>=HarborMissionReplyBase)return harbor_mission_reply(scene-HarborMissionReplyBase,option);
   if(scene>=BriefingReplyBase)return briefing_reply(scene-BriefingReplyBase,option);

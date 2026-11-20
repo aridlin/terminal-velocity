@@ -355,8 +355,12 @@ inline void add_archive_glass_catwalk(EngineGrid &room) {
   for(const Rect pane:std::array<Rect,4>{{{53.5,43,5,.5},{54,39.5,5,.5},{56,33.5,6,.5},{71,29.25,7,.5}}})
     room.platforms.push_back({.base=pane,.fragile=true});
   const auto route=verify_route(room);
-  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
-  else room.platforms.resize(count);
+  if(!route.complete||route.deaths!=0) {
+    room.platforms.resize(count);
+    return;
+  }
+  room.verification_policy=route.policy;
+  room.interactions.push_back({{85.5,24,2,3},InteractionKind::Npc,4,{"Porozmawiaj","Talk"}});
 }
 
 inline void add_expedition_drawers(EngineGrid &room) {

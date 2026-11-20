@@ -152,7 +152,8 @@ int main(){try {
      ExpeditionScene{4,57,iceberg::IrrigationReplyScene,5,52,50},
      ExpeditionScene{1,13,iceberg::HoistCrewReplyScene,1,12,56},
      ExpeditionScene{2,24,iceberg::EstateTramReplyScene,2,12,54},
-     ExpeditionScene{3,44,iceberg::ArchiveCopiesReplyScene,4,36,50}}) {
+     ExpeditionScene{3,44,iceberg::ArchiveCopiesReplyScene,4,36,50},
+     ExpeditionScene{3,iceberg::ArchiveGlassRoom,iceberg::ArchiveShelterReplyScene,4,86,27}}) {
   AdventureSession expedition(options,{});
   expedition.begin_campaign(true);
   expedition.profile.unlocked=expedition.run_district=scene.district;
@@ -176,6 +177,13 @@ int main(){try {
    expedition.inspect_nearby();
    dialogue_check(expedition.state.adventure.inspect_title==iceberg::Npcs[4].name,
      "the clipboard on the conveyor landing identifies Irena");
+   expedition.state.adventure.inspecting=false;
+  }
+  if(scene.scene==iceberg::ArchiveShelterReplyScene) {
+   expedition.inspect_nearby();
+   dialogue_check(expedition.state.adventure.inspect_title==iceberg::Npcs[4].name&&
+                  expedition.state.adventure.inspect_body.find(iceberg::tr(expedition.profile.language,"spis","register"))!=std::string::npos,
+                  "the upper shelf identifies Irena and her flood register");
    expedition.state.adventure.inspecting=false;
   }
   for(int option=0;option<2;++option) {

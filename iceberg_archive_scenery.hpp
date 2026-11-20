@@ -170,6 +170,11 @@
         default:world_art(p.x-4,p.y-10,{" ╥                     ╥"," ║  ╭───────────────╮  ║"," ║  │ ▥▥▥▥▥▥▥▥▥▥▥▥▥ │  ║"," ║  ├───────────────┤  ║"," ║  │ ▥▥▥▥▥▥▥▥▥▥▥▥▥ │  ║"," ║  ╰───────────────╯  ║"," ║                     ║"},d.stone);break;
         }
       }
+      if(grid_.template_id==iceberg::ArchiveGlassRoom&&std::any_of(grid_.interactions.begin(),grid_.interactions.end(),
+          [](const auto &node){return node.kind==InteractionKind::Npc&&node.id==4;})) {
+        const double row=aspect_*scale_;
+        world_art(82.7,27-4*row,{" ╭──┬──╮ "," │≡ │≡ │ ","═╧══╧══╧═"," ║     ║ "},0xbda589);
+      }
       if(grid_.template_id==44&&std::any_of(grid_.interactions.begin(),grid_.interactions.end(),
           [](const auto &node){return node.kind==InteractionKind::Npc&&node.id==4;})) {
         const double row=aspect_*scale_;
