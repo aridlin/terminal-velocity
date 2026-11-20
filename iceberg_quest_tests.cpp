@@ -117,6 +117,13 @@ int main() {
         const auto record=side.side_document(id);
         const double elapsed=side.state.elapsed;
         for(bool copy:{false,true}) {
+          if(!copy&&iceberg::achievement_toast_visible(side.state.adventure)) {
+            side.tick({.inspect=true},0.,true,34,24);
+            require_quest(side.state.adventure.inspecting&&
+              side.state.adventure.inspect_art==iceberg::InspectionArt::Achievement,
+              "B opens a pending achievement before inspecting a nearby document");
+            side.tick({.inspect=true},0.,true,34,24);
+          }
           side.tick(copy?Controls{.interact=true}:Controls{.inspect=true},.1,true,34,24);
           require_quest(side.state.adventure.inspecting&&side.has_side_flag(flag)==copy&&
             side.state.adventure.inspect_title==record->title.get(side.profile.language)&&
