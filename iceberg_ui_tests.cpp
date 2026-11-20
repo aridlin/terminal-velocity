@@ -1602,6 +1602,23 @@ int main(){try {
       }
       game.tick(previous_leg,0);game.tick(previous_room,0);
       ui_check(v.route_room_selection==16&&v.route.current==0,"room arrows still move one room after a leg step");
+      const auto courier=game.state.player.rect();
+      const double elapsed=game.state.elapsed;
+      const auto saved_rooms=v.route.rooms;
+      game.tick(previous_leg,0);game.tick(previous_leg,0);
+      ui_check(iceberg::browsing_expedition_room(v)&&v.route.browsed_leg==-2,"the return hint is active in the oldest recorded leg");
+      RenderGrid(game.grid,game.state,24,34,2).draw();
+      ui_check(ui_text(frame).find("ENTER current room")!=std::string::npos,"the timeline shows the current-room shortcut");
+      game.tick(enter,.1);
+      ui_check(v.map&&!v.map_room&&v.route_room_selection==-1&&v.route.browsed_leg==0&&
+        game.state.player.x==courier.x&&game.state.player.y==courier.y&&game.state.elapsed==elapsed&&
+        game.depth==16&&v.route.rooms.size()==saved_rooms.size(),
+        "Enter returns to the active room from history while the map keeps the courier paused");
+      game.tick(next_leg,0);
+      ui_check(v.route.browsed_leg==1,"the next-leg preview still opens after returning to the active room");
+      game.tick(enter,.1);
+      ui_check(v.map&&!iceberg::browsing_expedition_room(v)&&v.route.browsed_leg==0&&game.state.elapsed==elapsed,
+        "Enter also returns from the future preview without taking an exit");
       game.tick(open_menu,0);game.tick(enter,0);game.tick(map,0);
       game.tick(previous_room,0);
       ui_check(v.route.browsed_leg==-1,"resuming the same Expedition from the menu retains its session history");

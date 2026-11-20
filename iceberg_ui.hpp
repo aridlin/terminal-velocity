@@ -3,6 +3,11 @@
 #include "iceberg_story.hpp"
 
 namespace iceberg {
+inline bool browsing_expedition_room(const View &view) {
+  return view.mode!=Mode::Campaign&&view.tour_scene<0&&view.route.available&&view.route.current>=0&&
+    view.route_room_selection>=0&&
+    view.route_room_selection!=view.route.completed_legs*RoomsPerLeg+view.route.current;
+}
 struct DialogueLayout {
   int top=4, left=1, width=0, height=0, text_x=3, text_y=6, text_rows=1, pages=1;
   bool portrait=false;
