@@ -743,9 +743,11 @@
         std::string number=wide?(idx+1<10?"0":"")+std::to_string(idx+1):std::to_string(n+1);
         const auto label=wide?(current?"<":visited?"[":"(")+number+(current?">":visited?"]":")"):
           (current?"▶":visited?"●":"○")+number;
-        clipped(y,left+n*stride,label,current?0xffd68a:visited?0x91d4ce:0x607887);
-        if(!campaign&&selected==idx&&!current)
-          clipped(y+1,left+n*stride+(wide?1:0),"╰╯",0xc7d9df);
+        const bool browsing=!campaign&&selected==idx&&!current;
+        const uint32_t color=current?0xffd68a:browsing?0xf1f5ff:visited?0x91d4ce:0x607887;
+        clipped(y,left+n*stride,label,color);
+        if(browsing)
+          clipped(y+1,left+n*stride+(wide?1:0),"╰╯",color);
         if(n+1<room_count&&idx+1<int(rooms.size()))clipped(y,left+n*stride+node_width,wide?"──":"─",0x607887);
       }
       int legend=y+2;
