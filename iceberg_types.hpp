@@ -338,6 +338,7 @@ struct View {
   Dialogue dialogue;
   std::string prompt, notice, room_name;
   double notice_left = 0;
+  bool entry_notice = false;
   float music_volume = .65f, effects_volume = .75f, ambience_volume = .55f;
   bool pause_on_focus_loss = true;
   bool smooth_camera = false;

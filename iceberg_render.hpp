@@ -48,6 +48,11 @@
     if(grid_.district==5)return tr("Belka się ugina · Skacz!","Beam buckling · Jump!");
     return tr("Donica pęka · Skacz!","Planter cracking · Jump!");
   }
+  std::string gameplay_hint() const {
+    const auto &view=state_.adventure;
+    if(view.notice_left>0&&(!view.entry_notice||view.prompt.empty()))return view.notice;
+    return view.prompt.empty()?quest_focus_hint():view.prompt;
+  }
   void paint_text(int row,int col,const std::string &s,uint32_t rgb,bool bold=false) {
     for(auto ch:glyphs(s))put(row,col++,{ch,Color::Text,false,bold,0,rgb});
   }
@@ -884,8 +889,7 @@
     else if(state_.player.ledge&&state_.player.ledge_climb_left<=0.)
       text(rows_-1,2,ledge_hint(),Color::Gold);
     else if(const auto footing=fragile_footing_hint();!footing.empty())text(rows_-1,2,footing,Color::Gold);
-    else if(v.notice_left>0)text(rows_-1,2,v.notice,Color::Gold);
-    else text(rows_-1,2,v.prompt.empty()?quest_focus_hint():v.prompt,Color::Gold);
+    else text(rows_-1,2,gameplay_hint(),Color::Gold);
     if(state_.debug)text(5,2,"vx "+fixed(state_.player.vx)+" vy "+fixed(state_.player.vy)+" 120 Hz",Color::Gold);
     if(state_.menu){draw_iceberg_menu();return;}
     if(state_.journal||v.map)draw_iceberg_journal();

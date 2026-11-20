@@ -76,6 +76,43 @@ int main(){try {
                "compact gameplay keeps token, retry and expedition depth readouts");
     }
   }
+  {
+    AdventureSession tour(options,{});
+    tour.start_tour(6);
+    const auto &v=tour.state.adventure;
+    for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
+      tour.profile.language=language;
+      tour.load_tour_scene(6);
+      const auto opening=normalize_ui(v.notice);
+      for(int columns:{34,110}) {
+        auto footer=[&](){
+          RenderGrid(tour.grid,tour.state,34,columns,2).draw();
+          return normalize_ui(ui_text(CellFrame(frame.end()-3,frame.end())));
+        };
+        tour.state.player.x=28;
+        tour.tick({},0);
+        ui_check(footer().find(opening)!=std::string::npos,
+          "the conveyor entry instruction appears away from an interaction");
+        tour.state.player.x=36;
+        tour.tick({},0);
+        const auto nearby=footer();
+        ui_check(v.entry_notice&&v.notice_left>0&&
+          nearby.find(language==iceberg::Language::English?"Talk to Irena":"Porozmawiaj z Ireną")!=std::string::npos&&
+          nearby.find(opening)==std::string::npos,
+          "a nearby character prompt takes priority over the unexpired entry instruction");
+        tour.state.player.x=28;
+        tour.tick({},0);
+        ui_check(footer().find(opening)!=std::string::npos,
+          "walking away restores the still-current entry instruction");
+      }
+      tour.state.player.x=45;
+      tour.state.player.y=47-kPlayerHeight;
+      tour.tick({.interact=true},1./120);
+      RenderGrid(tour.grid,tour.state,24,34,2).draw();
+      ui_check(!v.entry_notice&&ui_text(frame).find(language==iceberg::Language::English?"Middle belt: →":"Środkowa taśma: →")!=std::string::npos,
+        "using the relay still shows immediate direction feedback near the switch");
+    }
+  }
   Controls enter;enter.confirm=true;Controls book;book.journal=true;Controls map;map.map=true;Controls tab;tab.inspect=true;Controls use;use.interact=true;
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
     game.profile.language=language;game.sync_view();game.state.adventure.map=true;game.state.adventure.selected=1;
