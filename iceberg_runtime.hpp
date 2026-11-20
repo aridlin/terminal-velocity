@@ -219,7 +219,7 @@ public:
     network.tick(snapshot,dt);state.multiplayer=true;state.ghosts=network.visible();
     if(grid.room_role==iceberg::RoomRole::Secret)state.ghosts.clear();
   }
-  void persist() {
+  void persist(bool token_collected=false) {
     if(tour_scene>=0){autosave_left=15;return;}
     if (mode == iceberg::Mode::Campaign && profile.started && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       profile.district=district;profile.stage=stage;profile.room=room;
@@ -253,6 +253,8 @@ public:
       e.switches=grid.switch_flags;e.room_seconds=state.elapsed;e.room_deaths=state.deaths;
       e.seconds=run_seconds;e.deaths=run_deaths;e.treasures=run_treasures;
     }
+    if(token_collected&&iceberg::outfitter_earned(profile)>=100)
+      unlock_achievement(iceberg::Achievement::HundredTokens);
     if(!(profile.cosmetics&iceberg::MasteryTransitPass)&&
        iceberg::mastery_token_progress(profile)==iceberg::MasteryTokenFare) {
       profile.cosmetics|=iceberg::MasteryTransitPass;
@@ -2127,10 +2129,7 @@ public:
     const bool mastery_progress=state.player.dash_jump_left>before.dash_jump_left&&profile.quest_counts[6]<3;
     if(deaths==0&&state.airborne_refill_time>old_elapsed)
       unlock_achievement(iceberg::Achievement::AirRefill);
-    if(pickups>0) {
-      unlock_achievement(iceberg::Achievement::FirstToken);
-      if(iceberg::outfitter_earned(profile)>=100)unlock_achievement(iceberg::Achievement::HundredTokens);
-    }
+    if(pickups>0)unlock_achievement(iceberg::Achievement::FirstToken);
     if(mastery_progress) {
       unlock_achievement(iceberg::Achievement::DashJump);
       ++profile.quest_counts[6];
@@ -2203,7 +2202,7 @@ public:
     const bool left_expedition_exit=run_active&&mode!=iceberg::Mode::Campaign&&at_door&&!state.won;
     if(crown_advanced||old_cp!=state.checkpoint||(state.won&&!at_door)||left_expedition_exit||at_route_fork()!=at_fork||
        deaths>0||pickups>0||mastery_progress||profile.discoveries!=discoveries_at_start||
-       iceberg::stored_award_progress(profile)!=awards_at_start||autosave_left<=0)persist();
+       iceberg::stored_award_progress(profile)!=awards_at_start||autosave_left<=0)persist(pickups>0);
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,
       deaths>0?10.:dt,profile.smooth_camera);
     if(crown_advanced) {

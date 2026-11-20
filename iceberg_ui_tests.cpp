@@ -124,6 +124,27 @@ int main(){try {
   }
 
   {
+    using iceberg::Achievement;
+    AdventureSession expedition(options,{});
+    expedition.begin_run(iceberg::Mode::Endless,true);
+    expedition.run_treasures=99;
+    expedition.persist();
+    expedition.sync_view();
+    expedition.grid.sweets={{expedition.state.player.x+.3,expedition.state.player.y+.5}};
+    expedition.state.collected.assign(1,false);
+    expedition.tick({},1./120);
+    ui_check(expedition.profile.expeditions[0].treasures==100,
+      "an expedition pickup records the hundredth token");
+    ui_check(iceberg::has_award(iceberg::stored_award_progress(expedition.profile),Achievement::HundredTokens)&&
+      expedition.achievement_queue==std::vector{Achievement::HundredTokens},
+      "the hundredth expedition token records and queues its milestone in the same step");
+    expedition.tick({},.1);
+    ui_check(expedition.state.adventure.achievement_toast==int(Achievement::HundredTokens),
+      "the expedition milestone starts on the next playable frame");
+    expedition.persist();
+    ui_check(expedition.achievement_queue.empty(),"saving again does not replay the token milestone");
+  }
+  {
     for(const auto locale:{iceberg::Language::English,iceberg::Language::Polish})
       for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
         using iceberg::Achievement;
