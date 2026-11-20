@@ -527,6 +527,31 @@ int main(){try {
       features.state.collected.back()=false;
     }
   }
+  {
+    auto turbine_room=verified_room(23,73,1);
+    add_heatworks_turbine(turbine_room);
+    auto view=new_state(turbine_room);
+    view.camera_x=61.;view.camera_y=21.2;
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      std::vector<std::pair<int,int>> before;
+      for(double time:{1.3,1.45}) {
+        view.elapsed=time;
+        RenderGrid(turbine_room,view,rows,cols,2).draw();
+        std::vector<std::pair<int,int>> stream;
+        for(int y=4;y<rows-3;++y)for(int x=0;x<cols;++x) {
+          const auto &cell=frame[size_t(y)][size_t(x)];
+          if(cell.rgb==0xe8ca9e&&(cell.glyph=="─"||cell.glyph=="›"))stream.emplace_back(y,x);
+        }
+        ui_check(!stream.empty()&&stream.back().first-stream.front().first>=4&&stream!=before,
+          "the strong turbine draft rises across several distinct rows of the maintenance gap");
+        before=std::move(stream);
+      }
+      view.elapsed=3.9;
+      RenderGrid(turbine_room,view,rows,cols,2).draw();
+      ui_check(count_map("›",0xe8ca9e)==0&&count_map("─",0xe8ca9e)==0,
+        "the turbine's lull does not draw bright airflow traces");
+    }
+  }
   auto tram_room=verified_room(24,73,2);
   auto tram_view=new_state(tram_room);
   tram_view.adventure.map=tram_view.adventure.map_room=true;
