@@ -1009,10 +1009,14 @@ const server=http.createServer((req,res)=>{
   await expedition.waitForFunction(()=>uiFlags&(1<<17));
   assert.equal(await expedition.evaluate(()=>document.activeElement===canvas),true);
   assert.equal(await desktopBrowse.isVisible(),false);
-  assert.equal(await desktopSwitch.getAttribute('aria-label'),'Show route map');
-  await desktopSwitch.press('Enter');
+  assert.equal(await desktopSwitch.getAttribute('aria-label'),'Show route timeline');
+  assert.equal(await desktopSwitch.textContent(),'Timeline');
+  await desktopSwitch.press('b');
   await expedition.waitForFunction(()=>(uiFlags&(128|(1<<17)))===128);
-  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 7:'));
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 7:')&&
+   window.desktopMapFrame.includes('EXPEDITION TIMELINE'));
+  assert.equal(await desktopSwitch.evaluate(button=>document.activeElement===button),true);
+  assert.equal(await desktopSwitch.textContent(),'Room map');
   await desktopBrowse.getByRole('button',{name:'Return to current room'}).click();
   await expedition.waitForFunction(()=>!!(uiFlags&128)&&window.desktopMapFrame?.includes('<01>')&&
    !window.desktopMapFrame?.includes('Room 7:')&&window.desktopMapFrame?.includes('Planned:'));

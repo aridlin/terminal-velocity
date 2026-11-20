@@ -721,23 +721,27 @@
     const auto &v=state_.adventure;auto l=v.language;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     frame(0,0,cols_,rows_,0x637f8e);
-    paint_text(1,2,v.map?(v.map_room?tr("PLAN POKOJU","ROOM MAP"):tr("MAPA PODRÓŻY","JOURNEY MAP")):
-      tr("KSIĘGA ZADAŃ","QUEST BOOK"),d.accent,true);
+    const auto overlay_title=!v.map?tr("KSIĘGA ZADAŃ","QUEST BOOK"):
+      v.map_room?tr("PLAN POKOJU","ROOM MAP"):
+      v.mode==iceberg::Mode::Endless?tr("OŚ WYPRAWY","EXPEDITION TIMELINE"):
+      v.mode==iceberg::Mode::Trial?tr("OŚ PRÓBY","MASTERY TIMELINE"):tr("MAPA PODRÓŻY","JOURNEY MAP");
+    paint_text(1,2,overlay_title,d.accent,true);
     if(v.map) {
       if(v.map_room) {
         draw_room_map(3,rows_-7);
         const auto back=v.tour_scene>=0?tr("J/P wróć","J/P return"):v.mode==iceberg::Mode::Campaign?
-          tr("B dzielnice · J/P wróć","B districts · J/P return"):tr("B trasa · J/P wróć","B route · J/P return");
+          tr("B dzielnice · J/P wróć","B districts · J/P return"):tr("B oś trasy · J/P wróć","B timeline · J/P return");
         paint_text(rows_-2,2,back,d.light);
         return;
       }
       if(v.mode!=iceberg::Mode::Campaign) {
         draw_iceberg_route_map(3,rows_-7);
-        if(iceberg::browsing_expedition_room(v))
-          paint_text(rows_-3,2,tr("ENTER obecny pokój","ENTER current room"),d.light);
-        paint_text(rows_-2,2,v.route.rooms.empty()?tr("B pokój · J/P wróć","B room · J/P return"):
-          v.mode==iceberg::Mode::Endless?tr("↑↓ pokoje · ←→ odc. · B/J/P","↑↓ rooms · ←→ legs · B/J/P"):
-          tr("↑↓ pokoje · B pokój · J/P wróć","↑↓ rooms · B room · J/P return"),d.light);
+        paint_text(rows_-3,2,iceberg::browsing_expedition_room(v)?
+          tr("ENTER obecny pokój · J/P wróć","ENTER current room · J/P back"):
+          tr("J/P wróć","J/P back"),d.light);
+        paint_text(rows_-2,2,v.route.rooms.empty()?tr("B plan pokoju","B room map"):
+          v.mode==iceberg::Mode::Endless?tr("↑↓ pokoje · ←→ odc. · B plan","↑↓ rooms · ←→ legs · B room map"):
+          tr("↑↓ pokoje · B plan pokoju","↑↓ rooms · B room map"),d.light);
         return;
       }
       paint_text(3,2,v.map_route?tr("  Dzielnice  ·  [Trasa]","  Districts  ·  [Route]"):tr("[Dzielnice]  ·   Trasa","[Districts]  ·   Route"),d.light);
