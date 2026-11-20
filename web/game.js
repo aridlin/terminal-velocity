@@ -2,6 +2,12 @@
 const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d',{alpha:false});
 const stage=document.querySelector('#stage'),start=document.querySelector('#start'),saveStatus=document.querySelector('#save-status');
 const tourControls=document.querySelector('#tour-controls');
+const menuSelection=document.querySelector('#menu-selection-actions');
+const saveReplacement=document.querySelector('#save-replacement-actions');
+const isMenuSelectionControl=element=>menuSelection.contains(element)||
+ element?.matches('#touch-use,#touch-inspect,#touch .directions button');
+const isSaveReplacementControl=element=>saveReplacement.contains(element)||
+ element?.matches('#touch-use,#touch-inspect');
 const gameButtons=document.querySelectorAll('[data-tap],[data-key],#account,#account-fullscreen,#export-save,#import-save');
 function setGameButtons(enabled){
  for(const button of gameButtons)button.disabled=!enabled;
@@ -233,8 +239,7 @@ function translateUI(){
   for(const button of document.querySelectorAll('#toolbar > [data-tap="9"],#fullscreen-buttons > [data-tap="9"]'))
    button.textContent=inSettings||closingOverlay?tr('Wróć','Back'):tr('Wznów','Resume');
  }
- document.querySelector('#save-replacement-actions').hidden=!replacingSave;
- const menuSelection=document.querySelector('#menu-selection-actions');
+ saveReplacement.hidden=!replacingSave;
  tourControls.hidden=!tourPicker;
  menuSelection.hidden=!inMenu||inSettings||replacingSave;
  menuSelection.querySelector('[data-tap="9"]').hidden=!choosingProfile;
@@ -374,6 +379,9 @@ window.tvUI=u=>{
  const hadMapActionFocus=isExpeditionMapAction(document.activeElement);
  const hadSettingsFocus=settingsKeys.contains(document.activeElement);
  const hadTourFocus=tourControls.contains(document.activeElement);
+ const hadMenuFocus=(uiFlags&1)&&!(uiFlags&(settingsFlag|confirmSaveFlag))&&
+  isMenuSelectionControl(document.activeElement);
+ const hadReplacementFocus=(uiFlags&confirmSaveFlag)&&isSaveReplacementControl(document.activeElement);
  routeLegs=nextRouteLegs;
  const previousSlot=selectedSlot;
  if(started)selectedSlot=1+((u.flags>>>20)&3);
@@ -408,7 +416,8 @@ window.tvUI=u=>{
  translateUI();
  if(!accounts?.active&&((hadTimelineFocus&&!expeditionTimelineOpen())||
     (hadMapActionFocus&&!expeditionMapOpen())||
-    (hadSettingsFocus&&settingsKeys.hidden)||(hadTourFocus&&tourControls.hidden)))
+    (hadSettingsFocus&&settingsKeys.hidden)||(hadTourFocus&&tourControls.hidden)||
+    (hadMenuFocus&&menuSelection.hidden)||(hadReplacementFocus&&saveReplacement.hidden)))
   canvas.focus({preventScroll:true});
 };
 const composingKey=e=>e.isComposing||e.keyCode===229;
@@ -433,14 +442,19 @@ addEventListener('keydown',e=>{
   target?.matches('#toolbar button[data-tap],#fullscreen-buttons button[data-tap],#touch-use');
  const tourPage=e.code==='PageUp'||e.code==='PageDown';
  if(tourPage&&!tourPicker)return;
- const tourNavigation=tourPicker&&tourControls.contains(target)&&
+ const menuControl=(uiFlags&1)&&!(uiFlags&(settingsFlag|confirmSaveFlag))&&isMenuSelectionControl(target);
+ const menuNavigation=menuControl&&(e.code==='ArrowUp'||e.code==='ArrowDown'||
+  (e.code==='Escape'&&(uiFlags&profilePickerFlag)));
+ const cancelReplacement=e.code==='Escape'&&(uiFlags&confirmSaveFlag)&&isSaveReplacementControl(target);
+ const tourNavigation=tourPicker&&(tourControls.contains(target)||menuControl)&&
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  const timelineDirection=isTimelineDirection(target);
  const mapShortcut=(timelineDirection||isExpeditionMapAction(target))&&timelineShortcuts.has(e.code);
  const timelineNavigation=timelineDirection&&e.code.startsWith('Arrow');
  if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !resumeShortcut&&!settingsBack&&!tourNavigation&&!mapShortcut&&!timelineNavigation)return;
+    !resumeShortcut&&!settingsBack&&!menuNavigation&&!cancelReplacement&&!tourNavigation&&
+    !mapShortcut&&!timelineNavigation)return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
