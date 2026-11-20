@@ -348,6 +348,17 @@ inline void add_expedition_post_launchers(EngineGrid &room) {
   else room.springs.erase(room.springs.begin()+original,room.springs.end());
 }
 
+inline void add_archive_glass_catwalk(EngineGrid &room) {
+  if(room.template_id!=iceberg::ArchiveGlassRoom)return;
+  const auto count=room.platforms.size();
+  // Two panes climb out of the reading aisle. The rest join the existing shelves.
+  for(const Rect pane:std::array<Rect,4>{{{53.5,43,5,.5},{54,39.5,5,.5},{56,33.5,6,.5},{71,29.25,7,.5}}})
+    room.platforms.push_back({.base=pane,.fragile=true});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms.resize(count);
+}
+
 inline void add_expedition_drawers(EngineGrid &room) {
   if(room.district!=3||room.template_id!=39)return;
   room.interactions.push_back({{57,41,3,3},InteractionKind::Valve,0,

@@ -292,6 +292,7 @@ public:
     add_estate_gutters(room);
     add_estate_awnings(room);
     add_expedition_drawers(room);
+    add_archive_glass_catwalk(room);
     add_archive_stack_shuttles(room);
     add_expedition_post_launchers(room);
     add_expedition_copy_belts(room);

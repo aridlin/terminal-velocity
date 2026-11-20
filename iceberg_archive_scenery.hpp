@@ -105,6 +105,33 @@
 
 // RenderGrid members. Shelves and catalogue rails belong to the room's
 // architecture; moving carriages stay attached to their collision platform.
+  void draw_archive_glass(const Rect &pane,double age) {
+    const double row=aspect_*scale_;
+    const int cells=std::max(2,int(pane.w/scale_));
+    constexpr uint32_t rim=0x9bd8e4,sheen=0x648a9c,fracture=0xffcf88;
+    const bool broken=age>=MovingPlatform::CrackTime&&age<MovingPlatform::RestoreTime;
+    world_art(pane.x,pane.y-row,{"╎"},sheen);
+    world_art(pane.x+(cells-1)*scale_,pane.y-row,{"╎"},sheen);
+    if(broken) {
+      world_text(pane.x,pane.y,"╘",sheen);
+      world_text(pane.x+(cells-1)*scale_,pane.y,"╛",sheen);
+      const double fall=age-MovingPlatform::CrackTime;
+      if(fall<.45)for(int i=0;i<4;++i)
+        world_art(pane.x+pane.w*(.18+.21*i)+(i-1.5)*fall,
+                  pane.y+row+fall*fall*20.,{i%2?"▴":"·"},rim);
+      return;
+    }
+    const bool cracking=age<MovingPlatform::CrackTime;
+    std::string rail="╒",glass="╲";
+    for(int i=1;i<cells-1;++i) {
+      const bool split=cracking&&(i==cells/2||(age>.25&&i==cells/3));
+      rail+=split?"╳":i%4==0?"╤":"═";
+      glass+=split?"╲":i%3==0?"╱":"░";
+    }
+    world_text(pane.x,pane.y,rail+"╕",cracking?fracture:rim);
+    world_art(pane.x,pane.y+row,{glass+"╱"},sheen);
+  }
+
   void draw_archive_landmarks() {
     auto d=iceberg::Districts[3];
     // Archive decoration recedes behind pale collision edges and warm task props.
@@ -160,7 +187,7 @@
     const double row_height=aspect_*scale_;
     const MovingPlatform *first_rack=nullptr;
     for(const auto &platform:grid_.platforms) {
-      if(platform.archive_trolley||platform.tram)continue;
+      if(platform.archive_trolley||platform.tram||platform.fragile)continue;
       if(platform.archive_rack) {
         const double center=platform.base.x+platform.base.w*.5;
         if(first_rack) {

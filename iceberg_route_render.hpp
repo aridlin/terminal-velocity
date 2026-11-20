@@ -143,7 +143,9 @@
     const bool has_vents=!grid_.pulses.empty();
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t piston_docked_color=0xb5d599;
-    constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f,gap_color=0x85c0cd;
+    const bool glass_catwalk=grid_.template_id==iceberg::ArchiveGlassRoom&&has_fragile;
+    const uint32_t fragile_color=glass_catwalk?0x9bd8e4:0xd5aa80;
+    constexpr uint32_t cracking_color=0xf1c66f,gap_color=0x85c0cd;
     struct FieldLandmark {const char *symbol;iceberg::Text legend;uint32_t color;};
     static constexpr std::array<FieldLandmark,3> field_landmarks{{
       {"▤",{"▤ Tabliczka","▤ Route sign"},0xe7d8b4},
@@ -253,7 +255,7 @@
       if(cell==' ')cell='s';
     }
     std::vector<std::array<int,3>> cracking_spans;
-    std::vector<std::pair<int,int>> broken_floes,broken_beams;
+    std::vector<std::pair<int,int>> broken_floes,broken_spans;
     for(size_t i=0;i<grid_.platforms.size();++i) {
       const auto &platform=grid_.platforms[i];
       if(platform.archive_rack||platform.service_lift||platform.cargo_hoist||platform.pressure_piston) {
@@ -286,7 +288,7 @@
       const auto deck=platform.at(state_.elapsed);
       if(!platform.available(state_,i,state_.elapsed)) {
         if(platform.icy)broken_floes.emplace_back(column(deck.x+deck.w*.5),row(deck.y));
-        else if(grid_.district==5)broken_beams.emplace_back(column(deck.x+deck.w*.5),row(deck.y));
+        else if(grid_.district==5||glass_catwalk)broken_spans.emplace_back(column(deck.x+deck.w*.5),row(deck.y));
         continue;
       }
       char tile=platform.icy?'i':'=';
@@ -518,7 +520,7 @@
               buffer_[first+y+1][left+x].background==water_depth_background)
         place(gap,0,1);
     }
-    for(const auto &[x,y]:broken_beams) {
+    for(const auto &[x,y]:broken_spans) {
       const Marker gap{x,y,1,"×",gap_color};
       const auto place_in_space=[&](int dx,int dy) {
         const int to_x=x+dx,to_y=y+dy;
@@ -642,13 +644,14 @@
       ++legend;
     }
     if(has_fragile) {
-      const auto name=tr("┅ Kruche","┅ Fragile");
+      const auto name=glass_catwalk?tr("┅ Szkło","┅ Glass"):
+        tr("┅ Kruche","┅ Fragile");
       const int separator=2+int(glyphs(name).size());
       paint_text(legend,2,name,fragile_color);
       paint_text(legend,separator," · ",0xc7d9df);
       const auto cracking=has_brittle_ice?tr("╍ Pęka","╍ Cracks"):tr("╍ Pękają","╍ Cracking");
       paint_text(legend,separator+3,cracking,cracking_color);
-      if(has_brittle_ice||grid_.district==5) {
+      if(has_brittle_ice||grid_.district==5||glass_catwalk) {
         const int end=separator+3+int(glyphs(cracking).size());
         paint_text(legend,end," · ",0xc7d9df);
         paint_text(legend,end+3,tr("× Przerwa","× Gap"),gap_color);

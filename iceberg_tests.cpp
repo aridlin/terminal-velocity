@@ -821,6 +821,60 @@ int main(int argc,char **argv) {
         throw std::runtime_error("Twin Pistons route changed for seed "+std::to_string(seed));
     }
     check(true,"Twin Pistons keeps the lower route, tokens, and checkpoints across 16 seeds");
+    AdventureSession glass(options,{});
+    const auto glass_stop=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==iceberg::ArchiveGlassRoom;});
+    check(glass_stop!=iceberg::DebugTour.end(),"the Debug Tour includes the Archive glass catwalk");
+    const int glass_tour=int(glass_stop-iceberg::DebugTour.begin());
+    glass.start_tour(glass_tour);
+    check(glass.grid.platforms.size()==4,"all four glass panes are present");
+    const auto glass_drive=[&](Controls input,int count=1){
+      while(count-->0)glass.tick(input,.1);
+    };
+    const auto glass_jump_right=[&](int strides,int settle){
+      glass_drive({.move=1,.jump_held=true,.jump_pressed=true});
+      glass_drive({.move=1,.jump_held=true},strides);
+      glass_drive({.move=-1,.jump_held=true});
+      glass_drive({},settle);
+    };
+    const auto glass_begin=[&] {
+      glass_drive({},2);glass_jump_right(2,3);
+    };
+    glass_begin();
+    check(glass.state.player.support==0&&glass.state.platform_armed_at[0]>0.,
+      "landing on the first pane starts the crack timer");
+    glass_drive({},7);
+    check(!glass.grid.platforms[0].available(glass.state,0,glass.state.elapsed)&&glass.state.player.support!=0,
+      "waiting on the glass breaks the pane and drops the courier");
+
+    glass.load_tour_scene(glass_tour);
+    glass_begin();
+    glass_drive({.move=1,.jump_held=true,.jump_pressed=true});
+    glass_drive({.jump_held=true},7);
+    check(glass.state.player.support==1,"jumping before the first crack opens reaches the second pane");
+    glass_drive({.move=-1,.jump_held=true,.jump_pressed=true});
+    glass_drive({.move=-1,.jump_held=true},6);
+    glass_drive({.move=1,.jump_held=true});
+    glass_drive({},3);
+    glass_jump_right(5,2);
+    check(glass.state.player.support==2&&glass.state.collected[2],"the third pane leads onward from the first token shelf");
+    glass_jump_right(5,2);
+    glass_drive({.move=1},2);glass_drive({.move=-1});glass_drive({});
+    glass_jump_right(5,2);
+    check(glass.state.player.support==3&&glass.state.collected[3],"the upper glass bridge links the last two shelves");
+    glass_jump_right(5,2);
+    glass_drive({.move=1},5);
+    check(glass.state.collected[4]&&glass.state.deaths==0&&glass.state.player.grounded,
+      "ordinary jumps cross all four glass panes and reach three upper tokens without a retry");
+    for(unsigned seed=0;seed<16;++seed) {
+      auto reading_room=verified_room(iceberg::ArchiveGlassRoom,iceberg::mix(seed),3);
+      const auto tokens=reading_room.sweets,lamps=reading_room.checkpoint_points;
+      add_archive_glass_catwalk(reading_room);
+      if(reading_room.platforms.size()!=4||reading_room.sweets!=tokens||reading_room.checkpoint_points!=lamps||
+         !verify_route(reading_room).complete)
+        throw std::runtime_error("the glass catwalk changed the lower reading room route");
+    }
+    check(true,"the glass catwalk keeps the reading room’s lower route and checkpoints across 16 seeds");
     auto chute=verified_room(58,iceberg::mix(73),4);
     check(chute.platforms.empty(),"older Leaf Chute layouts retain the stepped descent");
     add_expedition_ice(chute);
