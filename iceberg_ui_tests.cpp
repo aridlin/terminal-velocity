@@ -114,6 +114,32 @@ int main(){try {
     }
   }
   {
+    auto room=game.grid;
+    auto state=game.state;
+    room.sweets={{8,20},{12,20}};
+    state.collected={true,false};
+    state.deaths=12;
+    for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
+      state.adventure.language=language;
+      const bool en=language==iceberg::Language::English;
+      const std::string stats=en?"Tokens 1/2   Retries 12":"Żetony 1/2   Powroty 12";
+      state.adventure.room_name=en?"Hanging beds":"Wiszące grządki";
+      RenderGrid(room,state,24,34,2).draw();
+      const auto short_frame=ui_text(frame);
+      const auto short_row=short_frame.find(stats);
+      ui_check(short_row!=std::string::npos&&std::count(short_frame.begin(),short_frame.begin()+short_row,'\n')==2,
+        "a short room title leaves the narrow token and retry counts on the third row");
+      state.adventure.room_name=en?"The channel beneath the greenhouse":"Kanał pod szklarnią i górne tarasy";
+      RenderGrid(room,state,24,34,2).draw();
+      const auto long_frame=ui_text(frame);
+      const auto stats_row=long_frame.find(stats);
+      ui_check(stats_row!=std::string::npos&&std::count(long_frame.begin(),long_frame.begin()+stats_row,'\n')==3&&
+        frame[3].front().glyph=="─"&&frame[3].back().glyph=="─"&&
+        normalize_ui(long_frame).find(state.adventure.room_name)!=std::string::npos,
+        "a wrapped room title keeps both lines and the counters fit in the divider");
+    }
+  }
+  {
     auto settings=game.state;
     settings.menu=settings.adventure.settings=true;
     settings.adventure.smooth_camera=true;
