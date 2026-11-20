@@ -296,6 +296,13 @@ inline constexpr std::array DebugTour{
   TourStop{4,54,57.5,48,{"Wskocz do donicy i wysiądź przy górnej grządce","Ride the planter and jump to the upper bed"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
+// Keep the quick action pointed at the newest featured sample, independently of list order.
+inline constexpr auto DebugTourLatest = [] {
+  for(size_t i=0;i<DebugTour.size();++i)
+    if(DebugTour[i].room==ArchiveGlassRoom)return i;
+  return DebugTour.size();
+}();
+static_assert(DebugTourLatest<DebugTour.size());
 inline int tour_page_size(int rows) { return std::max(1,rows-12); }
 struct View {
   RouteView route;

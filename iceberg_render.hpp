@@ -626,7 +626,7 @@
       int y=rows_-4;
       for(const auto &part:wrap(v.save_error?save_failure_hint():v.notice,width-4))if(y<rows_-1)line(y++,part,d.accent);
     } else {
-      if(v.tour_picker)line(rows_-8,tr("PgUp/PgDn · Przewiń listę","PgUp/PgDn · Page through"),d.light);
+      if(v.tour_picker)line(rows_-8,tr("PgUp/PgDn · Str. · N Nowe","PgUp/PgDn · Page · N Latest"),d.light);
       if(v.tour_picker)line(rows_-3,tr("← Pierwsza · → Strażnik Korony","← First · → Crown Sentinel"),d.light);
       line(rows_-2,tr("↑↓ · ENTER wybierz · P wróć","↑↓ · ENTER select · P back"),d.accent);
     }

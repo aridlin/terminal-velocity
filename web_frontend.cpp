@@ -138,9 +138,9 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   c.navigate=int(p(3))-int(p(2));
   c.browse_leg=int(p(1))-int(p(0));
   c.tour_page=int(p(29))-int(p(28));
-  if(p(27)&&web_game->state.menu&&web_game->state.adventure.tour_picker) {
-    c.browse_leg=1;
-    c.confirm=true;
+  if(web_game->state.menu&&web_game->state.adventure.tour_picker) {
+    if(p(19))c.new_run=true;
+    if(p(27)){c.browse_leg=1;c.confirm=true;}
   }
   const auto &dialogue=web_game->state.adventure.dialogue;
   if(dialogue.choosing()&&!web_game->state.paused&&!web_game->state.menu&&(p(17)||p(18))) {

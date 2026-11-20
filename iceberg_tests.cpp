@@ -308,6 +308,13 @@ int main(int argc,char **argv) {
       press({.confirm=true});
       check(session.tour_scene<0,"debug tour waits for an in-flight account action");
       session.profile_action_busy=false;
+      press({.new_run=true});
+      check(session.tour_scene==int(iceberg::DebugTourLatest)&&session.grid.template_id==iceberg::ArchiveGlassRoom,
+        "N opens the latest sample from the picker");
+      session.end_tour();
+      check(session.save_revision==write_count&&bytes(path)==first_save&&bytes(secondary)==second_save&&bytes(tertiary)==third_save,
+        "the latest Debug Tour action leaves every save slot intact");
+      press({.browse_leg=-1});
       press({.confirm=true});
       press({.pause=true});
       press({.navigate=-1});

@@ -1392,6 +1392,10 @@ public:
         else {v.save_picker=false;v.settings=true;}
         return;
       }
+      if(v.tour_picker&&c.new_run) {
+        start_tour(int(iceberg::DebugTourLatest));
+        return;
+      }
       const int direction=v.tour_picker?repeated_navigation(c,dt):c.navigate;
       if(direction) {
         const int next=v.picker_choice+direction;
@@ -1482,7 +1486,7 @@ public:
     const bool tour_picker=state.menu&&v.tour_picker;
     const bool expedition_timeline=!state.menu&&v.map&&!v.map_room&&mode!=iceberg::Mode::Campaign;
     if(!focused||(!tour_picker&&!expedition_timeline)||c.map||c.journal||c.pause||c.menu_request||
-       c.inspect||(tour_picker&&(c.confirm||c.select_level||c.browse_leg||c.tour_page))||
+       c.inspect||(tour_picker&&(c.confirm||c.select_level||c.browse_leg||c.tour_page||c.new_run))||
        c.aim_y!=navigation_repeat_direction)navigation_repeat_direction=0;
     if(!focused)c={};
     v.notice_left=std::max(0.,v.notice_left-dt);
