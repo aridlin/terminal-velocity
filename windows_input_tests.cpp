@@ -92,6 +92,18 @@ int main() {
     check(input.focused && c.select_level == 3 && c.confirm,
           "native precision course menu controls");
     input.clear();
+    key('X',true);
+    key(VK_SPACE,true);
+    focus.Event.FocusEvent.bSetFocus=FALSE;
+    input.feed(focus);
+    key('A',true);
+    focus.Event.FocusEvent.bSetFocus=TRUE;
+    input.feed(focus);
+    key('D',true);
+    c=input.consume();
+    check(input.focused&&c.focus_lost&&!c.dash_pressed&&!c.jump_pressed&&c.move==1&&
+          !input.consume().focus_lost,"a native console focus bounce preserves the loss once and keeps fresh movement");
+    input.clear();
     key('5', true);
     key('U', true);
     c = input.consume();

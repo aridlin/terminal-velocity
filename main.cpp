@@ -160,6 +160,8 @@ struct Controls {
   std::optional<int> move_pressed={}, aim_pressed={};
   bool fast_fall_pressed = false;
   int tour_page = 0;
+  // A loss may precede a regain within one frontend poll.
+  bool focus_lost = false;
 };
 
 struct HeldKeys {
@@ -1806,6 +1808,11 @@ public:
 
   const std::vector<std::string> &diagnostics() const { return diagnostics_; }
 
+  void clear() {
+    pressed_.fill(false);
+    for(auto &keys:device_keys_)keys.fill(false);
+  }
+
   HeldKeys poll() {
     pressed_.fill(false);
     input_event event{};
@@ -2039,15 +2046,25 @@ public:
       ssize_t n;
       while ((n = read(STDIN_FILENO, bytes, sizeof(bytes))) > 0)
         focus_buffer_.append(bytes, size_t(n));
+      const bool was_focused=focused;
+      bool lost_focus=false;
       for (size_t i = 0; i + 2 < focus_buffer_.size(); ++i) {
-        if (focus_buffer_.compare(i, 3, "\x1b[O") == 0)
-          focused = false;
+        if (focus_buffer_.compare(i, 3, "\x1b[O") == 0) {
+          focused=false;
+          lost_focus=true;
+        }
         if (focus_buffer_.compare(i, 3, "\x1b[I") == 0)
           focused = true;
       }
       if (focus_buffer_.size() > 2)
         focus_buffer_ = focus_buffer_.substr(focus_buffer_.size() - 2);
       Controls c = evdev_->poll().controls();
+      // Focus and evdev edges arrive on separate streams. Drop this batch
+      // when either boundary was unfocused because its ordering is unknown.
+      if(lost_focus||!was_focused||!focused) {
+        evdev_->clear();
+        return Controls{.focus_lost=lost_focus};
+      }
       evdev_->ui_controls(c);
       return c;
     }

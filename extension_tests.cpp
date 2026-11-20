@@ -186,6 +186,15 @@ int main() {
             "SSH focus loss clears controls");
     keys.feed("\x1b[I");
     require(keys.focused, "SSH focus regain");
+    for(bool basic:{true,false}) {
+      SshInput bounce(basic);
+      bounce.feed(basic?"x \x1b[Oa\x1b[":"\x1b[120;1:1u\x1b[32;1:1u\x1b[O\x1b[97;1:1u\x1b[");
+      bounce.feed(basic?"Id":"I\x1b[100;1:1u");
+      const auto recovered=bounce.consume(.01);
+      require(bounce.focused&&recovered.focus_lost&&!recovered.dash_pressed&&
+              !recovered.jump_pressed&&recovered.move==1&&!bounce.consume(.01).focus_lost,
+              "a split SSH focus bounce preserves the loss once and keeps fresh movement");
+    }
     int maxdeaths = 0;
     for (uint32_t seed = 0; seed < 100; ++seed) {
       auto world = build_procedural(seed);
