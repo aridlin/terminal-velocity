@@ -155,26 +155,28 @@
     constexpr uint32_t belt_color=0xa0d6df,trolley_color=0xaee1df,wheel_color=0xc5a36d;
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
-    const bool has_vents=std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
-      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Steam;});
+    const auto has_pulse=[&](PulseKind kind) {
+      return std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
+        [kind](const PulseHazard &hazard){return hazard.kind==kind;});
+    };
+    const bool has_vents=has_pulse(PulseKind::Steam);
     if(!grid_.vines.empty())add_feature(tr("○ Pnącze","○ Swing vine"),0xbee984);
-    if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
-      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Flytrap;}))
-      add_feature(tr("▲ Muchołówka","▲ Flytrap"),0xebc676);
-    if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
-      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Masonry;}))
-      add_feature(tr("▼ Gruz","▼ Falling masonry"),0xec8a86);
-    if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
-      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Scanner;}))
-      add_feature(tr("║ Skaner","║ Scanner"),0xe9808a);
-    if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
-      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Surge;}))
-      add_feature(tr("∿ Fala","∿ Surge"),0xa1d7df);
+    if(has_pulse(PulseKind::Flytrap))add_feature(tr("▽/▲ Muchołówka","▽/▲ Flytrap"),0xebc676);
+    if(has_pulse(PulseKind::Masonry))add_feature(tr("◇/▼ Gruz","◇/▼ Falling masonry"),0xec8a86);
+    if(has_pulse(PulseKind::Scanner))add_feature(tr("○/║ Skaner","○/║ Scanner"),0xe9808a);
+    if(has_pulse(PulseKind::Surge))add_feature(tr("∿/≈ Fala","∿/≈ Surge"),0xa1d7df);
     const auto has_arc=[&](bool powered_on) {
       return std::any_of(grid_.pulses.begin(),grid_.pulses.end(),[&](const auto &pulse){
         return pulse.kind==PulseKind::Arc&&pulse.powered(grid_.switch_flags)==powered_on;});
     };
     if(has_arc(true))add_feature(tr("⊗/≈ Przewód · ! Uwaga","⊗/≈ Cable · ! Warning"),vent_active);
+    else if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),[&](const auto &pulse){
+      return pulse.kind!=PulseKind::Steam&&pulse.kind!=PulseKind::Arc&&pulse.powered(grid_.switch_flags);
+    })) {
+      // Share the return footer so the key does not take a row away from the map.
+      const auto warning=tr("! Uwaga","! Warning");
+      paint_text(rows_-2,cols_-2-iceberg::cell_length(warning),warning,vent_warning);
+    }
     if(has_arc(false))add_feature(tr("○ Brak zasilania","○ Power off"),vent_idle);
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t piston_docked_color=0xb5d599;

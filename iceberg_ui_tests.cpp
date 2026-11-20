@@ -1034,6 +1034,43 @@ int main(){try {
       }
     }
   }
+  {
+    for(const auto &[id,district,idle,active]:{
+        std::tuple{504,0,"∿","≈"},std::tuple{27,2,"◇","▼"},
+        std::tuple{40,3,"○","║"},std::tuple{48,4,"▽","▲"}}) {
+      auto room=verified_room(id,73,district);
+      AdventureSession::apply_expedition_mechanics(room);
+      const auto pulse=std::find_if(room.pulses.begin(),room.pulses.end(),
+        [](const auto &hazard){return hazard.kind!=PulseKind::Steam;});
+      ui_check(pulse!=room.pulses.end(),"the generated district room has its timed hazard");
+      auto state=new_state(room);
+      state.adventure.map=state.adventure.map_room=true;
+      state.adventure.mode=iceberg::Mode::Endless;
+      for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
+        state.adventure.language=language;
+        const bool en=language==iceberg::Language::English;
+        for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+          for(const auto &[phase,symbol,ink,tint]:{
+              std::tuple{.40,idle,0x987b6cu,0u},std::tuple{.90,"!",0xf1c66fu,0x4a3d2bu},
+              std::tuple{.10,active,0xeb6a74u,0x59303au}}) {
+            state.elapsed=(1.+phase-pulse->phase)*pulse->period;
+            RenderGrid(room,state,rows,cols,2).draw();
+            const auto legend=std::string(idle)+"/"+active;
+            const auto text=ui_text(frame);
+            ui_check(text.find(legend)!=std::string::npos&&
+              text.find(en?"! Warning":"! Uwaga")!=std::string::npos,
+              "the district hazard legend explains both marker forms and the warning");
+            ui_check(count_map(symbol,ink)>=1,"the district hazard still displays its exact phase on the map");
+            if(tint) {
+              bool highlighted=false;
+              for(const auto &line:frame)for(const auto &cell:line)highlighted|=cell.background==tint;
+              ui_check(highlighted,"the warning or active footprint remains visible on the room map");
+            }
+          }
+        }
+      }
+    }
+  }
   vent_view.adventure.map=false;
   for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
     vent_view.camera_y=vent.area.y-3.3;
