@@ -1477,7 +1477,7 @@ public:
     if(c.mute_audio)audio.muted=!audio.muted;
     if(c.language&&!state.menu){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;if(state.adventure.dialogue.active()){state.adventure.dialogue.segment=0;state.adventure.dialogue.line_seconds=0;state.adventure.dialogue.reset_reveal();frame_dialogue();}persist();}
     auto &v=state.adventure;
-    if(!focused && previous_focus){
+    if((!focused||c.focus_lost)&&previous_focus){
       // Maps, the quest book and inspections already stop the world.
       if(profile.pause_on_focus_loss&&!state.menu&&!state.journal&&!v.map&&!v.inspecting)
         state.paused=true;

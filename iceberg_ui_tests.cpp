@@ -1459,14 +1459,14 @@ int main(){try {
     for(int i=0;i<16;++i)paused.tick({},1./120);
     ui_check(paused.state.player.dash_time_left==0.,"an old dash cannot fire on returning to play");
   }
-  for(bool focus_pause:{false,true}) {
+  for(bool focus_pause:{false,true})for(bool refocused:{false,true}) {
     paused.profile.pause_on_focus_loss=focus_pause;
     paused.state.player.landing_dash_left=.08;
     Controls dash;dash.dash_pressed=true;dash.aim_y=-1;
     paused.tick(dash,1./120);
-    paused.tick({},0.,false);
+    paused.tick(Controls{.focus_lost=refocused},0.,refocused);
     ui_check(paused.state.paused==focus_pause&&paused.state.player.dash_buffer_left==0.,
-             "focus loss drops queued movement while respecting the pause setting");
+             "focus loss drops queued movement even when focus returns in the same batch");
     paused.tick(enter,1./120,true);
   }
   paused.state.player.dash_time_left=.1;

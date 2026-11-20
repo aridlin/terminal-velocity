@@ -47,6 +47,7 @@ class TuiInput {
   HANDLE input_ = GetStdHandle(STD_INPUT_HANDLE);
   std::array<bool, 256> keys_{};
   std::array<bool, 256> pressed_{};
+  bool focus_lost_ = false;
   bool key(unsigned k) const { return k < keys_.size() && keys_[k]; }
   bool press(unsigned k) const { return k < pressed_.size() && pressed_[k]; }
 
@@ -72,8 +73,10 @@ public:
   void feed(const INPUT_RECORD &event) {
     if (event.EventType == FOCUS_EVENT) {
       focused = event.Event.FocusEvent.bSetFocus != FALSE;
-      if (!focused)
+      if (!focused) {
+        focus_lost_ = true;
         clear();
+      }
     } else if (event.EventType == KEY_EVENT && focused) {
       unsigned k = event.Event.KeyEvent.wVirtualKeyCode;
       if (k >= keys_.size())
@@ -86,6 +89,8 @@ public:
   }
   Controls consume() {
     Controls c;
+    c.focus_lost = focus_lost_;
+    focus_lost_ = false;
     const bool left=key('A')||key(VK_LEFT),right=key('D')||key(VK_RIGHT);
     const bool up=key('W')||key(VK_UP),down=key('S')||key(VK_DOWN);
     const bool tap_left=press('A')||press(VK_LEFT),tap_right=press('D')||press(VK_RIGHT);

@@ -50,6 +50,7 @@ public:
       }
       if (final == 'O' && body.empty()) {
         focused = false;
+        focus_lost_ = true;
         clear();
         continue;
       }
@@ -103,6 +104,8 @@ public:
       escape_age_ = 0;
     Controls c = edges_;
     edges_ = {};
+    c.focus_lost = focus_lost_;
+    focus_lost_ = false;
     if (enhanced) {
       c.move = horizontal();
       c.jump_held = held(' ') || held('w');
@@ -130,7 +133,7 @@ public:
   }
 
 private:
-  bool basic_ = false;
+  bool basic_ = false, focus_lost_ = false;
   std::string pending_;
   std::map<unsigned, bool> keys_;
   Controls edges_{};

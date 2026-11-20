@@ -1173,14 +1173,13 @@ int terminal_window_main(int argc,char **argv) {
             if(frames==80)push_key(SDL_SCANCODE_D);
           }
         }
-        bool lost_focus=false;
         SDL_Event event;
         while(SDL_PollEvent(&event)) {
           if(event.type==SDL_QUIT)c.quit=true;
           if(event.type==SDL_WINDOWEVENT) {
             if(event.window.event==SDL_WINDOWEVENT_FOCUS_LOST){
-              lost_focus=true;focused=false;held.fill(false);
-              c=Controls{.quit=c.quit};
+              focused=false;held.fill(false);
+              c=Controls{.quit=c.quit,.focus_lost=true};
             }
             if(event.window.event==SDL_WINDOWEVENT_FOCUS_GAINED)focused=true;
           }
@@ -1257,9 +1256,6 @@ int terminal_window_main(int argc,char **argv) {
         bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
         if(c.debug)session.state.debug=!session.state.debug;
         const double cell_aspect=double(cell_h)/cell_w;
-        // A loss and gain can arrive in one poll. Let the session see the
-        // loss before applying fresh input, without advancing the world twice.
-        if(lost_focus&&focused)session.tick({},0.,false,cols,rows,cell_aspect);
         session.tick(c,dt,focused,cols,rows,cell_aspect);
         if(args.smoke&&frames==70)smoke_focus_pause=clean_focus_input&&session.state.paused;
         if(args.smoke&&frames==80)smoke_focus_continue=clean_focus_input&&fresh_focus_move&&!session.state.paused;
