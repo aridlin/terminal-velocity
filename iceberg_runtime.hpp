@@ -1935,9 +1935,13 @@ public:
     if(deaths>0)v.death_left=retrying?0.:1.6;
     if(mode==iceberg::Mode::Campaign) {
       if(!profile.revisit.active) {
-      profile.campaign_seconds+=active;profile.district_seconds+=active;
-      profile.campaign_deaths+=deaths;profile.district_deaths+=deaths;
-      profile.district_treasures+=pickups;
+        profile.campaign_seconds+=active;
+        profile.campaign_deaths+=deaths;
+        if(profile.hidden_room<0) {
+          profile.district_seconds+=active;
+          profile.district_deaths+=deaths;
+          profile.district_treasures+=pickups;
+        }
       }
     } else {run_seconds+=active;run_deaths+=deaths;run_treasures+=pickups;}
     if(state.player.wall_bounce_left>before.wall_bounce_left) {

@@ -89,6 +89,20 @@ int main() {
       use(InteractionKind::Secret,basement);
       require_quest(side.profile.hidden_room==basement&&earned(Achievement::LostFloor),
         "matching clues open the optional stairwell");
+      const double district_time=side.profile.district_seconds;
+      const double journey_time=side.profile.campaign_seconds;
+      const int district_retries=side.profile.district_deaths;
+      const int journey_retries=side.profile.campaign_deaths;
+      const auto &live_cable=side.grid.pulses.front();
+      side.state.elapsed=(1.2-live_cable.phase)*live_cable.period;
+      side.state.player.x=live_cable.area.x+2.;
+      side.state.player.y=live_cable.area.bottom()-kPlayerHeight;
+      side.tick({},1./120);
+      require_quest(side.state.deaths==1&&side.profile.campaign_deaths==journey_retries+1&&
+        side.profile.campaign_seconds>journey_time&&earned(Achievement::FirstFall),
+        "a real basement hit counts in the room and journey and earns the first setback");
+      require_quest(side.profile.district_deaths==district_retries&&side.profile.district_seconds==district_time,
+        "a hidden room does not change the ongoing district record");
       scene(SideStory::Intercom);finish_dialogue(side);
       scene(SideStory::Tape);
       require_quest(!earned(Achievement::WitnessTape),"starting the tape leaves the award pending");
@@ -121,6 +135,11 @@ int main() {
       walk_to(side,reach_area(return_shaft->area));interact(side);
       require_quest(side.profile.hidden_room<0&&side.state.player.rect().intersects(entrance)&&earned(Achievement::BelowTheRoster),
         "the service shaft returns to the same Estate entrance and awards the roster");
+      require_quest(side.profile.district_deaths==district_retries&&side.profile.district_seconds==district_time,
+        "leaving a detour restores the same clean district attempt");
+      side.tick({.restart=true},1./120);
+      require_quest(side.profile.district_deaths==district_retries+1&&side.profile.district_seconds>district_time,
+        "retrying on the regular district route still affects its record");
       const auto before_choice=side.profile;
       for(int option:{0,1}) {
         using iceberg::SideFlag;
