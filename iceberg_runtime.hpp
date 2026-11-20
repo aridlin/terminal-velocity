@@ -513,7 +513,7 @@ public:
     state.adventure.dialogue={};state.adventure.map=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
     state.adventure.door_left=.42;state.adventure.door_open=0;state.adventure.machinery_left=0;
     state.adventure.lamp_left=0;state.adventure.npc_reaction_left=0;
-    state.adventure.water_splash_left=0;
+    state.adventure.water_splash_left=0;state.adventure.garden_snail_left=0;
     state.ssh=options.remote;
     if(resume && mode==iceberg::Mode::Campaign && profile.hidden_room<0 && profile.visit_district<0 && !profile.revisit.active) {
       if(grid.template_id==iceberg::CrownSentinel) {
@@ -1150,8 +1150,7 @@ public:
   int near_interaction() const {
     auto p=state.player.rect();p.x-=1.6;p.y-=1.;p.w+=3.2;p.h+=2.;
     for(size_t i=0;i<grid.interactions.size();++i)
-      if(!(grid.interactions[i].kind==InteractionKind::SideStory&&
-           grid.interactions[i].id==int(iceberg::SideStory::Casting)&&has_side_flag(iceberg::SideFlag::Casting))&&
+      if(side_story_available(grid.interactions[i])&&
          !(grid.interactions[i].kind==InteractionKind::Evidence&&(grid.switch_flags&4))&&
          !(grid.template_id==310&&grid.interactions[i].kind==InteractionKind::Rescue&&(grid.switch_flags&8))&&
          p.intersects(grid.interactions[i].at(grid.platforms,state.elapsed)))return int(i);
@@ -1235,6 +1234,20 @@ public:
     }
     const auto &node=grid.interactions[size_t(at)];
     if(node.kind==InteractionKind::SideStory) {
+      using iceberg::SideStory;
+      using iceberg::SideFlag;
+      if(node.id==int(SideStory::GardensPot)&&has_side_flag(SideFlag::GardenSnailFound)) {
+        describe(t("Doniczka","Pot"),garden_snail_pot_text().get(profile.language),"♧",Art::Seeds);return;
+      }
+      if(node.id==int(SideStory::GardenSnailTap)) {
+        const auto body=has_side_flag(SideFlag::GardenSnailWatered)?
+          t("Ziemia jest mokra aż do liści po prawej.","The soil is damp all the way to the leaves on the right."):
+          t("Kranik jest połączony z rynną przy odwróconej doniczce.","The tap feeds the gutter beside the overturned pot.");
+        describe(t("Kranik ogrodowy","Garden tap"),body,"⊗",Art::Valve);return;
+      }
+      if(node.id==int(SideStory::GardenSnailShelter)) {
+        describe(t("Pod funkią","Under the hosta"),GardenSnailTag.get(profile.language),"♧",Art::Seeds);return;
+      }
       if(node.id==int(iceberg::SideStory::BasementBreaker)) {
         describe(t("Odłącznik piwnicy","Basement breaker"),
           t("Ten odłącznik zasila lampy za pomostem i zwarty przewód. E — przełącz zasilanie.",
@@ -1849,6 +1862,7 @@ public:
     }
     // Only start or age the toast on a frame that reaches gameplay.
     if(focused)advance_achievement_toast(dt);
+    v.garden_snail_left=std::max(0.,v.garden_snail_left-dt);
     Player before=state.player;
     int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
     int old_crown_hits=state.crown.hits;
@@ -1973,6 +1987,15 @@ public:
        grid.interactions[size_t(at)].id==int(iceberg::SideStory::RosterDesk)) {
       if(has_side_flag(iceberg::SideFlag::RosterPosted))v.prompt=t("[E] Przeczytaj sprostowanie","[E] Read the correction");
       if(has_side_flag(iceberg::SideFlag::RosterSealed))v.prompt=t("[E] Obejrzyj kopertę","[E] Look at the envelope");
+    }
+    if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::SideStory) {
+      using iceberg::SideStory;
+      using iceberg::SideFlag;
+      const auto prop=SideStory(grid.interactions[size_t(at)].id);
+      if(prop==SideStory::GardensPot&&has_side_flag(SideFlag::GardenSnailFound))
+        v.prompt=t("[E] Obejrzyj doniczkę","[E] Inspect the pot");
+      if(prop==SideStory::GardenSnailTap&&has_side_flag(SideFlag::GardenSnailWatered))
+        v.prompt=t("[E] Obejrzyj kranik","[E] Inspect the garden tap");
     }
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
     if(at<0&&state.player.support>=0&&grid.platforms[size_t(state.player.support)].clothesline)

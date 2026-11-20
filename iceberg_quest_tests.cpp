@@ -174,6 +174,45 @@ int main() {
       interact(side);
       require_quest(earned(Achievement::RingAgain),"ringing again after the warning earns the joke award");
     }
+    {
+      using iceberg::SideStory;
+      using iceberg::SideFlag;
+      AdventureSession garden(options,{});
+      garden.begin_campaign(true);
+      garden.profile.story=63;garden.district=4;garden.stage=0;garden.load_room();
+      const auto prop=[&](SideStory id) {
+        const auto object=std::find_if(garden.grid.interactions.begin(),garden.grid.interactions.end(),
+          [id](const Interaction &entry){return entry.kind==InteractionKind::SideStory&&entry.id==int(id);});
+        if(object==garden.grid.interactions.end())throw std::runtime_error("missing garden prop");
+        return *object;
+      };
+      const auto use=[&](SideStory id){walk_to(garden,reach_area(prop(id).area));interact(garden);};
+      const auto original_story=garden.profile.story;
+      use(SideStory::GardenSnailTap);
+      require_quest(garden.state.adventure.inspecting&&!garden.has_side_flag(SideFlag::GardenSnailWatered),
+        "the tap shows where its gutter leads before the snail is found");
+      garden.tick({.inspect=true},0.);
+      use(SideStory::GardensPot);
+      require_quest(garden.state.adventure.inspecting&&garden.has_side_flag(SideFlag::GardenSnailFound)&&
+        !garden.side_story_available(prop(SideStory::GardenSnailShelter)),
+        "lifting the pot discovers the tenant before the shelter can be read");
+      garden.tick({.inspect=true},0.);
+      use(SideStory::GardenSnailTap);
+      require_quest(garden.has_side_flag(SideFlag::GardenSnailWatered)&&garden.state.adventure.garden_snail_left>0.&&
+        garden.profile.story==original_story,"watering starts the snail moving without altering Journey progression");
+      garden.tick({.pause=true},.1);
+      const double travel=garden.state.adventure.garden_snail_left;
+      garden.tick({},.1);
+      require_quest(garden.state.adventure.garden_snail_left==travel,"the snail stops moving while the game is paused");
+      garden.tick({.pause=true},.1);
+      for(int i=0;i<45;++i)garden.tick({},.1);
+      use(SideStory::GardenSnailShelter);
+      require_quest(garden.state.adventure.inspecting&&garden.state.adventure.inspect_body.find("Celina")!=std::string::npos,
+        "the snail's trail leads to Celina's readable shelter tag");
+      garden.load_room(true);
+      require_quest(garden.state.adventure.garden_snail_left==0.&&garden.side_story_available(prop(SideStory::GardenSnailShelter)),
+        "returning to the Gardens keeps the snail under the shelter");
+    }
     game.profile.story=63;
     for(int q:{0,1,2,3,4,7})game.profile.quests[size_t(q)]=1;
     for(int id:{0,4,8,12,16,20,13,17,21,24,28,32,26,30,34,36,40,44}) {

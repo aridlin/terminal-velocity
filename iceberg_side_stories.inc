@@ -24,6 +24,8 @@
       add({33,44,4,4},SideStory::ArchiveCopy,{"Odpis z teczki 11","Copy from folder 11"});
       add({84,44,4,4},SideStory::EmergencyBell,{"Dzwonek alarmowy","Emergency bell"});
     } else if(grid.template_id==104) {
+      add({94,46,4,4},SideStory::GardenSnailTap,{"Podlej ziemię przy doniczce","Water the soil by the pot"});
+      add({117,46,3,4},SideStory::GardenSnailShelter,{"Przeczytaj tabliczkę","Read the shelter tag"});
       add({104,46,4,4},SideStory::GardensPot,{"Podnieś odwróconą doniczkę","Lift the overturned pot"});
     } else if(grid.template_id==105) {
       add({97,30,4,4},SideStory::CrownPunch,{"Sprawdź kasownik","Test the ticket punch"});
@@ -73,6 +75,27 @@
     return {"E — pokaż Grażynie odpis znaleziony pod schodami.",
             "E — show Grażyna the copy you found below the stairs."};
   }
+  bool side_story_available(const Interaction &node) const {
+    if(node.kind!=InteractionKind::SideStory)return true;
+    using iceberg::SideStory;
+    using iceberg::SideFlag;
+    switch(SideStory(node.id)) {
+      case SideStory::Casting:return !has_side_flag(SideFlag::Casting);
+      case SideStory::GardenSnailShelter:return has_side_flag(SideFlag::GardenSnailWatered);
+      default:return true;
+    }
+  }
+  iceberg::Text garden_snail_pot_text() const {
+    using iceberg::SideFlag;
+    if(has_side_flag(SideFlag::GardenSnailWatered))
+      return {"Doniczka jest pusta. Mokry ślad prowadzi w prawo, pod liście.",
+              "The pot is empty. A damp trail leads right, under the leaves."};
+    return {"Pod doniczką ślimak i tabliczka: «Najemca tymczasowy. Proszę podlewać obok».",
+            "Under the pot, a snail and a sign: ‘Temporary tenant. Please water around it.’"};
+  }
+  static constexpr iceberg::Text GardenSnailTag{
+    "Dziadek mówił, że ślimaki wracają tam, gdzie ostatnio znalazły wodę. Posadziłam tę funkię, żeby ten miał dokąd wrócić. — Celina",
+    "Granddad said snails go back to the last place they found water. I planted this hosta so this one would have somewhere to come back to. — Celina"};
   bool side_story_interact(const Interaction &node) {
     using iceberg::Achievement;
     using iceberg::SideFlag;
@@ -165,9 +188,25 @@
           "Cold tea. A note under the mug: ‘Open the hot circuit after the night shift. Witek hasn't slept since Tuesday.’"),7);
         break;
       case SideStory::GardensPot:
-        audio.play(AudioCue::Stone1,.55f);
-        notice(t("Pod doniczką ślimak i tabliczka: «Najemca tymczasowy. Proszę podlewać obok».",
-          "Under the pot, a snail and a sign: ‘Temporary tenant. Please water around it.’"),6);
+        if(!has_side_flag(SideFlag::GardenSnailFound)) {
+          remember_side_flag(SideFlag::GardenSnailFound);persist();
+          audio.play(AudioCue::Stone1,.55f);
+        }
+        inspect_nearby();
+        break;
+      case SideStory::GardenSnailTap:
+        if(!has_side_flag(SideFlag::GardenSnailFound)||has_side_flag(SideFlag::GardenSnailWatered)) {
+          inspect_nearby();
+        } else {
+          remember_side_flag(SideFlag::GardenSnailWatered);
+          state.adventure.garden_snail_left=iceberg::GardenSnailWalkTime;
+          audio.play(AudioCue::Valve,.45f);
+          notice(t("Woda spływa do ziemi. Ślimak wysuwa czułki.","Water trickles into the soil. The snail extends its feelers."),2.5);
+          persist();
+        }
+        break;
+      case SideStory::GardenSnailShelter:
+        inspect_nearby();
         break;
       case SideStory::CrownPunch:
         audio.play(AudioCue::Metal1,.6f);
