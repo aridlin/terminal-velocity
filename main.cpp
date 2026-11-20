@@ -2518,6 +2518,15 @@ private:
       if (grid_.adventure_level) {
         auto c=solid==255?Cell{"█",Color::Solid}:braille_cell(solid,Color::Solid);
         const auto &district=iceberg::Districts[size_t(grid_.district)];
+        if(grid_.template_id==53) {
+          c.rgb=0x667651;
+          if(solid==255) {
+            c.background=0x485641;
+            const int grain=(int(std::floor(wx*3))+int(std::floor(wy))*7)%13;
+            c.glyph=grain<3?"╶":grain==8?"≋":"─";
+          }
+          return c;
+        }
         c.rgb=grid_.district==3?0x78929e:district.stone;
         // Sparse masonry/plate seams retain a solid collision silhouette.
         if(solid==255 && (int(std::floor(wx*2))+int(std::floor(wy))*3)%47==0) {
