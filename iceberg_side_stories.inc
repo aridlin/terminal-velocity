@@ -16,6 +16,8 @@
     } else if(grid.template_id==102) {
       add({34,44,4,4},SideStory::EstatePlate,{"Blaszka pod schodami","Plate under the stairs"});
       add({104,30,4,4},SideStory::Casting,{"Podnieś odlew","Pick up the casting"});
+      if(has_side_flag(iceberg::SideFlag::Roster))
+        add({60,44,4,4},SideStory::RosterDesk,{"Pokaż Grażynie listę","Show Grażyna the roster"});
       grid.interactions.push_back({{67,44,3,4},InteractionKind::Secret,iceberg::UnnumberedFloor,
         {"Drzwi pod schodami","Door under the stairs"}});
     } else if(grid.template_id==103) {
@@ -54,6 +56,23 @@
       default:return std::nullopt;
     }
   }
+  iceberg::Text roster_desk_title() const {
+    using iceberg::SideFlag;
+    if(has_side_flag(SideFlag::RosterPosted))return {"Sprostowanie","Correction notice"};
+    if(has_side_flag(SideFlag::RosterSealed))return {"Zapieczętowany odpis","Sealed copy"};
+    return {"Lista lokatorów","Tenant roster"};
+  }
+  iceberg::Text roster_desk_body() const {
+    using iceberg::SideFlag;
+    if(has_side_flag(SideFlag::RosterPosted))
+      return {"KLATKA 11 · Obecnych: 14. Drzwi zamknięto przed zakończeniem obchodu. Podpisano: Grażyna.",
+              "STAIRWELL 11 · Present: 14. The door was shut before the count finished. Signed: Grażyna."};
+    if(has_side_flag(SideFlag::RosterSealed))
+      return {"Koperta jest zapieczętowana. Na wierzchu: «Do rąk własnych. Chcesz porozmawiać? Będę przy biurku. Grażyna».",
+              "The envelope is sealed. On the front: ‘For you alone. If you want to talk, I'll be by my desk. Grażyna.’"};
+    return {"E — pokaż Grażynie odpis znaleziony pod schodami.",
+            "E — show Grażyna the copy you found below the stairs."};
+  }
   bool side_story_interact(const Interaction &node) {
     using iceberg::Achievement;
     using iceberg::SideFlag;
@@ -80,6 +99,16 @@
       return true;
     }
     switch(story) {
+      case SideStory::RosterDesk:
+        if(has_side_flag(SideFlag::RosterPosted)||has_side_flag(SideFlag::RosterSealed))inspect_nearby();
+        else talk({{3,{"Poznaję ten ślad po ołówku. Pilnowałam Zosi w pralni, kiedy jej mama poszła po wodę.",
+                       "I know that pencil mark. I watched Zosia in the laundry while her mother went for water."}},
+                   {3,{"Miałam klucz. Kiedy dyżurny powiedział, że wszyscy wyszli, przekręciłam go. Rano nikt nie chciał dopisać dziecka bez numeru mieszkania.",
+                       "I had the key. When the dispatcher said everyone was out, I turned it. In the morning nobody would add a child without a flat number."}},
+                   {3,{"Zosia przeszła z matką do piekarni przez pralnię. W papierach nigdy nie weszła do budynku. Co robimy z odpisem?",
+                       "Zosia and her mother got to the bakery through the laundry. On paper she never entered the building. What should we do with the copy?"}}},
+                  0,iceberg::EstateRosterReplyScene);
+        break;
       case SideStory::Casting:
         remember_side_flag(SideFlag::Casting);
         animate_pickup(node,0);

@@ -812,7 +812,10 @@ public:
       }
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
-      if(tour_scene<0&&!iceberg::expedition_reply_scene(scene)) {
+      if(scene==iceberg::EstateRosterReplyScene) {
+        remember_side_flag(option==0?iceberg::SideFlag::RosterPosted:iceberg::SideFlag::RosterSealed);
+        persist();
+      } else if(tour_scene<0&&!iceberg::expedition_reply_scene(scene)) {
         if(scene>=iceberg::HarborMissionReplyBase) {
           set_arrival_exchange(option?iceberg::ArrivalExchange::SecondReply:iceberg::ArrivalExchange::FirstReply);
         } else if(scene<iceberg::BriefingReplyBase) {
@@ -842,7 +845,8 @@ public:
       if(dialogue.cinematic)dialogue.instant=false;
       if(shot!=dialogue.lines[dialogue.page].shot)dialogue.shot_seconds=0.;
       dialogue.reset_reveal();if(dialogue.instant)dialogue.reveal_all();
-      if(dialogue.choosing()&&!iceberg::expedition_reply_scene(dialogue.reply_scene)) {
+      if(dialogue.choosing()&&dialogue.reply_scene!=iceberg::EstateRosterReplyScene&&
+         !iceberg::expedition_reply_scene(dialogue.reply_scene)) {
         if(dialogue.reply_scene>=iceberg::HarborMissionReplyBase) {
           if(tour_scene<0) {
             set_arrival_exchange(iceberg::ArrivalExchange::Prompt);
@@ -1229,6 +1233,10 @@ public:
     }
     const auto &node=grid.interactions[size_t(at)];
     if(node.kind==InteractionKind::SideStory) {
+      if(node.id==int(iceberg::SideStory::RosterDesk)) {
+        describe(roster_desk_title().get(profile.language),roster_desk_body().get(profile.language),"▤",Art::File);
+        return;
+      }
       if(const auto document=side_document(iceberg::SideStory(node.id))) {
         auto body=document->body.get(profile.language);
         if(!has_side_flag(document->flag))
@@ -1947,6 +1955,11 @@ public:
     v.prompt=at>=0&&(grid.interactions[size_t(at)].kind!=InteractionKind::Secret||
       grid.interactions[size_t(at)].id==iceberg::UnnumberedFloor)?"[E] "+grid.interactions[size_t(at)].label.get(profile.language):"";
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::RouteChoice)v.prompt="[E] B: "+grid.interactions[size_t(at)].label.get(profile.language);
+    if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::SideStory&&
+       grid.interactions[size_t(at)].id==int(iceberg::SideStory::RosterDesk)) {
+      if(has_side_flag(iceberg::SideFlag::RosterPosted))v.prompt=t("[E] Przeczytaj sprostowanie","[E] Read the correction");
+      if(has_side_flag(iceberg::SideFlag::RosterSealed))v.prompt=t("[E] Obejrzyj kopertę","[E] Look at the envelope");
+    }
     if(at>=0&&grid.interactions[size_t(at)].kind==InteractionKind::Npc)v.prompt+=" — "+std::string(iceberg::Npcs[size_t(grid.interactions[size_t(at)].id)].name);
     if(at<0&&state.player.support>=0&&grid.platforms[size_t(state.player.support)].clothesline)
       v.prompt=t("↓ / S — zeskocz z liny","↓ / S — drop through the line");

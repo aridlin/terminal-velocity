@@ -727,6 +727,16 @@
         prop_art(x,y,{" ╭──╮ ","╱░░░░╲","╘════╛"},0xba886e);break;
       case SideStory::CrownPunch:
         prop_art(x,y,{"╭───╮","│ ▤ │","╞═══╡","  │  "},0x9ca9b2);break;
+      case SideStory::RosterDesk: {
+        const auto flags=state_.adventure.task_items[1];
+        if(flags&iceberg::side_flag(iceberg::SideFlag::RosterPosted))
+          prop_art(x,y,{"╭───────╮","│ 11:14 │","│ ≋≋≋≋  │","└───────┘"},0xc7ae83);
+        else if(flags&iceberg::side_flag(iceberg::SideFlag::RosterSealed))
+          prop_art(x,y,{" ╭─────╮ "," │╲ ◆╱│ "," ╰─────╯ "},0xa67888);
+        else
+          prop_art(x,y,{"╔══════╗","║ ▤ ▤  ║","╞══════╡","╵      ╵"},0xa09579);
+        break;
+      }
     }
   }
   void draw_award_entries(bool menu,int top) {
