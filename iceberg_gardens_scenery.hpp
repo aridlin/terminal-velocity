@@ -70,6 +70,9 @@
     world_art(x,pod.y-row,{"╭"+shell+"╮"},0xb9d77b);
   }
 
+  static constexpr std::pair<double,double> PlanterLowerSignal{58.,48.},PlanterUpperSignal{69.4,41.};
+  static constexpr uint32_t PlanterSignalReady=0xc1dfa2,PlanterSignalWaiting=0x77918b;
+
   void draw_hanging_planter_frame(const MovingPlatform &platform) {
     const double pivot=platform.swing_pivot,y=platform.base.y;
     const double row=aspect_*scale_;
@@ -81,13 +84,15 @@
     world_text(pivot,y,"◉",0xbacaa0);
     const int stop=platform.stop(state_.elapsed);
     const bool ready=stop==-1;
-    draw_scenery_pipe({{58,48},{58,45.2}},iron);
-    prop_art(58,43.7,{"╭─╮",ready?"│→│":"│○│","╰┬╯"},
-      ready?0xc1dfa2:0x77918b);
+    const auto [lower_x,lower_y]=PlanterLowerSignal;
+    draw_scenery_pipe({{lower_x,lower_y},{lower_x,lower_y-2.8}},iron);
+    prop_art(lower_x,lower_y-4.3,{"╭─╮",ready?"│→│":"│○│","╰┬╯"},
+      ready?PlanterSignalReady:PlanterSignalWaiting);
     // The upper light hangs from the lip the courier jumps onto.
-    draw_scenery_pipe({{69.4,41.},{69.4,42.}},iron);
-    prop_art(69.4,44.4,{"╭┴╮",stop==1?"│↗│":"│○│","╰─╯"},
-      stop==1?0xc1dfa2:0x77918b);
+    const auto [upper_x,upper_y]=PlanterUpperSignal;
+    draw_scenery_pipe({{upper_x,upper_y},{upper_x,upper_y+1.}},iron);
+    prop_art(upper_x,upper_y+3.4,{"╭┴╮",stop==1?"│↗│":"│○│","╰─╯"},
+      stop==1?PlanterSignalReady:PlanterSignalWaiting);
   }
 
   void draw_hanging_planter(const MovingPlatform &platform,const Rect &deck) {
