@@ -10,6 +10,41 @@ int main(){try {
   AdventureSession game(options,"/tmp/tv-ui-test-unused");game.begin_campaign(true);
   CellFrame frame;cell_frame_sink=[&](const CellFrame &f){frame=f;};
   {
+    AdventureSession awards(options,{});
+    awards.begin_campaign(true);
+    awards.profile.language=iceberg::Language::English;
+    awards.grid.sweets={{awards.state.player.x+.3,awards.state.player.y+.5}};
+    awards.state.collected.assign(1,false);
+    awards.tick({},1./120);
+    const auto bit=iceberg::achievement_bit(iceberg::Achievement::FirstToken);
+    ui_check(awards.profile.discoveries&bit,"a real token records its achievement");
+    awards.tick({},.08);awards.tick({},.08);
+    for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+      auto toast=awards.state;
+      const auto locate=[&]() {
+        for(int y=4;y<rows-3;++y)for(int x=0;x<cols;++x)
+          if(frame[size_t(y)][size_t(x)].glyph=="✧"&&frame[size_t(y)][size_t(x)].rgb==0xc4aa73)
+            return std::pair{x,y};
+        return std::pair{-1,-1};
+      };
+      toast.adventure.achievement_left=iceberg::AchievementToastTime-.15;
+      RenderGrid(awards.grid,toast,rows,cols,2).draw();
+      const auto initial=locate();
+      toast.adventure.achievement_left=iceberg::AchievementToastTime-.32;
+      RenderGrid(awards.grid,toast,rows,cols,2).draw();
+      const auto settled=locate();
+      ui_check(initial.first==cols-28&&settled.first==initial.first&&settled.second<initial.second&&
+        ui_text(frame).find("First token")!=std::string::npos,
+        "the achievement slides up from the bottom right without covering the controls");
+      toast.journal=true;toast.adventure.journal_tab=3;
+      RenderGrid(awards.grid,toast,rows,cols,2).draw();
+      ui_check(ui_text(frame).find("◆ First token")!=std::string::npos&&
+        ui_text(frame).find("◇ Dash and lift")!=std::string::npos,
+        "the quest book shows both earned and available achievements");
+    }
+  }
+
+  {
     auto at_door=game.state;
     const auto &door=game.grid.goal;
     const double marker_x=door.x+door.w*.5-.5, marker_y=door.y+1.6;

@@ -20,6 +20,7 @@ public:
   iceberg::Random dock_chatter;
   int last_dock_line=-1;
   int network_deaths=0;
+  std::vector<iceberg::Achievement> achievement_queue;
   int last_columns=110,last_rows=34;
   double last_aspect=2;
   iceberg::Mode mode = iceberg::Mode::Campaign;
@@ -49,6 +50,7 @@ public:
     }
   }
   void reset_profile_menu() {
+    achievement_queue.clear();
     mode=options.mode;run_active=false;run_seconds=0;run_deaths=run_treasures=depth=0;
     state={};
     if(profile.content_version!=iceberg::ContentVersion) {
@@ -171,7 +173,7 @@ public:
     }
     if(grid.template_id==330)for(auto &node:grid.interactions)if(node.kind==InteractionKind::Board)
       node.label=profile.finished?iceberg::Text{"Wyrusz na wyprawę","Start an expedition"}:iceberg::Text{"Zakończ obchód","Finish the round"};
-    v.discoveries=profile.discoveries;
+    v.discoveries=profile.discoveries|iceberg::achievement_progress(profile);
     v.switches=grid.switch_flags;v.room_name=(grid.room_role==iceberg::RoomRole::Settlement&&grid.template_id!=330?
       iceberg::Districts[size_t(grid.district)].subtitle:grid.room_name).get(profile.language);
     v.music_volume=profile.music_volume;v.effects_volume=profile.effects_volume;v.ambience_volume=profile.ambience_volume;
@@ -721,6 +723,23 @@ public:
     film.segment=std::max(film.segment,segment);
     if(film.line_seconds>=duration)dialogue_next();
   }
+  void unlock_achievement(iceberg::Achievement id) {
+    const auto bit=iceberg::achievement_bit(id);
+    if(tour_scene>=0||(profile.discoveries&bit))return;
+    profile.discoveries|=bit;
+    if(!(state.adventure.discoveries&bit))achievement_queue.push_back(id);
+  }
+  void advance_achievement_toast(double dt) {
+    auto &v=state.adventure;
+    if(dt<=0.||tour_scene>=0||v.dialogue.active())return;
+    v.achievement_left=std::max(0.,v.achievement_left-dt);
+    if(v.achievement_left>0.)return;
+    if(achievement_queue.empty()){v.achievement_toast=-1;return;}
+    v.achievement_toast=int(achievement_queue.front());
+    achievement_queue.erase(achievement_queue.begin());
+    v.achievement_left=iceberg::AchievementToastTime;
+    audio.play(AudioCue::Achievement);
+  }
   void offer_outfitter_item(int index) {
     talk({{iceberg::ReplyPrompt,{}}});
     auto &dialogue=state.adventure.dialogue;
@@ -741,6 +760,7 @@ public:
         } else if(!(profile.cosmetics&item.flag)&&iceberg::outfitter_balance(profile)>=item.price) {
           iceberg::remember_outfitter_tokens(profile);
           profile.cosmetics|=item.flag;
+          unlock_achievement(iceberg::Achievement::Gear);
           persist();audio.play(AudioCue::Cloth);
           offer_outfitter_item(index);
         }
@@ -800,6 +820,7 @@ public:
       complete_district();
     } else if(action==3) {
       profile.finished=true;profile.cosmetics|=1u<<7;audio.play(AudioCue::Win);
+      unlock_achievement(iceberg::Achievement::Journey);
     } else if(action==FinishHomecomingReply) {
       profile.story&=~iceberg::HomecomingReplyPending;
     } else if(action==FinishArrival) {
@@ -850,6 +871,7 @@ public:
       profile.records=previous.records;profile.trials=previous.trials;profile.challenges=previous.challenges;
       profile.expeditions=previous.expeditions;profile.endless_best=previous.endless_best;
       profile.cosmetics=previous.cosmetics;profile.outfit=previous.outfit;
+      profile.discoveries=iceberg::achievement_progress(previous);
       profile.music_volume=music;profile.effects_volume=effects;profile.ambience_volume=ambience;
       profile.pause_on_focus_loss=previous.pause_on_focus_loss;
       profile.smooth_camera=previous.smooth_camera;
@@ -983,7 +1005,10 @@ public:
       const int scene=profile.revisit.scene;
       bool jubilee=profile.revisit.scene==2&&state.won&&!(profile.story&(uint64_t(1)<<40));
       const bool surveyed=scene==iceberg::SurveyReplay&&state.won&&!(profile.cosmetics&iceberg::SurveyCourseComplete);
-      if(surveyed)profile.cosmetics|=iceberg::SurveyCourseComplete;
+      if(surveyed) {
+        profile.cosmetics|=iceberg::SurveyCourseComplete;
+        unlock_achievement(iceberg::Achievement::Survey);
+      }
       if(jubilee){profile.story|=uint64_t(1)<<40;profile.cosmetics|=1u<<3;}
       profile.revisit={};load_room(true);
       const auto entrance=std::find_if(grid.interactions.begin(),grid.interactions.end(),[scene](const auto &node){
@@ -1530,6 +1555,7 @@ public:
       v.death_left=std::max(0.,v.death_left-dt);
       v.machinery_left=std::max(0.,v.machinery_left-dt);v.lamp_left=std::max(0.,v.lamp_left-dt);
       if(v.dialogue.active())v.pickup_left=std::max(0.,v.pickup_left-dt);
+      if(focused)advance_achievement_toast(dt);
     }
     if(state.menu) {menu(c,dt);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request&&tour_scene>=0){end_tour();return;}
@@ -1624,7 +1650,7 @@ public:
       }
     }
     if(state.journal) {
-      if(c.inspect){v.journal_tab=(v.journal_tab+1)%3;v.selected=0;}
+      if(c.inspect){v.journal_tab=(v.journal_tab+1)%4;v.selected=0;}
       auto entries=iceberg::journal_entries(v);
       if(!entries.empty()) {
         int count=int(entries.size());v.selected=std::clamp(v.selected,0,count-1);
@@ -1782,7 +1808,9 @@ public:
     } else {run_seconds+=active;run_deaths+=deaths;run_treasures+=pickups;}
     if(state.player.wall_bounce_left>before.wall_bounce_left)audio.play(AudioCue::Bounce);
     const bool mastery_progress=state.player.dash_jump_left>before.dash_jump_left&&profile.quest_counts[6]<3;
+    if(pickups>0)unlock_achievement(iceberg::Achievement::FirstToken);
     if(mastery_progress) {
+      unlock_achievement(iceberg::Achievement::DashJump);
       ++profile.quest_counts[6];
       if(profile.quest_counts[6]>=3 && profile.quests[6]==1)profile.quests[6]=2;
     }
