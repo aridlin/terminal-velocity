@@ -158,6 +158,7 @@ struct Controls {
   bool interact = false, inspect = false, map = false, language = false;
   int navigate = 0, browse_leg = 0;
   std::optional<int> move_pressed={}, aim_pressed={};
+  std::optional<std::pair<int,int>> dash_pressed_direction{};
   bool fast_fall_pressed = false;
   int tour_page = 0;
   // A loss may precede a regain within one frontend poll.
@@ -1087,8 +1088,8 @@ void update_step(GameState &state, const EngineGrid &grid,
   const bool remember_direction=grid.adventure_level&&!state.reference_movement;
   if (controls.dash_pressed && !grid.dash_locked() && player.landing_dash_left <= 0.) {
     player.dash_buffer_left = kDashBuffer;
-    const int horizontal=controls.move||controls.aim_y?controls.move:player.facing;
-    player.dash_buffer_direction={horizontal,controls.aim_y};
+    const auto [horizontal,vertical]=controls.dash_pressed_direction.value_or(std::pair{controls.move,controls.aim_y});
+    player.dash_buffer_direction={horizontal||vertical?horizontal:player.facing,vertical};
   }
 
   if (player.grounded) {
@@ -1506,14 +1507,20 @@ public:
     if(input.move_pressed)pending.move_pressed=input.move_pressed;
     if(input.aim_pressed)pending.aim_pressed=input.aim_pressed;
     const int held_move=input.move, held_aim=input.aim_y;
+    if(input.dash_pressed&&grid.adventure_level&&!state.reference_movement) {
+      // Steering may change in a later poll before this dash reaches the physics step.
+      pending.dash_pressed_direction=std::pair{held_move?held_move:pending.move_pressed.value_or(0),
+        held_aim?held_aim:pending.aim_pressed.value_or(0)};
+    }
     const bool held_fast_fall = input.fast_fall;
     accumulator += clamp(elapsed, 0.0, 0.1);
     while (accumulator + 1e-10 >= 1.0 / 120.0) {
-      // A released direction can still aim a queued dash, then expires.
+      // A short direction tap still counts as steering for one step.
       input.move=held_move?held_move:pending.move_pressed.value_or(0);
       input.aim_y=held_aim?held_aim:pending.aim_pressed.value_or(0);
       input.jump_pressed = pending.jump_pressed;
       input.dash_pressed = pending.dash_pressed;
+      input.dash_pressed_direction=pending.dash_pressed_direction;
       input.fast_fall = held_fast_fall ||
                         (grid.adventure_level && pending.fast_fall_pressed);
       input.restart = pending.restart;

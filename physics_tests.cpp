@@ -97,6 +97,39 @@ int main() {
     check(!s.player.dash_available, "air dash cannot recharge in midair");
     auto adventure = flat();
     adventure.adventure_level = true;
+    {
+      auto player=new_state(adventure);
+      player.player.y=20.;
+      FixedStepper input_frames;
+      input_frames.advance(player,adventure,{.move=-1,.dash_pressed=true,.aim_y=-1},.004);
+      check(player.player.dash_time_left==0.,"a short input poll waits for the next physics tick");
+      input_frames.advance(player,adventure,{.move=1},.005);
+      check(player.player.vx<-20.&&player.player.vy<-20.,
+        "a dash keeps the aim on its press when steering changes before the next tick");
+      player=new_state(adventure);
+      player.player.y=20.;
+      input_frames={};
+      input_frames.advance(player,adventure,{.dash_pressed=true,.aim_y=-1},.002);
+      input_frames.advance(player,adventure,{.move=1,.dash_pressed=true},.002);
+      input_frames.advance(player,adventure,{.move=-1},.005);
+      check(player.player.vx>20.&&std::abs(player.player.vy)<1e-8,
+        "a second press before the tick replaces the queued dash aim");
+      player=new_state(adventure);
+      player.player.y=20.;
+      player.player.facing=-1;
+      input_frames={};
+      input_frames.advance(player,adventure,{.dash_pressed=true},.004);
+      input_frames.advance(player,adventure,{.move=1},.005);
+      check(player.player.vx<-20.&&std::abs(player.player.vy)<1e-8,
+        "a neutral press keeps the facing direction when steering follows it");
+      player=new_state(g);
+      player.player.y=20.;
+      input_frames={};
+      input_frames.advance(player,g,{.move=-1,.dash_pressed=true,.aim_y=-1},.004);
+      input_frames.advance(player,g,{.move=1},.005);
+      check(player.player.vx>20.&&std::abs(player.player.vy)<1e-8,
+        "classic courses retain their reference input timing");
+    }
     auto land_and_dash = [](const EngineGrid &floor) {
       auto state = new_state(floor);
       state.player.y = 40 - kPlayerHeight - .03;
