@@ -14,10 +14,12 @@ inline constexpr int AuthoredDistrictCount = 6;
 inline constexpr int RoomsPerLeg = 8;
 inline constexpr int UnnumberedFloor=3;
 inline constexpr uint64_t BasementCircuitCut=1;
-enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker };
+inline constexpr double GardenSnailWalkTime=4.;
+enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter };
 // Side-story state uses the top of the second task word. Existing room tasks
 // use their original indices and retain the same save representation.
 enum class SideFlag : uint64_t {
+  GardenSnailFound=1ull<<52, GardenSnailWatered=1ull<<53,
   RosterPosted=1ull<<54, RosterSealed=1ull<<55,
   HarborStub=1ull<<56, EstatePlate=1ull<<57, ArchiveCopy=1ull<<58, Casting=1ull<<59,
   CastingReturned=1ull<<60, BellRung=1ull<<61, Roster=1ull<<62, BasementPowerCut=1ull<<63
@@ -482,6 +484,7 @@ struct View {
   double achievement_left=0;
   static constexpr double water_splash_duration=.42;
   double water_splash_left=0, water_splash_x=0, water_splash_y=0;
+  double garden_snail_left=0;
   int reacting_npc=-1;
   Dialogue dialogue;
   std::string prompt, notice, room_name;

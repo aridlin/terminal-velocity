@@ -750,8 +750,33 @@
         prop_art(x,y,{"╭───╮","│ ⌂ │","╰─┬─╯","  │  "},0xa49e89);break;
       case SideStory::HeatworksMug:
         prop_art(x,y,{"╭──╮╮","╰──╯╯"},0xc2a58a);break;
-      case SideStory::GardensPot:
-        prop_art(x,y,{" ╭──╮ ","╱░░░░╲","╘════╛"},0xba886e);break;
+      case SideStory::GardensPot: {
+        const auto bits=state_.adventure.task_items[1];
+        const auto &v=state_.adventure;
+        const bool found=bits&iceberg::side_flag(iceberg::SideFlag::GardenSnailFound);
+        const bool wet=bits&iceberg::side_flag(iceberg::SideFlag::GardenSnailWatered);
+        prop_art(x,y,found?std::vector<std::string>{"╭──╮  ","│░░╲  ","╰───╲ "}:std::vector<std::string>{" ╭──╮ ","╱░░░░╲","╘════╛"},0xba886e);
+        if(found) {
+          const double progress=wet?1.-v.garden_snail_left/iceberg::GardenSnailWalkTime:0.;
+          const double snail=std::lerp(x+2.1,117.7,progress);
+          if(wet)
+            for(double trail=x+2.;trail<snail-.7;trail+=1.8)world_text(trail,y-.75,"·",0x699d91);
+          const bool extended=!wet||v.garden_snail_left==0||std::fmod(v.garden_snail_left,.7)<.54;
+          prop_art(snail,y,extended?std::vector<std::string>{"    ╲╱","  ◉▄▅ "}:std::vector<std::string>{"     ╵","  ◉▄▄ "},0xd2b47d);
+        }
+        break;
+      }
+      case SideStory::GardenSnailTap: {
+        draw_scenery_pipe({{x,47.4},{x,42},{101,42},{101,48.3}},0x5d8278);
+        prop_art(x,y,{"╭─┤","│⊗│","╰┬╯"},0x82aaa0);
+        if(state_.adventure.garden_snail_left>0.) {
+          const double phase=std::fmod(state_.adventure.garden_snail_left,.48)/.48;
+          world_text(101,48.3+1.3*phase*phase,phase>.85?"∿":"╵",0x8ac0b4);
+        }
+        break;
+      }
+      case SideStory::GardenSnailShelter:
+        prop_art(x+.3,y,{"╭╮   ╭──╮","╲╰─╮╱  ╱ "," ╲░│░ ╱  ","  ╲│╱    "},0x7a9d78);break;
       case SideStory::CrownPunch:
         prop_art(x,y,{"╭───╮","│ ▤ │","╞═══╡","  │  "},0x9ca9b2);break;
       case SideStory::BasementBreaker: {
