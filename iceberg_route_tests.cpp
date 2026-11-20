@@ -34,8 +34,48 @@ void test_garden_vine_and_flytrap() {
   require(trap.active(run.elapsed)&&run.deaths==1&&run.player.vine==-1,"the flytrap snaps and retries at the checkpoint");
 }
 
+void test_heatworks_route_machinery() {
+  constexpr double dt=1./120.;
+  iceberg::SessionOptions options;options.no_save=options.mute=true;
+  AdventureSession heat(options,{});
+  heat.mode=iceberg::Mode::Campaign;heat.district=1;heat.stage=4;heat.room=6;
+  heat.profile.layout_version=iceberg::ContentVersion;
+  heat.profile.itinerary.assign(iceberg::RoomsPerLeg*3,422);
+  heat.load_room();
+  require(heat.grid.air_fields.size()==1&&heat.grid.air_fields.front().turbine&&heat.grid.air_fields.front().ax==0.,
+    "the upward fan appears in a late Journey room");
+  heat.mode=iceberg::Mode::Endless;
+  heat.room=7;
+  auto &expedition=heat.profile.expeditions[0];
+  expedition.itinerary.assign(iceberg::RoomsPerLeg,424);
+  expedition.layout_version=iceberg::ContentVersion;
+  heat.load_room();
+  require(heat.grid.pulses.size()==2,"two timed vents appear late in the Expedition leg");
+  const auto &vent=heat.grid.pulses.front();
+  auto run=new_state(heat.grid);
+  run.player.x=vent.area.x+.2;run.player.y=vent.area.bottom()-kPlayerHeight;
+  run.elapsed=vent.period*(1.9-vent.phase);
+  world_step(run,heat.grid,{},dt);
+  require(vent.warning(run.elapsed)&&run.deaths==0,"the service vent warns before doing damage");
+  run.elapsed=vent.period*(1.1-vent.phase);
+  world_step(run,heat.grid,{},dt);
+  require(vent.active(run.elapsed)&&run.deaths==1,"the active service vent sends the courier to the lamp");
+  auto fan=verified_room(422,73,1);
+  add_heatworks_return_fan(fan);
+  run=new_state(fan);
+  run.spawn_x=111.;run.spawn_y=39.-kPlayerHeight;
+  reset_player(run);
+  for(int i=0;i<51;++i)world_step(run,fan,{.move=1},dt);
+  for(int i=0;i<98;++i)world_step(run,fan,{},dt);
+  require(run.player.y<27.&&run.player.x>=116.75,"the fan carries a walking player above the maintenance shelf");
+  for(int i=0;i<150&&!run.player.grounded&&!run.deaths;++i)
+    world_step(run,fan,{.move=run.player.x<121.3?1:run.player.x>121.7?-1:0},dt);
+  require(run.deaths==0&&run.player.grounded&&run.player.x>=119.&&
+    std::abs(run.player.y+kPlayerHeight-23.)<.05,"ordinary steering reaches the upper fan catwalk without a dash");
+}
 int main() {
   try {
+    test_heatworks_route_machinery();
     test_garden_vine_and_flytrap();
     for(unsigned seed=0;seed<10000;++seed) {
       auto itinerary=iceworld::make_itinerary(seed,0,24,4);

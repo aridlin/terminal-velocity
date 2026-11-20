@@ -381,7 +381,7 @@
         draw_heatworks_turbine(jet);
         continue;
       }
-      if(grid_.room_role==iceberg::RoomRole::Traverse&&state_.adventure.mode==iceberg::Mode::Endless) {
+      if(grid_.room_role==iceberg::RoomRole::Traverse) {
         draw_expedition_steam_lift(jet);
         continue;
       }

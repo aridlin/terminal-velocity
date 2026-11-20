@@ -348,12 +348,14 @@ inline constexpr std::array DebugTour{
   TourStop{4,GardenSeedBank,56.5,50,{"Wjedź tacą na półki z nasionami","Ride the seed tray up to the shelves"}},
   TourStop{4,48,55.4,39,{"Przytrzymaj skok, by złapać pnącze. Skocz ponownie, by się puścić.",
     "Hold jump to grab the vine. Jump again to release."}},
+  TourStop{1,422,111,39,{"Wjedź z podmuchem i zeskocz na boczną półkę","Ride the fan, then steer onto a side shelf"}},
+  TourStop{1,424,84,51,{"Odczekaj lub przeskocz po sygnale dyszy","Wait out a vent cycle or jump the warning plume"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 // Keep the quick action pointed at the newest featured sample, independently of list order.
 inline constexpr auto DebugTourLatest = [] {
   for(size_t i=0;i<DebugTour.size();++i)
-    if(DebugTour[i].room==48)return i;
+    if(DebugTour[i].room==422)return i;
   return DebugTour.size();
 }();
 static_assert(DebugTourLatest<DebugTour.size());

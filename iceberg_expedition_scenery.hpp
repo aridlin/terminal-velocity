@@ -210,6 +210,22 @@
 
   void draw_heatworks_turbine(const AirField &fan) {
     const double row=aspect_*scale_,floor=fan.area.bottom(),time=state_.elapsed;
+    if(fan.ax==0.) {
+      const double center=fan.area.x+fan.area.w*.5;
+      const double pressure=fan.strength(time);
+      const auto color=pressure>.6?0xcbe5a5:0xa18472;
+      draw_scenery_pipe({{center,62.},{center,floor+3.8},{center-2.,floor+3.8}},0x71818a);
+      world_art(center-4*scale_,floor-3*row,{"╞╪╪╪╪╪╪╪╡",
+        " ╲‒◍‒◍‒╱ ","  ╰═╤═╯  "},color);
+      const int count=3+int(pressure*11.);
+      for(int i=0;i<count;++i) {
+        const double rise=std::fmod(time*(.64+.5*pressure)+i*.126,1.);
+        const double x=fan.area.x+fan.area.w*(.5+.34*std::sin(i*3.1+rise*8.));
+        world_text(x,floor-rise*fan.area.h,i%3==0?"↑":"┆",pressure>.65?0xbce5d7:0x557989);
+      }
+      world_text(center+4*scale_,floor-3*row,pressure>.6?"↑":"○",color);
+      return;
+    }
     const double x=fan.area.x-13*scale_,y=floor-9*row;
     const double pressure=fan.strength(time);
     const bool jump_now=fan.strength(time+.25)>=.86;
