@@ -2103,7 +2103,7 @@ int main(){try {
       ui_check(v.route_room_selection==25&&v.route.browsed_leg==1&&v.route.current==0&&game.depth==16,
         "future preview clamps leg navigation without moving the courier");
       ui_check(v.route.detail_rhythm==
-          iceworld::pattern(game.expedition_itinerary(game.next_expedition_seed())[1]).rhythm,
+          iceworld::pattern(game.next_expedition_itinerary()[1]).rhythm,
         "a selected future room shows its type from the next seeded itinerary");
       const auto route_details=[&]{
         std::string details;

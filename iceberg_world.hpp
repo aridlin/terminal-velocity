@@ -126,7 +126,8 @@ inline bool has_expedition_mechanic(int district,int id) {
   }
 }
 inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = RoomsPerLeg * 3,
-                                      unsigned layout_version=ContentVersion, Mode mode=Mode::Campaign) {
+                                      unsigned layout_version=ContentVersion, Mode mode=Mode::Campaign,
+                                      std::span<const int> preceding={}) {
   Random random{mix(seed ^ unsigned(district * 7919))};
   std::vector<int> pool;
   for (const auto &p : patterns()) if (district_of(p) == district &&
@@ -134,8 +135,11 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
       (layout_version>=3||district>=2||p.id<24)) pool.push_back(p.id);
   if (pool.empty()) for (const auto &p : patterns()) if (district_of(p) == 0) pool.push_back(p.id);
   std::vector<int> result;
-  int previous = -1;
-  const bool reserve_mechanic=mode==Mode::Endless&&layout_version>=4&&district>=1&&district<AuthoredDistrictCount;
+  const bool endless=mode==Mode::Endless&&layout_version>=4;
+  const bool rotate=endless&&count==RoomsPerLeg&&preceding.size()==RoomsPerLeg;
+  const auto new_room=[&](int id){return std::find(preceding.begin(),preceding.end(),id)==preceding.end();};
+  int previous=rotate?preceding.back():-1;
+  const bool reserve_mechanic=endless&&district>=1&&district<AuthoredDistrictCount;
   // Some legs end on an exploration room, so a district with only one
   // recovery room doesn't keep returning to the same ending.
   const bool explore_closer=reserve_mechanic&&(mix(seed ^ 0x62f4a1bdu)&1u);
@@ -144,13 +148,21 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
   while (int(result.size()) < count) {
     auto bag = pool;
     for (size_t i = bag.size(); i > 1; --i) std::swap(bag[i - 1], bag[size_t(random.below(int(i)))]);
+    // Select unseen templates first while retaining their shuffled order.
+    // Reserve space for the district feature before ordering the leg by rhythm.
+    if(rotate)std::stable_partition(bag.begin(),bag.end(),new_room);
     if(reserve_mechanic&&result.empty()) {
       const auto local=std::find_if(bag.begin(),bag.end(),has_mechanic);
       if(local!=bag.end())early_mechanic=*local;
     }
+    if(rotate&&bag.size()>size_t(count)) {
+      const auto reserve=std::find(bag.begin()+count,bag.end(),early_mechanic);
+      if(reserve!=bag.end())std::iter_swap(bag.begin()+count-1,reserve);
+      bag.resize(size_t(count));
+    }
     // Within every leg alternate flow/precision/vertical/timing with relief.
     while (!bag.empty() && int(result.size()) < count) {
-      const bool harbor_graph=district==0&&layout_version>=4;
+      const bool harbor_graph=!rotate&&district==0&&layout_version>=4;
       // The seeded shuffle chooses the featured mechanic. The room's rhythm
       // can place it naturally; otherwise it gets the fourth slot.
       const bool mechanic_due=early_mechanic>=0&&result.size()==3;
@@ -163,6 +175,10 @@ inline std::vector<int> make_itinerary(uint32_t seed, int district, int count = 
         if(mechanic_due&&bag[i]!=early_mechanic)continue;
         const auto &candidate=pattern(bag[i]);
         int score=(candidate.rhythm==desired?0:3)+(bag[i]==previous?100:0);
+        if(rotate) {
+          if(bag[i]==preceding[slot])score+=10;
+          if(slot==0&&!new_room(bag[i]))score+=10;
+        }
         // Reserve collection-task rooms before the final settlement visit.
         // Expanding the library must not move a task's last object beyond its
         // owner's last ordinary turn-in opportunity.

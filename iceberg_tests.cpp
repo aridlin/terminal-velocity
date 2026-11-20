@@ -32,6 +32,38 @@ int main(int argc,char **argv) {
         throw std::runtime_error("another mode or layout inherited the Endless room reserve");
     }
     check(true,"new Endless legs include a local mechanic by room four without changing legacy routes or Trials");
+    for(int d=0;d<iceberg::AuthoredDistrictCount;++d)for(uint32_t seed=0;seed<128;++seed) {
+      using iceberg::Mode;
+      constexpr int length=iceberg::RoomsPerLeg;
+      constexpr auto version=iceberg::ContentVersion;
+      const auto current=iceworld::make_itinerary(seed,d,length,version,Mode::Endless);
+      const auto next_seed=iceberg::mix(seed+1);
+      const auto next=iceworld::make_itinerary(next_seed,d,length,version,Mode::Endless,current);
+      int unseen=0;
+      bool new_feature=false;
+      for(const auto &p:iceworld::patterns()) {
+        if(iceworld::district_of(p)!=d||(d==0&&(p.id<500||p.id>511))||
+           std::find(current.begin(),current.end(),p.id)!=current.end())continue;
+        ++unseen;
+        new_feature|=iceworld::has_expedition_mechanic(d,p.id);
+      }
+      const auto count_new=std::count_if(next.begin(),next.end(),[&](int id){
+        return std::find(current.begin(),current.end(),id)==current.end();
+      });
+      if(int(next.size())!=length||std::set<int>(next.begin(),next.end()).size()!=next.size()||
+         current.back()==next.front()||count_new!=std::min(unseen,length-(d!=0&&!new_feature))||
+         (d!=0&&std::none_of(next.begin(),next.begin()+4,[&](int id){return iceworld::has_expedition_mechanic(d,id);}))||
+         next!=iceworld::make_itinerary(next_seed,d,length,version,Mode::Endless,current))
+        throw std::runtime_error("rotated leg failed room variety, district feature, or repeatable order");
+      for(const auto mode:{Mode::Campaign,Mode::Trial})
+        if(iceworld::make_itinerary(next_seed,d,length,version,mode,current)!=
+           iceworld::make_itinerary(next_seed,d,length,version,mode))
+          throw std::runtime_error("leg rotation affected a non-Endless route");
+      if(iceworld::make_itinerary(next_seed,d,length,2,Mode::Endless,current)!=
+         iceworld::make_itinerary(next_seed,d,length,2,Mode::Endless))
+        throw std::runtime_error("leg rotation affected a legacy Endless layout");
+    }
+    check(true,"all six districts rotate unseen rooms into the next leg and retain a district feature");
     std::set<int> estate_openings,archive_openings;
     for(uint32_t seed=0;seed<128;++seed) {
       const auto estate=iceworld::make_itinerary(seed,2,iceberg::RoomsPerLeg,iceberg::ContentVersion,iceberg::Mode::Endless);
