@@ -357,6 +357,36 @@ inline void add_expedition_post_launchers(EngineGrid &room) {
   else room.springs.erase(room.springs.begin()+original,room.springs.end());
 }
 
+inline void add_archive_reference_carriers(EngineGrid &room) {
+  if(room.district!=3||(room.template_id==39&&!room.growth.empty()))return;
+  struct Carrier { int room;double x,upper,lower,w; };
+  static constexpr Carrier plans[]{
+    {37,66.,42.3,48.4,8.},{39,51.,34.7,44.8,4.},{40,44.,30.6,37.,6.5},{42,65.,43.0,49.3,9.},
+    {43,52.9,35.5,43.,6.4},{46,67.2,36.,47.,6.4}
+  };
+  for(const auto &plan:plans)if(plan.room==room.template_id) {
+    room.platforms.push_back({.base={plan.x,(plan.upper+plan.lower)*.5,plan.w,.5},
+      .dy=(plan.lower-plan.upper)*.5,.period=6.4,.phase=.25,.archive_rack=true});
+    const auto route=verify_route(room);
+    if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+    else room.platforms.pop_back();
+    break;
+  }
+}
+
+inline void add_archive_scan_rails(EngineGrid &room) {
+  if(room.district!=3||room.room_role!=iceberg::RoomRole::Traverse)return;
+  const auto &layout=iceworld::pattern(room.template_id);
+  if(iceworld::district_of(layout)!=3||layout.optional.size()<3)return;
+  const auto &desk=layout.optional.back();
+  // The scanner sweeps the outer edge of the optional desk.
+  room.pulses.push_back({{desk.x+1.,desk.y-2.7,desk.w-1.7,2.7},
+    5.1+(room.template_id%3)*.4,.31+(room.template_id%4)*.12,PulseKind::Scanner});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.pulses.pop_back();
+}
+
 inline void add_archive_glass_catwalk(EngineGrid &room) {
   if(room.template_id!=iceberg::ArchiveGlassRoom)return;
   const auto count=room.platforms.size();

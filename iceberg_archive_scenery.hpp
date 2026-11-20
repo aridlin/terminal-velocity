@@ -13,10 +13,43 @@
       surface+="═";files+=i%4==0?"│":i%4==1?" ":"▥";base+="═";
     }
     const double center=deck.x+deck.w*.5;
+    if(grid_.template_id!=47) {
+      const double header=platform.base.y-platform.dy-4.6;
+      const double foot=platform.base.y+platform.dy+1.;
+      draw_scenery_pipe({{deck.x-2.5,foot},{deck.x-2.5,header},
+        {deck.right()+.5,header},{deck.right()+.5,foot}},0x607b8a);
+      for(double y=header+row;y<deck.y-row;y+=row)
+        world_text(center,y,"┆",0x779ca9);
+    }
     world_text(deck.x,deck.y,surface+"╗",0xaecee0);
     world_text(deck.x,deck.y+row,files+"║",0x6d92a9);
     world_text(deck.x,deck.y+2*row,base+"╝",0x749cb3);
     world_text(center,deck.y-row*1.1,archive_rack_direction(platform,state_.elapsed),ArchiveRackMarker);
+  }
+
+  void draw_archive_scanner(const PulseHazard &rail) {
+    const auto &area=rail.area;
+    const double now=state_.elapsed,row=aspect_*scale_,floor=area.bottom();
+    const bool warn=rail.warning(now),active=rail.active(now);
+    constexpr uint32_t metal=0x73939d,ready=0xf1c66f,beam=0xe9808a;
+    draw_scenery_pipe({{area.x,floor-row},{area.x,floor+.2},{area.right(),floor+.2},
+      {area.right(),floor-row}},metal);
+    for(double x:{area.x,area.right()-scale_}) {
+      world_art(x,floor-3*row,{active?"┥":warn?"◉":"○","│","╨"},
+        active?beam:warn?ready:metal);
+    }
+    if(warn)for(int i=0;i<5;++i) {
+      const double progress=std::fmod(now*3.+i*.197,1.);
+      world_text(area.x+area.w*progress,floor-row,i%3==0?"›":"·",ready);
+    }
+    if(!active)return;
+    const auto scan=rail.damage_area(now);
+    const double x=scan.x+scan.w*.5;
+    for(double y=scan.top();y<floor;y+=row)
+      world_text(x,y,"║",beam);
+    world_text(x-scale_,scan.top(),"╶✦╴",0xffbeb4);
+    if(std::fmod(now*28.,1.)<.64)
+      world_text(x-2*scale_,floor-row,"░╱░",0xefb4a5);
   }
 
   void draw_archive_stack_shuttle(const MovingPlatform &platform,const Rect &deck) {

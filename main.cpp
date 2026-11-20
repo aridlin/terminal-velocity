@@ -469,16 +469,22 @@ struct GrowingBridge {
     return (switches&flag)==flag?std::floor(area.w*amount):0.;
   }
 };
-enum class PulseKind { Steam, Flytrap, Masonry };
+enum class PulseKind { Steam, Flytrap, Masonry, Scanner };
 struct PulseHazard {
   Rect area;
   double period=4,phase=0;
   PulseKind kind=PulseKind::Steam;
   double cycle(double t) const {return std::fmod(t/period+phase,1.);}
-  bool active(double t) const {return cycle(t)<.24;}
+  static constexpr double active_span=.24;
+  bool active(double t) const {return cycle(t)<active_span;}
   static constexpr double warning_start=.82;
   bool warning(double t) const {return cycle(t)>warning_start;}
   Rect damage_area(double t) const {
+    if(kind==PulseKind::Scanner) {
+      constexpr double width=.6;
+      const double sweep=std::clamp(cycle(t)/active_span,0.,1.);
+      return {area.x+(area.w-width)*sweep,area.y,width,area.h};
+    }
     if(kind!=PulseKind::Masonry)return area;
     constexpr double height=.85;
     const double drop=std::clamp(cycle(t)/.21,0.,1.);
