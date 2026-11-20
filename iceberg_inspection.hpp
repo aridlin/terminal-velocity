@@ -1,5 +1,6 @@
 #pragma once
 #include "iceberg_types.hpp"
+#include "iceberg_traversal_art.hpp"
 #include <algorithm>
 #include <sstream>
 
@@ -210,6 +211,7 @@ inline std::vector<std::string> inspection_art(InspectionArt kind,int detail=0) 
    │○    ╭──────╮      ○│
    ╰─────┴──────┴────────╯
        ╧╧          ╧╧)ART";break;
+  case InspectionArt::Traversal: return traversal_art(TraversalStudy(detail));
   case InspectionArt::Chart:
     return {"  ╭──────┬────────────────╮", "  │ ▥ ▥  ├─╮     ≈≈       │",
       "  │ ▥ ▥  │ ╰──╮    ≈≈     │", "  ├──────╯ ╭──╯           │",

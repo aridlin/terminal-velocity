@@ -100,6 +100,7 @@ int main(){try {
     MechanicSample{4,55,&iceworld::BrittleIce},
     MechanicSample{5,68,&iceworld::Crosswind}
   };
+  std::vector<std::vector<std::string>> studies_seen;
   for(const auto &[district,room,guide]:samples) {
     game.grid=verified_room(room,73,district);
     AdventureSession::apply_expedition_mechanics(game.grid);
@@ -115,6 +116,25 @@ int main(){try {
       game.state.adventure.inspecting=false;
     }
     if(!found)throw std::runtime_error("missing accessible field guide: "+guide->title.get(iceberg::Language::English));
+    game.state.player.grounded=true;
+    game.sync_view();
+    require_inspect(game.state.adventure.traversal_hint.en==guide->title.en,
+      "the contextual hint names the inspection that will open");
+    const auto original_lamps=game.grid.checkpoint_points;
+    game.grid.checkpoint_points.push_back({game.state.player.x,game.state.player.y});
+    game.sync_view();
+    require_inspect(!*game.state.adventure.traversal_hint.en,
+      "a nearby return lamp takes precedence over a traversal hint");
+    game.tick({.inspect=true},0.);
+    require_inspect(game.state.adventure.inspect_art==iceberg::InspectionArt::Lamp,
+      "suppressing the hint keeps ordinary lamp inspection available");
+    game.tick({.inspect=true},0.);
+    game.grid.checkpoint_points=original_lamps;
+    auto art=iceberg::traversal_art(guide->study);
+    require_inspect(art.size()==12&&std::find(studies_seen.begin(),studies_seen.end(),art)==studies_seen.end(),
+      "each guide has a distinct twelve-row illustration");
+    for(const auto &line:art)require_inspect(iceberg::cell_length(line)<=28,"illustration fits the narrow card");
+    studies_seen.push_back(art);
     const auto items=game.profile.task_items;
     for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
       game.profile.language=language;
@@ -123,6 +143,16 @@ int main(){try {
       const auto &view=game.state.adventure;
       require_inspect(view.inspecting&&view.inspect_title==guide->title.get(language)&&
         view.inspect_body==guide->body.get(language),"B opens the guide for the nearby authored mechanism");
+      require_inspect(view.inspect_art==iceberg::InspectionArt::Traversal&&
+        view.inspect_detail==int(guide->study),"the inspector selects the illustration of this fixture");
+      RenderGrid(game.grid,game.state,24,34,2).draw();
+      const auto layout=iceberg::inspection_layout(view.inspect_title,view.inspect_body,34,24);
+      for(size_t y=0;y<art.size();++y) {
+        std::string seen;
+        for(int x=0;x<iceberg::cell_length(art[y]);++x)
+          seen+=frame[size_t(layout.art_y+y)][size_t(layout.art_x+x)].glyph;
+        require_inspect(seen==art[y],"the fixture illustration fits without clipping or overdraw");
+      }
       require_inspect(game.state.elapsed==0.&&game.profile.task_items==items,
         "reading a field guide does not advance hazards or change progression");
       game.tick({.inspect=true},0.,true,34,24);
