@@ -849,7 +849,8 @@
       {"Eksploracja","Exploration"},
       {"Szerokie lądowania","Wide landings"}
     }};
-    const auto rhythm_suffix=[&](std::optional<iceberg::Rhythm> rhythm) {
+    const auto traversal_suffix=[&](iceberg::Text feature,std::optional<iceberg::Rhythm> rhythm) {
+      if(*feature.en)return " · "+feature.get(v.language);
       return rhythm?" · "+rhythms[size_t(*rhythm)].get(v.language):std::string{};
     };
     // Put the room details just below the route and wrap at terminal-cell width.
@@ -860,10 +861,10 @@
       row=paragraph(row,location,0xffd68a);
     }
     const auto place=browsing_other_leg?r.place.get(v.language):current;
-    row=paragraph(row,place+rhythm_suffix(r.current_rhythm),0xffd68a);
+    row=paragraph(row,place+traversal_suffix(r.current_feature,r.current_rhythm),0xffd68a);
     const int count=int(rooms.size());
     const bool browsing=selected>=0&&selected<count&&selected!=current_room;
-    const auto rhythm=rhythm_suffix(r.detail_rhythm);
+    const auto rhythm=traversal_suffix(r.detail_feature,r.detail_rhythm);
     if(browsing) {
       const auto detail=tr("Pokój ","Room ")+std::to_string(selected+1)+": "+rooms[size_t(selected)].get(v.language);
       row=paragraph(row,detail+rhythm,0xc7d9df);

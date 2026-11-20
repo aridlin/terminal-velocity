@@ -2102,9 +2102,10 @@ int main(){try {
       game.tick(next_leg,0);game.tick(next_leg,0);
       ui_check(v.route_room_selection==25&&v.route.browsed_leg==1&&v.route.current==0&&game.depth==16,
         "future preview clamps leg navigation without moving the courier");
-      ui_check(v.route.detail_rhythm==
-          iceworld::pattern(game.next_expedition_itinerary()[1]).rhythm,
-        "a selected future room shows its type from the next seeded itinerary");
+      const int forecast_id=game.next_expedition_itinerary()[1];
+      ui_check(v.route.detail_rhythm==iceworld::pattern(forecast_id).rhythm&&
+        std::string_view(v.route.detail_feature.en)==iceworld::expedition_feature(forecast_id).name.en,
+        "a selected future room shows its authored mechanic from the next seeded itinerary");
       const auto route_details=[&]{
         std::string details;
         for(const auto &row:frame) {
@@ -2132,12 +2133,15 @@ int main(){try {
         compact_view.route_room_selection+=6;
         compact_route.place=compact_route.browsed_rooms.back()=long_name;
         compact_route.current_rhythm=compact_route.detail_rhythm=iceberg::Rhythm::Precision;
-        const auto typed_name=long_name.get(language)+(en?" · Precise landings":" · Precyzyjne lądowania");
+        compact_route.current_feature={"Wyrzuty pary","Steam vents"};
+        compact_route.detail_feature={"Tłoki ciśnieniowe","Pressure pistons"};
+        const auto typed_name=long_name.get(language)+(en?" · Steam vents":" · Wyrzuty pary");
+        const auto forecast_name=long_name.get(language)+(en?" · Pressure pistons":" · Tłoki ciśnieniowe");
         for(auto [cols,rows]:{std::pair{34,24},std::pair{56,20}}) {
           RenderGrid(game.grid,compact,rows,cols,2).draw();
           const auto text=route_details();
           ui_check(text.find(location+" "+typed_name)!=std::string::npos&&
-                   text.find((en?"Room 8: ":"Pokój 8: ")+typed_name)!=std::string::npos&&
+                   text.find((en?"Room 8: ":"Pokój 8: ")+forecast_name)!=std::string::npos&&
                    text.find(en?"Exit starts leg 5":"Wyjście do odcinka 5")!=std::string::npos,
                    "the compact preview keeps both long room details and the exit destination");
         }

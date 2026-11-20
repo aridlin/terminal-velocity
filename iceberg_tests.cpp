@@ -64,6 +64,19 @@ int main(int argc,char **argv) {
         throw std::runtime_error("leg rotation affected a legacy Endless layout");
     }
     check(true,"all six districts rotate unseen rooms into the next leg and retain a district feature");
+    for(const auto &p:iceworld::patterns()) {
+      const auto district=iceworld::district_of(p);
+      if(district==0&&(p.id<500||p.id>511))continue;
+      const auto feature=iceworld::expedition_feature(p.id);
+      if(!feature.present||!*feature.name.pl||!*feature.name.en)
+        throw std::runtime_error("missing expedition feature for room "+std::to_string(p.id));
+      for(uint32_t seed=73;seed<77;++seed) {
+        auto grid=verified_room(p.id,iceberg::mix(seed),district);
+        AdventureSession::apply_expedition_mechanics(grid);
+        if(!feature.present(grid))throw std::runtime_error("expedition forecast names an absent mechanic in room "+std::to_string(p.id));
+      }
+    }
+    check(true,"each current Endless room forecasts a mechanic verified in its playable geometry");
     std::set<int> estate_openings,archive_openings;
     for(uint32_t seed=0;seed<128;++seed) {
       const auto estate=iceworld::make_itinerary(seed,2,iceberg::RoomsPerLeg,iceberg::ContentVersion,iceberg::Mode::Endless);

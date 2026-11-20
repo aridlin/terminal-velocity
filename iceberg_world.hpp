@@ -223,6 +223,97 @@ inline int harbor_alternate(const std::vector<int> &itinerary,int leg,uint32_t s
     if(id!=itinerary[size_t(leg*8+1)]&&id!=itinerary[size_t(leg*8+2)]&&id!=itinerary[size_t(leg*8+3)])candidates.push_back(id);
   return candidates[size_t(mix(seed^unsigned(leg*7919+441)))%candidates.size()];
 }
+struct ExpeditionFeature {
+  Text name;
+  bool (*present)(const EngineGrid &)=nullptr;
+};
+
+template<bool MovingPlatform::*Flag> bool expedition_deck(const EngineGrid &g) {
+  return std::any_of(g.platforms.begin(),g.platforms.end(),[](const MovingPlatform &deck){return deck.*Flag;});
+}
+template<PulseKind Kind> bool expedition_pulse(const EngineGrid &g) {
+  return std::any_of(g.pulses.begin(),g.pulses.end(),[](const PulseHazard &pulse){return pulse.kind==Kind;});
+}
+
+// Use authored template metadata so browsing a forecast does not construct
+// and simulate rooms. The active room checks its installed geometry too.
+inline ExpeditionFeature expedition_feature(int id) {
+  switch(id) {
+  case 500: case 501: case 502: case 505: case 506: case 507: case 508: case 510: case 511:
+    return {{"Zawiesia ładunkowe","Cargo slings"},expedition_deck<&MovingPlatform::harbor_sling>};
+  case 503: case 44:
+    return {{"Taśmy przenośnika","Conveyor belts"},[](const EngineGrid &g){return !g.sorting_belts.empty();}};
+  case 504: case 509:
+    return {{"Fale przypływu","Tidal surges"},expedition_pulse<PulseKind::Surge>};
+  case 12: case 15: case 17: case 19: case 420: case 423: case 424: case 425:
+    return {{"Wyrzuty pary","Steam vents"},expedition_pulse<PulseKind::Steam>};
+  case 13:
+    return {{"Dźwigi ładunkowe","Cargo hoists"},expedition_deck<&MovingPlatform::cargo_hoist>};
+  case 14: case 23: case 422:
+    return {{"Strumienie z turbin","Turbine drafts"},[](const EngineGrid &g){
+      return std::any_of(g.air_fields.begin(),g.air_fields.end(),[](const auto &field){return field.turbine;});}};
+  case 16: case 18: case 20: case 22:
+    return {{"Unosząca para","Steam lifts"},[](const EngineGrid &g){
+      return std::any_of(g.air_fields.begin(),g.air_fields.end(),[](const auto &field){return field.ay<-100.&&!field.turbine;});}};
+  case 21: case 31:
+    return {{"Ruchome pomosty","Moving decks"},[](const EngineGrid &g){
+      return std::any_of(g.platforms.begin(),g.platforms.end(),[](const auto &deck){return deck.dx!=0.||deck.dy!=0.;});}};
+  case 421:
+    return {{"Tłoki ciśnieniowe","Pressure pistons"},expedition_deck<&MovingPlatform::pressure_piston>};
+  case 24: case 41:
+    return {{"Ruchome wagoniki","Shuttle cars"},expedition_deck<&MovingPlatform::tram>};
+  case 25: case 33:
+    return {{"Spadający gruz","Falling masonry"},expedition_pulse<PulseKind::Masonry>};
+  case 26:
+    return {{"Sznury na pranie","Clotheslines"},expedition_deck<&MovingPlatform::clothesline>};
+  case 27: case 28: case 29: case 30: case 32: case 34:
+    return {{"Balkony na linach","Cable balconies"},expedition_deck<&MovingPlatform::estate_balcony>};
+  case 35:
+    return {{"Sprężyste markizy","Bouncy awnings"},[](const EngineGrid &g){
+      return std::any_of(g.springs.begin(),g.springs.end(),[](const auto &pad){return pad.awning;});}};
+  case 36:
+    return {{"Kruche szyby","Fragile glass"},expedition_deck<&MovingPlatform::fragile>};
+  case 37: case 40: case 42: case 43: case 46: case 47:
+    return {{"Podnoszone regały","Rising racks"},expedition_deck<&MovingPlatform::archive_rack>};
+  case 38:
+    return {{"Wyrzutnie pocztowe","Mail launchers"},[](const EngineGrid &g){return !g.springs.empty();}};
+  case 39:
+    return {{"Wysuwane szuflady","Sliding drawers"},[](const EngineGrid &g){return !g.growth.empty();}};
+  case 45:
+    return {{"Wózek na szynach","Rail trolley"},expedition_deck<&MovingPlatform::archive_trolley>};
+  case 48: case 50: case 53: case 59:
+    return {{"Pnącza i muchołówki","Vines and flytraps"},[](const EngineGrid &g){
+      return !g.vines.empty()&&expedition_pulse<PulseKind::Flytrap>(g);}};
+  case 49:
+    return {{"Sprężyste łupiny","Spring pods"},[](const EngineGrid &g){return !g.springs.empty();}};
+  case 51:
+    return {{"Kruche donice","Fragile pots"},expedition_deck<&MovingPlatform::fragile>};
+  case 52:
+    return {{"Rosnący most","Growing bridge"},[](const EngineGrid &g){return !g.growth.empty();}};
+  case 54:
+    return {{"Huśtająca się donica","Swinging planter"},[](const EngineGrid &g){
+      return std::any_of(g.platforms.begin(),g.platforms.end(),[](const auto &deck){return deck.swing_length>0.;});}};
+  case 55:
+    return {{"Kruche kry","Brittle ice floes"},expedition_deck<&MovingPlatform::icy>};
+  case 56:
+    return {{"Winda nasienna","Seed tray lift"},expedition_deck<&MovingPlatform::seed_tray>};
+  case 57:
+    return {{"Czerpaki koła wodnego","Waterwheel scoops"},expedition_deck<&MovingPlatform::irrigation_scoop>};
+  case 58:
+    return {{"Spływ na liściu","Leaf flume"},expedition_deck<&MovingPlatform::chute_leaf>};
+  case 60: case 66: case 70:
+    return {{"Kruche nawisy lodowe","Brittle ice shelves"},expedition_deck<&MovingPlatform::rime_shelf>};
+  case 61: case 62: case 64: case 65: case 67: case 68: case 71:
+    return {{"Boczne podmuchy","Crosswinds"},[](const EngineGrid &g){
+      return std::any_of(g.air_fields.begin(),g.air_fields.end(),[](const auto &field){return field.ax!=0.;});}};
+  case 63:
+    return {{"Kruche belki","Brittle beams"},expedition_deck<&MovingPlatform::fragile>};
+  case 69:
+    return {{"Winda serwisowa","Service lift"},expedition_deck<&MovingPlatform::service_lift>};
+  default: return {};
+  }
+}
+
 inline void decorate_harbor_room(EngineGrid &g,const Pattern &spec);
 inline EngineGrid build_room(int id, uint32_t seed, int district, bool expert = false, bool stable = false) {
   const auto &spec = pattern(id);

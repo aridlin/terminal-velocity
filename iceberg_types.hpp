@@ -467,6 +467,7 @@ struct RouteView {
   std::vector<Text> rooms;
   std::vector<Text> browsed_rooms;
   std::optional<Rhythm> current_rhythm,detail_rhythm;
+  Text current_feature,detail_feature;
   int completed_legs=0, browsed_leg=0;
   std::array<Text,3> alternatives{};
   uint32_t visited=0;
