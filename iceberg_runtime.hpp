@@ -88,8 +88,9 @@ public:
     if(grid.room_role==iceberg::RoomRole::Interlude)return 1;
     return grid.district==0?0:1;
   }
-  void notice(const std::string &text, double seconds=3) {
+  void notice(const std::string &text, double seconds=3, bool entry_notice=false) {
     state.adventure.notice=text;state.adventure.notice_left=seconds;
+    state.adventure.entry_notice=entry_notice;
   }
   int expedition_unlocked() const {
     int available=profile.unlocked;
@@ -345,7 +346,7 @@ public:
     }
     state=new_state(grid);state.ssh=options.remote;state.deaths=retries;stepper={};
     update_camera(state,grid,last_columns,std::max(1,last_rows-7),last_aspect,10,profile.smooth_camera);
-    if(stop.room!=iceberg::CrownSentinel)notice(stop.change.get(profile.language),8);
+    if(stop.room!=iceberg::CrownSentinel)notice(stop.change.get(profile.language),8,true);
     sync_view();
   }
   void start_tour(int index) {
@@ -872,7 +873,7 @@ public:
     stage=2;run_active=true;load_room(resume);state.menu=false;persist();
     notice(resume?t("WZNOWIONO WYPRAWĘ — ta sama droga","EXPEDITION RESUMED — the same route"):
       next==iceberg::Mode::Endless?t("WYPRAWA BEZ KOŃCA — każda brama to nowa droga","ENDLESS EXPEDITION — every gate is a new route"):
-      t("PRÓBA MISTRZOWSKA — osiem sal, jeden rekord","MASTERY TRIAL — eight rooms, one record"));
+      t("PRÓBA MISTRZOWSKA — osiem sal, jeden rekord","MASTERY TRIAL — eight rooms, one record"),3,true);
   }
   void advance_room() {
     if(tour_scene>=0) {

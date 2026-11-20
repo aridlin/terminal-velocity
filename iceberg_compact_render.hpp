@@ -15,7 +15,7 @@
     const auto footing=fragile_footing_hint();
     const auto footer=v.save_error?save_failure_hint():at_exit?tr("R — wróć do lampy","R — return to the lamp"):
       state_.player.ledge&&state_.player.ledge_climb_left<=0.?ledge_hint():
-      !footing.empty()?footing:v.notice_left>0?v.notice:v.prompt.empty()?quest_focus_hint():v.prompt;
+      !footing.empty()?footing:gameplay_hint();
     const auto lines=wrap(footer,cols_-4);
     const uint32_t warning_color=cell_color({" ",Color::Hazard});
     y=rows_-(lines.size()>2?3:2);
