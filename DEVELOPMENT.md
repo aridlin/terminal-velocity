@@ -67,7 +67,9 @@ Layouts 0–23 retain their released geometry. New harbor layouts use IDs 400–
 
 ### Browser frontend
 
-`EMXX=/path/to/em++ ./tools/build_web.sh` produces `web/dist/`. Serve that folder
+`EMXX=/path/to/em++ ./tools/build_web.sh` produces `web/dist/`. Set `TV_STEAM_SOUNDS` to the Steam installation’s `steamui/sounds` directory when building the browser release. The build embeds `deck_ui_achievement_toast.wav` from that directory. If no directory is specified, the build uses `~/.steam/root/steamui/sounds` when available.
+
+Serve the output folder
 with an ordinary static HTTP(S) server. It contains the same C++ session,
 120 Hz simulation, room validation, Unicode cell frames and recorded audio.
 The web shell supplies keyboard/touch input, canvas glyph drawing and browser
