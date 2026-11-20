@@ -8,8 +8,8 @@ void install_test_room(AdventureSession &game,EngineGrid grid,int stage=2) {
   game.grid=std::move(grid);game.district=game.grid.district;game.stage=stage;game.room=0;
   game.state=new_state(game.grid);game.stepper={};game.sync_view();
 }
-void walk_to(AdventureSession &game,Rect goal) {
-  auto path=find_motion_path(game.grid,game.state,goal);
+void walk_to(AdventureSession &game,Rect goal,const std::function<bool(const GameState &)> &accept={}) {
+  auto path=find_motion_path(game.grid,game.state,goal,accept);
   require_quest(path.reached,"ordinary-input path found");
   int deaths=game.state.deaths;
   for(auto c:path.actions)game.tick(c,.1);
@@ -156,6 +156,24 @@ int main() {
       walk_to(side,return_side);
       require_quest(side.state.adventure.night_beat>=2,
         "moving away from the observation window brings the passenger closer");
+      auto &night=side.state.adventure;
+      side.tick({.pause=true},.05);
+      const double paused_scale=night.night_plate_time;
+      for(int i=0;i<30;++i)side.tick({},.1);
+      require_quest(night.night_plate_time==paused_scale&&!earned(Achievement::NightWeight),
+        "paused time does not weigh the courier");
+      side.tick({.pause=true},.05);
+      walk_to(side,{99,47,4.,4.},[](const GameState &state) {
+        const auto &p=state.player;
+        return p.grounded&&std::abs(p.vx)<.5&&p.x>=99.6&&p.x<102.;
+      });
+      for(int i=0;i<30;++i)side.tick({},.1);
+      require_quest(earned(Achievement::NightWeight)&&side.has_curio(iceberg::Curio::NightPlateRecorded),
+        "standing on the scale with power cut prints a second reading and earns the hidden award");
+      interact(side);
+      require_quest(night.inspecting&&night.inspect_body.find(side.t("OCZEKUJE","WAITING"))!=std::string::npos,
+        "the completed scale prints a permanent receipt");
+      side.tick({.inspect=true},0.);
       auto path=std::filesystem::temp_directory_path()/"tv-extended-awards.iceberg";
       iceberg::SaveStore save(path);
       iceberg::Profile loaded;
