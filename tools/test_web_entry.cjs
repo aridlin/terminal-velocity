@@ -1518,7 +1518,17 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(()=>(uiFlags&(1|64))===(1|64));
    const menuConfirm=page.locator('#touch-use');
    assert.equal(await menuConfirm.getAttribute('aria-label'),'Select');
-   assert.equal(await inspectControl.isVisible(),false,'the main menu has one touch action');
+   assert.equal(await inspectControl.getAttribute('aria-label'),'Achievements');
+   assert.equal(await inspectControl.isVisible(),true);
+   await inspectControl.tap();
+   await page.waitForFunction(()=>awardsOpen);
+   assert.equal(await menuConfirm.getAttribute('aria-label'),'Back');
+   assert.equal(await inspectControl.getAttribute('aria-label'),'Change group');
+   await inspectControl.tap();
+   await page.waitForFunction(()=>awardsOpen);
+   await menuConfirm.tap();
+   await page.waitForFunction(()=>!awardsOpen&&(uiFlags&1));
+   await page.keyboard.press('Digit1');
    assert.equal(await page.locator('#touch .jump').isVisible(),false);
    await menuConfirm.tap();
    await page.waitForFunction(()=>!(uiFlags&1));
