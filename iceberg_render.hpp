@@ -788,6 +788,10 @@
       const auto x=std::lerp(54.,38.,std::clamp((v.platform_wait-1.)/2.2,0.,1.));
       shadow(x,38.5,0x928878);
     }
+    if(v.platform_shutter_open&&v.platform_shutter_time>=.8&&v.platform_shutter_time<iceberg::PlatformShutterWait) {
+      const double approach=std::clamp((v.platform_shutter_time-1.7)/1.25,0.,1.);
+      shadow(std::lerp(48.,60.,approach),38.3,0x726a63);
+    }
     for(int x:{17,26,35,44,53,62}) {
       const int col=screen(x,37).first;
       if(col<first_col||col>last_col)continue;
@@ -816,6 +820,20 @@
       }
       case SideStory::PlatformBench:
         prop_art(x,y,{"╔══════╗","╞══════╡","┴      ┴"},0x87756e);break;
+      case SideStory::PlatformShutter: {
+        const auto &v=state_.adventure;
+        const bool open=v.platform_shutter_open;
+        prop_art(x,y,{"╔═════╗",open?"║     ║":"║═════║",open?"║  ▪  ║":"║═╧═══║","╠═════╣","╚═════╝"},open?0x75717b:0x6d6265);
+        if(open&&v.platform_shutter_time>=iceberg::PlatformShutterWait)
+          prop_art(x,y-1.1,{" ╭───╮ ","╭┴╮╷╭┴╮","╰ ╰┴╯ ╯"},0x98818a);
+        break;
+      }
+      case SideStory::ArchiveLostProperty: {
+        const auto flags=state_.adventure.task_items[1];
+        const bool filed=flags&iceberg::side_flag(iceberg::SideFlag::LastCoatFiled);
+        prop_art(x,y,{"╓───────╖","║ 11  ╷ ║",filed?"║ ▤  ▄▄ ║":"║    ╰╯ ║","╟───────╢","╙───────╜"},0x8e8a84);
+        break;
+      }
       case SideStory::PlatformSignal: {
         const bool clear=state_.adventure.task_items[1]&iceberg::side_flag(iceberg::SideFlag::PlatformCleared);
         prop_art(x,y,{"╔═══╗","║ ◉ ║","╚═╤═╝","  │","──┴──"},clear?0x9bba87:0xc49275);
@@ -829,6 +847,21 @@
         if(left>0.)for(int i=0;i<5;++i) {
           const double age=std::fmod((2.8-left)*1.8+i*.22,1.);
           world_text(x+1.+age*2.+.35*std::sin(i),y-2.8-3.*age,age<.6?"°":"·",0xb6aa9a);
+        }
+        break;
+      }
+      case SideStory::EstateDoormat:
+        prop_art(x,y,{"╱▒▒▒▒╲","▀▀▀▀▀▀"},0x9e7d76);
+        break;
+      case SideStory::GardenSeedPod: {
+        const double left=state_.adventure.seed_pod_left;
+        prop_art(x,y,{left>1.15?" ╰ ╯ ":" ╭◇╯ ","  ╱  ","  │╱ ","╞═╧═╡","╰───╯"},0xa99a65);
+        if(left>0.)for(int i=0;i<11;++i) {
+          const double age=iceberg::SeedPodBurstTime-left-.027*i;
+          if(age<=0.)continue;
+          const double fall=-3.8-(2.+i%3)*age+3.7*age*age;
+          if(fall<-.2)
+            world_text(x+(i-5)*age*.95,y+fall,i%3==0?"▪":"·",i%2?0xd8bb7b:0xc8ab87);
         }
         break;
       }

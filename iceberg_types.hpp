@@ -16,14 +16,16 @@ inline constexpr int RoomsPerLeg = 8;
 inline constexpr int UnnumberedFloor=3, NightPlatform=4;
 inline constexpr int NightPlatformTemplate=200+NightPlatform;
 inline constexpr double PlatformGlassLeft=18., PlatformGlassRight=59.;
-inline constexpr double PlatformSignalX=73.;
+inline constexpr double PlatformSignalX=73., PlatformShutterX=61.;
+inline constexpr double PlatformShutterWait=3.4, SeedPodBurstTime=1.7;
 inline constexpr uint64_t BasementCircuitCut=1;
 inline constexpr double NightPlateLeft=99., NightPlateRight=103., NightPlateTime=2.1;
 inline constexpr double GardenSnailWalkTime=4.;
-enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket, NightWeighbridge, CarbonDial, CarbonReader, HarborWhistle, HeatGauge, GardenSeedDrawer, CrownViewer, PlatformBoard, PlatformBench, PlatformSignal };
+enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket, NightWeighbridge, CarbonDial, CarbonReader, HarborWhistle, HeatGauge, GardenSeedDrawer, CrownViewer, PlatformBoard, PlatformBench, PlatformSignal, PlatformShutter, ArchiveLostProperty, GardenSeedPod, EstateDoormat };
 // Side-story state uses the top of the second task word. Existing room tasks
 // use their original indices and retain the same save representation.
 enum class SideFlag : uint64_t {
+  LastCoatFound=1ull<<45, LastCoatFiled=1ull<<46,
   PlatformWaited=1ull<<47, PlatformCleared=1ull<<48, ArchiveCarbonPrinted=1ull<<49,
   HeatworksMugTaken=1ull<<50, HeatworksMugReturned=1ull<<51,
   GardenSnailFound=1ull<<52, GardenSnailWatered=1ull<<53,
@@ -229,7 +231,8 @@ enum class Achievement {
   ThreeTestimonies, BeltReverse, SiliconeReturn, LostFloor, WitnessTape, BelowTheRoster, RingAgain,
   NextShift, CrownReached, TrailLeg, LedgeClimb, MailBag, CrownDown, CleanSurvey, CleanLeg, FullRoom, AllMail, MasonrySpring, Detour, CircuitSaved, RoughDistrict, CrownRecovery, LongWayBack, MugReturned, SnailSafe, PunchTomorrow, PowerCut, RosterChoice, PaperTrail, NightLine, LastPassenger, WrenHouse, LostReceipt, NightWeight, SecondImpression,
   AirRefill, HundredTokens, CleanJourney, QuietLeg, EmptyDelivery, HardLesson, HarborWhistle, HeatGauge,
-  GardenSeedDrawer, CrownViewer, PlatformFound, PlatformEcho, PlatformReleased, Count
+  GardenSeedDrawer, CrownViewer, PlatformFound, PlatformEcho, PlatformReleased,
+  CargoLift, PressureLift, LeafFlume, ArchiveRide, CoastClear, LastCoat, HeldForCollection, DashingHeadfirst, SeedShower, Count
 };
 enum class AwardGroup { All, Journey, Skill, Mishaps, Oddities, Secrets };
 struct AchievementInfo { Text title,condition; AwardGroup group; bool hidden=false; };
@@ -303,7 +306,16 @@ inline constexpr std::array Achievements{
   AchievementInfo{{"Widok na widok","The view of the view"},{"Skorzystaj z lunety na Koronie.","Look through the Crown telescope."},AwardGroup::Oddities,true},
   AchievementInfo{{"Peron dla dwojga","Platform for two"},{"Wejdź na peron wpisany na kalce.","Enter the platform listed on the carbon copy."},AwardGroup::Secrets,true},
   AchievementInfo{{"Spóźnione odbicie","Late reflection"},{"Usiądź na ławce i poczekaj, aż szyba cię dogoni.","Sit at the bench and let the glass catch up."},AwardGroup::Secrets,true},
-  AchievementInfo{{"Sygnał wolnej drogi","Clear signal"},{"Nadaj sygnał odjazdu ostatniemu pasażerowi.","Give the last passenger the departure signal."},AwardGroup::Secrets,true}
+  AchievementInfo{{"Sygnał wolnej drogi","Clear signal"},{"Nadaj sygnał odjazdu ostatniemu pasażerowi.","Give the last passenger the departure signal."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Ładunek osobowy","Human cargo"},{"Wjedź na podnośniku towarowym.","Ride a cargo hoist."},AwardGroup::Journey},
+  AchievementInfo{{"Na pełnym ciśnieniu","Under pressure"},{"Wjedź na tłoku ciśnieniowym.","Ride a pressure piston."},AwardGroup::Journey},
+  AchievementInfo{{"Liść polecony","Leaf by registered post"},{"Popłyń na liściu w rynnie Ogrodów.","Ride a leaf down a Gardens flume."},AwardGroup::Oddities},
+  AchievementInfo{{"Na górną półkę","Top shelf"},{"Podjedź na ruchomym regale w Archiwum.","Ride a moving Archive rack."},AwardGroup::Journey},
+  AchievementInfo{{"Od brzegu do brzegu","Coast clear"},{"Ukończ pierwsze dwa odcinki Wyprawy bez końca bez ani jednego powrotu.","Clear the first two Endless Expedition legs without a single retry."},AwardGroup::Skill},
+  AchievementInfo{{"Płaszcz po ostatnim kursie","Coat after closing"},{"Poczekaj przy okienku na Peronie 11 po odjeździe ostatniego kursu i odbierz płaszcz.","Wait by the Platform 11 hatch after the last departure and collect the coat."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Do odbioru","Held for collection"},{"Zanieś płaszcz z peronu do punktu rzeczy znalezionych.","Take the coat from the platform to lost property."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Z rozpędu","Headfirst"},{"Traf na zagrożenie w trakcie zrywu.","Hit a hazard while dashing."},AwardGroup::Mishaps},
+  AchievementInfo{{"Rozsiej wiadomość","Spread the word"},{"Potrząśnij suchym strąkiem w Ogrodach.","Shake the dry seed pod in the Gardens."},AwardGroup::Oddities,true}
 };
 static_assert(Achievements.size()==size_t(Achievement::Count));
 inline constexpr unsigned LegacyAwardCount=29;
@@ -584,6 +596,8 @@ struct View {
   uint32_t discoveries = 0;
   AwardProgress awards{};
   bool platform_listening=false;
+  bool platform_shutter_open=false;
+  double platform_shutter_time=0.;
   double platform_wait=0., platform_departure=0., pressure_test_left=0.;
   std::vector<std::pair<double,double>> platform_reflection;
   double platform_sample_left=0.;
@@ -613,7 +627,7 @@ struct View {
   double achievement_left=0;
   static constexpr double water_splash_duration=.42;
   double water_splash_left=0, water_splash_x=0, water_splash_y=0;
-  double garden_snail_left=0;
+  double garden_snail_left=0, seed_pod_left=0;
   int reacting_npc=-1;
   Dialogue dialogue;
   std::string prompt, notice, room_name;

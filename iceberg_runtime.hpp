@@ -534,8 +534,9 @@ public:
     state.adventure.dialogue={};state.adventure.map=false;state.adventure.inspecting=false;state.adventure.pickup_left=0;state.adventure.prompt.clear();
     state.adventure.door_left=.42;state.adventure.door_open=0;state.adventure.machinery_left=0;
     state.adventure.lamp_left=0;state.adventure.npc_reaction_left=0;
-    state.adventure.water_splash_left=0;state.adventure.garden_snail_left=0;
+    state.adventure.water_splash_left=0;state.adventure.garden_snail_left=0;state.adventure.seed_pod_left=0;
     state.adventure.platform_listening=false;
+    state.adventure.platform_shutter_open=false;state.adventure.platform_shutter_time=0.;
     state.adventure.platform_wait=state.adventure.platform_departure=state.adventure.pressure_test_left=0.;
     state.adventure.platform_reflection.clear();state.adventure.platform_sample_left=0.;
     state.ssh=options.remote;
@@ -1066,6 +1067,8 @@ public:
         unlock_achievement(iceberg::Achievement::TrailLeg);
         if(run_deaths==0)unlock_achievement(iceberg::Achievement::CleanLeg);
       }
+      if(mode==iceberg::Mode::Endless&&depth==2*iceberg::RoomsPerLeg-1&&run_deaths==0)
+        unlock_achievement(iceberg::Achievement::CoastClear);
       ++room;++depth;if(mode==iceberg::Mode::Endless)profile.endless_best=std::max(profile.endless_best,depth);
       if(mode==iceberg::Mode::Trial && room>=iceberg::RoomsPerLeg) {
         unlock_achievement(iceberg::Achievement::Mastery);
@@ -1971,6 +1974,7 @@ public:
     // Only start or age the toast on a frame that reaches gameplay.
     if(focused)advance_achievement_toast(dt);
     v.garden_snail_left=std::max(0.,v.garden_snail_left-dt);
+    v.seed_pod_left=std::max(0.,v.seed_pod_left-dt);
     v.pressure_test_left=std::max(0.,v.pressure_test_left-dt);
     Player before=state.player;
     int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
@@ -2069,6 +2073,7 @@ public:
     if(deaths>0&&!retrying) {
       unlock_achievement(iceberg::Achievement::FirstFall);
       if(state.deaths>=5)unlock_achievement(iceberg::Achievement::RoughRoom);
+      if(before.dash_time_left>0.)unlock_achievement(iceberg::Achievement::DashingHeadfirst);
     }
     if(deaths>0&&!retrying&&state.deaths>=10)unlock_achievement(iceberg::Achievement::LongWayBack);
     if(deaths==0&&before.ledge_climb_left>0.&&!state.player.ledge&&state.player.grounded)
@@ -2080,6 +2085,10 @@ public:
     if(state.player.support>=0&&state.player.support!=before.support) {
       const auto &deck=grid.platforms[size_t(state.player.support)];
       if(deck.estate_balcony)unlock_achievement(iceberg::Achievement::BalconyRide);
+      if(deck.cargo_hoist)unlock_achievement(iceberg::Achievement::CargoLift);
+      if(deck.pressure_piston)unlock_achievement(iceberg::Achievement::PressureLift);
+      if(deck.chute_leaf)unlock_achievement(iceberg::Achievement::LeafFlume);
+      if(deck.archive_rack)unlock_achievement(iceberg::Achievement::ArchiveRide);
       if(grid.template_id==504||(grid.template_id==601&&state.player.support==0))
         unlock_achievement(iceberg::Achievement::FerryRide);
     }
@@ -2108,6 +2117,10 @@ public:
       using iceberg::SideStory;
       using iceberg::SideFlag;
       const auto prop=SideStory(grid.interactions[size_t(at)].id);
+      if(prop==SideStory::PlatformShutter&&v.platform_shutter_open&&v.platform_shutter_time>=iceberg::PlatformShutterWait)
+        v.prompt=t("[E] Odbierz płaszcz","[E] Take the coat");
+      if(prop==SideStory::ArchiveLostProperty&&has_side_flag(SideFlag::LastCoatFound)&&!has_side_flag(SideFlag::LastCoatFiled))
+        v.prompt=t("[E] Oddaj płaszcz","[E] Leave the coat");
       if(prop==SideStory::HeatworksMugBench&&has_side_flag(SideFlag::HeatworksMugReturned))
         v.prompt=t("[E] Przeczytaj rozpiskę","[E] Read the shift rota");
       if(prop==SideStory::GardensPot&&has_side_flag(SideFlag::GardenSnailFound))
