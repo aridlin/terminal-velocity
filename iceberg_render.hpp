@@ -769,7 +769,8 @@
         int y=first+6*spacing+1;
         for(const auto &line:wrap(iceberg::district_travel_status(v,std::clamp(v.selected,0,5),grid_.room_role),cols_-4))if(y<rows_-4)paint_text(y++,2,line,0xeee7d6);
       }
-      const auto selection=v.map_route?tr("↑↓ odcinek","↑↓ leg"):
+      const auto selection=v.map_route?
+        (iceberg::browsing_campaign_leg(v)?tr("↑↓ odc. · ENTER obecny odcinek","↑↓ leg · ENTER current leg"):tr("↑↓ odcinek","↑↓ leg")):
         iceberg::district_travel_available(v,v.selected)?tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"):
         tr("↑↓ wybór","↑↓ select");
       paint_text(rows_-3,2,selection,d.light);

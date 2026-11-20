@@ -274,7 +274,9 @@ function translateUI(){
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(uiFlags&routeReturnFlag){
   touchUse.textContent=tr('Teraz','Now');
-  touchUse.setAttribute('aria-label',tr('Wróć do obecnego pokoju','Return to current room'));
+  touchUse.setAttribute('aria-label',overlay&expeditionFlag
+   ?tr('Wróć do obecnego pokoju','Return to current room')
+   :tr('Wróć do obecnego odcinka','Return to current leg'));
  }else if(readOnlyMapOpen()){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));

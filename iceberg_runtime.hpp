@@ -1628,7 +1628,10 @@ public:
     }
     if(v.map&&mode==iceberg::Mode::Campaign&&!v.map_room&&!c.inspect) {
       if(c.navigate&&!v.map_route)v.selected=(v.selected-c.navigate+iceberg::DistrictCount)%iceberg::DistrictCount;
-      if(c.navigate&&v.map_route&&v.route.available)v.route_page=std::clamp((v.route_page<0?v.route.leg:v.route_page)+c.navigate,0,2);
+      if(v.map_route&&v.route.available) {
+        if(c.confirm)v.route_page=-1;
+        else if(c.navigate)v.route_page=std::clamp((v.route_page<0?v.route.leg:v.route_page)+c.navigate,0,2);
+      }
       // A selection change needs a fresh confirmation for the newly highlighted district.
       if(c.confirm&&!c.navigate&&!v.map_route&&iceberg::district_travel_available(v,v.selected)) {
         int destination=v.selected;persist();profile.visit_district=destination==district?-1:destination;

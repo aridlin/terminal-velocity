@@ -1466,9 +1466,33 @@ int main(){try {
   preview.tick(map,1./120);preview.tick(map,1./120);
   ui_check(preview.state.adventure.map_route&&preview.state.adventure.route_page==1,
     "reopening a route map keeps the previewed leg");
+  for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
+    auto &v=preview.state.adventure;
+    preview.profile.language=language;preview.sync_view();
+    RenderGrid(preview.grid,preview.state,24,34,2).draw();
+    const auto hint=language==iceberg::Language::English?"ENTER current leg":"ENTER obecny odcinek";
+    ui_check(ui_text(frame).find(hint)!=std::string::npos,
+      "the compact campaign route explains how to return to the current leg");
+    const auto player=preview.state.player;
+    const auto elapsed=preview.state.elapsed;
+    preview.tick(enter,1./120);
+    ui_check(v.map&&v.map_route&&!v.map_room&&v.route_page==-1&&v.route.leg==0&&
+      preview.state.player.x==player.x&&preview.state.player.y==player.y&&preview.state.elapsed==elapsed,
+      "Enter returns to the current campaign leg without closing the route or moving the courier");
+    RenderGrid(preview.grid,preview.state,24,34,2).draw();
+    ui_check(ui_text(frame).find(hint)==std::string::npos,"the return hint disappears on the current campaign leg");
+    preview.tick(next_leg,1./120);
+  }
   preview.advance_room();preview.tick(map,1./120);
   ui_check(preview.state.adventure.map_route&&preview.state.adventure.route_page==-1,
     "advancing a room returns the route view to the active leg");
+  preview.stage=4;preview.room=0;preview.load_room();
+  preview.tick(map,1./120);
+  Controls previous_leg;previous_leg.navigate=-1;
+  preview.tick(previous_leg,1./120);preview.tick(enter,1./120);
+  const auto &current_route=preview.state.adventure;
+  ui_check(current_route.map&&current_route.map_route&&current_route.route_page==-1&&current_route.route.leg==1,
+    "returning from the first leg follows the current campaign leg even when it is later in the route");
   AdventureSession paused(options,"/tmp/tv-ui-paused-overlays-unused");paused.begin_campaign(true);
   paused.profile.language=iceberg::Language::English;
   paused.profile.quests[2]=3;paused.sync_view();
