@@ -16,10 +16,11 @@ inline constexpr int UnnumberedFloor=3;
 inline constexpr uint64_t BasementCircuitCut=1;
 inline constexpr double NightPlateLeft=99., NightPlateRight=103., NightPlateTime=2.1;
 inline constexpr double GardenSnailWalkTime=4.;
-enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket, NightWeighbridge };
+enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket, NightWeighbridge, CarbonDial, CarbonReader };
 // Side-story state uses the top of the second task word. Existing room tasks
 // use their original indices and retain the same save representation.
 enum class SideFlag : uint64_t {
+  ArchiveCarbonPrinted=1ull<<49,
   HeatworksMugTaken=1ull<<50, HeatworksMugReturned=1ull<<51,
   GardenSnailFound=1ull<<52, GardenSnailWatered=1ull<<53,
   RosterPosted=1ull<<54, RosterSealed=1ull<<55,
@@ -44,6 +45,18 @@ struct Text {
     return language == Language::English && en && *en ? en : pl;
   }
 };
+inline constexpr std::array<Text,3> CarbonDialLabels{{
+  {"Bęben czasu","Time drum"},{"Bęben obciążenia","Load drum"},{"Bęben strony","Side drum"}
+}};
+inline constexpr std::array<std::array<Text,3>,3> CarbonDialReadings{{
+  {{{"00:00","00:00"},{"00:07","00:07"},{"06:00","06:00"}}},
+  {{{"0","0"},{"1","1"},{"2","2"}}},
+  {{{"TAMTA","FAR"},{"TA","THIS"},{"OBIE","BOTH"}}}
+}};
+inline constexpr std::array<unsigned,3> CarbonReaderCode{1,2,1};
+inline constexpr Text CarbonReaderRecord{
+  "00:07 · Klatka 11. KURIER: wyjście potwierdzone. DRUGI: wciąż po tej stronie. Kopia miała trafić do pieca. Na odwrocie dopisek Ireny: «Ktoś musi pamiętać, że czekamy».",
+  "00:07 · Stairwell 11. COURIER: exit confirmed. SECOND: still on this side. This copy was meant for the furnace. Irena wrote on the back, ‘Someone has to remember we’re still waiting.’"};
 struct District {
   Text name, subtitle, objective;
   uint32_t stone, light, shadow, accent;
@@ -210,7 +223,7 @@ enum class Achievement {
   FirstFall, RoughRoom, MadeItAnyway, CleanDistrict, Mastery, CleanMastery, CrownClean,
   WallBounce, FerryRide, VineRide, BalconyRide, SaltBath, AllGear, FirstTestimony,
   ThreeTestimonies, BeltReverse, SiliconeReturn, LostFloor, WitnessTape, BelowTheRoster, RingAgain,
-  NextShift, CrownReached, TrailLeg, LedgeClimb, MailBag, CrownDown, CleanSurvey, CleanLeg, FullRoom, AllMail, MasonrySpring, Detour, CircuitSaved, RoughDistrict, CrownRecovery, LongWayBack, MugReturned, SnailSafe, PunchTomorrow, PowerCut, RosterChoice, PaperTrail, NightLine, LastPassenger, WrenHouse, LostReceipt, NightWeight, Count
+  NextShift, CrownReached, TrailLeg, LedgeClimb, MailBag, CrownDown, CleanSurvey, CleanLeg, FullRoom, AllMail, MasonrySpring, Detour, CircuitSaved, RoughDistrict, CrownRecovery, LongWayBack, MugReturned, SnailSafe, PunchTomorrow, PowerCut, RosterChoice, PaperTrail, NightLine, LastPassenger, WrenHouse, LostReceipt, NightWeight, SecondImpression, Count
 };
 enum class AwardGroup { All, Journey, Skill, Mishaps, Oddities, Secrets };
 struct AchievementInfo { Text title,condition; AwardGroup group; bool hidden=false; };
@@ -270,7 +283,8 @@ inline constexpr std::array Achievements{
   AchievementInfo{{"Ostatni pasażer","Last passenger"},{"Zweryfikuj meldunek z linii 11 przy wyłączonej sieci.","Verify Line 11’s report with the circuit cut."},AwardGroup::Secrets,true},
   AchievementInfo{{"Dom za jeden guzik","A house for one button"},{"Zwróć z Ogrodów guzik do osiedlowego karmnika.","Return the button from the Gardens to the Estate birdhouse."},AwardGroup::Oddities,true},
   AchievementInfo{{"Między trzecią a czwartą","Between three and four"},{"Odbierz skasowany bilet w porcie.","Collect the punched ticket at the quay."},AwardGroup::Secrets,true},
-  AchievementInfo{{"Ciężar własny","Tare weight"},{"Po spotkaniu przy szybie zważ się na wadze peronowej.","After the encounter at the window, step on the platform scale and let it settle."},AwardGroup::Secrets,true}
+  AchievementInfo{{"Ciężar własny","Tare weight"},{"Po spotkaniu przy szybie zważ się na wadze peronowej.","After the encounter at the window, step on the platform scale and let it settle."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Drugi odcisk","Second impression"},{"Odczytaj kalkę w Archiwum, korzystając z wydruku wagi.","Read the Archive carbon copy using the scale receipt."},AwardGroup::Secrets,true}
 };
 static_assert(Achievements.size()==size_t(Achievement::Count));
 inline constexpr unsigned LegacyAwardCount=29;
@@ -422,7 +436,7 @@ struct RouteView {
   bool branching=false, available=false;
   Text place;
 };
-enum class TourStopSource { Course, Settlement, Basement, NightWindow };
+enum class TourStopSource { Course, Settlement, Basement, NightWindow, ArchiveReader };
 struct TourStop {
   int district,room;
   double entry_x, entry_floor;
@@ -486,6 +500,7 @@ inline constexpr std::array DebugTour{
     "Wait for a lull. The ice shelf cracks underfoot."}},
   TourStop{0,501,45,39,{"Wejdź na zawiesie i zeskocz na wyższą rampę","Ride the cargo sling and jump to the upper loading ramp"}},
   TourStop{0,504,25,52,{"Piana przy nabrzeżu zapowiada falę", "Foam at the quay warns of a surge"}},
+  TourStop{3,103,24,38,{"Ustaw bębny według wydruku wagi","Set the drums from the scale receipt"},TourStopSource::ArchiveReader,{"Czytnik kalek","Carbon reader"}},
   TourStop{3,103,103,48,{"Archiwum: odbierz telefon z linii 11","Archive: answer Line 11"},TourStopSource::Settlement,{"Słuchawka linii 11","Line 11 receiver"}},
   TourStop{2,200+UnnumberedFloor,118,51,{"Piwnica: sprawdź szyb obserwacyjny","Basement: check the observation window"},TourStopSource::NightWindow,{"Szyba obserwacyjna","Observation window"}},
   TourStop{2,200+UnnumberedFloor,79,51,{"Piwnica: przełącz odłącznik przed przewodem","Basement: try the breaker before the live cable"},TourStopSource::Basement,{"Odłącznik piwnicy","Basement breaker"}},
@@ -529,6 +544,7 @@ struct View {
   uint64_t awards = 0;
   int night_beat=0;
   double night_left=0., night_plate_time=0.;
+  std::array<unsigned,3> carbon_dials{};
   std::array<unsigned, 8> quests{};
   std::array<unsigned, 8> quest_counts{};
   std::array<uint64_t,2> task_items{};

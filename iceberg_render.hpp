@@ -809,6 +809,31 @@
           std::vector<std::string>{"╔═11═╗","║╭╮ ○║","╚╪═══╝"," ╰╴"},live?0xb2a07d:0x748387);
         break;
       }
+      case SideStory::CarbonDial: {
+        const auto &v=state_.adventure;
+        const auto dial=size_t(node.detail);
+        const auto value=v.carbon_dials[dial];
+        auto reading=iceberg::CarbonDialReadings[dial][value].get(v.language);
+        reading=std::string((5-reading.size())/2,' ')+reading;
+        reading.resize(5,' ');
+        prop_art(x,y-.5,{"╔═════╗","║"+reading+"║","╚══◉══╝"},value?0xb4a180:0x798c94);
+        draw_scenery_pipe({{x,35},{x,33.5},{39.75,33.5}},0x5f747c);
+        break;
+      }
+      case SideStory::CarbonReader: {
+        const auto &v=state_.adventure;
+        const bool printed=v.task_items[1]&iceberg::side_flag(iceberg::SideFlag::ArchiveCarbonPrinted);
+        draw_scenery_pipe({{x,33.5},{x,35}},0x5f747c);
+        world_art(23,40,{"╔════╗","║  ╱","║╱","║"},0x495e67);
+        world_art(38,40,{"╔════╗","  ╲  ║","    ╲║","     ║"},0x495e67);
+        prop_art(x,y-.5,{"╔═══════╗",printed?"║ ▬▬▬ ● ║":"║ ▬▬▬ ○ ║",
+          printed?"╚══▤════╝":"╚═══════╝"},printed?0xc4a479:0x8c9e9f);
+        if(printed&&v.pickup_left>0.)for(int i=0;i<4;++i) {
+          const double age=.65-v.pickup_left;
+          world_text(x-1.+i*.55,y-3.-3.*age-i*.2,"·",i%2?0xc4a479:0x797d79);
+        }
+        break;
+      }
       case SideStory::NightWeighbridge: {
         using iceberg::Curio;
         const auto &v=state_.adventure;

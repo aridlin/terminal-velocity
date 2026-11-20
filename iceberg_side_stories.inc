@@ -33,6 +33,10 @@
       add({33,44,4,4},SideStory::ArchiveCopy,{"Odpis z teczki 11","Copy from folder 11"});
       add({84,44,4,4},SideStory::EmergencyBell,{"Dzwonek alarmowy","Emergency bell"});
       add({103,44,3,4},SideStory::ArchiveLine,{"Podnieś słuchawkę linii 11","Pick up Line 11"});
+      for(int dial=0;dial<3;++dial)
+        grid.interactions.push_back({{23.+dial*5,34,1.5,4},InteractionKind::SideStory,int(SideStory::CarbonDial),
+          iceberg::CarbonDialLabels[size_t(dial)],dial});
+      add({39,34,1.5,4},SideStory::CarbonReader,{"Uruchom czytnik kalek","Run the carbon reader"});
     } else if(grid.template_id==104) {
       add({94,46,4,4},SideStory::GardenSnailTap,{"Podlej ziemię przy doniczce","Water the soil by the pot"});
       add({117,46,3,4},SideStory::GardenSnailShelter,{"Przeczytaj tabliczkę","Read the shelter tag"});
@@ -328,6 +332,31 @@
       }
       case SideStory::NightWeighbridge:
         inspect_nearby();
+        break;
+      case SideStory::CarbonDial: {
+        auto &reading=state.adventure.carbon_dials[size_t(node.detail)];
+        reading=(reading+1)%iceberg::CarbonDialReadings[size_t(node.detail)].size();
+        audio.play(AudioCue::Metal1,.42f);
+        notice(node.label.get(profile.language)+" · "+
+          iceberg::CarbonDialReadings[size_t(node.detail)][reading].get(profile.language),2);
+        break;
+      }
+      case SideStory::CarbonReader:
+        if(has_side_flag(SideFlag::ArchiveCarbonPrinted)||!has_curio(Curio::NightPlateRecorded)) {
+          inspect_nearby();
+        } else if(state.adventure.carbon_dials!=iceberg::CarbonReaderCode) {
+          audio.play(AudioCue::Motor,.4f);
+          notice(t("Czytnik oddaje czystą kartę. Sprawdź godzinę, dodatkowe obciążenie i stronę.",
+            "The reader returns a blank card. Check the time, the extra load, and the side."),5);
+        } else {
+          remember_side_flag(SideFlag::ArchiveCarbonPrinted);
+          unlock_achievement(Achievement::SecondImpression);
+          audio.play(AudioCue::Motor,.6f);
+          audio.play(AudioCue::Paper,.8f);
+          animate_pickup(node,4);
+          notice(t("Spod zużytej taśmy wysuwa się kopia.", "A copy slides out beneath the worn ribbon."),5);
+          persist();
+        }
         break;
       case SideStory::GardenButton:
         remember_curio(Curio::GardenButton);

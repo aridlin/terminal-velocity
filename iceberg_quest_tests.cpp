@@ -132,7 +132,8 @@ int main() {
       require_quest(!earned(Achievement::BelowTheRoster),"copying the roster leaves its return award pending");
       const auto return_shaft=std::find_if(side.grid.interactions.rbegin(),side.grid.interactions.rend(),
         [](const Interaction &node){return node.kind==InteractionKind::Return;});
-      walk_to(side,reach_area(return_shaft->area));interact(side);
+      const Rect shaft_area=reach_area(return_shaft->area);
+      walk_to(side,shaft_area);interact(side);
       require_quest(side.profile.hidden_room<0&&side.state.player.rect().intersects(entrance)&&earned(Achievement::BelowTheRoster),
         "the service shaft returns to the same Estate entrance and awards the roster");
       require_quest(side.profile.district_deaths==district_retries&&side.profile.district_seconds==district_time,
@@ -180,6 +181,31 @@ int main() {
       require_quest(save.save(side.profile)&&save.load(loaded)&&loaded.task_items==side.profile.task_items&&
         (iceberg::stored_achievements(loaded)&iceberg::achievement_bit(Achievement::LastPassenger)),
         "old and extended awards and encounter state round-trip through the existing TVICE6 format");
+      walk_to(side,shaft_area);interact(side);
+      require_quest(side.profile.hidden_room<0,"the measured route can still return through the shaft");
+      side.district=3;side.stage=0;side.load_room();
+      scene(SideStory::CarbonReader);
+      require_quest(!earned(Achievement::SecondImpression)&&
+                    !side.has_side_flag(iceberg::SideFlag::ArchiveCarbonPrinted),
+        "the reader will not print from the initial settings");
+      for(int dial=0;dial<3;++dial) {
+        const auto control=std::find_if(side.grid.interactions.begin(),side.grid.interactions.end(),[dial](const Interaction &node) {
+          return node.kind==InteractionKind::SideStory&&node.id==int(SideStory::CarbonDial)&&node.detail==dial;
+        });
+        require_quest(control!=side.grid.interactions.end(),"each carbon reader drum has its own interaction");
+        walk_to(side,control->area);
+        for(unsigned press=0;press<iceberg::CarbonReaderCode[size_t(dial)];++press)interact(side);
+      }
+      scene(SideStory::CarbonReader);
+      require_quest(earned(Achievement::SecondImpression)&&
+                    side.has_side_flag(iceberg::SideFlag::ArchiveCarbonPrinted),
+        "the receipt settings unlock the physical copy and a hidden award");
+      side.load_room();
+      scene(SideStory::CarbonReader);
+      require_quest(side.state.adventure.inspecting&&
+                    side.state.adventure.inspect_body==iceberg::CarbonReaderRecord.get(side.profile.language),
+        "returning to the machine reveals the completed carbon copy");
+      side.tick({.inspect=true},0.);
       side.profile=before_line;side.district=2;side.stage=0;side.load_room(true);
       side.tick({.restart=true},1./120);
       require_quest(side.profile.district_deaths==district_retries+1&&side.profile.district_seconds>district_time,

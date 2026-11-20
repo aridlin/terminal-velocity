@@ -311,9 +311,10 @@ int main(int argc,char **argv) {
       press({.new_run=true});
       check(session.tour_scene==int(iceberg::DebugTourLatest)&&session.grid.template_id==iceberg::DebugTour[iceberg::DebugTourLatest].room,
         "N opens the latest sample from the picker");
-      auto sample_for=[](int room) {
+      using iceberg::TourStopSource;
+      auto sample_for=[](int room,TourStopSource source=TourStopSource::Settlement) {
         const auto found=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
-          [room](const iceberg::TourStop &stop){return stop.room==room&&stop.source!=iceberg::TourStopSource::NightWindow;});
+          [=](const iceberg::TourStop &stop){return stop.room==room&&stop.source==source;});
         return int(found-iceberg::DebugTour.begin());
       };
       const auto latest=int(iceberg::DebugTourLatest);
@@ -332,7 +333,7 @@ int main(int argc,char **argv) {
       press({.interact=true});
       check(session.has_side_flag(SideFlag::Roster)&&session.state.adventure.dialogue.active(),
         "the Estate sample starts with a roster and opens Grażyna's dialogue");
-      const auto basement=sample_for(200+iceberg::UnnumberedFloor);
+      const auto basement=sample_for(200+iceberg::UnnumberedFloor,TourStopSource::Basement);
       session.load_tour_scene(basement);
       press({.interact=true});
       check(session.has_side_flag(SideFlag::BasementPowerCut)&&!session.grid.pulses.front().powered(session.grid.switch_flags),
@@ -344,6 +345,22 @@ int main(int argc,char **argv) {
       press({.interact=true});
       check(session.state.adventure.dialogue.active()&&session.has_curio(iceberg::Curio::ArchiveCall)&&
         iceberg::stored_achievements(session.profile)==0,"the archive sample answers Line 11 without awarding it");
+      const auto carbon=sample_for(103,TourStopSource::ArchiveReader);
+      session.load_tour_scene(carbon);
+      check(session.has_curio(iceberg::Curio::NightPlateRecorded),
+        "the carbon reader sample starts with the relevant receipt");
+      for(int i=0;i<3;++i) {
+        session.state.player.x=23.5+i*5.;
+        for(unsigned n=0;n<iceberg::CarbonReaderCode[size_t(i)];++n)press({.interact=true});
+      }
+      session.state.player.x=39.5;
+      press({.interact=true});
+      check(session.has_side_flag(SideFlag::ArchiveCarbonPrinted)&&iceberg::stored_achievements(session.profile)==0,
+        "the carbon reader sample prints the record without granting the award");
+      press({.restart=true});
+      check(!session.has_side_flag(SideFlag::ArchiveCarbonPrinted)&&
+        session.state.adventure.carbon_dials==std::array<unsigned,3>{},
+        "retry resets the carbon reader and its dials");
       session.end_tour();
       check(session.save_revision==write_count&&bytes(path)==first_save&&bytes(secondary)==second_save&&bytes(tertiary)==third_save,
         "the latest Debug Tour action leaves every save slot intact");
