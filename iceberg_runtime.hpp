@@ -1105,6 +1105,9 @@ public:
       if(grid.template_id==24&&node.id==2)
         v.inspect_body=t("Bogdan liczy nawroty wagonu. Złota lampka wskazuje, po której stronie tramwaj stoi. E — porozmawiaj.",
           "Bogdan counts the tram's trips. The gold lamp marks the side where the tram is stopped. Press E to talk.");
+      if(grid.template_id==44&&node.id==4)
+        v.inspect_body=t("Irena porównuje spis lokatorów z odpisem. Obok jest przekaźnik taśmy. E — porozmawiaj.",
+          "Irena is checking the tenant register against a carbon copy. The belt relay is nearby. Press E to talk.");
       v.inspect_icon="◉";break;
     case InteractionKind::DockWorker:
       v.inspect_title=t("Doker","Dockworker");
@@ -1227,6 +1230,10 @@ public:
       }
       if(grid.template_id==24&&node.id==2) {
         talk({iceberg::EstateTramOpening},0,iceberg::EstateTramReplyScene);
+        return;
+      }
+      if(grid.template_id==44&&node.id==4) {
+        talk({iceberg::ArchiveCopiesOpening},0,iceberg::ArchiveCopiesReplyScene);
         return;
       }
       if(grid.template_id==330) {

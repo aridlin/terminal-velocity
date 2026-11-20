@@ -305,6 +305,10 @@ inline constexpr DialogueLine EstateTramOpening{2,{
   "Tym tramwajem wracają ludzie z piekarni. Mają dwa przystanki. Ja nadal staję na trzecim, pod pustym mieszkaniem.",
   "The bakery shift rides this tram home. They use two stops. I still make a third, outside an empty flat."}};
 
+inline constexpr DialogueLine ArchiveCopiesOpening{4,{
+  "Na górnej kartce stoi: klatka jedenasta, pusta. Na kalce widać dopiski listonosza. Trzy podpisy z zeszłego tygodnia, wszystkie z tej samej klatki.",
+  "The top sheet says stairwell eleven is empty. The carbon copy has the postman's notes. Three signatures from last week, all from the same stairwell."}};
+
 inline constexpr Text ArchiveDryingLetterDetail{
   "Na mokrej kopercie został tylko inicjał. Pod sznurkiem ktoś wsunął paragon z piekarni, z adresem i numerem klatki.",
   "Only an initial survived on the wet envelope. Somebody slipped a bakery receipt under the string with the address and stairwell number."

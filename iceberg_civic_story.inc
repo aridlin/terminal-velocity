@@ -198,6 +198,21 @@ inline const CivicReply &civic_reply(int scene,int option) {
     }};
     return replies[size_t(option)];
   }
+  if(scene==ArchiveCopiesReplyScene) {
+    static const std::array<CivicReply,2> replies{{
+      {{"Jak przejść przez taśmę?","How do I cross the belt?"},
+       {"Środkowa taśma jedzie w lewo. Da się skierować ją w stronę wyjścia?",
+        "The middle belt runs left. Can I send it toward the exit?"},
+       {4,{"Pociągnij za przekaźnik przed taśmą. Gdy strzałka pokaże prawo, przejedź do końca i skocz na następny pomost. Przekaźnik można przełączyć z powrotem.",
+           "Pull the relay just before the belt. When the arrow points right, ride to the end and jump to the next landing. You can switch the relay back."}}},
+      {{"Dlaczego trzymasz kalkę?","Why keep the carbon copy?"},
+       {"Na obydwu kartkach jest twój podpis. Dlaczego zachowałaś też kalkę?",
+        "Your signature is on both sheets. Why did you keep the carbon copy too?"},
+       {4,{"Podpisałam spis po obchodzie. Listonosz zajrzał tam później. Kiedy próbowałam dopisać jego uwagi, przysłali mi formularz przeprowadzki. Nie wiem, dokąd mieliby się wyprowadzić, skoro według nas nigdy tam nie mieszkali.",
+           "I signed the register after the rounds. The postman went by later. When I tried to add his notes, they sent me a change-of-address form. I don't know where they were meant to move from when our register says they never lived there."}}},
+    }};
+    return replies[size_t(option)];
+  }
   if(scene==EpilogueReplyScene)return epilogue_reply(option);
   if(scene>=HarborMissionReplyBase)return harbor_mission_reply(scene-HarborMissionReplyBase,option);
   if(scene>=BriefingReplyBase)return briefing_reply(scene-BriefingReplyBase,option);
