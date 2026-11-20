@@ -88,6 +88,7 @@
         } else {
           const auto bit=uint64_t(1)<<node.id;
           if(grid.switch_flags&bit){notice(t("Ten obieg już pracuje.","This circuit is already running."));return true;}
+          if(node.id==2&&(grid.switch_flags&8))unlock_achievement(iceberg::Achievement::CircuitSaved);
           grid.switch_flags|=bit;if(node.id==2)grid.switch_flags&=~uint64_t(8);
           activate_machinery(node);audio.play(AudioCue::Valve);
           if(node.id==1)notice(t("Ciśnienie wyrównane. Zasuwa serwisowa otwarta.","Pressure equalised. Service shutter open."),5);
@@ -138,6 +139,8 @@
       if(state.player.rect().intersects(box)) {
         const auto mask=uint64_t(1)<<item;
         if(!(profile.task_items[0]&mask)) {
+          unlock_achievement(iceberg::Achievement::MailBag);
+          if(((profile.task_items[0]|mask)&7)==7)unlock_achievement(iceberg::Achievement::AllMail);
           profile.task_items[0]|=mask;++profile.quest_counts[0];
           if(profile.quests[0]==1&&profile.quest_counts[0]>=unsigned(iceberg::Quests[0].required))profile.quests[0]=2;
           notice(t("LISTY WYSŁANE — ","LETTERS SENT — ")+std::to_string(profile.quest_counts[0])+"/3",5);

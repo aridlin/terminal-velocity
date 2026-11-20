@@ -173,7 +173,8 @@ public:
     }
     if(grid.template_id==330)for(auto &node:grid.interactions)if(node.kind==InteractionKind::Board)
       node.label=profile.finished?iceberg::Text{"Wyrusz na wyprawę","Start an expedition"}:iceberg::Text{"Zakończ obchód","Finish the round"};
-    v.discoveries=profile.discoveries|iceberg::achievement_progress(profile);
+    v.awards=iceberg::achievement_progress(profile);
+    v.discoveries=profile.discoveries|uint32_t(v.awards);
     v.switches=grid.switch_flags;v.room_name=(grid.room_role==iceberg::RoomRole::Settlement&&grid.template_id!=330?
       iceberg::Districts[size_t(grid.district)].subtitle:grid.room_name).get(profile.language);
     v.music_volume=profile.music_volume;v.effects_volume=profile.effects_volume;v.ambience_volume=profile.ambience_volume;
@@ -381,13 +382,19 @@ public:
     tour_scene=index;
     const auto &stop=iceberg::DebugTour[size_t(index)];
     mode=iceberg::Mode::Endless;district=stop.district;stage=2;room=depth=0;run_seed=73;run_active=false;
+    profile.task_items[0]=0;
     if(stop.source==iceberg::TourStopSource::Settlement) {
+      if(stop.room==103)remember_curio(iceberg::Curio::BasementCall);
       profile.task_items[1]=stop.room==102?iceberg::side_flag(iceberg::SideFlag::Roster):0;
       grid=iceworld::build_settlement(district);
       place_side_stories();
-    } else if(stop.source==iceberg::TourStopSource::Basement) {
+    } else if(stop.source==iceberg::TourStopSource::Basement||stop.source==iceberg::TourStopSource::NightWindow) {
       profile.task_items[1]=0;
       grid=iceworld::build_hidden(iceberg::UnnumberedFloor);
+      if(stop.source==iceberg::TourStopSource::NightWindow) {
+        remember_curio(iceberg::Curio::ArchiveCall);
+        grid.switch_flags|=iceberg::BasementCircuitCut;
+      }
     } else {
       grid=stop.room==iceberg::CrownSentinel?iceworld::build_crown_sentinel():verified_room(stop.room,run_seed,district);
       apply_expedition_mechanics(grid);
@@ -779,9 +786,10 @@ public:
   }
   void unlock_achievement(iceberg::Achievement id) {
     const auto bit=iceberg::achievement_bit(id);
-    if(tour_scene>=0||(profile.discoveries&bit))return;
-    profile.discoveries|=bit;
-    if(!(state.adventure.discoveries&bit))achievement_queue.push_back(id);
+    if(tour_scene>=0||(iceberg::stored_achievements(profile)&bit))return;
+    profile.discoveries|=uint32_t(bit);
+    profile.task_items[0]|=bit&0xffffffff00000000ull;
+    if(!(state.adventure.awards&bit))achievement_queue.push_back(id);
   }
   void advance_achievement_toast(double dt) {
     auto &v=state.adventure;
@@ -825,10 +833,12 @@ public:
       const int scene=dialogue.reply_scene, option=dialogue.reply_option;
       const int action=dialogue.action;
       if(scene==iceberg::HeatworksMugReplyScene) {
+        unlock_achievement(iceberg::Achievement::MugReturned);
         remember_side_flag(iceberg::SideFlag::HeatworksMugReturned);
         audio.play(AudioCue::Stone1,.55f);
         persist();
       } else if(scene==iceberg::EstateRosterReplyScene) {
+        unlock_achievement(iceberg::Achievement::RosterChoice);
         remember_side_flag(option==0?iceberg::SideFlag::RosterPosted:iceberg::SideFlag::RosterSealed);
         persist();
       } else if(tour_scene<0&&!iceberg::expedition_reply_scene(scene)) {
@@ -915,6 +925,9 @@ public:
     profile.interlude=false;
     if(district==0)unlock_achievement(iceberg::Achievement::FirstDistrict);
     if(profile.district_deaths==0)unlock_achievement(iceberg::Achievement::CleanDistrict);
+    if(profile.district_deaths>=20)unlock_achievement(iceberg::Achievement::RoughDistrict);
+    if(district==0)unlock_achievement(iceberg::Achievement::NextShift);
+    if(district==4)unlock_achievement(iceberg::Achievement::CrownReached);
     merge_record(profile.records[size_t(district)],profile.district_seconds,
       profile.district_deaths,profile.district_treasures);
     profile.story|=uint64_t(1)<<(district+8);
@@ -943,7 +956,9 @@ public:
       profile.records=previous.records;profile.trials=previous.trials;profile.challenges=previous.challenges;
       profile.expeditions=previous.expeditions;profile.endless_best=previous.endless_best;
       profile.cosmetics=previous.cosmetics;profile.outfit=previous.outfit;
-      profile.discoveries=iceberg::achievement_progress(previous);
+      const auto awards=iceberg::achievement_progress(previous);
+      profile.discoveries=uint32_t(awards);
+      profile.task_items[0]=awards&0xffffffff00000000ull;
       profile.music_volume=music;profile.effects_volume=effects;profile.ambience_volume=ambience;
       profile.pause_on_focus_loss=previous.pause_on_focus_loss;
       profile.smooth_camera=previous.smooth_camera;
@@ -1026,7 +1041,14 @@ public:
       unlock_achievement(iceberg::Achievement::FirstDoor);
     if(state.deaths>=5&&grid.room_role==iceberg::RoomRole::Traverse)
       unlock_achievement(iceberg::Achievement::MadeItAnyway);
+    if(state.won&&grid.room_role==iceberg::RoomRole::Traverse&&state.deaths==0&&
+       grid.sweets.size()>=3&&size_t(state.sweets_count())==grid.sweets.size())
+      unlock_achievement(iceberg::Achievement::FullRoom);
     if(mode!=iceberg::Mode::Campaign) {
+      if(mode==iceberg::Mode::Endless&&depth==iceberg::RoomsPerLeg-1) {
+        unlock_achievement(iceberg::Achievement::TrailLeg);
+        if(run_deaths==0)unlock_achievement(iceberg::Achievement::CleanLeg);
+      }
       ++room;++depth;if(mode==iceberg::Mode::Endless)profile.endless_best=std::max(profile.endless_best,depth);
       if(mode==iceberg::Mode::Trial && room>=iceberg::RoomsPerLeg) {
         unlock_achievement(iceberg::Achievement::Mastery);
@@ -1085,6 +1107,8 @@ public:
       const int scene=profile.revisit.scene;
       bool jubilee=profile.revisit.scene==2&&state.won&&!(profile.story&(uint64_t(1)<<40));
       const bool surveyed=scene==iceberg::SurveyReplay&&state.won&&!(profile.cosmetics&iceberg::SurveyCourseComplete);
+      if(scene==iceberg::SurveyReplay&&state.won&&state.deaths==0)
+        unlock_achievement(iceberg::Achievement::CleanSurvey);
       if(surveyed) {
         profile.cosmetics|=iceberg::SurveyCourseComplete;
         unlock_achievement(iceberg::Achievement::Survey);
@@ -1251,6 +1275,19 @@ public:
     if(node.kind==InteractionKind::SideStory) {
       using iceberg::SideStory;
       using iceberg::SideFlag;
+      if(node.id==int(SideStory::ArchiveLine)) {
+        describe(t("Linia 11","Line 11"),t("Wtyk jest wyjęty. Pod szybką tkwi plakietka: «Klatka 11».",
+          "The plug is unplugged. A tag under the glass reads ‘Stairwell 11’."),"╪",Art::Speaker);return;
+      }
+      if(node.id==int(SideStory::NightWindow)) {
+        describe(t("Szyba obserwacyjna","Observation window"),
+          grid.switch_flags&iceberg::BasementCircuitCut?
+            t("Po drugiej stronie szyby słabo widać peron. Na tablicy mignął numer 11.",
+              "A platform is faintly visible through the window. The board briefly showed 11."):
+            t("Jasne lampy odbijają się w szkle. Za nim nie widać niczego.",
+              "The bright lamps reflect in the glass. Nothing beyond it is visible."),
+          "▥",Art::Speaker);return;
+      }
       if(node.id==int(SideStory::HeatworksMug)) {
         describe(t("Kubek na rurze","Mug on the pipe"),HeatworksMugNote.get(profile.language),"♨",Art::File);return;
       }
@@ -1615,7 +1652,9 @@ public:
         v.achievement_selection=0;
       }
       const int count=int(iceberg::award_entries(v.achievement_group).size());
-      v.achievement_selection=std::clamp(v.achievement_selection+c.navigate,0,std::max(0,count-1));
+      const int page=c.tour_page*std::max(1,last_rows-10);
+      v.achievement_selection=std::clamp(v.achievement_selection+c.navigate+page,0,count-1);
+      if(c.browse_leg)v.achievement_selection=c.browse_leg<0?0:count-1;
       return;
     }
     if(v.settings) {
@@ -1868,6 +1907,7 @@ public:
       return;
     }
     const auto discoveries_at_start=profile.discoveries;
+    const auto awards_at_start=iceberg::stored_achievements(profile);
     const auto switches_at_start=grid.switch_flags;
     // A retry queued between physics steps still takes priority at a doorway.
     if(!retrying) {
@@ -1901,12 +1941,7 @@ public:
     if(!state.won)v.door_open=std::max(0.,v.door_open-dt*4.5);
     feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,old_elapsed,dt,audio);
     harbor_step(before,old_deaths);
-    if(grid.template_id==200+iceberg::UnnumberedFloor&&state.deaths==old_deaths&&
-       (profile.discoveries&iceberg::achievement_bit(iceberg::Achievement::WitnessTape))) {
-      const double x=state.player.x;
-      if(before.x<98&&x>=98)audio.play(AudioCue::Step1,.48f);
-      if(before.x<105&&x>=105)audio.play(AudioCue::Step2,.44f);
-    }
+    night_line_step(before,old_deaths,dt);
     if(state.checkpoint!=old_cp)v.lamp_left=.8;
     // Spatially restrained machinery cues follow actual motion/timing.
     if(state.elapsed>old_elapsed&&state.deaths==old_deaths) {
@@ -1988,6 +2023,12 @@ public:
       unlock_achievement(iceberg::Achievement::FirstFall);
       if(state.deaths>=5)unlock_achievement(iceberg::Achievement::RoughRoom);
     }
+    if(deaths>0&&!retrying&&state.deaths>=10)unlock_achievement(iceberg::Achievement::LongWayBack);
+    if(deaths==0&&before.ledge_climb_left>0.&&!state.player.ledge&&state.player.grounded)
+      unlock_achievement(iceberg::Achievement::LedgeClimb);
+    if(deaths==0&&state.last_spring>=0&&state.last_spring_time>old_elapsed&&
+       grid.springs[size_t(state.last_spring)].awning)
+      unlock_achievement(iceberg::Achievement::MasonrySpring);
     if(before.vine<0&&state.player.vine>=0)unlock_achievement(iceberg::Achievement::VineRide);
     if(state.player.support>=0&&state.player.support!=before.support) {
       const auto &deck=grid.platforms[size_t(state.player.support)];
@@ -2057,11 +2098,14 @@ public:
     const bool crown_advanced=state.crown.hits>old_crown_hits;
     const bool crown_victory=crown_advanced&&state.crown.hits==3;
     if(crown_victory&&tour_scene<0) {
+      unlock_achievement(iceberg::Achievement::CrownDown);
+      if(state.deaths>=5)unlock_achievement(iceberg::Achievement::CrownRecovery);
       profile.story|=iceberg::CrownSentinelDefeated;
       if(state.deaths==0)unlock_achievement(iceberg::Achievement::CrownClean);
     }
     if(crown_advanced||old_cp!=state.checkpoint||(state.won&&!at_door)||at_route_fork()!=at_fork||
-       deaths>0||pickups>0||mastery_progress||profile.discoveries!=discoveries_at_start||autosave_left<=0)persist();
+       deaths>0||pickups>0||mastery_progress||profile.discoveries!=discoveries_at_start||
+       iceberg::stored_achievements(profile)!=awards_at_start||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,
       deaths>0?10.:dt,profile.smooth_camera);
     if(crown_advanced) {

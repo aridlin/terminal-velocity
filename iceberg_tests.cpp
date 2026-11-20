@@ -313,7 +313,7 @@ int main(int argc,char **argv) {
         "N opens the latest sample from the picker");
       auto sample_for=[](int room) {
         const auto found=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
-          [room](const iceberg::TourStop &stop){return stop.room==room;});
+          [room](const iceberg::TourStop &stop){return stop.room==room&&stop.source!=iceberg::TourStopSource::NightWindow;});
         return int(found-iceberg::DebugTour.begin());
       };
       const auto latest=int(iceberg::DebugTourLatest);
@@ -340,6 +340,10 @@ int main(int argc,char **argv) {
       press({.restart=true});
       check(session.tour_scene==basement&&session.grid.pulses.front().powered(session.grid.switch_flags),
         "Retry restores power in the basement sample");
+      session.load_tour_scene(sample_for(103));
+      press({.interact=true});
+      check(session.state.adventure.dialogue.active()&&session.has_curio(iceberg::Curio::ArchiveCall)&&
+        iceberg::stored_achievements(session.profile)==0,"the archive sample answers Line 11 without awarding it");
       session.end_tour();
       check(session.save_revision==write_count&&bytes(path)==first_save&&bytes(secondary)==second_save&&bytes(tertiary)==third_save,
         "the latest Debug Tour action leaves every save slot intact");

@@ -15,7 +15,7 @@ inline constexpr int RoomsPerLeg = 8;
 inline constexpr int UnnumberedFloor=3;
 inline constexpr uint64_t BasementCircuitCut=1;
 inline constexpr double GardenSnailWalkTime=4.;
-enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench };
+enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket };
 // Side-story state uses the top of the second task word. Existing room tasks
 // use their original indices and retain the same save representation.
 enum class SideFlag : uint64_t {
@@ -26,6 +26,9 @@ enum class SideFlag : uint64_t {
   CastingReturned=1ull<<60, BellRung=1ull<<61, Roster=1ull<<62, BasementPowerCut=1ull<<63
 };
 inline constexpr uint64_t side_flag(SideFlag flag) {return static_cast<uint64_t>(flag);}
+enum class Curio : uint64_t { BasementCall=1ull<<24, GardenButton=1ull<<25,
+  GardenButtonReturned=1ull<<26, ArchiveCall=1ull<<27, CrownTicket=1ull<<28, HarborTicket=1ull<<29 };
+inline constexpr uint64_t curio_bit(Curio curio) {return static_cast<uint64_t>(curio);}
 enum class Language { Polish, English };
 enum class Mode { Campaign, Endless, Trial };
 enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret, Interlude };
@@ -204,7 +207,8 @@ enum class Achievement {
   FirstToken, DashJump, Gear, Survey, Journey, FirstDoor, DockChat, FirstDistrict,
   FirstFall, RoughRoom, MadeItAnyway, CleanDistrict, Mastery, CleanMastery, CrownClean,
   WallBounce, FerryRide, VineRide, BalconyRide, SaltBath, AllGear, FirstTestimony,
-  ThreeTestimonies, BeltReverse, SiliconeReturn, LostFloor, WitnessTape, BelowTheRoster, RingAgain
+  ThreeTestimonies, BeltReverse, SiliconeReturn, LostFloor, WitnessTape, BelowTheRoster, RingAgain,
+  NextShift, CrownReached, TrailLeg, LedgeClimb, MailBag, CrownDown, CleanSurvey, CleanLeg, FullRoom, AllMail, MasonrySpring, Detour, CircuitSaved, RoughDistrict, CrownRecovery, LongWayBack, MugReturned, SnailSafe, PunchTomorrow, PowerCut, RosterChoice, PaperTrail, NightLine, LastPassenger, WrenHouse, LostReceipt, Count
 };
 enum class AwardGroup { All, Journey, Skill, Mishaps, Oddities, Secrets };
 struct AchievementInfo { Text title,condition; AwardGroup group; bool hidden=false; };
@@ -237,22 +241,56 @@ inline constexpr std::array Achievements{
   AchievementInfo{{"Piętro bez numeru","The unnumbered floor"},{"Otwórz przejście pod budynkiem.","Open the passage below the building."},AwardGroup::Secrets,true},
   AchievementInfo{{"Poczekaj na trzeci głos","Wait for the third voice"},{"Odsłuchaj całą ukrytą taśmę.","Listen to the full hidden tape."},AwardGroup::Secrets,true},
   AchievementInfo{{"Pod spisem","Below the roster"},{"Wróć z podziemia z kopią listy.","Return from below with a copy of the roster."},AwardGroup::Secrets,true},
-  AchievementInfo{{"Chyba nie słyszą","Maybe they didn't hear"},{ "Zadzwoń ponownie po usłyszeniu komunikatu dzwonka alarmowego.","Ring the emergency bell again after hearing its announcement."},AwardGroup::Oddities,true}
+  AchievementInfo{{"Chyba nie słyszą","Maybe they didn't hear"},{ "Zadzwoń ponownie po usłyszeniu komunikatu dzwonka alarmowego.","Ring the emergency bell again after hearing its announcement."},AwardGroup::Oddities,true},
+  AchievementInfo{{"Na następnej zmianie","Next shift"},{"Dotrzyj do Ciepłowni Łazarz.","Reach Lazarus Heating Works."},AwardGroup::Journey},
+  AchievementInfo{{"Pod Koroną","Under the Crown"},{"Dotrzyj do dzielnicy na Koronie.","Reach the Crown district."},AwardGroup::Journey},
+  AchievementInfo{{"Pierwszy odcinek","First leg"},{"Ukończ odcinek Wyprawy bez końca.","Finish a leg of Endless Expedition."},AwardGroup::Journey},
+  AchievementInfo{{"Tuż nad krawędzią","Over the edge"},{"Wciągnij się na krawędź.","Pull yourself up onto a ledge."},AwardGroup::Journey},
+  AchievementInfo{{"Poczta działa","The post goes through"},{"Doręcz worek listów w Dolnej Przystani.","Deliver a Lower Harbor mailbag."},AwardGroup::Journey},
+  AchievementInfo{{"Zmiana warty","Changing of the guard"},{"Pokonaj Strażnika Korony.","Defeat the Crown Sentinel."},AwardGroup::Journey},
+  AchievementInfo{{"Suchy powrót","Back dry"},{"Ukończ objazd latarni bez powrotu.","Finish the Breakwater Survey without a retry."},AwardGroup::Skill},
+  AchievementInfo{{"Czysty odcinek","Clean leg"},{"Ukończ pierwszy odcinek wyprawy bez powrotu.","Finish the first leg of an expedition without a retry."},AwardGroup::Skill},
+  AchievementInfo{{"Nic do oclenia","Nothing to declare"},{"Zbierz wszystkie żetony w pokoju z co najmniej trzema i ukończ go bez powrotu.","Collect every token in a room with at least three and finish it without a retry."},AwardGroup::Skill},
+  AchievementInfo{{"Ostatni worek","Last post"},{"Doręcz wszystkie trzy portowe worki listów.","Deliver all three Lower Harbor mailbags."},AwardGroup::Skill},
+  AchievementInfo{{"Markiza wytrzyma","The awning held"},{"Odbij się od markizy na Osiedlu.","Bounce off an Estate awning."},AwardGroup::Oddities},
+  AchievementInfo{{"Droga okrężna","Taking the long way"},{"Wybierz odnogę trasy na rozwidleniu.","Choose the alternate path at a route fork."},AwardGroup::Secrets},
+  AchievementInfo{{"Z morza do domów","From sea to homes"},{"Źle skieruj wodę w porcie, a potem zawróć ją do mieszkań.","Correct the Harbor pump after sending the heat out to sea."},AwardGroup::Mishaps},
+  AchievementInfo{{"Jednak na miejscu","Still made it"},{"Ukończ jedną dzielnicę mimo co najmniej dwudziestu powrotów.","Finish a district despite at least twenty retries."},AwardGroup::Mishaps},
+  AchievementInfo{{"Jeszcze jedna runda","One more round"},{"Pokonaj Strażnika Korony po co najmniej pięciu powrotach.","Defeat the Crown Sentinel after at least five retries."},AwardGroup::Mishaps},
+  AchievementInfo{{"Znów ta lampa","That lamp again"},{"Wróć do lampy po zagrożeniu w pokoju, w którym zginąłeś co najmniej dziesięć razy.","Get sent back by a hazard or fall after at least ten deaths in one room."},AwardGroup::Mishaps},
+  AchievementInfo{{"Zmiana przy kubku","Tea for the next shift"},{"Oddaj Witkowi kubek.","Return Witek’s mug."},AwardGroup::Oddities,true},
+  AchievementInfo{{"Lokal pod funkią","Room under the hosta"},{"Znajdź nową kryjówkę ślimaka.","Find the snail in its new shelter."},AwardGroup::Oddities,true},
+  AchievementInfo{{"Bilet na jutro","Tomorrow’s ticket"},{"Sprawdź kasownik na Koronie.","Try the ticket punch on the Crown."},AwardGroup::Oddities,true},
+  AchievementInfo{{"Światło awaryjne","Emergency lighting"},{"Odetnij dopływ prądu do piwnicy.","Cut power to the basement."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Czternasta lokatorka","The fourteenth tenant"},{"Zdecyduj z Grażyną, co zrobić ze spisem.","Decide what to do with the roster alongside Grażyna."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Trzy odpisy","Paper trail"},{"Zbierz trzy rozproszone wskazówki o wejściu pod klatkę.","Collect all three scattered clues to the entrance under the stairwell."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Linia nocna","Night line"},{"Po rozmowie z portiernią odbierz połączenie z linii 11 w Archiwum.","After speaking to the basement intercom, answer Line 11 in the Archive."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Ostatni pasażer","Last passenger"},{"Zweryfikuj meldunek z linii 11 przy wyłączonej sieci.","Verify Line 11’s report with the circuit cut."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Dom za jeden guzik","A house for one button"},{"Zwróć z Ogrodów guzik do osiedlowego karmnika.","Return the button from the Gardens to the Estate birdhouse."},AwardGroup::Oddities,true},
+  AchievementInfo{{"Między trzecią a czwartą","Between three and four"},{"Odbierz skasowany bilet w porcie.","Collect the punched ticket at the quay."},AwardGroup::Secrets,true}
 };
-static_assert(Achievements.size()<=29);
-inline constexpr uint32_t achievement_bit(Achievement id) {
+static_assert(Achievements.size()==size_t(Achievement::Count));
+inline constexpr unsigned LegacyAwardCount=29;
+static_assert(Achievements.size()-LegacyAwardCount<=32);
+// The lower word preserves the original TVICE6 discovery bits. New awards
+// occupy the upper half of the first task word, above task slots 0–23 and curios.
+inline constexpr uint64_t achievement_bit(Achievement id) {
   // Bits 0–2 hold the original hidden testimonies. Keep all five released award bits.
   const unsigned index=unsigned(id);
-  return 1u<<(index<16?index+16:index-13);
+  if(index>=LegacyAwardCount)return uint64_t(1)<<(32+index-LegacyAwardCount);
+  return uint64_t(1)<<(index<16?index+16:index-13);
 }
-inline constexpr uint32_t AchievementMask=[] {
-  uint32_t mask=0;
+inline constexpr uint64_t AchievementMask=[] {
+  uint64_t mask=0;
   for(size_t i=0;i<Achievements.size();++i)mask|=achievement_bit(Achievement(i));
   return mask;
 }();
 inline constexpr double AchievementToastTime=3.8;
-inline uint32_t achievement_progress(const Profile &profile) {
-  uint32_t flags=profile.discoveries&AchievementMask;
+inline uint64_t stored_achievements(const Profile &profile) {
+  return (profile.discoveries|(profile.task_items[0]&0xffffffff00000000ull))&AchievementMask;
+}
+inline uint64_t achievement_progress(const Profile &profile) {
+  uint64_t flags=stored_achievements(profile);
   const auto include=[&](Achievement id,bool earned) {if(earned)flags|=achievement_bit(id);};
   include(Achievement::FirstToken,outfitter_earned(profile)>0);
   include(Achievement::DashJump,profile.quest_counts[6]>0);
@@ -274,6 +312,19 @@ inline uint32_t achievement_progress(const Profile &profile) {
   include(Achievement::AllGear,(profile.cosmetics&gear)==gear);
   include(Achievement::FirstTestimony,(profile.discoveries&7)!=0);
   include(Achievement::ThreeTestimonies,(profile.discoveries&7)==7);
+  include(Achievement::NextShift,profile.unlocked>=1);
+  include(Achievement::CrownReached,profile.unlocked>=5);
+  include(Achievement::TrailLeg,profile.endless_best>=RoomsPerLeg);
+  include(Achievement::MailBag,(profile.task_items[0]&7)!=0);
+  include(Achievement::AllMail,(profile.task_items[0]&7)==7);
+  include(Achievement::CrownDown,(flags&achievement_bit(Achievement::CrownClean))||profile.finished);
+  include(Achievement::MugReturned,profile.task_items[1]&side_flag(SideFlag::HeatworksMugReturned));
+  include(Achievement::PowerCut,profile.task_items[1]&side_flag(SideFlag::BasementPowerCut));
+  include(Achievement::RosterChoice,profile.task_items[1]&(side_flag(SideFlag::RosterPosted)|side_flag(SideFlag::RosterSealed)));
+  constexpr uint64_t clues=side_flag(SideFlag::HarborStub)|side_flag(SideFlag::EstatePlate)|side_flag(SideFlag::ArchiveCopy);
+  include(Achievement::PaperTrail,(profile.task_items[1]&clues)==clues);
+  include(Achievement::Detour,std::any_of(profile.route_choices.begin(),profile.route_choices.end(),
+    [](auto choices){return choices!=0;}));
   return flags;
 }
 
@@ -368,7 +419,7 @@ struct RouteView {
   bool branching=false, available=false;
   Text place;
 };
-enum class TourStopSource { Course, Settlement, Basement };
+enum class TourStopSource { Course, Settlement, Basement, NightWindow };
 struct TourStop {
   int district,room;
   double entry_x, entry_floor;
@@ -431,6 +482,8 @@ inline constexpr std::array DebugTour{
     "Wait for a lull. The ice shelf cracks underfoot."}},
   TourStop{0,501,45,39,{"Wejdź na zawiesie i zeskocz na wyższą rampę","Ride the cargo sling and jump to the upper loading ramp"}},
   TourStop{0,504,25,52,{"Piana przy nabrzeżu zapowiada falę", "Foam at the quay warns of a surge"}},
+  TourStop{3,103,103,48,{"Archiwum: odbierz telefon z linii 11","Archive: answer Line 11"},TourStopSource::Settlement},
+  TourStop{2,200+UnnumberedFloor,118,51,{"Piwnica: sprawdź szyb obserwacyjny","Basement: check the observation window"},TourStopSource::NightWindow},
   TourStop{2,200+UnnumberedFloor,79,51,{"Piwnica: przełącz odłącznik przed przewodem","Basement: try the breaker before the live cable"},TourStopSource::Basement},
   TourStop{2,102,61,48,{"Pokaż Grażynie odpis listy lokatorów","Show Grażyna the copy of the roster"},TourStopSource::Settlement},
   TourStop{4,104,104,50,{"Podnieś doniczkę i pomóż ślimakowi","Lift the pot and help the snail"},TourStopSource::Settlement},
@@ -469,6 +522,9 @@ struct View {
   bool branch_at_door = false;
   uint64_t switches = 0;
   uint32_t discoveries = 0;
+  uint64_t awards = 0;
+  int night_beat=0;
+  double night_left=0.;
   std::array<unsigned, 8> quests{};
   std::array<unsigned, 8> quest_counts{};
   std::array<uint64_t,2> task_items{};
