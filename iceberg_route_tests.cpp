@@ -73,10 +73,46 @@ void test_heatworks_route_machinery() {
   require(run.deaths==0&&run.player.grounded&&run.player.x>=119.&&
     std::abs(run.player.y+kPlayerHeight-23.)<.05,"ordinary steering reaches the upper fan catwalk without a dash");
 }
+
+void test_estate_balcony_and_masonry() {
+  constexpr double dt=1./120.;
+  auto room=verified_room(27,73,2);
+  AdventureSession::apply_estate_mechanics(room);
+  require(room.platforms.size()==1&&room.platforms.front().estate_balcony,
+    "the Estate street leads to an upper balcony on a cable");
+  require(room.pulses.size()==1&&room.pulses.front().kind==PulseKind::Masonry,
+    "loose masonry threatens the raised route");
+  auto run=new_state(room);
+  run.spawn_x=34.;run.spawn_y=38.-kPlayerHeight;
+  reset_player(run);
+  for(int i=0;i<2;++i)world_step(run,room,{},dt);
+  for(int i=0;i<110&&run.player.support!=0;++i) {
+    const int steer=run.player.x<37.15?1:run.player.x>37.65?-1:0;
+    world_step(run,room,{.move=steer,.jump_held=true,.jump_pressed=i==0},dt);
+  }
+  require(run.deaths==0&&run.player.support==0,"a normal jump boards the moving balcony");
+  for(int i=0;i<230&&run.player.y>30.5;++i)world_step(run,room,{},dt);
+  require(run.player.y<30.5&&run.player.support==0&&run.deaths==0,
+    "the balcony climbs to the upper floor with a neutral rider");
+  const auto &drop=room.pulses.front();
+  run=new_state(room);
+  run.player.x=drop.area.x+.25;run.player.y=drop.area.bottom()-kPlayerHeight;
+  run.elapsed=drop.period*(1.89-drop.phase);
+  world_step(run,room,{},dt);
+  require(drop.warning(run.elapsed)&&run.deaths==0,"the cornice sheds dust before the masonry falls");
+  run.elapsed=drop.period*(1.01-drop.phase);
+  world_step(run,room,{},dt);
+  require(drop.active(run.elapsed)&&run.deaths==0,"the space below a newly falling block is still clear");
+  run.elapsed=drop.period*(1.22-drop.phase);
+  world_step(run,room,{},dt);
+  require(drop.active(run.elapsed)&&run.deaths==1,"the falling block hits when it reaches the courier");
+}
+
 int main() {
   try {
     test_heatworks_route_machinery();
     test_garden_vine_and_flytrap();
+    test_estate_balcony_and_masonry();
     for(unsigned seed=0;seed<10000;++seed) {
       auto itinerary=iceworld::make_itinerary(seed,0,24,4);
       for(int leg=0;leg<3;++leg) {

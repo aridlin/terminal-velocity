@@ -64,6 +64,8 @@
     const auto add_boost_symbol=[&](const char *symbol){
       if(boost_symbols.find(symbol)==std::string::npos)boost_symbols+=symbol;
     };
+    const bool has_balconies=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &deck){return deck.estate_balcony;});
     const bool has_awnings=std::any_of(grid_.springs.begin(),grid_.springs.end(),
       [](const auto &spring){return spring.awning;});
     constexpr uint32_t awning_color=0xe8c79d;
@@ -83,6 +85,7 @@
     };
     if(grid_.has_hazards())add_feature(tr("░ Ryzyko","░ Hazard"),hazard_color);
     if(remaining_token)add_feature(tr("● Żeton","● Token"),0xedc278);
+    if(has_balconies)add_feature(tr("↕ Balkon","↕ Balcony lift"),0xe5bfa1);
     if(has_awnings)add_feature(tr("↗ Markizy","↗ Awnings"),awning_color);
     if(has_planter)add_feature(tr("▱ Donica","▱ Planter"),planter_color);
     const auto irena=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[&](const auto &node){
@@ -155,6 +158,9 @@
     if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
       [](const PulseHazard &hazard){return hazard.kind==PulseKind::Flytrap;}))
       add_feature(tr("▲ Muchołówka","▲ Flytrap"),0xebc676);
+    if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
+      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Masonry;}))
+      add_feature(tr("▼ Gruz","▼ Falling masonry"),0xec8a86);
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t piston_docked_color=0xb5d599;
     const bool glass_catwalk=grid_.template_id==iceberg::ArchiveGlassRoom&&has_fragile;
@@ -332,7 +338,7 @@
     for(const auto &vent:grid_.pulses) {
       const bool active=vent.active(state_.elapsed);
       if(!active&&!vent.warning(state_.elapsed))continue;
-      const auto &area=vent.area;
+      const auto area=active?vent.damage_area(state_.elapsed):vent.area;
       const int last_row=row(std::nextafter(area.bottom(),area.top()));
       const int last_col=column(std::nextafter(area.right(),area.left()));
       const uint32_t tint=active?burst_tint:warning_tint;
@@ -495,11 +501,16 @@
       const bool active=vent.active(state_.elapsed),warning=vent.warning(state_.elapsed);
       mark(vent.area.x+vent.area.w*.5,vent.area.bottom(),
         vent.kind==PulseKind::Flytrap?(active?"▲":warning?"!":"▽"):
+        vent.kind==PulseKind::Masonry?(active?"▼":warning?"!":"◇"):
         active?"♨":warning?"↑":"╧",active?vent_active:warning?vent_warning:vent_idle);
     }
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];
       mark(x,y,"●",0xedc278);
+    }
+    if(has_balconies)for(const auto &deck:grid_.platforms)if(deck.estate_balcony) {
+      const auto r=deck.at(state_.elapsed);
+      mark(r.x+r.w*.5,r.top(),"↕",0xe5bfa1);
     }
     for(const auto &vine:grid_.vines) {
       const auto [x,y]=vine.tip(state_.elapsed);

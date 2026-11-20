@@ -1,5 +1,44 @@
 // RenderGrid member: suspended homes have lit windows, balcony rails and
 // overhead cables; their silhouettes stay behind solid walking surfaces.
+  void draw_estate_balcony(const MovingPlatform &lift,const Rect &deck) {
+    const double row=aspect_*scale_;
+    const double limit=lift.base.y-lift.dy,center=deck.x+deck.w*.5;
+    const int width=std::max(5,int(deck.w/scale_));
+    const auto brass=lift.stop(state_.elapsed)?0xe5bfa1:0x9b7b85;
+    draw_scenery_pipe({{deck.x,0.},{deck.x,limit-6.},{deck.right()-scale_,limit-6.},
+      {deck.right()-scale_,0.}},0x696072);
+    for(double y=limit-6.;y<deck.y;y+=row) {
+      world_text(deck.x,y,"┆",0x9b7b85);
+      world_text(deck.right()-scale_,y,"┆",0x9b7b85);
+    }
+    for(int i=0;i<width;++i) {
+      const double x=deck.x+i*scale_;
+      const bool end=i==0||i==width-1;
+      world_text(x,deck.y-row,end?"│":i%3==0?"┬":"─",0xa18988);
+      world_text(x,deck.y,i==0?"╞":i==width-1?"╡":"━",brass);
+      world_text(x,deck.y+row,end?"╲":i%4==2?"╿":"▱",0x856b79);
+    }
+    world_text(center,deck.y+row,lift.stop(state_.elapsed)?"●":"○",brass);
+  }
+
+  void draw_falling_masonry(const PulseHazard &cornice) {
+    const bool warns=cornice.warning(state_.elapsed),drops=cornice.active(state_.elapsed);
+    const auto &area=cornice.area;
+    const double row=aspect_*scale_,x=area.x+area.w*.5;
+    draw_scenery_pipe({{area.x-1.6,0.},{area.x-1.6,area.y-row},{area.right()+1.6,area.y-row}},0x78636f);
+    world_art(area.x-.8,area.y-row,{"╞╪═╪╡",warns?" ▒┊▒ ":" ▒╲▒ "},warns?0xe9bd94:0x9e7e86);
+    if(!warns&&!drops)return;
+    const Rect falling=cornice.damage_area(state_.elapsed);
+    const double cycle=cornice.cycle(state_.elapsed);
+    if(drops)world_art(falling.x,falling.y,{"◢▒◣","╰█╯"},0xec8a86);
+    for(int i=0;i<6;++i) {
+      const double age=warns?cycle-PulseHazard::warning_start:cycle;
+      const double distance=std::fmod(age*(warns?13.:22.)+i*.37,1.);
+      const double y=warns?area.y+.2+2.5*distance:falling.y-1.4*distance;
+      world_text(x+std::sin(i*5.3)*(.35+.5*distance),y,i%3==0?"▪":"·",warns?0xf0c49d:0xc98785);
+    }
+  }
+
   void draw_estate_clothesline(const Rect &line,size_t index) {
     const double row=aspect_*scale_;
     const auto count=int(line.w/scale_);

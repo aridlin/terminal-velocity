@@ -295,13 +295,19 @@ public:
     add_heatworks_boiler_wall_fan(room);
     add_heatworks_service_bypass(room);
   }
-  static void apply_expedition_mechanics(EngineGrid &room) {
-    apply_heatworks_mechanics(room);
+  static void apply_estate_mechanics(EngineGrid &room) {
+    if(room.district!=2)return;
     add_expedition_trams(room);
     add_expedition_stairwells(room);
     add_estate_clotheslines(room);
     add_estate_gutters(room);
     add_estate_awnings(room);
+    add_estate_balconies(room);
+    add_estate_masonry(room);
+  }
+  static void apply_expedition_mechanics(EngineGrid &room) {
+    apply_heatworks_mechanics(room);
+    apply_estate_mechanics(room);
     add_expedition_drawers(room);
     add_archive_glass_catwalk(room);
     add_archive_stack_shuttles(room);
@@ -431,6 +437,7 @@ public:
           iceberg::mix(profile.seed ^ unsigned(district*104729+leg*31+room)),district);
         if(profile.layout_version>=4) {
           apply_heatworks_mechanics(grid);
+          apply_estate_mechanics(grid);
           add_garden_vines_and_traps(grid);
         }
       } else {
@@ -1797,13 +1804,16 @@ public:
       for(const auto &vent:grid.pulses) {
         if(vent.active(state.elapsed)&&!vent.active(old_elapsed)) {
           const double distance=std::hypot(vent.area.x-state.player.x,vent.area.y-state.player.y);
-          if(distance<22)audio.play(vent.kind==PulseKind::Flytrap?AudioCue::Wood2:AudioCue::Steam,
-            float(1-distance/22));
+          const auto cue=vent.kind==PulseKind::Flytrap?AudioCue::Wood2:
+            vent.kind==PulseKind::Masonry?AudioCue::Stone2:AudioCue::Steam;
+          if(distance<22)audio.play(cue,float(1-distance/22));
         } else if(vent.warning(state.elapsed)&&!vent.warning(old_elapsed)) {
           const double distance=std::hypot(vent.area.x+vent.area.w*.5-courier.x-courier.w*.5,
                                           vent.area.bottom()-courier.bottom());
           if(vent.kind==PulseKind::Flytrap) {
             if(distance<15.)audio.play(AudioCue::Cloth,float(.65*(1.-distance/15.)));
+          } else if(vent.kind==PulseKind::Masonry) {
+            if(distance<15.)audio.play(AudioCue::Stone1,float(.45*(1.-distance/15.)));
           } else valve_warning=std::max(valve_warning,1.-distance/15.);
         }
       }

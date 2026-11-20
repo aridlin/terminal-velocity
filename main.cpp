@@ -375,7 +375,7 @@ struct MovingPlatform {
   bool chute_leaf = false;
   double swing_pivot = 0, swing_length = 0;
   bool pressure_piston = false;
-  bool seed_tray = false;
+  bool seed_tray = false, estate_balcony = false;
   static constexpr double CrackTime = .55, RestoreTime = 2.9;
   double crack_age(const GameState &state, size_t index, double time) const {
     const double start = state.platform_armed_at[index];
@@ -388,7 +388,7 @@ struct MovingPlatform {
   }
   double offset(double t) const {
     const double cycle=t/period+phase;
-    if(!tram&&!archive_trolley&&!cargo_hoist&&!chute_leaf&&!pressure_piston&&!seed_tray&&swing_length<=0.)
+    if(!tram&&!archive_trolley&&!cargo_hoist&&!chute_leaf&&!pressure_piston&&!seed_tray&&!estate_balcony&&swing_length<=0.)
       return std::sin(cycle*6.283185307179586);
     const double half_cycle=std::fmod(cycle,1.)*2;
     const double travel=std::clamp((std::fmod(half_cycle,1.)-.22)/.78,0.,1.);
@@ -469,7 +469,7 @@ struct GrowingBridge {
     return (switches&flag)==flag?std::floor(area.w*amount):0.;
   }
 };
-enum class PulseKind { Steam, Flytrap };
+enum class PulseKind { Steam, Flytrap, Masonry };
 struct PulseHazard {
   Rect area;
   double period=4,phase=0;
@@ -478,6 +478,12 @@ struct PulseHazard {
   bool active(double t) const {return cycle(t)<.24;}
   static constexpr double warning_start=.82;
   bool warning(double t) const {return cycle(t)>warning_start;}
+  Rect damage_area(double t) const {
+    if(kind!=PulseKind::Masonry)return area;
+    constexpr double height=.85;
+    const double drop=std::clamp(cycle(t)/.21,0.,1.);
+    return {area.x,area.y+(area.h-height)*drop*drop,area.w,height};
+  }
 };
 struct SwingVine {
   double x,y,length,phase;
@@ -1447,7 +1453,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
         }
       }
     }
-  for(const auto &pulse:g.pulses)if(pulse.active(s.elapsed)&&p.rect().intersects(pulse.area)) {
+  for(const auto &pulse:g.pulses)if(pulse.active(s.elapsed)&&p.rect().intersects(pulse.damage_area(s.elapsed))) {
     ++s.deaths;reset_player(s);return;
   }
   if (g.template_id == iceberg::CrownSentinel) {
