@@ -536,11 +536,28 @@ int main(){try {
   add_expedition_trams(tram_room);
   tram_view=new_state(tram_room);
   tram_view.adventure.map=tram_view.adventure.map_room=true;
-  for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
-    RenderGrid(tram_room,tram_view,rows,cols,2).draw();
-    ui_check(count_map("▰",0xefcd74)==3&&count_map("○",0xc2accf)==6&&
-      ui_text(frame).find("○ Przystanek")!=std::string::npos,
-      "the compact Estate room map shows three tram cars and both stops on each track");
+  auto shuttle_room=verified_room(41,73,3);
+  add_archive_stack_shuttles(shuttle_room);
+  for(const auto *room:{&tram_room,&shuttle_room}) {
+    auto ride_view=new_state(*room);
+    ride_view.adventure.map=ride_view.adventure.map_room=true;
+    const uint32_t ready_color=room->district==3?0xb5dba0:0xefcd74;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      ride_view.adventure.language=language;
+      const std::string dock_legend=language==iceberg::Language::English?"● Ready · ○ Empty":"● Gotowe · ○ Pusto";
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        const double half=room->platforms.front().period*.5;
+        for(double time:{0.,half*.3,half}) {
+          ride_view.elapsed=time;
+          RenderGrid(*room,ride_view,rows,cols,2).draw();
+          const auto ready=std::count_if(room->platforms.begin(),room->platforms.end(),
+            [time](const auto &platform){return platform.stop(time)!=0;});
+          ui_check(count_map("▰",0xefcd74)==3&&count_map("●",ready_color)==ready&&
+            count_map("○",0xc2accf)==6-ready&&ui_text(frame).find(dock_legend)!=std::string::npos,
+            "scheduled cars share their exact docking state with the room map");
+        }
+      }
+    }
   }
   auto map_markers=[&](const char *glyph,uint32_t color){
     std::vector<std::pair<size_t,size_t>> cells;
@@ -548,13 +565,13 @@ int main(){try {
       if(frame[y][x].glyph==glyph&&frame[y][x].rgb==color)cells.emplace_back(y,x);
     return cells;
   };
-  const auto first_cars=map_markers("▰",0xefcd74),stops=map_markers("○",0xc2accf);
-  tram_view.elapsed=3;
-  tram_view.adventure.language=iceberg::Language::English;
   RenderGrid(tram_room,tram_view,34,110,2).draw();
-  ui_check(map_markers("▰",0xefcd74)!=first_cars&&map_markers("○",0xc2accf)==stops&&
-    ui_text(frame).find("○ Stop")!=std::string::npos,
-    "tram markers follow the actual cars across their routes");
+  const auto first_cars=map_markers("▰",0xefcd74);
+  const auto first_departures=map_markers("●",0xefcd74);
+  tram_view.elapsed=3;
+  RenderGrid(tram_room,tram_view,34,110,2).draw();
+  ui_check(map_markers("▰",0xefcd74)!=first_cars&&map_markers("●",0xefcd74)!=first_departures,
+    "tram car and boarding markers follow the moving platforms across their routes");
   auto shutter_room=verified_room(69,73,5);
   auto shutter_view=new_state(shutter_room);
   shutter_view.adventure.map=shutter_view.adventure.map_room=true;
