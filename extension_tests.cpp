@@ -200,6 +200,31 @@ int main() {
       "a plain terminal retains aim at the dash character in a batch");
     local.begin_frame();
     require(!local.controls().dash_pressed_direction,"plain terminal clears the consumed aim");
+    local={};
+    local.feed("5\x1b[");
+    auto terminal_actions=local.consume(.01);
+    require(terminal_actions.select_level==5&&!terminal_actions.navigate&&!terminal_actions.pause,
+      "plain terminal retains a split arrow while selecting a menu section");
+    local.feed("A");
+    terminal_actions=local.consume(.01);
+    require(terminal_actions.navigate==-1&&terminal_actions.jump_pressed&&!terminal_actions.confirm,
+      "plain Up navigates and can jump without confirming a menu item");
+    local.feed("eB\tjmpN\x1b[6~\x1bOM");
+    terminal_actions=local.consume(.01);
+    require(terminal_actions.interact&&terminal_actions.inspect&&terminal_actions.journal&&
+      terminal_actions.map&&terminal_actions.menu_request&&terminal_actions.pause&&
+      terminal_actions.new_run&&terminal_actions.tour_page==1&&terminal_actions.confirm,
+      "plain terminal sends the Journey actions its interface advertises");
+    require(!local.consume(.01).confirm,"plain terminal consumes each action once");
+    local.feed("dx\x1b[Oe\x1b[Ia");
+    terminal_actions=local.consume(.01);
+    require(local.focused&&terminal_actions.focus_lost&&!terminal_actions.dash_pressed&&
+      !terminal_actions.interact&&terminal_actions.move==-1,
+      "plain focus loss clears movement and actions until focus comes back");
+    local.feed("\x1b");
+    require(!local.consume(.06).pause&&local.consume(.07).pause&&!local.consume(.01).pause,
+      "a lone Escape pauses once after the split sequence window");
+
     keys.feed("\x1b[97;1:1u\x1b[100;1:1u\x1b[119;1:1u\x1b[115;1:1u");
     auto opposed=keys.consume(.01);
     require(opposed.move==0&&opposed.aim_y==0&&opposed.move_pressed==0&&opposed.aim_pressed==0,
