@@ -695,7 +695,7 @@
     draw_scenery_pipe({{0,25},{41,25},{41,29},{106,29},{106,33},{145,33}},0x516266);
     draw_scenery_pipe({{18,25},{18,39},{21,39},{21,42}},0x697171);
     draw_scenery_pipe({{53,29},{53,38},{55,38},{55,45}},0x536165);
-    draw_scenery_pipe({{91,29},{91,47}},0x536165);
+    draw_scenery_pipe({{91,29},{91,44},{87,44},{87,50.6}},0x536165);
     const bool cut=grid_.switch_flags&iceberg::BasementCircuitCut;
     for(const auto &[x,floor]:std::array<std::pair<int,int>,6>{{{14,45},{32,48},{56,48},{79,51},{103,51},{132,51}}}) {
       world_art(x-2,31,{"╔═══╗","╚═╤═╝"},0x617173);
@@ -756,7 +756,7 @@
         prop_art(x,y,{"╭───╮","│ ▤ │","╞═══╡","  │  "},0x9ca9b2);break;
       case SideStory::BasementBreaker: {
         const bool cut=grid_.switch_flags&iceberg::BasementCircuitCut;
-        draw_scenery_pipe({{x,y-2},{x,39},{91,39}},0x657173);
+        draw_scenery_pipe({{x,y-.5},{x,39},{91,39}},0x657173);
         prop_art(x,y,cut?std::vector<std::string>{"╔═══╗","║ ○ ║","║ ╲ ║","╚═══╝"}:
           std::vector<std::string>{"╔═══╗","║ ● ║","║ ╱ ║","╚═══╝"},cut?0x8a9290:0xd6a76e);
         break;
