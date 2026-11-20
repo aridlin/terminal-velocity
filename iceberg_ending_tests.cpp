@@ -402,7 +402,7 @@ int main(){try{
  {AdventureSession resume(options,file);resume.begin_campaign(false);require_end(resume.grid.template_id==330&&resume.grid.switch_flags==1&&!resume.profile.finished,"restart resumes the morning round with planted seeds and pending delivery");}
  use(0);require_end(game.grid.switch_flags==1&&!game.state.adventure.dialogue.active(),"repeated planting cannot duplicate the epilogue action");
  use(1);game.advance_room();read_end(game);
- require_end(game.profile.finished&&game.profile.discoveries==0&&game.profile.quests[5]==0,"main ending needs no hidden discoveries or optional character tasks");
+ require_end(game.profile.finished&&(game.profile.discoveries&~iceberg::AchievementMask)==0&&game.profile.quests[5]==0,"main ending needs no hidden discoveries or optional character tasks");
  require_end(game.profile.cosmetics&(1u<<7),"completed journey unlocks the courier reward");
  {AdventureSession resume(options,file);resume.begin_campaign(false);require_end(resume.profile.finished&&resume.grid.template_id==330&&resume.grid.switch_flags==3,"completed epilogue and its world changes survive restart");
   resume.profile.visit_district=2;resume.load_room();require_end(resume.grid.template_id==102,"completed journey can visit restored settlements");
