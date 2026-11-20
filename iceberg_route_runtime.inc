@@ -112,7 +112,7 @@
             if(selected<int(leg.size())) {
               const int id=leg[size_t(selected)];
               r.detail_rhythm=iceworld::pattern(id).rhythm;
-              if(show_features&&r.browsed_leg>0)r.detail_feature=iceworld::expedition_feature(id).name;
+              if(show_features)r.detail_feature=iceworld::expedition_feature(id).name;
             }
           };
           if(r.browsed_leg<0)browse(e.completed_legs[size_t(page)]);
