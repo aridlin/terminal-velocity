@@ -178,7 +178,18 @@ public:
     v.pause_on_focus_loss=profile.pause_on_focus_loss;
     v.smooth_camera=profile.smooth_camera;
     state.audio_muted=audio.muted;state.audio_error=audio.error();
-    v.current_objective=iceworld::harbor_objective(grid.template_id,grid.switch_flags).get(profile.language);
+    if(grid.template_id==iceberg::CrownSentinel) {
+      const int hits=state.crown.hits;
+      if(hits<2)v.current_objective=t(
+        "Gdy właz jest zamknięty, omiń oznaczone uderzenia. Po otwarciu zrób zryw przez rdzeń.",
+        "While the hatch is closed, dodge the marked strikes. When it opens, dash through the core.");
+      else if(hits==2)v.current_objective=t(
+        "Ostatnie odsłonięcie jest wysoko. Skocz, a potem zrób zryw przez odsłonięty rdzeń.",
+        "The last opening is high. Jump, then dash through the exposed core.");
+      else if(tour_scene>=0)v.current_objective=t(
+        "Strażnik pokonany. M wraca do menu.","The Sentinel is down. Press M to return to the menu.");
+      else v.current_objective=t("Wysłuchaj zeznań przy latarni.","Hear the testimony at the beacon.");
+    } else v.current_objective=iceworld::harbor_objective(grid.template_id,grid.switch_flags).get(profile.language);
     v.branch_at_door=at_route_fork();
     sync_route_view();
   }

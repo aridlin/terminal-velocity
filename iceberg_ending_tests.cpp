@@ -144,6 +144,9 @@ int main(){try{
   AdventureSession resume(options,file);resume.begin_campaign(false);
   require_end(resume.grid.template_id==iceberg::CrownSentinel&&resume.state.crown.hits==0,
               "reloading an unfinished Crown fight restores the entrance");
+  const auto objective=iceberg::journey_next_step(resume.state.adventure);
+  require_end(objective.find(resume.t("zrób zryw przez rdzeń","dash through the core"))!=std::string::npos,
+              "the Crown campaign journal explains the early counter after reload");
  }
  {
   auto shield=game.state;
@@ -276,6 +279,9 @@ int main(){try{
   AdventureSession last_phase(options,phase_file);last_phase.begin_campaign(false);
   require_end(last_phase.state.crown.hits==2&&last_phase.state.crown.time==0.,
               "the last attack pattern resumes after both shield breaks have saved");
+  const auto objective=iceberg::journey_next_step(last_phase.state.adventure);
+  require_end(objective.starts_with(last_phase.t("Ostatnie odsłonięcie jest wysoko","The last opening is high")),
+              "the Crown campaign journal explains the aerial counter after reload");
   const int last_deaths=last_phase.state.deaths;
   play_crown_sentinel(last_phase);
   require_end(last_phase.state.deaths==last_deaths&&last_phase.state.crown.hits==3&&last_phase.state.adventure.dialogue.active(),
