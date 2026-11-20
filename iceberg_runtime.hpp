@@ -309,6 +309,7 @@ public:
     add_expedition_fragile_pots(room);
     add_garden_hanging_planter(room);
     add_garden_seed_tray(room);
+    add_garden_vines_and_traps(room);
     strengthen_expedition_wind(room);
     add_fractured_ribs(room);
     add_overhang_windbreak(room);
@@ -419,6 +420,7 @@ public:
         int leg=stage==2?0:stage==4?1:2;
         grid=verified_room(route_room_id(leg,room),
           iceberg::mix(profile.seed ^ unsigned(district*104729+leg*31+room)),district);
+        if(profile.layout_version>=4)add_garden_vines_and_traps(grid);
       } else {
         auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
         if(e.itinerary.size()!=iceberg::RoomsPerLeg)
@@ -1783,11 +1785,14 @@ public:
       for(const auto &vent:grid.pulses) {
         if(vent.active(state.elapsed)&&!vent.active(old_elapsed)) {
           const double distance=std::hypot(vent.area.x-state.player.x,vent.area.y-state.player.y);
-          if(distance<22)audio.play(AudioCue::Steam,float(1-distance/22));
+          if(distance<22)audio.play(vent.kind==PulseKind::Flytrap?AudioCue::Wood2:AudioCue::Steam,
+            float(1-distance/22));
         } else if(vent.warning(state.elapsed)&&!vent.warning(old_elapsed)) {
           const double distance=std::hypot(vent.area.x+vent.area.w*.5-courier.x-courier.w*.5,
                                           vent.area.bottom()-courier.bottom());
-          valve_warning=std::max(valve_warning,1.-distance/15.);
+          if(vent.kind==PulseKind::Flytrap) {
+            if(distance<15.)audio.play(AudioCue::Cloth,float(.65*(1.-distance/15.)));
+          } else valve_warning=std::max(valve_warning,1.-distance/15.);
         }
       }
       // A nearby valve clicks once as pressure builds, before any damaging steam.

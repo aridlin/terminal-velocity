@@ -132,7 +132,8 @@ struct Player {
   double wall_lock_left = 0.0;
   double wall_coyote_left = 0;
   int last_wall = 0;
-  int support = -1;
+  int support = -1, vine = -1;
+  double vine_release_left = 0.;
   double drop_left = 0.0;
   double momentum_left = 0, dash_jump_left = 0, wall_bounce_left = 0;
   double lift_x = 0, lift_y = 0, lift_left = 0;
@@ -468,13 +469,26 @@ struct GrowingBridge {
     return (switches&flag)==flag?std::floor(area.w*amount):0.;
   }
 };
+enum class PulseKind { Steam, Flytrap };
 struct PulseHazard {
   Rect area;
   double period=4,phase=0;
+  PulseKind kind=PulseKind::Steam;
   double cycle(double t) const {return std::fmod(t/period+phase,1.);}
   bool active(double t) const {return cycle(t)<.24;}
   static constexpr double warning_start=.82;
   bool warning(double t) const {return cycle(t)>warning_start;}
+};
+struct SwingVine {
+  double x,y,length,phase;
+  std::pair<double,double> tip(double time) const {
+    const double angle=.86*std::sin(time*1.85+phase);
+    return {x+length*std::sin(angle),y+length*std::cos(angle)};
+  }
+  Rect rider(double time) const {
+    const auto [hand_x,hand_y]=tip(time);
+    return {hand_x-kPlayerWidth*.5,hand_y-.18,kPlayerWidth,kPlayerHeight};
+  }
 };
 class EngineGrid {
 public:
@@ -638,6 +652,7 @@ public:
   }
   std::vector<Rect> water_basins; // Scenery behind the walkable surfaces.
   std::vector<PulseHazard> pulses;
+  std::vector<SwingVine> vines;
   std::vector<Gate> gates;
   std::vector<GrowingBridge> growth;
   uint64_t switch_flags = 0, goal_requires = 0, dash_lock = 0, dash_unlock = 0;
@@ -882,6 +897,8 @@ void reset_player(GameState &state) {
   state.player.dash_time_left = 0.0;
   state.player.landing_dash_left = 0.0;
   state.player.ledge.reset();
+  state.player.vine=-1;
+  state.player.vine_release_left=0.;
   state.player.ledge_climb_left = 0.0;
   state.player.ledge_lock_left = 0.0;
   state.player.wall_lock_left = 0.0;
@@ -1309,19 +1326,55 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   bool dashing = p.dash_time_left > 0;
   s.elapsed += dt;
   s.notice = std::max(0.0, s.notice - dt);
-  update_step(s, g, c, dt);
-  p.support = -1;
+  p.vine_release_left=std::max(0.,p.vine_release_left-dt);
+  if(p.vine>=0) {
+    const auto &vine=g.vines[size_t(p.vine)];
+    const Rect next=vine.rider(s.elapsed);
+    const bool clear=ledge_clearance(g,next);
+    if(clear&&!c.jump_pressed&&!c.dash_pressed&&!c.fast_fall&&!c.restart) {
+      p.vx=(next.x-p.x)/dt;p.vy=(next.y-p.y)/dt;
+      p.x=next.x;p.y=next.y;
+      p.landing_dash_left=std::max(0.,p.landing_dash_left-dt);
+    } else {
+      p.vine=-1;
+      p.vine_release_left=.30;
+      if(c.jump_pressed) {
+        // Keep the swing's speed and give a repeatable upward launch.
+        const int direction=c.move?c.move:p.facing;
+        p.vx=std::abs(p.vx)<7.?direction*7.:p.vx;
+        p.vy=std::min(-kJumpSpeed,p.vy);
+        p.momentum_left=.24;
+        c.jump_pressed=false;
+      }
+    }
+  }
+  if(p.vine<0)update_step(s,g,c,dt);
+  p.support=-1;
   if (s.deaths != deaths || c.restart)
     return;
+  if(!s.reference_movement&&p.vine<0&&!p.grounded&&!p.ledge&&p.dash_time_left<=0.&&
+     p.vine_release_left<=0.&&c.jump_held&&!c.fast_fall) {
+    for(size_t i=0;i<g.vines.size();++i) {
+      const auto &vine=g.vines[i];
+      const auto next=vine.rider(s.elapsed);
+      if(std::abs(next.x-p.x)>.85||std::abs(next.y-p.y)>.85||!ledge_clearance(g,next))continue;
+      const auto previous=vine.rider(before_time);
+      p.vine=int(i);p.x=next.x;p.y=next.y;
+      p.vx=(next.x-previous.x)/dt;p.vy=(next.y-previous.y)/dt;
+      p.jump_buffer_left=p.dash_buffer_left=p.coyote_left=p.wall_coyote_left=0.;
+      p.last_wall=0;
+      break;
+    }
+  }
   for (const auto &field : g.air_fields)
-    if (!p.ledge && field.active(g.switch_flags) && p.rect().intersects(field.area) && p.dash_time_left <= 0) {
+    if (p.vine<0 && !p.ledge && field.active(g.switch_flags) && p.rect().intersects(field.area) && p.dash_time_left <= 0) {
       double amount = field.strength(s.elapsed);
       p.vx += field.ax * amount * dt;
       p.vy += field.ay * amount * dt;
       p.vx = clamp(p.vx, -38., 38.);
       p.vy = clamp(p.vy, -38., kMaxFallSpeed);
     }
-  if (!p.ledge && p.drop_left <= 0 && p.vy >= 0) {
+  if (p.vine<0 && !p.ledge && p.drop_left <= 0 && p.vy >= 0) {
     for (size_t i = 0; i < g.platforms.size(); ++i) {
       const auto &platform = g.platforms[i];
       if (!platform.available(s, i, s.elapsed)) continue;
@@ -1359,7 +1412,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   }
   for (size_t i=0;i<g.springs.size();++i) {
     const auto &spring=g.springs[i];
-    if (!p.ledge && p.vy >= 0 && p.rect().intersects(spring)) {
+    if (p.vine<0 && !p.ledge && p.vy >= 0 && p.rect().intersects(spring)) {
       s.last_spring=int(i);
       s.last_spring_time=s.elapsed;
       p.vy = spring.push_y;
