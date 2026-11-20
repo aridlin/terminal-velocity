@@ -429,6 +429,7 @@ function recompute(){
  for(const {key} of pointers.values())if(key!==null)held|=1<<key;
 }
 addEventListener('keydown',e=>{
+ if(importPending)return;
  const shiftKey=e.code==='ShiftLeft'||e.code==='ShiftRight';
  if(!e.repeat){
   if(shiftKey)shiftKeys.add(e.code);
@@ -524,12 +525,12 @@ for(const button of document.querySelectorAll('[data-key]')){
  };
  button.addEventListener('click',e=>{
   // Pointer input is handled by the contact; this also serves keyboard clicks.
-  if(e.detail!==0||button.disabled||accounts?.active||!started)return;
+  if(e.detail!==0||button.disabled||accounts?.active||!started||importPending)return;
   if(!isTimelineDirection(button))canvas.focus();
   tap(action());
  });
  button.addEventListener('pointerdown',e=>{
-  if(e.button!==0||button.disabled||accounts?.active||!started)return;
+  if(e.button!==0||button.disabled||accounts?.active||!started||importPending)return;
   e.preventDefault();
   canvas.focus({preventScroll:true});
   const key=action();
@@ -642,7 +643,7 @@ window.tvSaveReady=()=>{
  flushBrowserStorage();
 };
 function syncSave(){
- if(!started||inTour())return;
+ if(!started||inTour()||importPending)return;
  Module._web_save();
  window.tvSaveReady();
 }
@@ -655,7 +656,7 @@ function updateFocus(hasFocus){
  clearInput();
  // A hidden tab can lose every animation frame between blur and focus.
  // Deliver the focus edge without advancing the game clock.
- if(started&&!accounts?.active)Module._web_tick(0,0,0,cols,rows,0);
+ if(started&&!accounts?.active&&!importPending)Module._web_tick(0,0,0,cols,rows,0);
  syncSave();
 }
 addEventListener('blur',()=>updateFocus(false));

@@ -775,7 +775,28 @@ const server=http.createServer((req,res)=>{
     });
     await stalledPicker.setFiles({name:'slow.iceberg',mimeType:'application/octet-stream',buffer:sample});
     await page.waitForFunction(()=>importPending&&typeof window.releaseSlowImport==='function');
+    await page.keyboard.down('d');
+    const focusDuringRead=await page.evaluate(()=>{
+      let ticks=0,saves=0;
+      const tick=Module._web_tick,save=Module._web_save;
+      Module._web_tick=(...args)=>{ticks++;return tick(...args);};
+      Module._web_save=(...args)=>{saves++;return save(...args);};
+      try {
+        const pauseBefore=uiFlags&2;
+        const inputBefore=held|pressed;
+        window.dispatchEvent(new Event('blur'));
+        window.dispatchEvent(new Event('focus'));
+        return {ticks,saves,inputBefore,pauseChanged:(uiFlags&2)!==pauseBefore};
+      } finally {
+        Module._web_tick=tick;
+        Module._web_save=save;
+      }
+    });
+    await page.keyboard.up('d');
+    assert.deepEqual(focusDuringRead,{ticks:0,saves:0,inputBefore:0,pauseChanged:false},
+      'focus changes during the file read leave gameplay and saves alone');
     await page.waitForFunction(()=>!importPending&&saveStatus.textContent==='Could not read save file — try again',null,{timeout:8000});
+    console.log('PASS an active import ignores gameplay input and focus changes without advancing or saving the game');
     assert.equal(await importButton.isEnabled(),true);
     assert.equal(await page.evaluate(async()=>{
       const confirm=window.confirm;
