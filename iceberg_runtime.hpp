@@ -2073,7 +2073,7 @@ public:
     if(deaths>0&&!retrying) {
       unlock_achievement(iceberg::Achievement::FirstFall);
       if(state.deaths>=5)unlock_achievement(iceberg::Achievement::RoughRoom);
-      if(before.dash_time_left>0.)unlock_achievement(iceberg::Achievement::DashingHeadfirst);
+      if(state.dash_hazard_death)unlock_achievement(iceberg::Achievement::DashingHeadfirst);
     }
     if(deaths>0&&!retrying&&state.deaths>=10)unlock_achievement(iceberg::Achievement::LongWayBack);
     if(deaths==0&&before.ledge_climb_left>0.&&!state.player.ledge&&state.player.grounded)
