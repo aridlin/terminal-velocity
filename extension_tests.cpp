@@ -173,6 +173,33 @@ int main() {
     remote_frame.advance(remote_dash,open,idle,.009);
     require(remote_dash.player.vx>20&&remote_dash.player.vy>20,
             "the full server input path launches a quick downward diagonal dash");
+    auto adventure_open=open;
+    adventure_open.adventure_level=true;
+    keys.feed("\x1b[119;1:1u\x1b[120;1:1u\x1b[119;1:3u\x1b[120;1:3u\x1b[100;1:1u");
+    auto reordered=keys.consume(.01);
+    remote_dash=new_state(adventure_open);
+    remote_frame={};
+    remote_frame.advance(remote_dash,adventure_open,reordered,1./120);
+    require(reordered.move==1&&std::abs(remote_dash.player.vx)<1e-8&&remote_dash.player.vy<-20,
+      "enhanced SSH keeps the aim at the dash event when steering changes in the packet");
+    keys.feed("\x1b[100;1:3u");keys.consume(.01);
+    legacy.feed("sid");
+    reordered=legacy.consume(.01);
+    remote_dash=new_state(adventure_open);
+    remote_frame={};
+    remote_frame.advance(remote_dash,adventure_open,reordered,1./120);
+    require(reordered.move==1&&std::abs(remote_dash.player.vx)<1e-8&&remote_dash.player.vy<-20,
+      "basic SSH keeps an i-key dash vertical when a later d-key starts running");
+    InputState local;
+    local.press('i');local.press('x');local.press('d');
+    reordered=local.controls();
+    remote_dash=new_state(adventure_open);
+    remote_frame={};
+    remote_frame.advance(remote_dash,adventure_open,reordered,1./120);
+    require(reordered.move==1&&std::abs(remote_dash.player.vx)<1e-8&&remote_dash.player.vy<-20,
+      "a plain terminal retains aim at the dash character in a batch");
+    local.begin_frame();
+    require(!local.controls().dash_pressed_direction,"plain terminal clears the consumed aim");
     keys.feed("\x1b[97;1:1u\x1b[100;1:1u\x1b[119;1:1u\x1b[115;1:1u");
     auto opposed=keys.consume(.01);
     require(opposed.move==0&&opposed.aim_y==0&&opposed.move_pressed==0&&opposed.aim_pressed==0,
