@@ -487,6 +487,38 @@ inline void add_estate_clotheslines(EngineGrid &room) {
   else room.platforms.resize(original);
 }
 
+inline void add_estate_balconies(EngineGrid &room) {
+  if(room.district!=2)return;
+  struct Balcony { int room; double x,upper,lower,w; };
+  static constexpr Balcony plans[]{
+    {27,37.3,30.,39.,3.5},{28,104.25,31.,37.,6.5},{29,52.6,36.,43.,5.},
+    {30,65.2,41.,47.,5.6},{32,95.2,36.,43.,6.},{34,114.,27.,34.,6.3}
+  };
+  for(const auto &plan:plans)if(plan.room==room.template_id) {
+    room.platforms.push_back({.base={plan.x,(plan.upper+plan.lower)*.5,plan.w,.5},
+      .dy=(plan.lower-plan.upper)*.5,.period=5.8,.phase=.5,.estate_balcony=true});
+    const auto route=verify_route(room);
+    if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+    else room.platforms.pop_back();
+    break;
+  }
+}
+
+inline void add_estate_masonry(EngineGrid &room) {
+  if(room.district!=2||room.room_role!=iceberg::RoomRole::Traverse)return;
+  const auto &layout=iceworld::pattern(room.template_id);
+  if(iceworld::district_of(layout)!=2||layout.optional.empty())return;
+  const auto &bed=layout.optional.back();
+  // Leave the token at the center of the upper balcony clear. The loose
+  // cornice drops onto the far end just beyond it.
+  const double floor=bed.y;
+  room.pulses.push_back({{bed.x+bed.w-1.85,floor-5.,1.5,5.},
+    4.9+(room.template_id%3)*.3,.33+(room.template_id%4)*.12,PulseKind::Masonry});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.pulses.pop_back();
+}
+
 inline void add_estate_awnings(EngineGrid &room) {
   if(room.district!=2||room.template_id!=35)return;
   // Both canopies sit in the gaps before the upper token shelves.

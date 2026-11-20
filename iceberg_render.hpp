@@ -416,6 +416,7 @@
         continue;
       }
       if(platform.clothesline){draw_estate_clothesline(r,i);continue;}
+      if(platform.estate_balcony){draw_estate_balcony(platform,r);continue;}
       if(platform.archive_rack){draw_archive_rack(platform,r);continue;}
       if(platform.archive_trolley){draw_archive_trolley(r);continue;}
       if(platform.cargo_hoist){draw_heatworks_hoist(platform,r);continue;}
@@ -463,6 +464,7 @@
     }
     for(const auto &pulse:grid_.pulses) {
       if(pulse.kind==PulseKind::Flytrap)draw_flytrap(pulse);
+      else if(pulse.kind==PulseKind::Masonry)draw_falling_masonry(pulse);
       else draw_pulse_vent(pulse);
     }
     for(size_t i=0;i<grid_.enemies.size();++i)if(!state_.defeated[i]) {
