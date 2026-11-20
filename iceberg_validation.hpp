@@ -803,8 +803,8 @@ inline void add_garden_vines_and_traps(EngineGrid &room) {
   const auto &takeoff=layout.optional[0],&landing=layout.optional[1],&bed=layout.optional[2];
   const double left=takeoff.x+takeoff.w-.85;
   const double right=landing.x-.85;
-  const double length=(right-left)*.5/std::sin(.86);
-  const double angle_y=length*std::cos(.86);
+  const double length=(right-left)*.5/std::sin(SwingVine::MaxAngle);
+  const double angle_y=length*std::cos(SwingVine::MaxAngle);
   const SwingVine vine{(left+right)*.5,takeoff.y-4.2-angle_y,length,-1.57};
   // Sample the swept body, including the sag at mid-span. Keep vines out
   // of existing trellises and off the ground on every room variant.
