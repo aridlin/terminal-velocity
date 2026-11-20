@@ -1711,6 +1711,14 @@ int main(){try {
         RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
         ui_check(normalize_ui(ui_text(frame)).find(ending(language==iceberg::Language::English))!=std::string::npos,
           "browsing to room eight previews the exit before the courier arrives");
+        const auto &nodes=frame[6];
+        const auto count_color=[&](uint32_t color) {
+          return std::count_if(nodes.begin(),nodes.end(),[color](const auto &cell){return cell.rgb==color;});
+        };
+        const int node_width=size.first>=56?4:2;
+        ui_check(count_color(0xf1f5ff)==node_width&&count_color(0xffd68a)==node_width&&
+          count_color(0x607887)>node_width,
+          "the browsed room is bright while the courier stays gold and unvisited rooms stay dim");
       }
     }
     if(mode==iceberg::Mode::Trial) {
