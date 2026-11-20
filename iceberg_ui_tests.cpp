@@ -764,6 +764,27 @@ int main(){try {
       }
     }
   }
+  {
+    auto beds=verified_room(54,73,4);
+    add_garden_hanging_planter(beds);
+    auto view=new_state(beds);
+    view.adventure.map=view.adventure.map_room=true;
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      view.adventure.language=language;
+      const bool en=language==iceberg::Language::English;
+      const auto legend=en?"→ Board · ↗ Jump · ○ Wait":"→ Wsiądź · ↗ Skocz · ○ Czekaj";
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        for(const auto [time,stop]:{std::pair{.5,-1},std::pair{2.,0},std::pair{4.,1}}) {
+          view.elapsed=time;
+          RenderGrid(beds,view,rows,cols,2).draw();
+          ui_check(count_map("→",0xc1dfa2)==int(stop==-1)&&count_map("↗",0xc1dfa2)==int(stop==1)&&
+            count_map("○",0x77918b)==2-int(stop!=0)&&count_map("▱",0xcfe5a2)==1&&
+            count_map("@",0xffd68a)==1&&ui_text(frame).find(legend)!=std::string::npos,
+            "the Hanging Beds map matches both planter lamps and keeps the courier visible");
+        }
+      }
+    }
+  }
   auto pots=verified_room(51,73,4);
   add_expedition_fragile_pots(pots);
   const size_t first_pot=pots.platforms.size()-2;

@@ -174,7 +174,7 @@
     const int legend_rows=1+int(feature_legend.size())+int(fork)+int(has_valves)+int(has_chart)+int(has_trams)+int(has_belts)
       +int(bridge_legend)+int(has_return&&!return_only)+int(has_refills)+int(has_vents)+int(has_service_lift)
       +int(has_fragile)+int(has_ferries||has_chute_leaf)+int(has_trolley)+int(has_seam||has_gutter)+int(has_wheel)
-      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(has_pressure_piston||has_seed_tray)+int(lesson_signals)+int(has_chute_leaf);
+      +int(paper_landmarks)+int(tube_landmark)+int(has_cargo_hoist)+int(has_pressure_piston||has_seed_tray)+int(lesson_signals)+int(has_chute_leaf)+int(has_planter);
     const auto title=wrap(grid_.room_name.get(state_.adventure.language),cols_-6);
     const int title_rows=(has_ferries||has_chute_leaf||paper_landmarks||tube_landmark)&&title.size()==1?1:2;
     const int width=std::min(cols_-8,72),map_rows=std::min(height-2-title_rows-legend_rows,18);
@@ -432,7 +432,12 @@
     if(has_wheel)mark(wheel->base.x+wheel->base.w*.5,wheel->base.y,"⊕",wheel_color);
     if(has_planter) {
       const auto deck=planter->at(state_.elapsed);
+      const int stop=planter->stop(state_.elapsed);
       mark(deck.x+deck.w*.5,deck.y,"▱",planter_color);
+      mark(PlanterLowerSignal.first,PlanterLowerSignal.second,stop==-1?"→":"○",
+        stop==-1?PlanterSignalReady:PlanterSignalWaiting,-1);
+      mark(PlanterUpperSignal.first,PlanterUpperSignal.second,stop==1?"↗":"○",
+        stop==1?PlanterSignalReady:PlanterSignalWaiting);
     }
     if(irena!=grid_.interactions.end())
       mark(irena->area.x+irena->area.w*.5,irena->area.y+irena->area.h*.5,"◉",irena_color);
@@ -676,6 +681,17 @@
         const int end=separator+3+int(glyphs(cracking).size());
         paint_text(legend,end," · ",0xc7d9df);
         paint_text(legend,end+3,tr("× Przerwa","× Gap"),gap_color);
+      }
+      ++legend;
+    }
+    if(has_planter) {
+      int x=2;
+      for(const auto &[label,color]:{std::pair{tr("→ Wsiądź","→ Board"),PlanterSignalReady},
+          std::pair{tr("↗ Skocz","↗ Jump"),PlanterSignalReady},
+          std::pair{tr("○ Czekaj","○ Wait"),PlanterSignalWaiting}}) {
+        if(x>2){paint_text(legend,x," · ",0xc7d9df);x+=3;}
+        paint_text(legend,x,label,color);
+        x+=iceberg::cell_length(label);
       }
       ++legend;
     }
