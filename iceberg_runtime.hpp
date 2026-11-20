@@ -423,6 +423,8 @@ public:
     ++room_revision;
     if(mode==iceberg::Mode::Campaign && profile.hidden_room>=0) {
       grid=iceworld::build_hidden(profile.hidden_room);
+      if(profile.hidden_room==iceberg::UnnumberedFloor&&has_side_flag(iceberg::SideFlag::BasementPowerCut))
+        grid.switch_flags|=iceberg::BasementCircuitCut;
     } else if(mode==iceberg::Mode::Campaign && profile.revisit.active) {
       if(profile.revisit.scene==iceberg::SurveyReplay)grid=iceworld::build_survey_course();
       else if(profile.revisit.scene==2)grid=iceworld::build_jubilee();
@@ -1233,6 +1235,13 @@ public:
     }
     const auto &node=grid.interactions[size_t(at)];
     if(node.kind==InteractionKind::SideStory) {
+      if(node.id==int(iceberg::SideStory::BasementBreaker)) {
+        describe(t("Odłącznik piwnicy","Basement breaker"),
+          t("Ten odłącznik zasila lampy za pomostem i zwarty przewód. E — przełącz zasilanie.",
+            "This breaker feeds the lamps beyond the landing and the shorted cable. Press E to flip it."),
+          "⊗",Art::Valve);
+        return;
+      }
       if(node.id==int(iceberg::SideStory::RosterDesk)) {
         describe(roster_desk_title().get(profile.language),roster_desk_body().get(profile.language),"▤",Art::File);
         return;
@@ -1893,11 +1902,12 @@ public:
       if(piston_dock_gain>0.)audio.play(AudioCue::Metal2,float(.7*piston_dock_gain));
       double valve_warning=0.;
       for(const auto &vent:grid.pulses) {
+        if(!vent.powered(grid.switch_flags))continue;
         if(vent.active(state.elapsed)&&!vent.active(old_elapsed)) {
           const double distance=std::hypot(vent.area.x-state.player.x,vent.area.y-state.player.y);
           const auto cue=vent.kind==PulseKind::Flytrap?AudioCue::Wood2:
             vent.kind==PulseKind::Masonry?AudioCue::Stone2:
-            vent.kind==PulseKind::Scanner?AudioCue::Spark:
+            (vent.kind==PulseKind::Scanner||vent.kind==PulseKind::Arc)?AudioCue::Spark:
             vent.kind==PulseKind::Surge?AudioCue::Rumble:AudioCue::Steam;
           if(distance<22)audio.play(cue,float(1-distance/22));
         } else if(vent.warning(state.elapsed)&&!vent.warning(old_elapsed)) {
@@ -1907,7 +1917,7 @@ public:
             if(distance<15.)audio.play(AudioCue::Cloth,float(.65*(1.-distance/15.)));
           } else if(vent.kind==PulseKind::Masonry) {
             if(distance<15.)audio.play(AudioCue::Stone1,float(.45*(1.-distance/15.)));
-          } else if(vent.kind==PulseKind::Scanner) {
+          } else if(vent.kind==PulseKind::Scanner||vent.kind==PulseKind::Arc) {
             if(distance<15.)audio.play(AudioCue::Metal1,float(.5*(1.-distance/15.)));
           } else if(vent.kind==PulseKind::Surge) {
             if(distance<15.)audio.play(AudioCue::Cloth,float(.4*(1.-distance/15.)));

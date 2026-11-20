@@ -507,7 +507,8 @@
       recharging|=spent;
     }
     for(const auto &vent:grid_.pulses) {
-      const bool active=vent.active(state_.elapsed),warning=vent.warning(state_.elapsed);
+      const bool powered=vent.powered(grid_.switch_flags);
+      const bool active=powered&&vent.active(state_.elapsed),warning=powered&&vent.warning(state_.elapsed);
       const auto area=active?vent.damage_area(state_.elapsed):vent.area;
       const char *symbol;
       switch(vent.kind) {
@@ -515,6 +516,7 @@
         case PulseKind::Masonry:symbol=active?"▼":warning?"!":"◇";break;
         case PulseKind::Scanner:symbol=active?"║":warning?"!":"○";break;
         case PulseKind::Surge:symbol=active?"≈":warning?"!":"∿";break;
+        case PulseKind::Arc:symbol=!powered?"○":active?"≈":warning?"!":"⊗";break;
         default:symbol=active?"♨":warning?"↑":"╧";break;
       }
       mark(area.x+area.w*.5,area.bottom(),symbol,active?vent_active:warning?vent_warning:vent_idle);

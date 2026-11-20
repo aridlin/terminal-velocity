@@ -94,6 +94,26 @@ int main() {
       require_quest(!earned(Achievement::WitnessTape),"starting the tape leaves the award pending");
       finish_dialogue(side);
       require_quest(earned(Achievement::WitnessTape),"finishing the tape earns the award");
+      const auto charge_probe=[&]() {
+        auto probe=new_state(side.grid);
+        const auto &arc=side.grid.pulses.front();
+        probe.elapsed=(1.2-arc.phase)*arc.period;
+        probe.player.x=arc.area.x+2.;
+        probe.player.y=arc.area.bottom()-kPlayerHeight;
+        FixedStepper stepper;
+        stepper.advance(probe,side.grid,{},1./120);
+        return probe.deaths;
+      };
+      require_quest(charge_probe()==1,"the exposed cable damages the courier while energized");
+      scene(SideStory::BasementBreaker);
+      require_quest(side.has_side_flag(iceberg::SideFlag::BasementPowerCut)&&charge_probe()==0,
+        "the breaker cuts collision damage as well as the basement lights");
+      side.load_room(true);
+      require_quest(charge_probe()==0,"the breaker stays off when the basement is reloaded");
+      scene(SideStory::BasementBreaker);
+      require_quest(!side.has_side_flag(iceberg::SideFlag::BasementPowerCut)&&charge_probe()==1,
+        "restoring power reactivates the cable in the same room");
+      scene(SideStory::BasementBreaker);
       read_document(SideStory::Roster,iceberg::SideFlag::Roster);
       require_quest(!earned(Achievement::BelowTheRoster),"copying the roster leaves its return award pending");
       const auto return_shaft=std::find_if(side.grid.interactions.rbegin(),side.grid.interactions.rend(),
