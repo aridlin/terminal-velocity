@@ -1152,10 +1152,14 @@ int terminal_window_main(int argc,char **argv) {
         }
         if(args.smoke&&frames==60) {
           for(auto type:{SDL_KEYDOWN,SDL_KEYUP})
-            for(auto key:{SDL_SCANCODE_LEFT,SDL_SCANCODE_DOWN,SDL_SCANCODE_X}) {
+            for(auto key:{SDL_SCANCODE_RIGHT,SDL_SCANCODE_DOWN,SDL_SCANCODE_X}) {
               SDL_Event tap{};tap.type=type;tap.key.keysym.scancode=key;
               SDL_PushEvent(&tap);
             }
+          for(auto type:{SDL_KEYDOWN,SDL_KEYUP}) {
+            SDL_Event steer{};steer.type=type;steer.key.keysym.scancode=SDL_SCANCODE_LEFT;
+            SDL_PushEvent(&steer);
+          }
         }
         if(args.smoke&&(frames==70||frames==71||frames==80)) {
           const auto push_key=[](SDL_Scancode key) {
@@ -1195,7 +1199,12 @@ int terminal_window_main(int argc,char **argv) {
           }
           held[key]=true;
           c.jump_pressed|=key==SDL_SCANCODE_SPACE||key==SDL_SCANCODE_W||key==SDL_SCANCODE_UP;
-          c.dash_pressed|=key==SDL_SCANCODE_X||key==SDL_SCANCODE_LSHIFT||key==SDL_SCANCODE_RSHIFT;
+          if(key==SDL_SCANCODE_X||key==SDL_SCANCODE_LSHIFT||key==SDL_SCANCODE_RSHIFT) {
+            c.dash_pressed=true;
+            c.dash_pressed_direction=std::pair{
+              axis_on_press(left(),right(),c.move_pressed.value_or(0)),
+              axis_on_press(up(),down(),c.aim_pressed.value_or(0))};
+          }
           c.interact|=key==SDL_SCANCODE_E||key==SDL_SCANCODE_F;
           c.inspect|=key==SDL_SCANCODE_B;
           c.confirm|=is_confirm_key(key);
@@ -1237,7 +1246,7 @@ int terminal_window_main(int argc,char **argv) {
         const bool fresh_focus_move=c.move==1&&c.move_pressed==1;
         if(args.smoke){
           if(frames==60)smoke_tap=c.move==0&&c.aim_y==0&&c.dash_pressed&&
-            c.move_pressed==-1&&c.aim_pressed==1;
+            c.move_pressed==-1&&c.aim_pressed==1&&c.dash_pressed_direction==std::pair{1,1};
           c.move=1;c.jump_held=true;
         }
         int w,h;SDL_GetRendererOutputSize(ren,&w,&h);

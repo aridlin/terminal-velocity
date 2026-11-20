@@ -58,6 +58,15 @@ int main() {
     check(!c.move_pressed&&!c.aim_pressed,"Windows console direction edges are consumed once");
     step.advance(dash,open,c,.009);
     check(dash.player.vx<-20&&dash.player.vy>20,"the released keys launch a downward left dash");
+    input.clear();
+    key(VK_UP,true);key('X',true);key(VK_UP,false);key('X',false);key('D',true);
+    c=input.consume();
+    open.adventure_level=true;
+    dash=new_state(open);step={};
+    step.advance(dash,open,c,1./120);
+    check(c.move==1&&std::abs(dash.player.vx)<1e-8&&dash.player.vy<-20,
+          "Windows console preserves aim across events in the same read");
+    input.clear();
     key(VK_LEFT, true);
     key('D', true);
     key(VK_UP, true);
@@ -161,18 +170,18 @@ int main() {
         native_poll = written == 3 && from_console.move == 1 &&
                       from_console.jump_pressed && !from_console.jump_held;
         native.clear();
-        const WORD chord[]={VK_LEFT,VK_DOWN,'X'};
-        INPUT_RECORD taps[6]{};
+        const WORD code[]={VK_LEFT,VK_DOWN,'X',VK_LEFT,VK_DOWN,'X',VK_RIGHT};
+        INPUT_RECORD taps[std::size(code)]{};
         for(size_t i=0;i<std::size(taps);++i) {
           taps[i].EventType=KEY_EVENT;
-          taps[i].Event.KeyEvent.wVirtualKeyCode=chord[i%3];
-          taps[i].Event.KeyEvent.bKeyDown=i<3;
+          taps[i].Event.KeyEvent.wVirtualKeyCode=code[i];
+          taps[i].Event.KeyEvent.bKeyDown=i<3||i==6;
         }
-        const bool queued=WriteConsoleInputW(console_input,taps,6,&written)!=FALSE;
+        const bool queued=WriteConsoleInputW(console_input,taps,std::size(taps),&written)!=FALSE;
         from_console=native.poll(.01);
-        native_dash=queued&&written==6&&from_console.dash_pressed&&
-          from_console.move==0&&from_console.aim_y==0&&
-          from_console.move_pressed==-1&&from_console.aim_pressed==1;
+        native_dash=queued&&written==std::size(taps)&&from_console.dash_pressed&&
+          from_console.move==1&&from_console.aim_y==0&&
+          from_console.dash_pressed_direction==std::pair{-1,1};
       }
       std::cout.rdbuf(old_buffer);
       DWORD after_input = 0, after_output = 0;

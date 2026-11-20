@@ -172,14 +172,19 @@ private:
       edges_.jump_pressed = true;
       jump_left_ = .18;
     }
-    if (k == 'x' || k == 'k' || k == 57441 || k == 57447)
+    if (k == 'x' || k == 'k' || k == 57441 || k == 57447) {
       edges_.dash_pressed = true;
+      edges_.dash_pressed_direction=enhanced?std::pair{
+        axis_on_press(held('a'),held('d'),edges_.move_pressed.value_or(0)),
+        axis_on_press(held('w'),held('s'),edges_.aim_pressed.value_or(0))}:std::pair{direction_,0};
+    }
     // Explicit vertical dash edges keep the full traversal vocabulary usable
     // on terminals without key-release events. A/D still supplies diagonals;
     // S then I/O produces a vertical dash without changing the latched run.
     if (!protocol && (k == 'i' || k == 'o')) {
       edges_.dash_pressed = true;
       edges_.aim_y = k == 'i' ? -1 : 1;
+      edges_.dash_pressed_direction=std::pair{direction_,edges_.aim_y};
     }
     if (k == 'q' || k == 3)
       edges_.quit = true;

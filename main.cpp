@@ -165,6 +165,11 @@ struct Controls {
   bool focus_lost = false;
 };
 
+// Preserve a short tap when neither direction is held at the dash press.
+constexpr int axis_on_press(bool negative,bool positive,int tapped) {
+  return negative||positive?int(positive)-int(negative):tapped;
+}
+
 struct HeldKeys {
   bool left = false;
   bool right = false;
@@ -176,9 +181,10 @@ struct HeldKeys {
   bool dash_pressed = false;
   bool restart_pressed = false;
   bool quit_pressed = false;
+  std::optional<std::pair<int,int>> dash_direction{};
 
   Controls controls() const {
-    return Controls{
+    Controls controls{
         static_cast<int>(right) - static_cast<int>(left),
         jump,
         jump_pressed,
@@ -188,6 +194,8 @@ struct HeldKeys {
         quit_pressed,
         static_cast<int>(down) - static_cast<int>(up),
     };
+    controls.dash_pressed_direction=dash_direction;
+    return controls;
   }
 };
 
@@ -204,12 +212,14 @@ struct InputState {
   bool dash_pressed = false;
   bool restart_pressed = false;
   bool quit_pressed = false;
+  std::optional<std::pair<int,int>> dash_direction{};
 
   void begin_frame() {
     tour_page = 0;
     jump_pressed = false;
     confirm_pressed = false;
     dash_pressed = false;
+    dash_direction.reset();
     restart_pressed = false;
     quit_pressed = false;
   }
@@ -244,6 +254,7 @@ struct InputState {
     case 'k':
       if (dash <= 0.0) {
         dash_pressed = true;
+        dash_direction=std::pair{int(right>0.)-int(left>0.),int(down>0.)-int(up>0.)};
       }
       dash = kInputHold;
       break;
@@ -259,7 +270,7 @@ struct InputState {
   }
 
   Controls controls() const {
-    return Controls{
+    Controls controls{
         static_cast<int>(right > 0.0) - static_cast<int>(left > 0.0),
         jump > 0.0,
         jump_pressed,
@@ -269,6 +280,8 @@ struct InputState {
         quit_pressed,
         static_cast<int>(down > 0.0) - static_cast<int>(up > 0.0),
     };
+    controls.dash_pressed_direction=dash_direction;
+    return controls;
   }
 
   void decay(double dt) {
@@ -1898,6 +1911,7 @@ public:
 
   HeldKeys poll() {
     pressed_.fill(false);
+    std::optional<std::pair<int,int>> dash_direction;
     input_event event{};
     for (size_t device = 0; device < fds_.size(); ++device) {
       const int fd = fds_[device];
@@ -1918,8 +1932,17 @@ public:
           }
           if (event.type == EV_KEY && event.code < KEY_CNT) {
             if (event.value == 1) {
-              pressed_[event.code] = pressed_[event.code] || !key(event.code);
+              const bool fresh=!key(event.code);
+              pressed_[event.code] = pressed_[event.code] || fresh;
               device_keys_[device][event.code] = true;
+              if(fresh&&(event.code==KEY_X||event.code==KEY_K||
+                         event.code==KEY_LEFTSHIFT||event.code==KEY_RIGHTSHIFT)) {
+                dash_direction=std::pair{
+                  axis_on_press(key(KEY_A)||key(KEY_LEFT),key(KEY_D)||key(KEY_RIGHT),
+                    int(press(KEY_D)||press(KEY_RIGHT))-int(press(KEY_A)||press(KEY_LEFT))),
+                  axis_on_press(key(KEY_W)||key(KEY_UP),key(KEY_S)||key(KEY_DOWN),
+                    int(press(KEY_S)||press(KEY_DOWN))-int(press(KEY_W)||press(KEY_UP)))};
+              }
             } else if (event.value == 0) {
               device_keys_[device][event.code] = false;
             }
@@ -1947,6 +1970,7 @@ public:
             press(KEY_RIGHTSHIFT),
         press(KEY_R),
         press(KEY_Q),
+        dash_direction,
     };
   }
 

@@ -48,6 +48,7 @@ class TuiInput {
   std::array<bool, 256> keys_{};
   std::array<bool, 256> pressed_{};
   bool focus_lost_ = false;
+  std::optional<std::pair<int,int>> dash_direction_{};
   bool key(unsigned k) const { return k < keys_.size() && keys_[k]; }
   bool press(unsigned k) const { return k < pressed_.size() && pressed_[k]; }
 
@@ -66,6 +67,7 @@ public:
   void clear() {
     keys_.fill(false);
     pressed_.fill(false);
+    dash_direction_.reset();
   }
   bool basic_ssh() const { return false; }
   std::string label() const { return "Windows console • press/release"; }
@@ -82,9 +84,18 @@ public:
       if (k >= keys_.size())
         return;
       bool down = event.Event.KeyEvent.bKeyDown != FALSE;
-      if (down && !keys_[k])
-        pressed_[k] = true;
+      const bool fresh=down&&!keys_[k];
       keys_[k] = down;
+      if(fresh) {
+        pressed_[k]=true;
+        if(k==VK_SHIFT||k==VK_LSHIFT||k==VK_RSHIFT||k=='X'||k=='K') {
+          dash_direction_=std::pair{
+            axis_on_press(key('A')||key(VK_LEFT),key('D')||key(VK_RIGHT),
+              int(press('D')||press(VK_RIGHT))-int(press('A')||press(VK_LEFT))),
+            axis_on_press(key('W')||key(VK_UP),key('S')||key(VK_DOWN),
+              int(press('S')||press(VK_DOWN))-int(press('W')||press(VK_UP)))};
+        }
+      }
     }
   }
   Controls consume() {
@@ -106,8 +117,8 @@ public:
       c.aim_pressed=up&&down?0:c.navigate;
     c.jump_held = key(VK_SPACE) || up;
     c.jump_pressed = press(VK_SPACE) || tap_up;
-    c.dash_pressed = press(VK_SHIFT) || press(VK_LSHIFT) || press(VK_RSHIFT) ||
-                     press('X') || press('K');
+    c.dash_pressed = dash_direction_.has_value();
+    c.dash_pressed_direction = dash_direction_;
     c.fast_fall = down;
     c.fast_fall_pressed = tap_down;
     c.restart = press('R');
@@ -133,6 +144,7 @@ public:
     c.journal = press(VK_TAB);
     c.debug = press(VK_F3);
     pressed_.fill(false);
+    dash_direction_.reset();
     return c;
   }
   Controls poll(double) {
