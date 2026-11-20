@@ -891,6 +891,35 @@ int main(){try {
       }
     }
   }
+  {
+    auto basement=iceworld::build_hidden(iceberg::UnnumberedFloor);
+    auto view=new_state(basement);
+    view.adventure.map=view.adventure.map_room=true;
+    const auto &cable=basement.pulses.front();
+    for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
+      view.adventure.language=language;
+      const bool en=language==iceberg::Language::English;
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        for(auto [phase,tint]:{std::pair{.9,0x4a3d2bu},std::pair{.1,0x59303au}}) {
+          view.elapsed=(1.+phase-cable.phase)*cable.period;
+          const auto tinted=[&] {
+            for(const auto &line:frame)
+              for(const auto &cell:line)
+                if(cell.background==tint)return true;
+            return false;
+          };
+          basement.switch_flags=0;
+          RenderGrid(basement,view,rows,cols,2).draw();
+          ui_check(tinted(),"a live cable tints its warning or active footprint");
+          basement.switch_flags=iceberg::BasementCircuitCut;
+          RenderGrid(basement,view,rows,cols,2).draw();
+          ui_check(!tinted(),"a cut cable never tints the minimap as dangerous");
+          ui_check(ui_text(frame).find(en?"○ Power off":"○ Brak zasilania")!=std::string::npos,
+            "the minimap identifies the powered-off cable in both languages");
+        }
+      }
+    }
+  }
   vent_view.adventure.map=false;
   for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
     vent_view.camera_y=vent.area.y-3.3;
