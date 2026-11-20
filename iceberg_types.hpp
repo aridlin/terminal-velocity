@@ -119,7 +119,7 @@ struct Record {
 struct SeedRecord {uint32_t seed=1;int district=0;unsigned version=ContentVersion;Record record;};
 struct Expedition {
   unsigned layout_version = ContentVersion;
-  bool active = false;
+  bool active = false, at_exit = false;
   uint32_t seed = 1, origin_seed = 1;
   int district = 0, room = 0, depth = 0, checkpoint = 0;
   uint64_t collected = 0, switches = 0;

@@ -17,6 +17,8 @@ class SaveStore {
   // saved parent room. Their own writes use -1.
   static constexpr const char *BasementRoomToken="-01";
   static constexpr const char *NightPlatformToken="-001";
+  // Older readers parse 01 as true and normalize it to 1 when saving.
+  static constexpr const char *ExpeditionExitToken="01";
   static constexpr size_t max_history_bytes(size_t legs) {return 64+legs*(4*RoomsPerLeg+1);}
   static bool sync_file(const std::filesystem::path &file) {
 #ifdef _WIN32
@@ -134,13 +136,17 @@ class SaveStore {
       if(hidden_room==NightPlatformToken)q.hidden_room=NightPlatform;
     }
     for (auto &e : q.expeditions) {
-      if (!(data >> e.active >> e.seed >> e.district >> e.room >> e.depth >> e.checkpoint >>
+      std::string active;
+      if (!(data >> active >> e.seed >> e.district >> e.room >> e.depth >> e.checkpoint >>
         e.collected >> e.switches >> e.room_seconds >> e.seconds >> e.room_deaths >> e.deaths >> e.treasures >> count)) return false;
       if (e.district < 0 || e.district >= DistrictCount || e.room < 0 || e.room >= RoomsPerLeg ||
         e.depth < 0 || e.depth > MaxExpeditionDepth || e.checkpoint < 0 || e.checkpoint > 64 ||
         e.room_deaths < 0 || e.deaths < 0 || e.treasures < 0 ||
         !std::isfinite(e.room_seconds) || e.room_seconds < 0 || e.room_seconds > 1e9 ||
         !std::isfinite(e.seconds) || e.seconds < 0 || e.seconds > 1e9 || count > 512) return false;
+      std::istringstream active_value(active);
+      if(!(active_value>>e.active)||!active_value.eof())return false;
+      e.at_exit=magic=="TVICE6"&&active==ExpeditionExitToken;
       e.itinerary.resize(count);
       for (int &id : e.itinerary) if (!(data >> id) || !valid_room_id(id)) return false;
     }
@@ -305,7 +311,7 @@ class SaveStore {
     else body << p.hidden_room;
     body << ' ' << p.visit_district << '\n';
     for (const auto &e : p.expeditions) {
-      body << e.active << ' ' << e.seed << ' ' << e.district << ' ' << e.room << ' ' << e.depth << ' ' << e.checkpoint << ' '
+      body << (e.active?(e.at_exit?ExpeditionExitToken:"1"):"0") << ' ' << e.seed << ' ' << e.district << ' ' << e.room << ' ' << e.depth << ' ' << e.checkpoint << ' '
         << e.collected << ' ' << e.switches << ' ' << e.room_seconds << ' ' << e.seconds << ' ' << e.room_deaths << ' '
         << e.deaths << ' ' << e.treasures << ' ' << e.itinerary.size() << '\n';
       for (int id : e.itinerary) body << id << ' ';
