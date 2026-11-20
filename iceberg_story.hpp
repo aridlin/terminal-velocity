@@ -309,6 +309,10 @@ inline constexpr DialogueLine ArchiveCopiesOpening{4,{
   "Na górnej kartce stoi: klatka jedenasta, pusta. Na kalce widać dopiski listonosza. Trzy podpisy z zeszłego tygodnia, wszystkie z tej samej klatki.",
   "The top sheet says stairwell eleven is empty. The carbon copy has the postman's notes. Three signatures from last week, all from the same stairwell."}};
 
+inline constexpr DialogueLine ArchiveShelterOpening{4,{
+  "Po powodzi Róża pomogła mi spisać, kto spał w czytelni. Następnego dnia kierownik chciał naliczyć im opłaty za nocleg. Schowałam spis tutaj, pod pustą kartką.",
+  "After the flood, Róża helped me list who slept in the reading room. The next day the manager wanted to charge them for staying. I hid the register up here under a blank sheet."}};
+
 inline constexpr Text ArchiveDryingLetterDetail{
   "Na mokrej kopercie został tylko inicjał. Pod sznurkiem ktoś wsunął paragon z piekarni, z adresem i numerem klatki.",
   "Only an initial survived on the wet envelope. Somebody slipped a bakery receipt under the string with the address and stairwell number."

@@ -84,7 +84,8 @@
     if(has_awnings)add_feature(tr("↗ Markizy","↗ Awnings"),awning_color);
     if(has_planter)add_feature(tr("▱ Donica","▱ Planter"),planter_color);
     const auto irena=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[&](const auto &node){
-      return grid_.template_id==44&&node.kind==InteractionKind::Npc&&node.id==4;
+      return (grid_.template_id==44||grid_.template_id==iceberg::ArchiveGlassRoom)&&
+        node.kind==InteractionKind::Npc&&node.id==4;
     });
     const auto irena_color=iceberg::Npcs[4].color;
     if(irena!=grid_.interactions.end())add_feature("◉ Irena",irena_color);

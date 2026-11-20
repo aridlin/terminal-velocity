@@ -1123,6 +1123,9 @@ public:
       if(grid.template_id==44&&node.id==4)
         v.inspect_body=t("Irena porównuje spis lokatorów z odpisem. Obok jest przekaźnik taśmy. E — porozmawiaj.",
           "Irena is checking the tenant register against a carbon copy. The belt relay is nearby. Press E to talk.");
+      if(grid.template_id==iceberg::ArchiveGlassRoom&&node.id==4)
+        v.inspect_body=t("Irena przytrzymuje otwarty spis pustą kartką. Na widocznej stronie jest data powodzi. E — porozmawiaj.",
+          "Irena holds the register open with a blank sheet. The visible page is dated the night of the flood. Press E to talk.");
       v.inspect_icon="◉";break;
     case InteractionKind::DockWorker:
       v.inspect_title=t("Doker","Dockworker");
@@ -1249,6 +1252,10 @@ public:
       }
       if(grid.template_id==44&&node.id==4) {
         talk({iceberg::ArchiveCopiesOpening},0,iceberg::ArchiveCopiesReplyScene);
+        return;
+      }
+      if(grid.template_id==iceberg::ArchiveGlassRoom&&node.id==4) {
+        talk({iceberg::ArchiveShelterOpening},0,iceberg::ArchiveShelterReplyScene);
         return;
       }
       if(grid.template_id==330) {
