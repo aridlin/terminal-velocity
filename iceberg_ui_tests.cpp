@@ -1745,7 +1745,7 @@ int main(){try {
   down.navigate=1;
   tour_repeat.tick(down,0);
   down.navigate=0;
-  for(int i=0;i<40;++i)tour_repeat.tick(down,.1);
+  for(int i=0;i<last+10;++i)tour_repeat.tick(down,.1);
   ui_check(picker.picker_choice==last,"held Down reaches the end of the Tour picker and stops there");
   down.navigate=1;
   tour_repeat.tick(down,0);
@@ -1754,10 +1754,10 @@ int main(){try {
   Controls page_up;page_up.tour_page=-1;
   tour_repeat.tick(page_down,0,true,34,24);
   ui_check(picker.picker_choice==12,"Page Down moves by the compact Tour list height without starting a sample");
-  tour_repeat.tick(page_down,0,true,34,24);
-  tour_repeat.tick(page_down,0,true,34,24);
+  const int compact_pages=last/iceberg::tour_page_size(24)+1;
+  for(int i=0;i<compact_pages;++i)tour_repeat.tick(page_down,0,true,34,24);
   ui_check(picker.picker_choice==last,"paging forward clamps at the final stop");
-  for(int i=0;i<4;++i)tour_repeat.tick(page_up,0,true,34,24);
+  for(int i=0;i<compact_pages;++i)tour_repeat.tick(page_up,0,true,34,24);
   ui_check(picker.picker_choice==0,"paging backward clamps at the first stop");
   tour_repeat.tick(page_down,0,true,110,34);
   ui_check(picker.picker_choice==22,"the wide Tour picker pages by its own visible row count");

@@ -332,7 +332,7 @@
     for(int dy=0;dy<3;++dy)for(int dx=-2;dx<=2;++dx) {
       static constexpr const char *casework[3][5]={
         {"╭","─","─","─","╮"},{"╡"," "," "," ","│"},{"╰","─","─","─","╯"}};
-      steel(dial+dx,dial_y+dy,casework[dy][dx],iron);
+      steel(dial+dx,dial_y+dy,casework[dy][dx+2],iron);
     }
     steel(dial,dial_y+1,pressure>.55?"╱":pressure>.18?"│":"╲",pressure>.55?0xb4e3e3:0xb7a788);
   }
