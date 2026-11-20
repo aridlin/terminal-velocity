@@ -1503,7 +1503,7 @@ void burst(GameState &s, double x, double y, int count, bool gold) {
 }
 void feedback_step(GameState &s, const EngineGrid &g, const Player &before,
                    int old_deaths, int old_pickups, int old_checkpoint,
-                   bool was_won, double dt, GameAudio &audio) {
+                   bool was_won, double old_elapsed, double dt, GameAudio &audio) {
   dt = clamp(dt, 0., .1);
   for (auto &m : s.motes) {
     m.life -= dt;
@@ -1525,11 +1525,15 @@ void feedback_step(GameState &s, const EngineGrid &g, const Player &before,
     s.afterimages.clear();
     return;
   }
-  if (p.dash_time_left > before.dash_time_left) {
+  if (s.last_spring>=0 && s.last_spring_time>old_elapsed) {
+    const auto &spring=g.springs[size_t(s.last_spring)];
+    audio.play(AudioCue::Spring,spring.awning?.8f:1.f);
+    if(spring.awning)audio.play(AudioCue::Cloth,.85f);
+  } else if (p.dash_time_left > before.dash_time_left) {
     audio.play(AudioCue::Dash);
     burst(s, p.x, p.y + .8, 6, true);
   } else if (before.vy >= -1 && p.vy < -8 && !p.grounded) {
-    audio.play(p.vy < -27 ? AudioCue::Spring : AudioCue::Jump);
+    audio.play(AudioCue::Jump);
   }
   if (!before.grounded && p.grounded && before.vy > 4) {
     audio.play(AudioCue::Land);
@@ -2965,9 +2969,10 @@ std::filesystem::path audio_directory() {
       int deaths = state.deaths, pickups = state.sweets_count(),
           checkpoint = state.checkpoint;
       bool was_won = state.won;
+      const double old_elapsed=state.elapsed;
       stepper.advance(state, grid, c, dt);
       feedback_step(state, grid, before, deaths, pickups, checkpoint, was_won,
-                    dt, audio);
+                    old_elapsed, dt, audio);
       if (!demo)
         finish_chapter(state, grid, progress);
     } else

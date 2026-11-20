@@ -124,6 +124,45 @@ int main() {
               << " rms=" << std::sqrt(energy / frames.size()) << '\n';
     check(peak < .98 && energy > .001,
           "conservative overlapping audio mix leaves headroom");
+    // Split a frame across a jump apex and a real pad contact. Velocity
+    // sampling alone cannot identify the spring in this frame.
+    {
+      auto roof=verified_room(35,73,2);
+      add_estate_awnings(roof);
+      check(roof.springs.size()==2,"spring audio test uses the actual Estate awning");
+      auto launch=new_state(roof);
+      const auto &awning=roof.springs.front();
+      launch.player.x=awning.x+.7;
+      launch.player.y=awning.y-kPlayerHeight+.035;
+      launch.player.vy=-1.25;
+      launch.elapsed=1.;
+      const auto before=launch.player;
+      const double before_contact=launch.elapsed;
+      FixedStepper step;
+      step.advance(launch,roof,{},.1);
+      check(launch.last_spring==0&&launch.last_spring_time>before_contact&&launch.deaths==0,
+            "the awning contact occurs after the apex inside one rendered frame");
+
+      GameAudio actual,expected;
+      actual.init("assets/audio",false,true);
+      expected.init("assets/audio",false,true);
+      feedback_step(launch,roof,before,0,0,0,false,before_contact,.1,actual);
+      expected.play(AudioCue::Spring,.8f);
+      expected.play(AudioCue::Cloth,.85f);
+      std::vector<float> played(48000*2),reference(played.size());
+      check(actual.render(played.data(),played.size()/2)&&expected.render(reference.data(),reference.size()/2),
+            "the rebound and fabric recordings mix through the real audio engine");
+      double signal=0.,difference=0.;
+      for(size_t i=0;i<played.size();++i) {
+        signal+=std::abs(reference[i]);
+        difference+=std::abs(played[i]-reference[i]);
+      }
+      check(signal>1.&&difference<.001,"an awning contact plays the rebound and fabric exactly once");
+      feedback_step(launch,roof,launch.player,0,0,0,false,launch.elapsed,.1,actual);
+      check(actual.render(played.data(),played.size()/2)&&
+            std::all_of(played.begin(),played.end(),[](float value){return std::abs(value)<.000001f;}),
+            "a later feedback frame does not replay the same launch");
+    }
     sound.set_climax(true,1);
     for(int block=0;block<150;++block) {
       sound.update(AudioScene::Play,1,.02);
