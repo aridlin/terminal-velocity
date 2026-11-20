@@ -121,7 +121,7 @@ EMSCRIPTEN_KEEPALIVE void web_select_expedition_room(int index) {
   web_game->navigation_repeat_direction=0;
   web_game->sync_view();
 }
-EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int cols,int rows,int focused) {
+EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int cols,int rows,int focused,unsigned dash_aim) {
   if(!web_game)return;
   auto h=[&](int key){return bool(held&(1u<<key));};auto p=[&](int key){return bool(pressed&(1u<<key));};
   auto direction_pressed=[&](int negative,int positive)->std::optional<int>{
@@ -133,6 +133,10 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   c.move_pressed=direction_pressed(0,1);c.aim_pressed=direction_pressed(2,3);
   c.jump_held=h(4)||h(2);c.jump_pressed=p(4)||p(2);c.dash_pressed=p(5);c.fast_fall=h(3);
   c.fast_fall_pressed=p(3);
+  if(c.dash_pressed&&dash_aim>=1&&dash_aim<=9) {
+    const int direction=int(dash_aim)-1;
+    c.dash_pressed_direction=std::pair{direction%3-1,direction/3-1};
+  }
   c.interact=p(6);c.inspect=p(7);c.confirm=p(8);c.pause=p(9);c.journal=p(10);c.map=p(11);
   c.menu_request=p(12);c.restart=p(13);c.new_run=p(14);c.language=p(15);c.mute_audio=p(16);
   c.navigate=int(p(3))-int(p(2));

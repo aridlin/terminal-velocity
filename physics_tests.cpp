@@ -122,6 +122,12 @@ int main() {
       input_frames.advance(player,adventure,{.move=1},.005);
       check(player.player.vx<-20.&&std::abs(player.player.vy)<1e-8,
         "a neutral press keeps the facing direction when steering follows it");
+      player=new_state(adventure);
+      player.player.y=20.;
+      input_frames={};
+      input_frames.advance(player,adventure,{.move=1,.dash_pressed=true,.dash_pressed_direction=std::pair{0,-1}},1./120);
+      check(std::abs(player.player.vx)<1e-8&&player.player.vy<-20.,
+        "an explicit frontend dash direction takes priority over newer steering");
       player=new_state(g);
       player.player.y=20.;
       input_frames={};

@@ -1509,8 +1509,9 @@ public:
     const int held_move=input.move, held_aim=input.aim_y;
     if(input.dash_pressed&&grid.adventure_level&&!state.reference_movement) {
       // Steering may change in a later poll before this dash reaches the physics step.
-      pending.dash_pressed_direction=std::pair{held_move?held_move:pending.move_pressed.value_or(0),
-        held_aim?held_aim:pending.aim_pressed.value_or(0)};
+      pending.dash_pressed_direction=input.dash_pressed_direction.value_or(std::pair{
+        held_move?held_move:pending.move_pressed.value_or(0),
+        held_aim?held_aim:pending.aim_pressed.value_or(0)});
     }
     const bool held_fast_fall = input.fast_fall;
     accumulator += clamp(elapsed, 0.0, 0.1);
