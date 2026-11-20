@@ -1295,6 +1295,13 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>held===2);
   await page.keyboard.down('a');
   await page.waitForFunction(()=>held===3);
+  await page.setViewportSize({width:390,height:650});
+  await page.waitForFunction(()=>held===1&&!document.querySelector('#touch .held'));
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.setViewportSize({width:390,height:844});
+  await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[right]});
+  await page.waitForFunction(()=>held===3);
+  console.log('PASS portrait resize cancels displaced touch while preserving the keyboard');
   await page.setViewportSize({width:844,height:390});
   await page.waitForFunction(()=>held===1&&!document.querySelector('#touch .held'));
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});

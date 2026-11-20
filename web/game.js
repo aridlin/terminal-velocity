@@ -545,7 +545,7 @@ for(const button of document.querySelectorAll('[data-key]')){
   const onRelease=doorConfirm||travelConfirm||mapConfirm||
    (button.id==='touch-use'&&(confirmingReply||!!(uiFlags&confirmSaveFlag)));
   const pointer={key:onRelease?null:key,releaseKey:onRelease?key:null,button,touch,canSlide,
-   doorConfirm,travelConfirm,mapConfirm,pending:0};
+   x:e.clientX,y:e.clientY,doorConfirm,travelConfirm,mapConfirm,pending:0};
   pointers.set(e.pointerId,pointer);
   button.classList.add('held');
   if(!onRelease)pointerPress(pointer);
@@ -560,6 +560,7 @@ for(const button of document.querySelectorAll('[data-key]')){
    if(button.hasPointerCapture(e.pointerId))button.releasePointerCapture(e.pointerId);
    return;
   }
+  pointer.x=e.clientX;pointer.y=e.clientY;
   if(!pointer.canSlide)return;
   // Keep an initial Up or Down press until the thumb leaves its button.
   // Sliding across a vertical button must never trigger a new jump or fall.
@@ -664,6 +665,10 @@ function resize(){
  const width=stage.clientWidth,height=stage.clientHeight;
  if(width!==stageWidth||height!==stageHeight)canvasFit=null;
  stageWidth=width;stageHeight=height;
+ // Capture can outlive a layout change even after the button moves away.
+ for(const [id,pointer] of pointers)
+  if(pointer.touch&&pointer.button&&!pointer.button.contains(document.elementFromPoint(pointer.x,pointer.y)))
+   finishPointer(id,false);
  const landscape=matchMedia('(orientation:landscape) and (max-height:500px)').matches;
  const compact=mobile()&&(!!(uiFlags&255)||(landscape&&expanded()));
  const portraitPhone=matchMedia('(pointer:coarse) and (orientation:portrait) and (max-width:480px)').matches;
