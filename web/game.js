@@ -731,60 +731,62 @@ const settingsKeys=document.querySelector('#settings-keys');
 const importSteamSounds=document.querySelector('#import-steam-sounds');
 const steamSoundFiles=document.querySelector('#steam-sound-files');
 const steamSoundStatus=document.querySelector('#steam-sound-status');
-const steamSoundNames=['desktop_toast_default.wav','deck_ui_achievement_toast.wav'];
+const testSteamSound=document.querySelector('#test-steam-sound');
+const steamSoundName='deck_ui_achievement_toast.wav';
 const steamSoundCache=()=>caches.open('terminal-velocity-steam-sounds');
-// The site's base URL changes with each game release. Keep these local keys stable.
-const steamSoundKey=name=>new URL('/.terminal-velocity-steam-sounds/'+name,location.origin).href;
-const loadedSteamSounds=new Set();
-let steamSoundError=null;
+// The site's base URL changes with each game release. Keep the local key stable.
+const steamSoundKey=new URL('/.terminal-velocity-steam-sounds/'+steamSoundName,location.origin).href;
+let steamSoundLoaded=false,steamSoundError=null;
 function renderSteamSoundSettings(){
- const count=loadedSteamSounds.size;
- importSteamSounds.title=tr('Wybierz oba pliki powiadomień z folderu Steam steamui/sounds','Choose the two notification WAVs from Steam’s steamui/sounds folder');
- importSteamSounds.textContent=tr('Dźwięki Steam','Steam sounds')+(count?' · '+count+'/2':'');
+ importSteamSounds.title=tr('Wybierz '+steamSoundName+' z folderu Steam steamui/sounds','Choose '+steamSoundName+' from Steam’s steamui/sounds folder');
+ importSteamSounds.textContent=tr('Dźwięk Steam','Steam sound')+(steamSoundLoaded?' ✓':'');
+ testSteamSound.textContent=tr('Test dźwięku osiągnięcia','Test achievement sound');
+ testSteamSound.disabled=!started||!steamSoundLoaded||Boolean(uiFlags&soundMutedFlag);
  steamSoundStatus.textContent=steamSoundError?tr(...steamSoundError):'';
  steamSoundStatus.hidden=!steamSoundError;
 }
-function installSteamSound(name,bytes){
- Module.FS.writeFile('/steam-sounds/'+name,bytes);
- loadedSteamSounds.add(name);
+function installSteamSound(bytes){
+ Module.FS.writeFile('/steam-sounds/'+steamSoundName,bytes);
+ steamSoundLoaded=true;
 }
-async function restoreSteamSounds(){
+async function restoreSteamSound(){
  try{
   const cache=await steamSoundCache();
-  for(const name of steamSoundNames){
-   const stored=await cache.match(steamSoundKey(name));
-   const bytes=stored&&new Uint8Array(await stored.arrayBuffer());
-   if(bytes&&!loadedSteamSounds.has(name))installSteamSound(name,bytes);
+  const stored=await cache.match(steamSoundKey);
+  if(stored){
+   const bytes=new Uint8Array(await stored.arrayBuffer());
+   if(!steamSoundLoaded)installSteamSound(bytes);
   }
   renderSteamSoundSettings();
  }catch{}
 }
 importSteamSounds.onclick=()=>steamSoundFiles.click();
+testSteamSound.onclick=()=>{
+ Module._web_test_achievement_sound();
+ canvas.focus({preventScroll:true});
+};
 steamSoundFiles.onchange=async()=>{
- const files=Array.from(steamSoundFiles.files);
+ const file=steamSoundFiles.files[0];
  steamSoundFiles.value='';
- if(!files.length)return;
+ if(!file)return;
  importSteamSounds.disabled=true;
  steamSoundError=null;
  try{
-  let cache;
-  try{cache=await steamSoundCache();}catch{}
-  let valid=0,remembered=0;
-  for(const file of files){
-   const name=file.name.toLowerCase();
-   if(!steamSoundNames.includes(name)||file.size<44||file.size>2*1024*1024)continue;
-   const bytes=new Uint8Array(await file.arrayBuffer());
-   if(String.fromCharCode(...bytes.subarray(0,4))!=='RIFF'||String.fromCharCode(...bytes.subarray(8,12))!=='WAVE')continue;
-   installSteamSound(name,bytes);
-   ++valid;
-   try{if(cache){await cache.put(steamSoundKey(name),new Response(bytes));++remembered;}}catch{}
+  let bytes;
+  if(file.name.toLowerCase()===steamSoundName&&file.size>=44&&file.size<=2*1024*1024)
+   bytes=new Uint8Array(await file.arrayBuffer());
+  if(!bytes||String.fromCharCode(...bytes.subarray(0,4))!=='RIFF'||String.fromCharCode(...bytes.subarray(8,12))!=='WAVE'){
+   steamSoundError=['Wybierz '+steamSoundName+' z folderu Steam steamui/sounds.',
+                    'Choose '+steamSoundName+' from Steam’s steamui/sounds folder.'];
+   return;
   }
-  if(!valid)steamSoundError=[
-   'Wybierz desktop_toast_default.wav lub deck_ui_achievement_toast.wav z folderu steamui/sounds.',
-   'Choose desktop_toast_default.wav or deck_ui_achievement_toast.wav from steamui/sounds.'];
-  else if(remembered<valid)steamSoundError=['Dźwięki działają do odświeżenia strony.','Sounds are available until the page reloads.'];
+  installSteamSound(bytes);
+  try{
+   const cache=await steamSoundCache();
+   await cache.put(steamSoundKey,new Response(bytes));
+  }catch{steamSoundError=['Dźwięk działa do odświeżenia strony.','The sound is available until the page reloads.'];}
  }catch{
-  steamSoundError=['Nie udało się wczytać plików WAV.','Could not read the WAV files.'];
+  steamSoundError=['Nie udało się wczytać pliku WAV.','Could not read the WAV file.'];
  }finally{
   importSteamSounds.disabled=false;
   renderSteamSoundSettings();
@@ -1278,7 +1280,7 @@ var Module={
    if(typeof reconcile==='function')idbfs.reconcile=(local,remote,done)=>
     runStorageOperation(finish=>reconcile.call(idbfs,local,remote,finish),done);
    Module.FS.mkdir('/steam-sounds');
-   restoreSteamSounds();
+   restoreSteamSound();
    Module.FS.mkdir(persistentSaveDirectory);
    Module.FS.mount(idbfs,{},persistentSaveDirectory);
    restoreBrowserStorage().catch(failStartup);
@@ -1303,5 +1305,34 @@ for(const button of document.querySelectorAll('#account,#account-fullscreen')){
 }
 setInterval(syncSave,5000);
 if(accounts)setInterval(()=>{if(accountSlot()&&!accountBooting&&!importPending)accounts.sync();},15000);
+
+// The live entry names its versioned assets in <base>. Check it while the
+// start screen is idle so a returning player does not launch an old build.
+const entryRelease=page=>/^\.\/releases\/([a-f0-9]{12})\/$/.exec(
+ page.querySelector('base[href]')?.getAttribute('href')||'')?.[1];
+const loadedRelease=entryRelease(document);
+let checkingRelease=false;
+async function refreshIdleEntry(){
+ if(!loadedRelease||started||checkingRelease||document.hidden)return;
+ checkingRelease=true;
+ const controller=new AbortController();
+ const deadline=setTimeout(()=>controller.abort(),2500);
+ try{
+  const response=await fetch(location.href,{cache:'no-store',mode:'same-origin',redirect:'error',signal:controller.signal});
+  if(!response.ok)return;
+  const entry=new DOMParser().parseFromString(await response.text(),'text/html');
+  const latest=entryRelease(entry);
+  // A pending network response must never reload a game that has started.
+  if(latest&&latest!==loadedRelease&&!started&&!document.hidden)location.reload();
+ }catch{}finally{
+  clearTimeout(deadline);
+  checkingRelease=false;
+ }
+}
+if(loadedRelease){
+ addEventListener('focus',refreshIdleEntry);
+ addEventListener('pageshow',refreshIdleEntry);
+ document.addEventListener('visibilitychange',refreshIdleEntry);
+}
 
 translateUI();resize();watchEngineLoad();
