@@ -363,6 +363,7 @@ struct GameState {
   double camera_x = 0.0;
   double camera_y = 0.0;
   int deaths = 0;
+  bool dash_hazard_death = false;
   int checkpoint = 0;
   std::vector<bool> collected;
   std::vector<bool> defeated;
@@ -1111,13 +1112,14 @@ bool step_ledge(Player &player, const EngineGrid &grid, const Controls &controls
   return true;
 }
 
-void update_step(GameState &state, const EngineGrid &grid,
+// Report whether this step moved with the dash, including its final tick.
+bool update_step(GameState &state, const EngineGrid &grid,
                  const Controls &controls, double dt) {
   Player &player = state.player;
   if (controls.restart) {
     ++state.deaths;
     reset_player(state);
-    return;
+    return false;
   }
 
   player.wall_lock_left = std::max(0.0, player.wall_lock_left - dt);
@@ -1174,7 +1176,7 @@ void update_step(GameState &state, const EngineGrid &grid,
   if (player.ledge && step_ledge(player,grid,controls,dt)) {
     if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires && grid.touches_exit(player.rect()))
       state.won = true;
-    return;
+    return false;
   }
 
   if (player.dash_time_left > 0.0) {
@@ -1228,15 +1230,16 @@ void update_step(GameState &state, const EngineGrid &grid,
       }
     }
     if (rect.top() > grid.height() + 5.0 || hit_hazard) {
+      state.dash_hazard_death=hit_hazard;
       ++state.deaths;
       reset_player(state);
-      return;
+      return true;
     }
     if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires &&
         grid.touches_exit(rect)) {
       state.won = true;
     }
-    return;
+    return true;
   }
 
   const int touching_wall = player.grounded ? 0 : wall_dir(grid, player);
@@ -1330,16 +1333,18 @@ void update_step(GameState &state, const EngineGrid &grid,
   if (rect.top() > grid.height() + 5.0 || hit_hazard) {
     ++state.deaths;
     reset_player(state);
-    return;
+    return false;
   }
   if ((grid.switch_flags&grid.goal_requires)==grid.goal_requires &&
       grid.touches_exit(rect)) {
     state.won = true;
   }
+  return false;
 }
 
 // Dynamic surfaces are one-way: carry riders, allow upward passage and S-drop.
 void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
+  s.dash_hazard_death=false;
   auto &p = s.player;
   const bool was_grounded = p.grounded;
   const bool spent_dash = !p.dash_available || p.dash_time_left > 0.;
@@ -1418,7 +1423,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       }
     }
   }
-  if(p.vine<0)update_step(s,g,c,dt);
+  const bool dash_motion=p.vine<0&&update_step(s,g,c,dt);
   p.support=-1;
   if (s.deaths != deaths || c.restart)
     return;
@@ -1519,10 +1524,12 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       }
     }
   for(const auto &pulse:g.pulses)if(pulse.powered(g.switch_flags)&&pulse.active(s.elapsed)&&p.rect().intersects(pulse.damage_area(s.elapsed))) {
+    s.dash_hazard_death=dash_motion;
     ++s.deaths;reset_player(s);return;
   }
   if (g.template_id == iceberg::CrownSentinel) {
     step_crown_sentinel(s,dt,dashing || p.dash_time_left > 0.);
+    s.dash_hazard_death=dash_motion&&s.deaths!=deaths;
     if (s.crown.hits < 3) s.won = false;
   }
   if (g.adventure_level && !s.reference_movement && !was_grounded && p.grounded &&

@@ -46,17 +46,29 @@ int main() {
         for(int i=0;i<60&&rider.state.player.support<0;++i)rider.tick({},1./120);
         require_quest(rider.state.player.support==0&&earned(),"actually landing on the deck earns its ride award");
       }
-      EngineGrid hazard(40,28);
-      hazard.adventure_level=true;hazard.spawn_x=8;hazard.spawn_y=25-kPlayerHeight;
-      hazard.add_solid_rect(0,25,40,3);
-      hazard.add_hazard_rect(14,22,3,3);
-      hazard.goal={36,23,1,2};
-      install_test_room(rider,std::move(hazard));
-      rider.tick({.move=1,.dash_pressed=true},1./120);
-      for(int i=0;i<50&&rider.state.deaths==0;++i)rider.tick({.move=1},1./120);
-      require_quest(rider.state.deaths==1&&iceberg::has_award(
+      for(bool moving:{false,true})for(double frame:{1./120,.1}) {
+        rider.profile.task_items[1]&=~iceberg::achievement_bit(Achievement::DashingHeadfirst);
+        EngineGrid hazard(40,28);
+        hazard.adventure_level=true;hazard.spawn_x=12.85;hazard.spawn_y=25-kPlayerHeight;
+        hazard.add_solid_rect(0,25,40,3);
+        if(moving)hazard.pulses.push_back({{14,22,3,3}});
+        else hazard.add_hazard_rect(14,22,3,3);
+        hazard.goal={36,23,1,2};
+        install_test_room(rider,std::move(hazard));
+        rider.tick({.move=1,.dash_pressed=true},frame);
+        require_quest(rider.state.deaths==1&&iceberg::has_award(
+          iceberg::stored_award_progress(rider.profile),Achievement::DashingHeadfirst),
+          "first-step dash contact earns Headfirst at either frame rate");
+      }
+      rider.profile.task_items[1]&=~iceberg::achievement_bit(Achievement::DashingHeadfirst);
+      EngineGrid drop(40,28);
+      drop.adventure_level=true;drop.spawn_x=12;drop.spawn_y=32.85;
+      drop.goal={36,23,1,2};
+      install_test_room(rider,std::move(drop));
+      rider.tick({.dash_pressed=true,.aim_y=1},.05);
+      require_quest(rider.state.deaths==1&&!iceberg::has_award(
         iceberg::stored_award_progress(rider.profile),Achievement::DashingHeadfirst),
-        "dashing into a hazard earns a mishap award after a real return");
+        "dashing out of bounds without touching a hazard does not earn Headfirst");
     }
     {
       AdventureSession inspected(options,std::filesystem::temp_directory_path()/"tv-inspect-nosave");
