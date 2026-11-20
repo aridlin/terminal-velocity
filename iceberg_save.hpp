@@ -11,6 +11,9 @@
 namespace iceberg {
 class SaveStore {
   std::filesystem::path path_;
+  static constexpr size_t MaxProfileBytes=65536;
+  static constexpr int MaxExpeditionDepth=10000000;
+  static constexpr size_t max_history_bytes(size_t legs) {return 64+legs*(4*RoomsPerLeg+1);}
   static bool sync_file(const std::filesystem::path &file) {
 #ifdef _WIN32
     HANDLE handle=CreateFileW(file.c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
@@ -73,18 +76,15 @@ class SaveStore {
   static bool valid_room_id(int id) {
     return (id>=0&&id<72)||(id>=400&&id<=405)||(id>=420&&id<=425)||(id>=500&&id<=511);
   }
-  static bool read(const std::filesystem::path &file, Profile &p,
-                   const std::string *matching_payload=nullptr,uint64_t *save_hash=nullptr) {
-    std::error_code size_error;auto bytes=std::filesystem::file_size(file,size_error);
-    if(size_error||bytes>65536)return false;
-    std::ifstream in(file, std::ios::binary);
+  static bool read_profile(std::istream &in,Profile &p,
+                           const std::string *matching_payload,uint64_t *save_hash) {
     std::string magic;
     uint64_t hash = 0;
     if (!(in >> magic >> hash) || (magic != "TVICE2" && magic != "TVICE3" && magic != "TVICE4" && magic != "TVICE5" && magic != "TVICE6")) return false;
     in.get();
     std::string payload((std::istreambuf_iterator<char>(in)), {});
     if (matching_payload && (magic != "TVICE6" || payload != *matching_payload)) return false;
-    if (payload.size() > 65536 || checksum(payload) != hash) return false;
+    if (payload.size() > MaxProfileBytes || checksum(payload) != hash) return false;
     std::istringstream data(payload);
     Profile q;
     int language = 0;
@@ -126,7 +126,7 @@ class SaveStore {
       if (!(data >> e.active >> e.seed >> e.district >> e.room >> e.depth >> e.checkpoint >>
         e.collected >> e.switches >> e.room_seconds >> e.seconds >> e.room_deaths >> e.deaths >> e.treasures >> count)) return false;
       if (e.district < 0 || e.district >= DistrictCount || e.room < 0 || e.room >= RoomsPerLeg ||
-        e.depth < 0 || e.depth > 10000000 || e.checkpoint < 0 || e.checkpoint > 64 ||
+        e.depth < 0 || e.depth > MaxExpeditionDepth || e.checkpoint < 0 || e.checkpoint > 64 ||
         e.room_deaths < 0 || e.deaths < 0 || e.treasures < 0 ||
         !std::isfinite(e.room_seconds) || e.room_seconds < 0 || e.room_seconds > 1e9 ||
         !std::isfinite(e.seconds) || e.seconds < 0 || e.seconds > 1e9 || count > 512) return false;
@@ -176,6 +176,15 @@ class SaveStore {
     return true;
   }
 
+  static bool read(const std::filesystem::path &file,Profile &p,
+                   const std::string *matching_payload=nullptr,uint64_t *save_hash=nullptr) {
+    std::error_code ec;
+    const auto bytes=std::filesystem::file_size(file,ec);
+    if(ec||bytes>MaxProfileBytes)return false;
+    std::ifstream input(file,std::ios::binary);
+    return read_profile(input,p,matching_payload,save_hash);
+  }
+
   std::array<std::filesystem::path,2> history_files() const {
     auto first=path_,second=path_;
     first+=".routes";second+=".routes.bak";
@@ -185,106 +194,72 @@ class SaveStore {
     std::string magic;uint64_t saved_anchor=0;
     return (input>>magic>>saved_anchor>>body_hash)&&magic=="TVROUTE1"&&saved_anchor==anchor&&input.get()=='\n';
   }
-  void restore_history(Expedition &expedition,uint64_t anchor) const {
+  static bool read_history(std::istream &input,Expedition &expedition,uint64_t anchor,size_t bytes) {
     const size_t max_legs=size_t(expedition.depth/RoomsPerLeg);
-    if(!expedition.active||!max_legs)return;
+    if(!expedition.active||!max_legs||bytes>max_history_bytes(max_legs))return false;
+    uint64_t body_hash=0;
+    if(!history_header(input,anchor,body_hash))return false;
+    const std::string body((std::istreambuf_iterator<char>(input)),{});
+    if(checksum(body)!=body_hash)return false;
+    std::istringstream data(body);
+    size_t count=0;
+    if(!(data>>count)||!count||count>max_legs||count>body.size()/(2*RoomsPerLeg))return false;
+    std::vector<std::array<int,RoomsPerLeg>> legs(count);
+    for(auto &leg:legs)
+      for(int &id:leg)
+        if(!(data>>id)||!valid_room_id(id))return false;
+    data>>std::ws;
+    if(!data.eof())return false;
+    expedition.completed_legs=std::move(legs);
+    return true;
+  }
+  void restore_history(Expedition &expedition,uint64_t anchor) const {
     for(const auto &file:history_files()) {
       std::error_code ec;
       const auto bytes=std::filesystem::file_size(file,ec);
-      if(ec||bytes>64+max_legs*(4*RoomsPerLeg+1))continue;
+      if(ec)continue;
       std::ifstream input(file,std::ios::binary);
-      uint64_t body_hash=0;
-      if(!history_header(input,anchor,body_hash))continue;
-      const std::string body((std::istreambuf_iterator<char>(input)),{});
-      if(checksum(body)!=body_hash)continue;
-      std::istringstream data(body);
-      size_t count=0;
-      if(!(data>>count)||!count||count>max_legs)continue;
-      if(count>body.size()/(2*RoomsPerLeg))continue;
-      std::vector<std::array<int,RoomsPerLeg>> legs(count);
-      const bool valid=std::all_of(legs.begin(),legs.end(),[&](auto &leg) {
-        return std::all_of(leg.begin(),leg.end(),[&](int &id){return (data>>id)&&valid_room_id(id);});
-      });
-      data>>std::ws;
-      if(valid&&data.eof()) {
-        expedition.completed_legs=std::move(legs);
-        return;
-      }
+      if(read_history(input,expedition,anchor,bytes))return;
     }
   }
-  void save_history(const Expedition &expedition,uint64_t anchor,uint64_t previous,
-                    std::filesystem::path temporary) const {
-    const auto &legs=expedition.completed_legs;
-    if(!expedition.active||legs.empty())return;
+  static std::string history_payload(const Expedition &expedition) {
+    std::ostringstream body;
+    body<<expedition.completed_legs.size()<<'\n';
+    for(const auto &leg:expedition.completed_legs) {
+      for(int id:leg)body<<id<<' ';
+      body<<'\n';
+    }
+    return body.str();
+  }
+  static void write_history(std::ostream &output,uint64_t anchor,const std::string &payload) {
+    output<<"TVROUTE1 "<<anchor<<' '<<checksum(payload)<<'\n'<<payload;
+  }
+  bool save_history(const Expedition &expedition,uint64_t anchor,uint64_t previous,
+                    std::filesystem::path temporary,bool replace_matching_history) const {
+    if(!expedition.active||expedition.completed_legs.empty())return true;
     const auto files=history_files();
     const auto matches=[](const auto &file,uint64_t hash) {
       std::ifstream input(file,std::ios::binary);uint64_t body_hash=0;
       return history_header(input,hash,body_hash);
     };
-    if(matches(files[0],anchor)||matches(files[1],anchor))return;
+    const bool first_matches=matches(files[0],anchor);
+    const bool second_matches=matches(files[1],anchor);
+    if(!replace_matching_history&&(first_matches||second_matches))return true;
 
-    // Keep the companion for the previous valid save until its replacement
-    // commits. Both the primary save and its recovery copy can find a match.
-    const auto &target=files[matches(files[0],previous)?1:0];
-    std::ostringstream body;
-    body<<legs.size()<<'\n';
-    for(const auto &leg:legs) {
-      for(int id:leg)body<<id<<' ';
-      body<<'\n';
-    }
-    const auto payload=body.str();
+    // Replace a companion with the same profile checksum in place. Otherwise
+    // keep the previous save's companion until the new primary commits.
+    const auto &target=files[!first_matches&&(second_matches||matches(files[0],previous))?1:0];
+    const auto payload=history_payload(expedition);
     temporary+=".routes";
     std::ofstream output(temporary,std::ios::binary|std::ios::trunc);
-    output<<"TVROUTE1 "<<anchor<<' '<<checksum(payload)<<'\n'<<payload;
+    write_history(output,anchor,payload);
     output.close();
-    if(!output||!sync_file(temporary)||!replace_file(temporary,target)) {
-      std::error_code ec;
-      std::filesystem::remove(temporary,ec);
-    }
-  }
-public:
-  // Importers validate the exact file, without consulting recovery siblings.
-  static bool validate_file(const std::filesystem::path &file,Profile &profile) {return read(file,profile);}
-  bool recovered = false, protected_future = false;
-  explicit SaveStore(std::filesystem::path path = default_file()) : path_(std::move(path)) {}
-  static constexpr int SlotCount=3;
-  static std::filesystem::path slot_file(std::filesystem::path base,int slot) {
-    if(!base.empty()&&slot>1)base+=(".slot"+std::to_string(slot));
-    return base;
-  }
-  static std::filesystem::path default_file() {
-    if (const char *v = std::getenv("TV_ICEBERG_FILE")) return v;
-    // Keep legacy progress.dat untouched, including its TV_PROGRESS_FILE override.
-    auto p = ProgressStore::default_file();
-    if (p.empty()) return {};
-    p += ".iceberg";
-    return p;
-  }
-  bool load(Profile &p) {
-    recovered = false;protected_future=false;
-    {std::error_code ec;auto bytes=std::filesystem::file_size(path_,ec);
-      std::ifstream header; if(!ec&&bytes<=65536)header.open(path_,std::ios::binary);
-      std::string magic;uint64_t hash;unsigned version=0;
-      if(header>>magic>>hash) {
-        header.get();std::string payload((std::istreambuf_iterator<char>(header)),{});std::istringstream body(payload);
-        if(checksum(payload)==hash&&(body>>version))protected_future=(magic.rfind("TVICE",0)==0&&magic!="TVICE2"&&magic!="TVICE3"&&magic!="TVICE4"&&magic!="TVICE5"&&magic!="TVICE6")||version>ContentVersion;
-      }
-    }
-    uint64_t anchor=0;
-    if (read(path_, p,nullptr,&anchor)) {
-      restore_history(p.expeditions[0],anchor);
-      return true;
-    }
-    auto backup = path_; backup += ".bak";
-    if (read(backup, p,nullptr,&anchor)) {
-      recovered=true;
-      restore_history(p.expeditions[0],anchor);
-      return true;
-    }
+    if(output&&sync_file(temporary)&&replace_file(temporary,target))return true;
+    std::error_code ec;
+    std::filesystem::remove(temporary,ec);
     return false;
   }
-  bool save(const Profile &p) {
-    if (path_.empty()||protected_future) return false;
+  static std::string profile_payload(const Profile &p) {
     std::ostringstream body;
     body << std::setprecision(17) << p.content_version << ' ' << int(p.language) << ' '
       << p.started << ' ' << p.finished << ' ' << p.seed << ' ' << p.district << ' '
@@ -327,7 +302,90 @@ public:
     body<<p.quest_focus<<'\n';
     for(int d=0;d<DistrictCount;++d)
       body<<p.route_visited[size_t(d)]<<' '<<p.route_choices[size_t(d)]<<' '<<p.route_decisions[size_t(d)]<<'\n';
-    auto payload = body.str();
+    return body.str();
+  }
+public:
+  // Importers validate the exact file, without consulting recovery siblings.
+  static bool validate_file(const std::filesystem::path &file,Profile &profile) {return read(file,profile);}
+  bool recovered = false, protected_future = false;
+  explicit SaveStore(std::filesystem::path path = default_file()) : path_(std::move(path)) {}
+  static constexpr int SlotCount=3;
+  static std::filesystem::path slot_file(std::filesystem::path base,int slot) {
+    if(!base.empty()&&slot>1)base+=(".slot"+std::to_string(slot));
+    return base;
+  }
+  static std::filesystem::path default_file() {
+    if (const char *v = std::getenv("TV_ICEBERG_FILE")) return v;
+    // Keep legacy progress.dat untouched, including its TV_PROGRESS_FILE override.
+    auto p = ProgressStore::default_file();
+    if (p.empty()) return {};
+    p += ".iceberg";
+    return p;
+  }
+  bool load(Profile &p) {
+    recovered = false;protected_future=false;
+    {std::error_code ec;auto bytes=std::filesystem::file_size(path_,ec);
+      std::ifstream header; if(!ec&&bytes<=MaxProfileBytes)header.open(path_,std::ios::binary);
+      std::string magic;uint64_t hash;unsigned version=0;
+      if(header>>magic>>hash) {
+        header.get();std::string payload((std::istreambuf_iterator<char>(header)),{});std::istringstream body(payload);
+        if(checksum(payload)==hash&&(body>>version))protected_future=(magic.rfind("TVICE",0)==0&&magic!="TVICE2"&&magic!="TVICE3"&&magic!="TVICE4"&&magic!="TVICE5"&&magic!="TVICE6")||version>ContentVersion;
+      }
+    }
+    uint64_t anchor=0;
+    if (read(path_, p,nullptr,&anchor)) {
+      restore_history(p.expeditions[0],anchor);
+      return true;
+    }
+    auto backup = path_; backup += ".bak";
+    if (read(backup, p,nullptr,&anchor)) {
+      recovered=true;
+      restore_history(p.expeditions[0],anchor);
+      return true;
+    }
+    return false;
+  }
+  static constexpr size_t MaxBackupBytes=64+MaxProfileBytes+64+size_t(MaxExpeditionDepth/RoomsPerLeg)*(4*RoomsPerLeg+1);
+
+  // Portable backups keep the exact standalone profile and the already
+  // checksummed journal together. Older standalone saves remain importable.
+  static bool read_backup(const std::filesystem::path &file,Profile &profile) {
+    std::error_code ec;
+    const auto size=std::filesystem::file_size(file,ec);
+    if(ec||size>MaxBackupBytes)return false;
+    std::ifstream input(file,std::ios::binary);
+    std::string magic;
+    if(!(input>>std::setw(10)>>magic)||magic!="TVBACKUP1")return read(file,profile);
+    size_t primary_bytes=0;
+    if(!(input>>primary_bytes)||!primary_bytes||primary_bytes>MaxProfileBytes||input.get()!='\n')return false;
+    const auto offset=input.tellg();
+    if(offset<0||size_t(offset)>64||size<=size_t(offset)+primary_bytes)return false;
+    std::string primary(primary_bytes,'\0');
+    if(!input.read(primary.data(),primary_bytes))return false;
+    std::istringstream standalone(primary);
+    Profile imported;
+    uint64_t anchor=0;
+    if(!read_profile(standalone,imported,nullptr,&anchor)||
+       !read_history(input,imported.expeditions[0],anchor,size-size_t(offset)-primary_bytes))return false;
+    profile=std::move(imported);
+    return true;
+  }
+  static bool write_backup(const std::filesystem::path &file,const Profile &profile) {
+    const auto payload=profile_payload(profile);
+    const auto anchor=checksum(payload);
+    const auto primary="TVICE6 "+std::to_string(anchor)+'\n'+payload;
+    const auto &expedition=profile.expeditions[0];
+    const bool has_history=expedition.active&&!expedition.completed_legs.empty();
+    std::ofstream output(file,std::ios::binary|std::ios::trunc);
+    if(has_history)output<<"TVBACKUP1 "<<primary.size()<<'\n';
+    output<<primary;
+    if(has_history)write_history(output,anchor,history_payload(expedition));
+    output.close();
+    return bool(output);
+  }
+  bool save(const Profile &p,bool require_history=false) {
+    if (path_.empty()||protected_future) return false;
+    const auto payload=profile_payload(p);
     const auto anchor=checksum(payload);
     Profile verified;
 
@@ -343,7 +401,7 @@ public:
       auto backup=path_;backup+=".bak";
       if(!p.expeditions[0].completed_legs.empty()) {
         read(backup,verified,nullptr,&previous);
-        save_history(p.expeditions[0],anchor,previous,temp);
+        return save_history(p.expeditions[0],anchor,previous,temp,require_history)||!require_history;
       }
       return true;
     }
@@ -376,8 +434,10 @@ public:
       auto backup=path_;backup+=".bak";
       read(backup,verified,nullptr,&previous);
     }
-    save_history(p.expeditions[0],anchor,previous,temp);
-    bool ok=replace_file(temp,path_);
+    // A portable restore must commit its companion. Ordinary saves can
+    // still retain the playable checkpoint when the optional journal fails.
+    const bool saved_history=save_history(p.expeditions[0],anchor,previous,temp,require_history);
+    bool ok=(saved_history||!require_history)&&replace_file(temp,path_);
     if (!ok) std::filesystem::remove(temp, ec);
     return ok;
   }

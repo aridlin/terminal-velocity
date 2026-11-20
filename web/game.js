@@ -760,13 +760,21 @@ function maybeStartAccount(){
  accounts.start().finally(()=>{accountBooting=false;});
 }
 
-function readCurrentSave(forAccount=false){
+function readAccountSave(){
  if(Module._web_save())return Module.FS.readFile(currentSavePath());
- if(forAccount&&!Module._web_primary_usable_for_account())throw Error('save_write_failed');
+ if(!Module._web_primary_usable_for_account())throw Error('save_write_failed');
  if(!Module._web_export_recovery())throw Error('save_write_failed');
  const recovery='/tmp/terminal-velocity-export.iceberg';
  try{return Module.FS.readFile(recovery);}
  finally{Module.FS.unlink(recovery);}
+}
+function readManualBackup(){
+ const path='/tmp/terminal-velocity-manual.iceberg';
+ const fs=Module.FS;
+ try{
+  if(!Module._web_export_manual())throw Error('save_write_failed');
+  return fs.readFile(path);
+ }finally{if(fs.analyzePath(path).exists)fs.unlink(path);}
 }
 function downloadSave(event,suffix,read){
  try {
@@ -782,7 +790,10 @@ function downloadSave(event,suffix,read){
   if(event.detail!==0)canvas.focus({preventScroll:true});
  }
 }
-exportSave.onclick=event=>downloadSave(event,'',readCurrentSave);
+exportSave.onclick=event=>downloadSave(event,'',()=>{
+ Module._web_save();
+ return readManualBackup();
+});
 exportPreviousSave.onclick=event=>downloadSave(event,'-previous',()=>Module.FS.readFile(previousImportPath()));
 unreadableSaveButtons.forEach((button,i)=>{
  button.onclick=event=>{
@@ -863,7 +874,7 @@ saveFile.onchange=async()=>{
  setSaveActionError(null);
  clearInput();
  try {
-  if(!file.size||file.size>65536) {
+  if(!file.size||file.size>Module._web_import_size_limit()) {
    setSaveActionError(['Nieprawidłowy plik zapisu','Invalid save file']);
    return;
   }
@@ -891,7 +902,7 @@ saveFile.onchange=async()=>{
    setSaveActionError(['Błąd zapisu — pobierz kopię','Save failed — download a copy']);
    return;
   }
-  const previous=fs.readFile(currentSavePath());
+  const previous=readManualBackup();
   const incoming=saveDirectory+'/import.iceberg';
   try {
    fs.writeFile(incoming,bytes);
@@ -1143,7 +1154,7 @@ const accounts=typeof window.TVAccounts==='function'?new window.TVAccounts({
  english:()=>english,ready:()=>accountSlot()&&!accountBooting&&!importPending,frame:window.tvFrame,
  refreshLayout:()=>{clearInput();resize();},
  needsRedraw:()=>previous.length===0,flush:flushBrowserStorage,
- currentSave:()=>new TextDecoder().decode(readCurrentSave(true)),
+ currentSave:()=>new TextDecoder().decode(readAccountSave()),
  recoveryCopy:()=>unreadableSaveNames[0]
 }):null;
 for(const button of document.querySelectorAll('#account,#account-fullscreen')){
