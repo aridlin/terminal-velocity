@@ -1719,9 +1719,11 @@ public:
         v.achievement_selection=0;
         audio.play(AudioCue::Menu,.5f);
       }
-      const int count=int(iceberg::award_entries(v.achievement_group).size());
-      const int page=c.tour_page*std::max(1,last_rows-13);
-      v.achievement_selection=std::clamp(v.achievement_selection+repeated_navigation(c,dt)+page,0,count-1);
+      const auto entries=iceberg::award_entries(v.achievement_group);
+      const int count=int(entries.size());
+      const int selected=std::clamp(v.achievement_selection,0,count-1);
+      const int page=c.tour_page?c.tour_page*iceberg::award_list_layout(v,entries[size_t(selected)],true,last_columns,last_rows).visible:0;
+      v.achievement_selection=std::clamp(selected+repeated_navigation(c,dt)+page,0,count-1);
       return;
     }
     if(v.settings) {
@@ -1918,8 +1920,12 @@ public:
     }
     if(state.journal) {
       if(c.inspect){v.journal_tab=(v.journal_tab+1)%4;v.selected=0;v.achievement_selection=0;}
-      if(v.journal_tab==3&&c.navigate)
-        v.achievement_selection=std::clamp(v.achievement_selection+c.navigate,0,int(iceberg::Achievements.size())-1);
+      if(v.journal_tab==3&&(c.navigate||c.tour_page)) {
+        const int last=int(iceberg::Achievements.size())-1;
+        const int selected=std::clamp(v.achievement_selection,0,last);
+        const int page=c.tour_page?c.tour_page*iceberg::award_list_layout(v,size_t(selected),false,columns,rows).visible:0;
+        v.achievement_selection=std::clamp(selected+c.navigate+page,0,last);
+      }
       auto entries=iceberg::journal_entries(v);
       if(!entries.empty()) {
         int count=int(entries.size());v.selected=std::clamp(v.selected,0,count-1);

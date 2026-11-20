@@ -164,7 +164,7 @@ function clearPresses(){
   pointer.dash=null;
  }
 }
-let awardToast=false;
+let awardToast=false,journalAwards=false;
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
 const pauseScreenOpen=()=>(overlayFlags()&(2|8|64|128))===2;
 const settingsFlag=1<<4;
@@ -410,9 +410,10 @@ window.tvUI=u=>{
  const nextTravelDistrict=u.travelDistrict??-1;
  const travelChanged=nextTravelDistrict!==travelDistrict;
  // The game sends UI state every frame. Only a transition changes the controls.
- if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&!travelChanged&&tourPicker===!!u.tourPicker&&awardsOpen===!!u.awardsOpen&&awardToast===!!u.awardToast)return;
+ if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&!travelChanged&&tourPicker===!!u.tourPicker&&awardsOpen===!!u.awardsOpen&&awardToast===!!u.awardToast&&journalAwards===!!u.journalAwards)return;
  awardToast=!!u.awardToast;
- if(tourPicker!==!!u.tourPicker||awardsOpen!==!!u.awardsOpen)clearInput();
+ if(tourPicker!==!!u.tourPicker||awardsOpen!==!!u.awardsOpen||journalAwards!==!!u.journalAwards)clearInput();
+ journalAwards=!!u.journalAwards;
  awardsOpen=!!u.awardsOpen;
  tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
@@ -478,14 +479,14 @@ addEventListener('keydown',e=>{
  const pauseActionShortcut=pauseScreen&&
   (e.code==='Escape'||e.code==='KeyP'||(e.code==='KeyR'&&!retryButton.disabled))&&
   target?.matches('#toolbar button[data-tap],#fullscreen-buttons button[data-tap],#touch-use');
- const tourPage=e.code==='PageUp'||e.code==='PageDown';
- if(tourPage&&!tourPicker&&!awardsOpen)return;
+ const pageKey=e.code==='PageUp'||e.code==='PageDown';
+ if(pageKey&&!tourPicker&&!awardsOpen&&!journalAwards)return;
  const menuControl=(uiFlags&1)&&!(uiFlags&(settingsFlag|confirmSaveFlag))&&isMenuSelectionControl(target);
  const menuNavigation=menuControl&&(e.code==='ArrowUp'||e.code==='ArrowDown'||
-  (e.code==='Escape'&&((uiFlags&profilePickerFlag)||awardsOpen))||(awardsOpen&&(e.code==='KeyB'||e.code==='ArrowLeft'||e.code==='ArrowRight'||tourPage)));
+  (e.code==='Escape'&&((uiFlags&profilePickerFlag)||awardsOpen))||(awardsOpen&&(e.code==='KeyB'||e.code==='ArrowLeft'||e.code==='ArrowRight'||pageKey)));
  const cancelReplacement=e.code==='Escape'&&(uiFlags&confirmSaveFlag)&&isSaveReplacementControl(target);
  const tourNavigation=tourPicker&&(tourControls.contains(target)||menuControl)&&
-  (tourPage||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');
+  (pageKey||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  const timelineDirection=isTimelineDirection(target);
  const mapAction=isMapViewAction(target);

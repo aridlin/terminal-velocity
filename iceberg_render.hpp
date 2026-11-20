@@ -1023,31 +1023,17 @@
       }
     }
   }
-  void draw_award_entries(bool menu,int top) {
+  void draw_award_entries(bool menu) {
     const auto &v=state_.adventure;
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     const auto entries=iceberg::award_entries(menu?v.achievement_group:iceberg::AwardGroup::All);
     const auto earned=[&](size_t i){return iceberg::has_award(v.awards,iceberg::Achievement(i));};
-    const auto entry_title=[&](size_t i) {
-      const auto &award=iceberg::Achievements[i];
-      return award.hidden&&!earned(i)?tr("Ukryte osiągnięcie","Hidden achievement"):award.title.get(v.language);
-    };
     const int selected=std::clamp(v.achievement_selection,0,int(entries.size())-1);
     const auto selected_entry=entries[size_t(selected)];
     const auto &selected_award=iceberg::Achievements[selected_entry];
     const int text_width=cols_-4;
-    const auto selected_title=entry_title(selected_entry);
-    const auto title_lines=iceberg::cell_length(selected_title)+6>text_width?
-      wrap(selected_title,text_width):std::vector<std::string>{};
-    std::vector<std::string> condition;
-    if(!selected_award.hidden||earned(selected_entry))
-      condition=wrap(selected_award.condition.get(v.language),text_width);
-    else if(menu)condition=wrap(tr("Opis pojawi się po odkryciu.","Details appear when unlocked."),text_width);
-
-    // Make room for the selected details before deciding how far the list can extend.
-    const int detail_rows=int(title_lines.size()+condition.size())+int(menu);
-    const int detail_top=std::min(rows_-(menu?7:4),rows_-2-detail_rows);
-    const int visible=std::max(1,detail_top-top-2);
+    const auto layout=iceberg::award_list_layout(v,selected_entry,menu,cols_,rows_);
+    const int top=layout.top,visible=layout.visible;
     const int start=std::clamp(selected-visible/2,0,std::max(0,int(entries.size())-visible));
     const auto total=std::count_if(entries.begin(),entries.end(),earned);
     if(menu) {
@@ -1070,7 +1056,7 @@
       const bool concealed=award.hidden&&!earned(i);
       const auto icon=concealed?"?":award.icon;
       const uint32_t ink=earned(i)?(award.rare?0xffba64u:0xffd68au):d.light;
-      auto label=glyphs(std::string(n==selected?"▸ ":"  ")+icon+" "+(earned(i)?"◆ ":"◇ ")+entry_title(i));
+      auto label=glyphs(std::string(n==selected?"▸ ":"  ")+icon+" "+(earned(i)?"◆ ":"◇ ")+iceberg::award_title(award,earned(i),v.language));
       std::string line;
       for(int x=0;x<std::min(int(label.size()),text_width);++x)
         line+=x==text_width-1&&int(label.size())>text_width?"…":label[size_t(x)];
@@ -1083,22 +1069,22 @@
              ink,0x20313a});
       } else paint_text(top+1+n-start,2,line,ink);
     }
-    int y=detail_top;
-    for(const auto &line:title_lines)paint_text(y++,2,line,0xffd68a,true);
+    int y=layout.detail_top;
+    for(const auto &line:layout.title)paint_text(y++,2,line,0xffd68a,true);
     if(menu) {
       const auto status=earned(selected_entry)?(selected_award.rare?tr("◆ Zdobyte · rzadkie","◆ Unlocked · rare"):
         tr("◆ Zdobyte","◆ Unlocked")):tr("◇ Zablokowane","◇ Locked");
       paint_text(y++,2,status,earned(selected_entry)?0xffd68a:d.accent);
     }
-    for(const auto &line:condition)paint_text(y++,2,line,0xa8bfc2);
-    const auto controls=menu?tr("↑↓ · ←→ / B grupy · P wróć","↑↓ · ←→ / B groups · P back"):
-      tr("↑↓ · B zakładka · TAB wróć","↑↓ · B tab · TAB back");
+    for(const auto &line:layout.condition)paint_text(y++,2,line,0xa8bfc2);
+    const auto controls=menu?tr("↑↓ PgUp/Dn · B grupy · P wróć","↑↓ PgUp/Dn · B groups · P back"):
+      tr("↑↓ PgUp/Dn · B zakładka · TAB","↑↓ PgUp/Dn · B tab · TAB back");
     paint_text(rows_-2,2,controls,d.light);
   }
   void draw_iceberg_menu() {
     auto &v=state_.adventure;
     if(v.save_picker||v.tour_picker){draw_profile_picker();return;}
-    if(v.achievement_menu){draw_award_entries(true,4);return;}
+    if(v.achievement_menu){draw_award_entries(true);return;}
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     frame(4,2,cols_-4,rows_-7,d.stone);
     const bool compact=rows_<25;
@@ -1247,7 +1233,7 @@
       narrow?tr("Cele","Awards"):tr("Osiągnięcia","Achievements")};
     std::string tabline;for(int i=0;i<4;++i){if(i)tabline+=" · ";tabline+=i==v.journal_tab?"["+tabs[size_t(i)]+"]":tabs[size_t(i)];}
     paint_text(3,2,tabline,d.light);
-    if(v.journal_tab==3) {draw_award_entries(false,5);return;}
+    if(v.journal_tab==3) {draw_award_entries(false);return;}
     auto entries=iceberg::journal_entries(v);
     if(entries.empty()) {
       int y=7;for(const auto &line:wrap(v.journal_tab==1?tr("Ukończone zadania i ich skutki pojawią się tutaj.","Completed tasks and their outcomes will appear here."):tr("Znalezione dokumenty możesz tutaj przeczytać ponownie.","Documents you find can be read again here."),cols_-4))paint_text(y++,2,line,0xeee7d6);

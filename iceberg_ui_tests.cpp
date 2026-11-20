@@ -83,6 +83,32 @@ int main(){try {
         }
   }
   {
+    using iceberg::Achievement;
+    AdventureSession paging(options,{});
+    paging.begin_campaign(true);
+    paging.profile.language=iceberg::Language::Polish;
+    paging.unlock_achievement(Achievement::LastCoat);
+    paging.sync_view();
+    paging.state.menu=true;
+    auto &v=paging.state.adventure;
+    v.achievement_menu=true;
+    v.achievement_selection=int(Achievement::LastCoat);
+    paging.tick({.tour_page=-1},0.,true,34,24);
+    ui_check(v.achievement_selection==int(Achievement::LastCoat)-10,
+      "Page Up in the compact catalogue moves by the ten rows visible above the long details");
+    paging.state.menu=false;
+    paging.state.journal=true;
+    v.achievement_menu=false;
+    v.journal_tab=3;
+    v.achievement_selection=int(Achievement::EmptyDelivery);
+    paging.tick({.tour_page=-1},0.,true,34,24);
+    ui_check(v.achievement_selection==int(Achievement::EmptyDelivery)-11&&paging.state.journal,
+      "Page Up in the quest book uses the visible award rows and leaves the book open");
+    paging.tick({.tour_page=1},0.,true,34,24);
+    ui_check(v.achievement_selection==int(Achievement::EmptyDelivery)-11+13,
+      "Page Down uses the page size of the newly selected award");
+  }
+  {
     AdventureSession tour(options,{});
     auto &picker=tour.state.adventure;
     picker.tour_picker=true;

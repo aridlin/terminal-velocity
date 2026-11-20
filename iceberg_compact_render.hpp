@@ -36,7 +36,7 @@
     auto panel=[&](const std::string &title){frame(0,0,cols_,rows_,d.stone);paint_text(1,2,title,d.accent,true);};
     if(state_.menu) {
       if(v.save_picker||v.tour_picker){draw_profile_picker();return;}
-      if(v.achievement_menu){frame(0,0,cols_,rows_,d.stone);draw_award_entries(true,4);return;}
+      if(v.achievement_menu){frame(0,0,cols_,rows_,d.stone);draw_award_entries(true);return;}
       panel("TERMINAL VELOCITY");
       if(v.confirm_new) {
         y=5;compact_paragraph(y,restart_title(),rows_-3,d.accent);++y;

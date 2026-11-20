@@ -11,8 +11,8 @@ int web_slot=1;
 EM_JS(void, browser_frame, (const uint32_t *cells,int cols,int rows), {
   if(window.tvFrame)window.tvFrame(HEAPU32.subarray(cells>>>2,(cells>>>2)+cols*rows*4),cols,rows);
 });
-EM_JS(void, browser_ui, (int flags,int route_legs,int travel_district,int tour_picker,int awards_open,int award_toast,int audio_ready,int clips,const char *error), {
-  if(window.tvUI)window.tvUI({flags,routeLegs:route_legs,travelDistrict:travel_district,tourPicker:!!tour_picker,awardsOpen:!!awards_open,awardToast:!!award_toast,audioReady:audio_ready,clips,error:UTF8ToString(error)});
+EM_JS(void, browser_ui, (int flags,int route_legs,int travel_district,int tour_picker,int awards_open,int journal_awards,int award_toast,int audio_ready,int clips,const char *error), {
+  if(window.tvUI)window.tvUI({flags,routeLegs:route_legs,travelDistrict:travel_district,tourPicker:!!tour_picker,awardsOpen:!!awards_open,journalAwards:!!journal_awards,awardToast:!!award_toast,audioReady:audio_ready,clips,error:UTF8ToString(error)});
 });
 EM_JS(void, browser_save_ready, (), {
   if(window.tvSaveReady)window.tvSaveReady();
@@ -67,7 +67,8 @@ void send_web_ui() {
   }
   const int cols=web_game->last_columns,rows=web_game->last_rows;
   const bool toast=!s.menu&&!s.paused&&!s.journal&&cols>=34&&rows>=(cols>=56?20:24)&&iceberg::achievement_toast_visible(v);
-  browser_ui(flags,route_legs,travel_district,s.menu&&v.tour_picker,s.menu&&v.achievement_menu,toast,web_game->audio.ready(),
+  const bool journal_awards=!s.menu&&s.journal&&v.journal_tab==3&&!v.dialogue.active();
+  browser_ui(flags,route_legs,travel_district,s.menu&&v.tour_picker,s.menu&&v.achievement_menu,journal_awards,toast,web_game->audio.ready(),
     int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }

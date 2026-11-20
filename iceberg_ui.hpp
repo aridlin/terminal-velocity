@@ -13,6 +13,29 @@ inline std::vector<size_t> award_entries(AwardGroup group) {
     if(group==AwardGroup::All||Achievements[i].group==group)entries.push_back(i);
   return entries;
 }
+inline std::string award_title(const AchievementInfo &award,bool earned,Language language) {
+  return award.hidden&&!earned?tr(language,"Ukryte osiągnięcie","Hidden achievement"):award.title.get(language);
+}
+struct AwardListLayout {
+  int top,detail_top,visible;
+  std::vector<std::string> title,condition;
+};
+inline AwardListLayout award_list_layout(const View &view,size_t entry,bool menu,int cols,int rows) {
+  const int top=menu?4:5;
+  const int width=std::max(1,cols-4);
+  const auto &award=Achievements[entry];
+  const bool earned=has_award(view.awards,Achievement(entry));
+  const auto title=award_title(award,earned,view.language);
+  AwardListLayout layout{top,0,1,{},{}};
+  if(cell_length(title)+6>width)layout.title=inspection_wrap(title,width);
+  if(!award.hidden||earned)layout.condition=inspection_wrap(award.condition.get(view.language),width);
+  else if(menu)layout.condition=inspection_wrap(tr(view.language,"Opis pojawi się po odkryciu.","Details appear when unlocked."),width);
+
+  const int detail_rows=int(layout.title.size()+layout.condition.size())+int(menu);
+  layout.detail_top=std::min(rows-(menu?7:4),rows-2-detail_rows);
+  layout.visible=std::max(1,layout.detail_top-top-2);
+  return layout;
+}
 inline bool achievement_toast_visible(const View &view) {
   return view.achievement_toast>=0&&view.achievement_left>0.&&
     !view.map&&!view.inspecting&&!view.dialogue.active()&&view.tour_scene<0;
