@@ -62,8 +62,6 @@ async function suggestLanguage(){
 }
 const locationLanguage=suggestLanguage();
 const pointers=new Map(),keyboard=new Set(),tiles=new Map();
-const shiftKeys=new Set();
-let dashShift='';
 let frameWasStalled=false;
 let storageFlushQueued=false;
 let storageStatusTimers=null;
@@ -130,7 +128,6 @@ window.tvExpeditionNodes=(first,count,row,left,stride,width)=>{
 };
 const tap=(...keys)=>{for(const k of keys){completedPresses|=1<<k;pressed|=1<<k;}};
 function pointerPress(pointer){
- dashShift='';
  pointer.pending|=1<<pointer.key;
  pressed|=1<<pointer.key;
 }
@@ -189,7 +186,7 @@ function translateUI(){
  for(const b of document.querySelectorAll('[data-pl]'))b.textContent=tr(b.dataset.pl,b.dataset.en);
  for(const b of document.querySelectorAll('[data-aria-pl]'))b.setAttribute('aria-label',tr(b.dataset.ariaPl,b.dataset.ariaEn));
  for(const b of document.querySelectorAll('[data-language]'))b.setAttribute('aria-pressed',String(b.dataset.language===(english?'en':'pl')));
- document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X lub wciśnij i puść Shift, by wykonać zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Shift+Tab sterowanie przeglądarki','A/D move · Space jump · X or tap Shift to dash · E use · B inspect · P pause · Tab quests · Shift+Tab browser controls');
+ document.querySelector('#hint').textContent=tr('A/D ruch · Spacja skok · X / Shift zryw · E użyj · B obejrzyj · P pauza · Tab zadania · Pauza + Tab sterowanie przeglądarki','A/D move · Space jump · X / Shift dash · E use · B inspect · P pause · Tab quests · Pause + Tab for browser controls');
  const touchUse=document.querySelector('#touch-use');
  const inMenu=!!(uiFlags&1);
  const replacingSave=!!(uiFlags&confirmSaveFlag);
@@ -433,11 +430,7 @@ function recompute(){
 addEventListener('keydown',e=>{
  if(importPending)return;
  const shiftKey=e.code==='ShiftLeft'||e.code==='ShiftRight';
- if(!e.repeat){
-  if(shiftKey)shiftKeys.add(e.code);
-  if(!shiftKey||shiftKeys.size>1)dashShift='';
- }
- if(composingKey(e)){dashShift='';return;}
+ if(composingKey(e))return;
  const target=e.target instanceof Element?e.target:null;
  const settingsBack=e.code==='Escape'&&settingsKeys.contains(target);
  const pauseScreen=pauseScreenOpen();
@@ -463,11 +456,8 @@ addEventListener('keydown',e=>{
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
- // Shift also starts browser shortcuts. Dash only if it was tapped alone.
- if(shiftKey){
-  if(shiftKeys.size===1)dashShift=e.code;
-  return;
- }
+ // Shift is an immediate movement input. When paused or in menus it stays a browser modifier.
+ if(shiftKey&&((uiFlags&blockingFlags)||keyboard.has('ShiftLeft')||keyboard.has('ShiftRight')))return;
  if(pauseActionShortcut)canvas.focus({preventScroll:true});
  tap(keyMap[e.code]);
  keyboard.add(e.code);
@@ -475,17 +465,8 @@ addEventListener('keydown',e=>{
 });
 canvas.addEventListener('blur',clearInput);
 addEventListener('keyup',e=>{
- shiftKeys.delete(e.code);
- if(e.code===dashShift){
-  dashShift='';
-  if(!e.shiftKey&&!composingKey(e))tap(5);
- }
  if(keyboard.delete(e.code))recompute();
 });
-// A modified click or scroll also uses Shift, even without another keydown.
-const cancelShiftDash=()=>{dashShift='';};
-addEventListener('pointerdown',cancelShiftDash,{capture:true});
-addEventListener('wheel',cancelShiftDash,{capture:true,passive:true});
 const horizontalTouchControls='#touch .directions :is(button[data-key="0"], button[data-key="1"])';
 function releaseHighlight(button){
  if(button&&![...pointers.values()].some(pointer=>pointer.button===button))button.classList.remove('held');
@@ -593,7 +574,7 @@ for(const b of document.querySelectorAll('[data-tap]'))b.onclick=event=>{
  if(event.detail!==0||(!adjustsSetting&&!pagesTour))canvas.focus({preventScroll:true});
  tap(key);
 };
-function clearInput(){keyboard.clear();pointers.clear();shiftKeys.clear();dashShift='';canvasPress=null;held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
+function clearInput(){keyboard.clear();pointers.clear();canvasPress=null;held=0;clearPresses();document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
 function updateBrowserSaveStatus(status){
  browserSaveStatus=status;
  renderSaveStatus();

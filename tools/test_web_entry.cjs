@@ -433,12 +433,14 @@ const server=http.createServer((req,res)=>{
       return tick(dt,held,pressed,...rest);
      };
     });
+    await page.keyboard.press('p');
+    await page.waitForFunction(()=>!!(uiFlags&2));
     await page.keyboard.down('Shift');
     await page.evaluate(async()=>{
      for(let i=0;i<4;i++)await new Promise(requestAnimationFrame);
     });
     assert.equal(await page.evaluate(()=>window.dashEdges),0,
-      'holding Shift before reverse Tab navigation does not dash');
+      'holding Shift before reverse Tab navigation while paused does not dash');
     await page.keyboard.press('Tab');
     await page.keyboard.up('Shift');
     assert.equal(await page.evaluate(()=>document.activeElement.id),'fullscreen',
@@ -449,17 +451,6 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'pl',
       'Tab moves from the site link to the first language control');
     await page.locator('#game').focus();
-    await page.keyboard.down('ShiftLeft');
-    await page.locator('#game').click();
-    await page.keyboard.up('ShiftLeft');
-    await page.keyboard.down('ShiftLeft');
-    await page.keyboard.down('ShiftRight');
-    await page.keyboard.up('ShiftLeft');
-    await page.keyboard.up('ShiftRight');
-    await page.evaluate(async()=>{for(let i=0;i<4;i++)await new Promise(requestAnimationFrame);});
-    assert.equal(await page.evaluate(()=>window.dashEdges),0,'modified clicks and overlapping Shift keys do not dash');
-    await page.keyboard.press('p');
-    await page.waitForFunction(()=>!!(uiFlags&2));
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(()=>document.activeElement.dataset.tap),'12','Tab reaches the toolbar while paused');
     await page.keyboard.press('Escape');
@@ -656,12 +647,17 @@ const server=http.createServer((req,res)=>{
     assert.ok(await page.evaluate(()=>!(entryFlags&4)),'the briefing returns control after the reply exchange');
     assert.equal(await page.locator('#touch-use').getAttribute('aria-label'),'Use');
     console.log('PASS locked map explanation, route tab, quest book and briefing reply through browser controls');
-    await page.keyboard.press('Shift');
+    await page.keyboard.down('ShiftLeft');
     await page.waitForFunction(()=>window.dashEdges===1);
+    await page.keyboard.down('ShiftRight');
+    await page.keyboard.up('ShiftLeft');
+    await page.keyboard.up('ShiftRight');
+    await page.evaluate(async()=>{for(let i=0;i<4;i++)await new Promise(requestAnimationFrame);});
+    assert.equal(await page.evaluate(()=>window.dashEdges),1,'holding, overlapping and releasing Shift does not send extra dash edges');
     await page.keyboard.down('x');
     await page.waitForFunction(()=>window.dashEdges===2);
     await page.keyboard.up('x');
-    console.log('PASS Shift+Tab exits without dashing, tap Shift dashes, and X still dashes on keydown');
+    console.log('PASS Shift+Tab from Pause navigates browser controls and both Shift and X dash on keydown');
     const fullscreenTools=page.locator('#fullscreen-tools');
     const fullscreenMap=fullscreenTools.locator('[data-tap="11"]');
     assert.equal(await fullscreenTools.isVisible(),false);

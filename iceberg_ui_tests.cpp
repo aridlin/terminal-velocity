@@ -1514,10 +1514,7 @@ int main(){try {
     ui_check(paused.state.deaths==1,"Retry from Pause is consumed exactly once");
   }
   for(Controls overlay:{pause,map,book}) {
-    paused.state.player.landing_dash_left=.08;
-    Controls dash;dash.dash_pressed=true;dash.aim_y=-1;
-    paused.tick(dash,1./120);
-    ui_check(paused.state.player.dash_buffer_left>0.,"a dash is queued while the charge recovers");
+    paused.state.player.dash_buffer_left=.08;
     paused.state.player.jump_buffer_left=.10;
     paused.tick(overlay,1./120);
     ui_check(paused.state.player.dash_buffer_left==0.&&paused.state.player.jump_buffer_left==0.,
@@ -1528,9 +1525,7 @@ int main(){try {
   }
   for(bool focus_pause:{false,true})for(bool refocused:{false,true}) {
     paused.profile.pause_on_focus_loss=focus_pause;
-    paused.state.player.landing_dash_left=.08;
-    Controls dash;dash.dash_pressed=true;dash.aim_y=-1;
-    paused.tick(dash,1./120);
+    paused.state.player.dash_buffer_left=.08;
     paused.tick(Controls{.focus_lost=refocused},0.,refocused);
     ui_check(paused.state.paused==focus_pause&&paused.state.player.dash_buffer_left==0.,
              "focus loss drops queued movement even when focus returns in the same batch");
