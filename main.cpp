@@ -70,7 +70,8 @@ constexpr double kWallJumpX = 16.5;
 constexpr double kWallJumpY = 22.5;
 constexpr double kDashSpeed = 32.0;
 constexpr double kDashTime = 0.18;
-constexpr double kLandingDashCooldown = .085;
+constexpr double kLandingDashCooldown = .110;
+constexpr double kLandingDashBuffer = kLandingDashCooldown + .045;
 constexpr double kLedgeHangDepth = .55;
 constexpr double kLedgeClimbTime = .24;
 
@@ -1052,7 +1053,8 @@ void update_step(GameState &state, const EngineGrid &grid,
   }
   const bool remember_direction=grid.adventure_level&&!state.reference_movement;
   if (controls.dash_pressed && !grid.dash_locked()) {
-    player.dash_buffer_left = kDashBuffer;
+    // Preserve the window for a dash tapped just before a spent charge refills on landing.
+    player.dash_buffer_left = remember_direction && !player.can_dash() ? kLandingDashBuffer : kDashBuffer;
     player.dash_buffer_jump = remember_direction && player.grounded &&
                               controls.jump_pressed && controls.aim_y == 0;
     const int horizontal=controls.move||controls.aim_y?controls.move:player.facing;
