@@ -52,7 +52,10 @@
     const auto add_boost_symbol=[&](const char *symbol){
       if(boost_symbols.find(symbol)==std::string::npos)boost_symbols+=symbol;
     };
-    for(const auto &spring:grid_.springs)add_boost_symbol(spring_symbol(spring));
+    const bool has_awnings=std::any_of(grid_.springs.begin(),grid_.springs.end(),
+      [](const auto &spring){return spring.awning;});
+    constexpr uint32_t awning_color=0xe8c79d;
+    for(const auto &spring:grid_.springs)if(!spring.awning)add_boost_symbol(spring_symbol(spring));
     if(std::any_of(grid_.air_fields.begin(),grid_.air_fields.end(),lift_field))add_boost_symbol("↑");
     const bool remaining_token=std::find(state_.collected.begin(),state_.collected.end(),false)!=state_.collected.end();
     constexpr uint32_t hazard_color=0xe09386,hazard_tint=0x63353b;
@@ -68,6 +71,7 @@
     };
     if(grid_.has_hazards())add_feature(tr("░ Ryzyko","░ Hazard"),hazard_color);
     if(remaining_token)add_feature(tr("● Żeton","● Token"),0xedc278);
+    if(has_awnings)add_feature(tr("↗ Markizy","↗ Awnings"),awning_color);
     if(!boost_symbols.empty())add_feature(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
     uint64_t steam_controls=0;
     for(const auto &field:grid_.air_fields)
@@ -424,7 +428,7 @@
       mark(x,y,"●",0xedc278);
     }
     for(const auto &spring:grid_.springs)
-      mark(spring.x+spring.w*.5,spring.y,spring_symbol(spring),0x9dd39c);
+      mark(spring.x+spring.w*.5,spring.y,spring_symbol(spring),spring.awning?awning_color:0x9dd39c);
     for(const auto &field:grid_.air_fields)if(lift_field(field))
       mark(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑",0x9dd39c);
     if(has_wind)

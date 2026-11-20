@@ -408,8 +408,10 @@
         world_text(r.x,r.y+.8,hull,d.stone);
       }
     }
-    for(const auto &spring:grid_.springs) {
-      if(spring.push_x!=0)draw_post_launcher(spring);
+    for(size_t i=0;i<grid_.springs.size();++i) {
+      const auto &spring=grid_.springs[i];
+      if(spring.awning)draw_estate_awning(spring,i);
+      else if(spring.push_x!=0)draw_post_launcher(spring);
       else if(grid_.district==4)draw_garden_pod(spring);
       else world_text(spring.x,spring.y-.5,"╱╲╱╲",0xd8cc87);
     }

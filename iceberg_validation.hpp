@@ -451,6 +451,17 @@ inline void add_estate_clotheslines(EngineGrid &room) {
   else room.platforms.resize(original);
 }
 
+inline void add_estate_awnings(EngineGrid &room) {
+  if(room.district!=2||room.template_id!=35)return;
+  // Both canopies sit in the gaps before the upper token shelves.
+  const auto original=room.springs.size();
+  room.springs.emplace_back(46.,45.35,6.,.55,20.,-42.,true);
+  room.springs.emplace_back(65.3,34.35,4.,.55,17.,-38.,true);
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.springs.erase(room.springs.begin()+original,room.springs.end());
+}
+
 inline void add_expedition_trams(EngineGrid &room) {
   if(room.district!=2||room.template_id!=24||room.platforms.size()!=3)return;
   auto original=room.platforms;

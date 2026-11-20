@@ -344,9 +344,9 @@ int main(int argc,char **argv) {
             "the Estate gutter sample starts at the live wall-kick route");
         }
         if(stop.room==58) {
-          check(i+2==iceberg::DebugTour.size()&&session.grid.platforms.size()==1&&
+          check(session.grid.platforms.size()==1&&
             session.grid.platforms.front().chute_leaf&&session.grid.platforms.front().stop(0)==-1,
-            "the Leaf Chute sample starts at the ready flume before the Crown finale");
+            "the Leaf Chute sample starts at the ready flume");
         }
         session.state.player.x+=2;
         press({.restart=true});
@@ -696,6 +696,41 @@ int main(int argc,char **argv) {
     gardens.begin_campaign(false);gardens.begin_run(iceberg::Mode::Endless);
     check(gardens.grid.template_id==52&&gardens.grid.solid_at(112,41)&&gardens.state.collected.back(),
       "resuming the greenhouse channel restores both the bridge and its token");
+    const auto roof_sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==35;});
+    AdventureSession roof(options,{});
+    check(roof_sample==iceberg::DebugTour.end()-2&&iceberg::DebugTour.back().room==iceberg::CrownSentinel,
+      "the Estate roof sample leaves the Crown finale last");
+    roof.start_tour(int(roof_sample-iceberg::DebugTour.begin()));
+    check(roof.grid.template_id==35&&roof.grid.springs.size()==2&&
+          roof.grid.springs[0].awning&&roof.grid.springs[1].awning,
+      "the Estate roof sample has two striped awnings");
+    for(int i=0;i<14;++i)roof.tick({},1./120);
+    for(int i=0;i<228;++i) {
+      Controls c;c.jump_pressed=i==0;c.jump_held=true;c.move=i<90?1:0;
+      roof.tick(c,1./120);
+    }
+    check(roof.state.deaths==0&&roof.state.last_spring==0&&roof.state.player.grounded&&
+          roof.state.collected[2]&&std::abs(roof.state.player.rect().bottom()-36.)<.01,
+      "the first awning rebounds an ordinary jump up to the first token shelf");
+    for(int i=0;i<191;++i) {
+      Controls c;c.jump_pressed=i==0;c.jump_held=i<94;c.move=i<103?1:0;
+      roof.tick(c,1./120);
+    }
+    check(roof.state.deaths==0&&roof.state.last_spring==1&&roof.state.player.grounded&&
+          roof.state.collected[3]&&std::abs(roof.state.player.rect().bottom()-31.)<.01,
+      "the second awning takes the courier to the next token without a dash or retry");
+    for(unsigned seed=20;seed<52;++seed) {
+      auto regular_roof=verified_room(35,iceberg::mix(seed),2);
+      const auto tokens=regular_roof.sweets;
+      const auto lamps=regular_roof.checkpoint_points;
+      if(!regular_roof.springs.empty())throw std::runtime_error("the original Estate roof unexpectedly has springs");
+      add_estate_awnings(regular_roof);
+      if(regular_roof.springs.size()!=2||tokens!=regular_roof.sweets||lamps!=regular_roof.checkpoint_points||
+         !verify_route(regular_roof).complete)
+        throw std::runtime_error("Estate awnings changed the lower route for seed "+std::to_string(seed));
+    }
+    check(true,"Estate awnings retain the original exit, tokens and lamps across 32 seeds");
     auto chute=verified_room(58,iceberg::mix(73),4);
     check(chute.platforms.empty(),"older Leaf Chute layouts retain the stepped descent");
     add_expedition_ice(chute);

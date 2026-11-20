@@ -311,6 +311,8 @@ struct GameState {
   std::vector<bool> defeated;
   std::vector<double> refill_cooldown;
   std::vector<double> platform_armed_at;
+  int last_spring=-1;
+  double last_spring_time=0.;
   std::vector<ghosts::Ghost> ghosts;
   bool multiplayer = false;
   std::array<ChapterRecord, 3> records{};
@@ -421,8 +423,9 @@ struct SortingBelt {
 };
 struct SpringPad : Rect {
   double push_x, push_y;
-  SpringPad(double x,double y,double w,double h,double push_x=0.,double push_y=-31.)
-    :Rect{x,y,w,h},push_x(push_x),push_y(push_y){}
+  bool awning;
+  SpringPad(double x,double y,double w,double h,double push_x=0.,double push_y=-31.,bool awning=false)
+    :Rect{x,y,w,h},push_x(push_x),push_y(push_y),awning(awning){}
 };
 struct AirField {
   Rect area;
@@ -871,6 +874,7 @@ void reset_player(GameState &state) {
   state.player.last_wall = 0;
   std::fill(state.refill_cooldown.begin(), state.refill_cooldown.end(), 0);
   std::fill(state.platform_armed_at.begin(), state.platform_armed_at.end(), 0);
+  state.last_spring=-1;
   state.player.support = -1;
   state.player.drop_left = 0;
   state.player.momentum_left = state.player.dash_jump_left = state.player.wall_bounce_left = 0;
@@ -1337,8 +1341,11 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       s.refill_cooldown[i] = 2.5;
     }
   }
-  for (auto spring : g.springs)
+  for (size_t i=0;i<g.springs.size();++i) {
+    const auto &spring=g.springs[i];
     if (!p.ledge && p.vy >= 0 && p.rect().intersects(spring)) {
+      s.last_spring=int(i);
+      s.last_spring_time=s.elapsed;
       p.vy = spring.push_y;
       if (spring.push_x != 0) {
         p.vx = spring.push_x;
@@ -1351,6 +1358,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
       p.dash_available = true;
       p.support = -1;
     }
+  }
   for (size_t i = 0; i < g.enemies.size(); ++i)
     if (!s.defeated[i]) {
       auto enemy = g.enemies[i].at(s.elapsed);
