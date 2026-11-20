@@ -254,7 +254,7 @@ function translateUI(){
   touchUse.textContent=tr('Zastąp','Replace');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(inMenu&&!inSettings){
-  touchUse.textContent=tr('Wybierz','Select');
+  touchUse.textContent=awardsOpen?tr('Wróć','Back'):tr('Wybierz','Select');
   touchUse.setAttribute('aria-label',touchUse.textContent);
  }else if(inSettings){
   touchUse.textContent=tr('Wróć','Back');
@@ -330,13 +330,15 @@ function translateUI(){
   button.textContent='B · '+mapViewLabel;
   button.setAttribute('aria-label',mapViewAction);
  }
- touchInspect.hidden=showingPause||(reading&&!questRecordOpen())||
-  (inMenu&&!choosingProfile&&!replacingSave)||!!((overlay&128)&&(overlay&tourFlag));
+ touchInspect.hidden=showingPause||(reading&&!questRecordOpen())||inSettings||!!((overlay&128)&&(overlay&tourFlag));
  let inspectLabel;
  if(replacingSave){
   touchInspect.textContent=tr('Anuluj','Cancel');
  }else if(choosingProfile){
   touchInspect.textContent=tr('Wróć','Back');
+ }else if(inMenu){
+  touchInspect.textContent=awardsOpen?tr('Grupa','Group'):tr('Osiągnięcia','Achievements');
+  if(awardsOpen)inspectLabel=tr('Zmień grupę','Change group');
  }else if(overlay&forkDoorFlag){
   touchInspect.textContent=tr('Główne drzwi','Main door');
  }else if(questRecordOpen()){
@@ -505,7 +507,11 @@ for(const button of document.querySelectorAll('[data-key]')){
    if(button.id==='touch-use')return 6;
    if(button.id==='touch-inspect')return 8;
   }
-  if(button.id==='touch-inspect'&&((uiFlags&(confirmSaveFlag|profilePickerFlag))||questRecordOpen()))return 9;
+  if(button.id==='touch-inspect'){
+   if((uiFlags&(confirmSaveFlag|profilePickerFlag))||questRecordOpen())return 9;
+   if((uiFlags&1)&&!(uiFlags&settingsFlag)&&!awardsOpen)return 30;
+  }
+  if(button.id==='touch-use'&&awardsOpen)return 9;
   if(button.id!=='touch-use'||!lastBlocked)return +button.dataset.key;
   if(uiFlags&routeReturnFlag)return 8;
   if(readOnlyMapOpen())return 11;

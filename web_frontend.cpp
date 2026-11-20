@@ -149,6 +149,11 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
     c.confirm=true;
   }
   for(int i=0;i<7;++i)if(p(20+i))c.select_level=i+1;
+  const auto &view=web_game->state.adventure;
+  if(p(30)&&web_game->state.menu&&!view.settings&&!view.confirm_new&&!view.tour_picker&&
+     !view.save_picker&&!view.achievement_menu) {
+    c.select_level=7;c.confirm=true;
+  }
   const auto last_save=web_game->save_revision;
   const int previous_slot=web_slot;
   web_game->tick(c,std::isfinite(dt)?dt:0,focused!=0,std::clamp(cols,34,160),std::clamp(rows,cols>=56?20:24,60),2);
