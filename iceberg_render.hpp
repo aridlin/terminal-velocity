@@ -44,7 +44,7 @@
     const auto &platform=grid_.platforms[size_t(support)];
     if(!platform.fragile||platform.crack_age(state_,size_t(support),state_.elapsed)>=MovingPlatform::CrackTime)
       return {};
-    if(platform.icy)return tr("Lód pęka · Skacz!","Ice cracking · Jump!");
+    if(platform.icy||platform.rime_shelf)return tr("Lód pęka · Skacz!","Ice cracking · Jump!");
     if(grid_.template_id==iceberg::ArchiveGlassRoom)return tr("Szyba pęka · Skacz!","Glass cracking · Jump!");
     if(grid_.district==5)return tr("Belka się ugina · Skacz!","Beam buckling · Jump!");
     return tr("Donica pęka · Skacz!","Planter cracking · Jump!");
@@ -408,6 +408,7 @@
         draw_archive_glass(r,platform.crack_age(state_,i,state_.elapsed));
         continue;
       }
+      if(platform.rime_shelf) {draw_rime_shelf(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile&&grid_.district==5){draw_crown_rib(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.fragile){draw_fragile_planter(r,platform.crack_age(state_,i,state_.elapsed));continue;}
       if(platform.tram) {

@@ -27,6 +27,23 @@
     world_art(deck_center-3*scale_,deck.y+row,{"╲──╥──╱"," ╲─╨─╱"},steel);
   }
 
+  void draw_rime_shelf(const Rect &shelf,double age) {
+    const double row=aspect_*scale_;
+    const double brace=shelf.x+.48;
+    draw_scenery_pipe({{shelf.x-2.4,shelf.y+2.2},{brace,shelf.y+2.2},{brace,shelf.y+row}},0x829da6);
+    if(age>=MovingPlatform::CrackTime&&age<MovingPlatform::RestoreTime) {
+      const double drop=age-MovingPlatform::CrackTime;
+      if(drop<.6)for(int i=0;i<8;++i) {
+        const double x=shelf.x+shelf.w*(i+.5)/8.+std::sin(i*4.2)*drop*1.5;
+        const double y=shelf.y+(2.+(i%4)*1.1)*drop*drop;
+        world_text(x,y,i%3==0?"✧":"·",drop<.27?0xd1e9ed:0x7dabb9);
+      }
+      return;
+    }
+    draw_crown_rib(shelf,age);
+    world_text(shelf.x+.3,shelf.y-row,age<MovingPlatform::CrackTime?"╍":"❄",0xb4dfe7);
+  }
+
   void draw_crown_rib(const Rect &beam,double age) {
     const double row=aspect_*scale_;
     const int cells=std::max(4,int(beam.w/scale_));
@@ -171,6 +188,13 @@
       else world_art(deck.x,deck.y+.7,{"╲──────┬──────╱"," ╲─────┴─────╱","      ╱╲"},d.stone);
     }
     draw_crown_wind();
+    for(const auto &ice:grid_.ice_strips) {
+      int index=0;
+      for(double x=ice.x;x<ice.right();x+=scale_,++index) {
+        const bool sheen=(index+int(state_.elapsed*5.))%7==0;
+        world_text(x,ice.y-.24,sheen?"━":"╌",sheen?0xd5eff3:0x8db5c1);
+      }
+    }
     if(grid_.crown_seam)draw_crown_seam(*grid_.crown_seam,clock);
     if(grid_.windbreak_roof) {
       const auto &roof=*grid_.windbreak_roof;

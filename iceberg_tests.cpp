@@ -1056,18 +1056,20 @@ int main(int argc,char **argv) {
     const auto &counterweights=crown.grid;
     const auto original_counterweights=verified_room(69,counterweights.seed,5);
     const auto lower_route=verify_route(counterweights);
-    check(counterweights.platforms.size()==original_counterweights.platforms.size()+1&&
-          lower_route.complete&&lower_route.deaths==0,
+    const auto service_entry=std::find_if(counterweights.platforms.begin(),counterweights.platforms.end(),
+      [](const auto &platform){return platform.service_lift;});
+    check(service_entry!=counterweights.platforms.end()&&lower_route.complete&&lower_route.deaths==0,
       "current Shutter Counterweights adds a service lift and retains its lower route");
-    const auto &service_lift=counterweights.platforms.back();
+    const auto &service_lift=*service_entry;
+    const int lift_index=int(service_entry-counterweights.platforms.begin());
     auto lift_rider=new_state(counterweights);
     lift_rider.player.x=service_lift.base.x+1.;
     lift_rider.player.y=service_lift.at(0).y-kPlayerHeight;
     lift_rider.player.grounded=true;
-    lift_rider.player.support=int(counterweights.platforms.size()-1);
+    lift_rider.player.support=lift_index;
     const auto low_landing=lift_rider.player.rect().bottom();
     for(int tick=0;tick<350;++tick)world_step(lift_rider,counterweights,{},1./120);
-    check(lift_rider.player.support==int(counterweights.platforms.size()-1)&&
+    check(lift_rider.player.support==lift_index&&
           lift_rider.deaths==0&&low_landing-lift_rider.player.rect().bottom()>15.,
       "the service lift carries a neutral rider from the lower route toward the upper shelves");
     crown_run.layout_version=2;crown.load_room();
