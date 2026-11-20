@@ -1509,7 +1509,7 @@ int main(){try {
       "the full Tour title leaves the sample instructions readable");
     RenderGrid(tour_repeat.grid,tour_repeat.state,28,38,2).draw();
     ui_check(ui_text(frame).find("The channel beneath the greenhouse")!=std::string::npos&&
-             ui_text(frame).find("Underfrost Gardens")!=std::string::npos,
+             ui_text(frame).find(iceberg::Districts[size_t(channel->district)].name.get(picker.language))!=std::string::npos,
       "a wider Tour keeps its full list title and district");
     picker.picker_choice=previous;
   }
