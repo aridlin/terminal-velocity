@@ -31,6 +31,53 @@ int main() {
     if(!detour_store.save(reloaded,true)||!detour_store.load(reloaded)||reloaded.hidden_room!=-1)return 3;
     std::cout<<"PASS basement resumes from current saves and portable backups, and clears on return\n";
   }
+  for(bool rotate:{false,true}) {
+    const auto journal_path=folder/(rotate?"rotated-journal":"same-leg-journal");
+    iceberg::SaveStore journal(journal_path);
+    iceberg::Profile before;
+    auto &run=before.expeditions[0];
+    run.active=true;run.origin_seed=12;run.seed=73;run.depth=rotate?15:8;
+    run.room=run.depth%iceberg::RoomsPerLeg;
+    run.itinerary={14,13,16,15,18,17,20,19};
+    run.completed_legs.push_back({0,1,2,3,4,5,6,7});
+    auto after=before;
+    after.story=42;
+    auto &next=after.expeditions[0];
+    ++next.depth;
+    next.room=next.depth%iceberg::RoomsPerLeg;
+    if(rotate) {
+      next.seed=iceberg::mix(run.seed+1);
+      next.itinerary={21,22,23,18,17,15,19,16};
+      next.completed_legs.push_back({14,13,16,15,18,17,20,19});
+    }
+    if(!journal.save(before,true)||!journal.save(after,true))return 4;
+    {
+      std::fstream damage(journal_path.string()+".routes.bak",std::ios::in|std::ios::out|std::ios::binary);
+      damage.seekp(-2,std::ios::end);
+      if(!(damage<<'x'))return 4;
+    }
+    iceberg::Profile saved;
+    if(!journal.load(saved)||journal.recovered||saved.story!=after.story||
+       saved.expeditions[0].itinerary!=next.itinerary||
+       saved.expeditions[0].completed_legs!=next.completed_legs) {
+      std::cerr<<"FAIL healthy backup restores history without rolling back the newer save, rotate="<<rotate<<'\n';
+      return 4;
+    }
+    const auto exported=folder/"recovered-journal.iceberg";
+    {
+      std::ofstream backup(exported,std::ios::binary);
+      if(!journal.export_backup(backup))return 4;
+    }
+    if(!iceberg::SaveStore::read_backup(exported,saved)||saved.expeditions[0].completed_legs!=next.completed_legs)return 4;
+    if(!journal.save(after))return 4;
+    std::filesystem::remove(journal_path.string()+".bak");
+    std::filesystem::remove(journal_path.string()+".routes");
+    if(!journal.load(saved)||saved.expeditions[0].completed_legs!=next.completed_legs) {
+      std::cerr<<"FAIL autosave must repair the corrupted body even if its header still matches\n";
+      return 4;
+    }
+  }
+  std::cout<<"PASS damaged journals recover through same-leg and rotation saves, portable export and idle repair\n";
   int old_count=0,new_count=0;
   for(int attempt=0;attempt<200;++attempt) {
     if(!store.save(previous))return 1;

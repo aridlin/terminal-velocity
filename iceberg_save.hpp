@@ -239,6 +239,32 @@ class SaveStore {
       if(read_history(input,expedition,anchor,bytes))return;
     }
   }
+  void restore_current_history(Expedition &current,uint64_t anchor) const {
+    restore_history(current,anchor);
+    if(!current.active||current.depth<RoomsPerLeg||!current.completed_legs.empty())return;
+
+    auto backup=path_;backup+=".bak";
+    Profile previous_profile;
+    uint64_t previous_anchor=0;
+    if(!read(backup,previous_profile,nullptr,&previous_anchor))return;
+    auto &previous=previous_profile.expeditions[0];
+    if(!previous.active||previous.origin_seed!=current.origin_seed||previous.district!=current.district||
+       previous.layout_version!=current.layout_version||previous.depth>current.depth||
+       previous.room!=previous.depth%RoomsPerLeg||current.room!=current.depth%RoomsPerLeg||
+       previous.itinerary.size()!=RoomsPerLeg||current.itinerary.size()!=RoomsPerLeg)return;
+
+    const int leg=current.depth/RoomsPerLeg, previous_leg=previous.depth/RoomsPerLeg;
+    const bool same_leg=previous_leg==leg&&previous.seed==current.seed&&previous.itinerary==current.itinerary;
+    const bool just_rotated=previous_leg+1==leg&&previous.room==RoomsPerLeg-1&&mix(previous.seed+1)==current.seed;
+    if(!same_leg&&!just_rotated)return;
+    restore_history(previous,previous_anchor);
+    current.completed_legs=std::move(previous.completed_legs);
+    if(just_rotated) {
+      // The previous primary still names the leg the courier just finished.
+      auto &last=current.completed_legs.emplace_back();
+      std::copy(previous.itinerary.begin(),previous.itinerary.end(),last.begin());
+    }
+  }
   static std::string history_payload(const Expedition &expedition) {
     std::ostringstream body;
     body<<expedition.completed_legs.size()<<'\n';
@@ -268,12 +294,22 @@ class SaveStore {
     };
     const bool first_matches=matches(files[0],anchor);
     const bool second_matches=matches(files[1],anchor);
-    if(!replace_matching_history&&(first_matches||second_matches))return true;
+    const auto payload=history_payload(expedition);
+    if(!replace_matching_history&&(first_matches||second_matches)) {
+      const auto digest=checksum(payload);
+      const auto intact=[&](const auto &file) {
+        std::ifstream input(file,std::ios::binary);
+        uint64_t saved_digest=0;
+        return history_header(input,anchor,saved_digest)&&saved_digest==digest&&
+          std::equal(std::istreambuf_iterator<char>(input),std::istreambuf_iterator<char>(),
+            payload.begin(),payload.end());
+      };
+      if((first_matches&&intact(files[0]))||(second_matches&&intact(files[1])))return true;
+    }
 
     // Replace a companion with the same profile checksum in place. Otherwise
     // keep the previous save's companion until the new primary commits.
     const auto &target=files[!first_matches&&(second_matches||matches(files[0],previous))?1:0];
-    const auto payload=history_payload(expedition);
     temporary+=".routes";
     std::ofstream output(temporary,std::ios::binary|std::ios::trunc);
     write_history(output,anchor,payload);
@@ -362,7 +398,7 @@ public:
     }
     uint64_t anchor=0;
     if (read(path_, p,nullptr,&anchor)) {
-      restore_history(p.expeditions[0],anchor);
+      restore_current_history(p.expeditions[0],anchor);
       return true;
     }
     auto backup = path_; backup += ".bak";
@@ -421,7 +457,7 @@ public:
     uint64_t anchor=0;
     if(!read_profile(standalone,profile,nullptr,&anchor))return false;
     auto &expedition=profile.expeditions[0];
-    restore_history(expedition,anchor);
+    restore_current_history(expedition,anchor);
     write_portable(output,primary,expedition,anchor);
     return bool(output);
   }
