@@ -239,12 +239,18 @@
       prop_art(iceworld::TurbineAccessX,iceworld::TurbineAccessFloor,
         {"╭─────╮","│  ↖  │","╰──┬──╯","   │","  ╱┴╲"},access_arrow);
     }
+    const double stream_width=fan.area.w-2*scale_;
+    if(stream_width<=0)return;
+    const bool strong=pressure>=.7;
     const int streaks=2+int(pressure*9.);
     for(int i=0;i<streaks;++i) {
       const double along=std::fmod(time*1.16+i/11.,1.);
-      const double wx=fan.area.x+along*fan.area.w;
-      const double wy=y+(2.+(i%3)*.84)*row-along*row;
-      world_art(wx,wy,{jump_now&&i%3==0?"›":"─"},jump_now?draft:casing);
+      const double lane=i%3-1;
+      // Start at the outlet and fan upward within the playable air field.
+      const double height=.58-.33*along+lane*(.07+.10*along);
+      const double wx=fan.area.x+along*stream_width;
+      const double wy=fan.area.y+height*fan.area.h;
+      world_art(wx,wy,{strong?"─›":"╶"},strong?draft:casing);
     }
   }
 
