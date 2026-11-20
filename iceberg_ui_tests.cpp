@@ -50,6 +50,39 @@ int main(){try {
     }
   }
   {
+    auto catalogue=game.state;
+    for(size_t i=0;i<iceberg::Achievements.size();++i)
+      catalogue.adventure.awards[iceberg::achievement_word(iceberg::Achievement(i))]|=
+        iceberg::achievement_bit(iceberg::Achievement(i));
+    for(auto locale:{iceberg::Language::English,iceberg::Language::Polish})
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}})
+        for(bool menu:{false,true}) {
+          catalogue.menu=menu;
+          catalogue.journal=!menu;
+          catalogue.adventure.journal_tab=3;
+          catalogue.adventure.achievement_menu=menu;
+          catalogue.adventure.language=locale;
+          for(size_t i=0;i<iceberg::Achievements.size();++i) {
+            catalogue.adventure.achievement_selection=int(i);
+            RenderGrid(game.grid,catalogue,rows,cols,2).draw();
+            std::string description;
+            for(const auto &row:frame) {
+              for(const auto &cell:row)
+                description+=cell.rgb==0xa8bfc2?cell.glyph:" ";
+              description+=' ';
+            }
+            const auto &award=iceberg::Achievements[i];
+            const auto title=award.title.get(locale);
+            const auto body=award.condition.get(locale);
+            if(normalize_ui(description)!=normalize_ui(body))
+              throw std::runtime_error("truncated achievement condition: "+title);
+            if(normalize_ui(ui_text(frame)).find(title)==std::string::npos)
+              throw std::runtime_error("truncated achievement title: "+title);
+          }
+          ui_check(true,"every earned title and condition fits the achievement catalogue and quest book");
+        }
+  }
+  {
     AdventureSession tour(options,{});
     auto &picker=tour.state.adventure;
     picker.tour_picker=true;

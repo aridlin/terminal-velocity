@@ -1028,8 +1028,26 @@
     const auto &d=iceberg::Districts[size_t(grid_.district)];
     const auto entries=iceberg::award_entries(menu?v.achievement_group:iceberg::AwardGroup::All);
     const auto earned=[&](size_t i){return iceberg::has_award(v.awards,iceberg::Achievement(i));};
+    const auto entry_title=[&](size_t i) {
+      const auto &award=iceberg::Achievements[i];
+      return award.hidden&&!earned(i)?tr("Ukryte osiągnięcie","Hidden achievement"):award.title.get(v.language);
+    };
     const int selected=std::clamp(v.achievement_selection,0,int(entries.size())-1);
-    const int visible=std::max(1,rows_-top-(menu?9:6));
+    const auto selected_entry=entries[size_t(selected)];
+    const auto &selected_award=iceberg::Achievements[selected_entry];
+    const int text_width=cols_-4;
+    const auto selected_title=entry_title(selected_entry);
+    const auto title_lines=iceberg::cell_length(selected_title)+6>text_width?
+      wrap(selected_title,text_width):std::vector<std::string>{};
+    std::vector<std::string> condition;
+    if(!selected_award.hidden||earned(selected_entry))
+      condition=wrap(selected_award.condition.get(v.language),text_width);
+    else if(menu)condition=wrap(tr("Opis pojawi się po odkryciu.","Details appear when unlocked."),text_width);
+
+    // Make room for the selected details before deciding how far the list can extend.
+    const int detail_rows=int(title_lines.size()+condition.size())+int(menu);
+    const int detail_top=std::min(rows_-(menu?7:4),rows_-2-detail_rows);
+    const int visible=std::max(1,detail_top-top-2);
     const int start=std::clamp(selected-visible/2,0,std::max(0,int(entries.size())-visible));
     const auto total=std::count_if(entries.begin(),entries.end(),earned);
     if(menu) {
@@ -1049,14 +1067,13 @@
     for(int n=start;n<std::min(int(entries.size()),start+visible);++n) {
       const auto i=entries[size_t(n)];
       const auto &award=iceberg::Achievements[i];
-      const auto title=award.hidden&&!earned(i)?tr("Ukryte osiągnięcie","Hidden achievement"):award.title.get(v.language);
       const bool concealed=award.hidden&&!earned(i);
       const auto icon=concealed?"?":award.icon;
       const uint32_t ink=earned(i)?(award.rare?0xffba64u:0xffd68au):d.light;
-      auto label=glyphs(std::string(n==selected?"▸ ":"  ")+icon+" "+(earned(i)?"◆ ":"◇ ")+title);
+      auto label=glyphs(std::string(n==selected?"▸ ":"  ")+icon+" "+(earned(i)?"◆ ":"◇ ")+entry_title(i));
       std::string line;
-      for(int x=0;x<std::min(int(label.size()),cols_-4);++x)
-        line+=x==cols_-5&&int(label.size())>cols_-4?"…":label[size_t(x)];
+      for(int x=0;x<std::min(int(label.size()),text_width);++x)
+        line+=x==text_width-1&&int(label.size())>text_width?"…":label[size_t(x)];
       if(menu&&n==selected)for(int x=2;x<cols_-3;++x)
         put(top+1+n-start,x,{" ",Color::Decor,false,false,0,d.light,0x20313a});
       if(menu&&n==selected) {
@@ -1066,20 +1083,14 @@
              ink,0x20313a});
       } else paint_text(top+1+n-start,2,line,ink);
     }
-    const auto i=entries[size_t(selected)];
-    const auto &award=iceberg::Achievements[i];
-    int y=rows_-(menu?7:4);
+    int y=detail_top;
+    for(const auto &line:title_lines)paint_text(y++,2,line,0xffd68a,true);
     if(menu) {
-      const auto status=earned(i)?(award.rare?tr("◆ Zdobyte · rzadkie","◆ Unlocked · rare"):
+      const auto status=earned(selected_entry)?(selected_award.rare?tr("◆ Zdobyte · rzadkie","◆ Unlocked · rare"):
         tr("◆ Zdobyte","◆ Unlocked")):tr("◇ Zablokowane","◇ Locked");
-      paint_text(y++,2,status,earned(i)?0xffd68a:d.accent);
+      paint_text(y++,2,status,earned(selected_entry)?0xffd68a:d.accent);
     }
-    if(!award.hidden||earned(i)) {
-      for(const auto &line:wrap(award.condition.get(v.language),cols_-4))
-        if(y<rows_-2)paint_text(y++,2,line,0xa8bfc2);
-    } else if(menu) {
-      paint_text(y,2,tr("Opis pojawi się po odkryciu.","Details appear when unlocked."),0xa8bfc2);
-    }
+    for(const auto &line:condition)paint_text(y++,2,line,0xa8bfc2);
     const auto controls=menu?tr("↑↓ · ←→ / B grupy · P wróć","↑↓ · ←→ / B groups · P back"):
       tr("↑↓ · B zakładka · TAB wróć","↑↓ · B tab · TAB back");
     paint_text(rows_-2,2,controls,d.light);
