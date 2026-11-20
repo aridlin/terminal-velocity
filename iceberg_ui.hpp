@@ -63,7 +63,21 @@ inline std::vector<int> journal_entries(const View &v) {
 inline std::string journey_next_step(const View &v) {
   auto t=[&](const char *pl,const char *en){return tr(v.language,pl,en);};
   if(!v.current_objective.empty())return v.current_objective;
-  if(v.mode!=Mode::Campaign)return v.mode==Mode::Endless?t("Przejdź przez oświetlone drzwi do następnego odcinka.","Pass through the lit door to the next route."):t("Ukończ osiem odcinków. Czas, powroty i zbiory mają osobne rekordy.","Finish eight rooms. Time, retries and collection have separate records.");
+  if(v.tour_scene>=0)return DebugTour[size_t(v.tour_scene)].change.get(v.language);
+  if(v.mode!=Mode::Campaign) {
+    const auto &route=v.route;
+    const int current=route.current,count=int(route.rooms.size());
+    if(route.available&&current>=0&&current<count) {
+      if(current+1<count)
+        return t("Oświetlone drzwi prowadzą do pokoju ","The lit door leads to room ")+
+          std::to_string(current+2)+": "+route.rooms[size_t(current+1)].get(v.language)+".";
+      if(v.mode==Mode::Trial)
+        return t("Oświetlone drzwi kończą próbę mistrzowską.","The lit door completes the Mastery Trial.");
+      return t("Oświetlone drzwi rozpoczynają odcinek ","The lit door starts leg ")+
+        std::to_string(v.depth/RoomsPerLeg+2)+".";
+    }
+    return t("Idź do oświetlonych drzwi.","Head to the lit door.");
+  }
   if(v.revisit)return t("Brama przy wejściu wraca do osady. Postęp głównej podróży czeka.","The entrance door returns to the settlement. Your journey is waiting.");
   if(v.visit_district>=0)return t("Tablica wypraw w osadzie wraca do twojej bieżącej trasy.","The settlement's route board returns to your current journey.");
   if(v.finished)return t("Wybierz wyprawę na tablicy albo odwiedź mieszkańców.","Choose an expedition at the board or visit the residents.");

@@ -1783,6 +1783,43 @@ int main(){try {
       game.tick(map,0);
     }
   }
+  {
+    AdventureSession route_book(options,{});
+    route_book.begin_campaign(true);
+    route_book.profile.language=iceberg::Language::English;
+    route_book.profile.unlocked=4;route_book.run_district=4;
+    route_book.begin_run(iceberg::Mode::Endless,true);
+    route_book.room=route_book.depth=6;
+    route_book.load_room();
+    const auto &view=route_book.state.adventure;
+    const auto destination=view.route.rooms.back().get(view.language);
+    const auto goal=[&] {
+      const auto &door=route_book.grid.goal;
+      route_book.state.player.x=door.x;
+      route_book.state.player.y=door.bottom()-kPlayerHeight;
+      route_book.tick({},1./120);
+      route_book.tick(use,1./120);
+    };
+    ui_check(iceberg::journey_next_step(view)=="The lit door leads to room 8: "+destination+".",
+      "the penultimate Expedition room names the last room of the same leg");
+    goal();
+    ui_check(route_book.room==7&&view.room_name==destination&&
+      iceberg::journey_next_step(view)=="The lit door starts leg 2.",
+      "the named door reaches that room and the final door announces the next leg");
+    goal();
+    ui_check(route_book.room==0&&route_book.depth==8&&
+      iceberg::journey_next_step(view).starts_with("The lit door leads to room 2: "),
+      "the final Expedition door starts the next leg and its journal resets the room number");
+    auto trial=view;
+    trial.mode=iceberg::Mode::Trial;trial.route.current=7;
+    ui_check(iceberg::journey_next_step(trial)=="The lit door completes the Mastery Trial.",
+      "the last Mastery Trial room describes completion");
+    route_book.start_tour(17);
+    route_book.tick({},.0);
+    route_book.state.adventure.notice_left=0.;
+    ui_check(iceberg::journey_next_step(view)==iceberg::DebugTour[17].change.get(view.language),
+      "the Debug Tour journal keeps a stop's instructions after the entry notice expires");
+  }
   game.begin_campaign(false);game.tick(map,1./120);
   ui_check(game.state.adventure.map&&!game.state.adventure.map_route,"returning to the campaign opens district travel");
   Controls menu;menu.menu_request=true;game.tick(menu,1./120);
