@@ -1700,14 +1700,22 @@ const server=http.createServer((req,res)=>{
      await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 8:'),null,{timeout:5000});
     }finally{await page.keyboard.up('ArrowDown');}
     assert.equal(await action.getAttribute('aria-label'),'Return to current room');
+    await action.focus();
+    await page.keyboard.press('b');
+    await page.waitForFunction(()=>uiFlags&(1<<17));
+    assert.equal(await action.evaluate(button=>document.activeElement===button),true);
+    await page.keyboard.press('b');
+    await page.waitForFunction(()=>!(uiFlags&(1<<17))&&window.expeditionFrame?.includes('Room 8:'));
     await action.tap();
     await page.waitForFunction(()=>!!(uiFlags&128)&&window.expeditionFrame?.includes('Planned:')&&
      !window.expeditionFrame?.includes('Room 8:'));
     assert.equal(await action.getAttribute('aria-label'),'Close map');
     console.log('PASS touch Now returns to the current room and restores the map close action');
    }
-   await action.tap();
+   await action.focus();
+   await page.keyboard.press('j');
    await page.waitForFunction(()=>!(uiFlags&128));
+   assert.equal(await page.evaluate(()=>document.activeElement===canvas),true,'the map close shortcut restores gameplay focus');
    assert.equal(await newRun.isEnabled(),true,'closing the map restores Retry');
    assert.equal(await action.getAttribute('aria-label'),'Use',
     'closing either Expedition map restores the touch interaction action');

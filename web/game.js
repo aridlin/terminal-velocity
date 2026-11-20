@@ -148,8 +148,8 @@ const previousRouteRoomFlag=1<<29,nextRouteRoomFlag=1<<30;
 const routeDirectionSelector='.route-browse [data-key],#touch .directions [data-key]';
 const expeditionMapOpen=()=>(overlayFlags()&(128|expeditionFlag|tourFlag))===(128|expeditionFlag);
 const expeditionTimelineOpen=()=>expeditionMapOpen()&&!(overlayFlags()&roomMapFlag);
-const isExpeditionMapSwitch=element=>expeditionMapOpen()&&element instanceof Element&&
- element.matches('.map-view-switch,#touch-inspect');
+const isExpeditionMapAction=element=>expeditionMapOpen()&&element instanceof Element&&
+ element.matches('.map-view-switch,#touch-inspect,#touch-use');
 const isTimelineDirection=element=>expeditionTimelineOpen()&&element instanceof Element&&element.matches(routeDirectionSelector);
 const timelineShortcuts=new Set(['KeyB','KeyJ','KeyP','Escape']);
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&travelDistrict<0);
@@ -370,7 +370,7 @@ window.tvUI=u=>{
  if(tourPicker!==!!u.tourPicker)clearInput();
  tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
- const hadMapSwitchFocus=isExpeditionMapSwitch(document.activeElement);
+ const hadMapActionFocus=isExpeditionMapAction(document.activeElement);
  const hadSettingsFocus=settingsKeys.contains(document.activeElement);
  const hadTourFocus=tourControls.contains(document.activeElement);
  routeLegs=nextRouteLegs;
@@ -406,7 +406,7 @@ window.tvUI=u=>{
  }
  translateUI();
  if(!accounts?.active&&((hadTimelineFocus&&!expeditionTimelineOpen())||
-    (hadMapSwitchFocus&&!expeditionMapOpen())||
+    (hadMapActionFocus&&!expeditionMapOpen())||
     (hadSettingsFocus&&settingsKeys.hidden)||(hadTourFocus&&tourControls.hidden)))
   canvas.focus({preventScroll:true});
 };
@@ -434,7 +434,7 @@ addEventListener('keydown',e=>{
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape');
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  const timelineDirection=isTimelineDirection(target);
- const mapShortcut=(timelineDirection||isExpeditionMapSwitch(target))&&timelineShortcuts.has(e.code);
+ const mapShortcut=(timelineDirection||isExpeditionMapAction(target))&&timelineShortcuts.has(e.code);
  const timelineNavigation=timelineDirection&&e.code.startsWith('Arrow');
  if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
     !settingsBack&&!tourNavigation&&!mapShortcut&&!timelineNavigation)return;
