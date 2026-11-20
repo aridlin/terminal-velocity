@@ -71,7 +71,6 @@ constexpr double kWallJumpY = 22.5;
 constexpr double kDashSpeed = 32.0;
 constexpr double kDashTime = 0.18;
 constexpr double kLandingDashCooldown = .110;
-constexpr double kLandingDashBuffer = kLandingDashCooldown + .045;
 constexpr double kLedgeHangDepth = .55;
 constexpr double kLedgeClimbTime = .24;
 
@@ -125,7 +124,6 @@ struct Player {
   double jump_buffer_left = 0.0;
   double dash_buffer_left = 0.0;
   std::pair<int,int> dash_buffer_direction{};
-  bool dash_buffer_jump = false;
   double dash_time_left = 0.0;
   double landing_dash_left = 0.0;
   std::optional<Ledge> ledge;
@@ -881,7 +879,6 @@ void reset_player(GameState &state) {
   state.player.coyote_left = 0.0;
   state.player.jump_buffer_left = 0.0;
   state.player.dash_buffer_left = 0.0;
-  state.player.dash_buffer_jump = false;
   state.player.dash_time_left = 0.0;
   state.player.landing_dash_left = 0.0;
   state.player.ledge.reset();
@@ -1052,11 +1049,8 @@ void update_step(GameState &state, const EngineGrid &grid,
     player.jump_buffer_left = kJumpBuffer;
   }
   const bool remember_direction=grid.adventure_level&&!state.reference_movement;
-  if (controls.dash_pressed && !grid.dash_locked()) {
-    // Preserve the window for a dash tapped just before a spent charge refills on landing.
-    player.dash_buffer_left = remember_direction && !player.can_dash() ? kLandingDashBuffer : kDashBuffer;
-    player.dash_buffer_jump = remember_direction && player.grounded &&
-                              controls.jump_pressed && controls.aim_y == 0;
+  if (controls.dash_pressed && !grid.dash_locked() && player.landing_dash_left <= 0.) {
+    player.dash_buffer_left = kDashBuffer;
     const int horizontal=controls.move||controls.aim_y?controls.move:player.facing;
     player.dash_buffer_direction={horizontal,controls.aim_y};
   }
@@ -1075,7 +1069,7 @@ void update_step(GameState &state, const EngineGrid &grid,
     // A paired jump can still be buffered when the landing cooldown ends.
     dash_jump_on_launch = remember_direction && player.grounded && dy == 0.0 &&
                           player.jump_buffer_left > 0.0 &&
-                          (controls.jump_pressed || player.dash_buffer_jump);
+                          controls.jump_pressed;
     const double len = std::hypot(dx, dy);
     dx /= len;
     dy /= len;
@@ -1088,7 +1082,6 @@ void update_step(GameState &state, const EngineGrid &grid,
     player.wall_coyote_left = 0;
     if (!dash_jump_on_launch) player.jump_buffer_left = 0.0;
     player.dash_buffer_left = 0.0;
-    player.dash_buffer_jump = false;
     player.ledge.reset();
     player.ledge_climb_left = 0.0;
   }
@@ -1174,9 +1167,7 @@ void update_step(GameState &state, const EngineGrid &grid,
     player.vy = kWallSlideSpeed;
   }
 
-  const bool waiting_for_dash_jump = player.grounded && player.dash_buffer_jump &&
-      player.dash_buffer_left > 0.0 && player.landing_dash_left > 0.0;
-  if (player.jump_buffer_left > 0.0 && !waiting_for_dash_jump) {
+  if (player.jump_buffer_left > 0.0) {
     if (player.grounded || player.coyote_left > 0.0) {
       player.vy = -kJumpSpeed;
       player.grounded = false;
@@ -1407,6 +1398,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
   if (g.adventure_level && !s.reference_movement && !was_grounded && p.grounded &&
       (spent_dash || p.dash_time_left > 0.)) {
     p.landing_dash_left = kLandingDashCooldown;
+    p.dash_buffer_left = 0.0; // A recharged dash requires a new press.
     // Ending the dash keeps the next step grounded, with gravity maintaining contact.
     p.dash_time_left = 0.0;
   }
