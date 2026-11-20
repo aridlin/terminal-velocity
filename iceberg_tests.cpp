@@ -311,6 +311,35 @@ int main(int argc,char **argv) {
       press({.new_run=true});
       check(session.tour_scene==int(iceberg::DebugTourLatest)&&session.grid.template_id==iceberg::DebugTour[iceberg::DebugTourLatest].room,
         "N opens the latest sample from the picker");
+      auto sample_for=[](int room) {
+        const auto found=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+          [room](const iceberg::TourStop &stop){return stop.room==room;});
+        return int(found-iceberg::DebugTour.begin());
+      };
+      const auto latest=int(iceberg::DebugTourLatest);
+      using iceberg::SideFlag;
+      press({.interact=true});
+      check(session.has_side_flag(SideFlag::HeatworksMugTaken),
+        "the latest sample starts beside a working Heatworks mug");
+      press({.restart=true});
+      check(session.tour_scene==latest&&!session.has_side_flag(SideFlag::HeatworksMugTaken),
+        "Retry restarts the mug sample from its original state");
+      session.load_tour_scene(sample_for(104));
+      press({.interact=true});
+      check(session.has_side_flag(SideFlag::GardenSnailFound)&&session.state.adventure.inspecting,
+        "the Gardens sample opens the pot and reveals the snail");
+      session.load_tour_scene(sample_for(102));
+      press({.interact=true});
+      check(session.has_side_flag(SideFlag::Roster)&&session.state.adventure.dialogue.active(),
+        "the Estate sample starts with a roster and opens Grażyna's dialogue");
+      const auto basement=sample_for(200+iceberg::UnnumberedFloor);
+      session.load_tour_scene(basement);
+      press({.interact=true});
+      check(session.has_side_flag(SideFlag::BasementPowerCut)&&!session.grid.pulses.front().powered(session.grid.switch_flags),
+        "the basement sample operates the breaker on the live circuit");
+      press({.restart=true});
+      check(session.tour_scene==basement&&session.grid.pulses.front().powered(session.grid.switch_flags),
+        "Retry restores power in the basement sample");
       session.end_tour();
       check(session.save_revision==write_count&&bytes(path)==first_save&&bytes(secondary)==second_save&&bytes(tertiary)==third_save,
         "the latest Debug Tour action leaves every save slot intact");

@@ -381,8 +381,18 @@ public:
     tour_scene=index;
     const auto &stop=iceberg::DebugTour[size_t(index)];
     mode=iceberg::Mode::Endless;district=stop.district;stage=2;room=depth=0;run_seed=73;run_active=false;
-    grid=stop.room==iceberg::CrownSentinel?iceworld::build_crown_sentinel():verified_room(stop.room,run_seed,district);
-    apply_expedition_mechanics(grid);grid.protect_exit();
+    if(stop.source==iceberg::TourStopSource::Settlement) {
+      profile.task_items[1]=stop.room==102?iceberg::side_flag(iceberg::SideFlag::Roster):0;
+      grid=iceworld::build_settlement(district);
+      place_side_stories();
+    } else if(stop.source==iceberg::TourStopSource::Basement) {
+      profile.task_items[1]=0;
+      grid=iceworld::build_hidden(iceberg::UnnumberedFloor);
+    } else {
+      grid=stop.room==iceberg::CrownSentinel?iceworld::build_crown_sentinel():verified_room(stop.room,run_seed,district);
+      apply_expedition_mechanics(grid);
+    }
+    grid.protect_exit();
     const Rect entry{stop.entry_x,stop.entry_floor-kPlayerHeight,kPlayerWidth,kPlayerHeight};
     const auto solids=grid.solid_rects_near(entry), hazards=grid.hazard_rects_near(entry);
     const auto overlaps_entry=[&](const Rect &tile){return tile.intersects(entry);};
