@@ -1348,7 +1348,9 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
     const auto &vine=g.vines[size_t(p.vine)];
     const Rect next=vine.rider(s.elapsed);
     const bool clear=ledge_clearance(g,next);
-    if(clear&&!c.jump_pressed&&!c.dash_pressed&&!c.fast_fall&&!c.restart) {
+    const bool dash_can_launch=c.dash_pressed&&p.dash_available&&
+      p.landing_dash_left<=dt&&!g.dash_locked();
+    if(clear&&!c.jump_pressed&&!dash_can_launch&&!c.fast_fall&&!c.restart) {
       p.vx=(next.x-p.x)/dt;p.vy=(next.y-p.y)/dt;
       p.x=next.x;p.y=next.y;
       p.landing_dash_left=std::max(0.,p.landing_dash_left-dt);
