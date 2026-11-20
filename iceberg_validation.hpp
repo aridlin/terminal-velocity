@@ -318,6 +318,16 @@ inline void add_expedition_channel_bridge(EngineGrid &room) {
   room.sweets.push_back({101.5,39.5});
 }
 
+inline void add_garden_hanging_planter(EngineGrid &room) {
+  if(room.district!=4||room.template_id!=54)return;
+  // Board from the west bed and swing upward to the edge of the seed shelves.
+  room.platforms.push_back({.base={61.5,36.,4.,.5},.dx=3.,.period=7.2,
+    .swing_pivot=55.667,.swing_length=13.034});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms.pop_back();
+}
+
 inline void add_expedition_fragile_pots(EngineGrid &room) {
   if(room.district!=4||room.template_id!=51)return;
   const size_t original=room.platforms.size();

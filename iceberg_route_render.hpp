@@ -29,6 +29,10 @@
     const auto wheel=std::find_if(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.irrigation_scoop;});
     const bool has_wheel=wheel!=grid_.platforms.end();
+    const auto planter=std::find_if(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &platform){return platform.swing_length>0.;});
+    const bool has_planter=planter!=grid_.platforms.end();
+    constexpr uint32_t planter_color=0xcfe5a2;
     const bool has_trams=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
       [](const auto &platform){return platform.tram;});
     const bool leaf_ferries=grid_.template_id==50;
@@ -76,6 +80,7 @@
     if(grid_.has_hazards())add_feature(tr("░ Ryzyko","░ Hazard"),hazard_color);
     if(remaining_token)add_feature(tr("● Żeton","● Token"),0xedc278);
     if(has_awnings)add_feature(tr("↗ Markizy","↗ Awnings"),awning_color);
+    if(has_planter)add_feature(tr("▱ Donica","▱ Planter"),planter_color);
     const auto irena=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[&](const auto &node){
       return grid_.template_id==44&&node.kind==InteractionKind::Npc&&node.id==4;
     });
@@ -237,6 +242,11 @@
     if(has_wheel)for(int i=0;i<32;++i) {
       const auto rim=wheel->at(wheel->period*i/32.);
       auto &cell=map[size_t(row(rim.y))][size_t(column(rim.x+rim.w*.5))];
+      if(cell==' ')cell='s';
+    }
+    if(has_planter)for(int i=0;i<=24;++i) {
+      const auto along=planter->at(planter->period*i/48.);
+      auto &cell=map[size_t(row(along.y))][size_t(column(along.x+along.w*.5))];
       if(cell==' ')cell='s';
     }
     std::vector<std::array<int,3>> cracking_spans;
@@ -407,6 +417,10 @@
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,leaf?"◒":"▱",leaf?0xb6d778:trolley_color});
     }
     if(has_wheel)mark(wheel->base.x+wheel->base.w*.5,wheel->base.y,"⊕",wheel_color);
+    if(has_planter) {
+      const auto deck=planter->at(state_.elapsed);
+      mark(deck.x+deck.w*.5,deck.y,"▱",planter_color);
+    }
     if(irena!=grid_.interactions.end())
       mark(irena->area.x+irena->area.w*.5,irena->area.y+irena->area.h*.5,"◉",irena_color);
     if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
