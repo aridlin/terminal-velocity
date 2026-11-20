@@ -50,4 +50,35 @@ with tempfile.TemporaryDirectory(prefix='tv-account-test-') as private:
  for _ in range(21):last=request('login','POST',{'username':'courier_one','password':'wrong-password'},third,s['csrf'])[0]
  check(last==429,'login attempts throttled')
  check(db.execute('select count(*) from history').fetchone()[0]==2,'previous saves retained for recovery')
+ def save_hash(data):
+  value=1469598103934665603
+  for byte in data.encode('ascii'):
+   value=((value^byte)*1099511628211)&((1<<64)-1)
+  return value
+ capabilities={'HTTP_X_TV_SAVE_FORMAT':'portable'}
+ anchor=sample6.split('\n',1)[0].split()[1]
+ routes='1\n0 1 2 3 4 5 6 7 \n'
+ portable=f'TVBACKUP1 {len(sample6)}\n{sample6}TVROUTE1 {anchor} {save_hash(routes)}\n{routes}'
+ def put(revision,body,headers=capabilities):
+  return request('save','PUT',{'revision':revision,'save':body},second,second_csrf,extra=headers)
+ check(put(3,portable,None)[0]==400,'standalone clients cannot submit a portable variant accidentally')
+ check(put(3,portable[:-2]+'8\n')[0]==400,'a damaged route journal is rejected with no revision change')
+ check(put(3,portable.replace('TVROUTE1 '+anchor,'TVROUTE1 1',1))[0]==400,'a journal with a different primary checksum is rejected')
+ check(put(3,portable+'0'*524288)[0]==413,'the transport rejects a portable backup above the account limit')
+ check(put(3,portable)[0]==200,'portable archive accepted after all rejected writes')
+ check(request('save',cookie=second,extra=capabilities)[1]['save']==portable,'portable sync returns the completed-route archive byte-exactly')
+ check(request('save',cookie=second)[1]['save']==sample6,'older clients still receive the standalone profile')
+ check(request('save',cookie=third,extra=capabilities)[1]['save'] is None,'portable accounts remain isolated')
+ check(put(4,sample6,None)[0]==200 and request('save',cookie=second,extra=capabilities)[1]['save']==portable,
+       'a legacy upload of the identical primary retains the portable data')
+ payload=sample6.split('\n',1)[1]+' '
+ changed=f'TVICE6 {save_hash(payload)}\n{payload}'
+ check(put(5,changed,None)[0]==200 and request('save',cookie=second,extra=capabilities)[1]['save']==changed,
+       'new legacy progress never receives an unrelated journal')
+ check(db.execute('select backup from portable_saves where revision=5').fetchone()[0]==portable,
+       'the earlier portable archive stays in revision history')
+ for revision in range(6,12):
+  assert put(revision,changed,None)[0]==200
+ check(db.execute('select count(*) from portable_saves').fetchone()[0]==0,'older portable data is pruned with its corresponding revision')
+
  print('All account endpoint checks passed through real PHP CGI; no live deployment claimed.')

@@ -31,6 +31,10 @@ func TestSharedAccountSave(t *testing.T) {
 			}
 			reply(accountResponse{Username: "guest-test", CSRF: csrf})
 		case "save":
+			if r.Header.Get("X-TV-Save-Format") != "portable" {
+				http.Error(w, "missing portable save capability", 400)
+				return
+			}
 			if r.Method == "GET" {
 				reply(accountResponse{Save: &remote, Revision: revision})
 				return

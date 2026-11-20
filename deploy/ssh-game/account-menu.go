@@ -23,6 +23,7 @@ import (
 
 // Set at build time for isolated API integration tests.
 var accountEndpoint = "https://aridlin.pl/terminal-velocity/api.php"
+var gameProgram = "/game/terminal_velocity"
 
 type accountResponse struct {
 	Username string  `json:"username"`
@@ -65,6 +66,9 @@ func (a *accountAPI) call(method, action string, payload any) (accountResponse, 
 	if err != nil {
 		return result, err
 	}
+	if action == "save" {
+		req.Header.Set("X-TV-Save-Format", "portable")
+	}
 	if method != "GET" {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-TV-CSRF", a.csrf)
@@ -74,7 +78,7 @@ func (a *accountAPI) call(method, action string, payload any) (accountResponse, 
 		return result, errors.New("unavailable")
 	}
 	defer resp.Body.Close()
-	if json.NewDecoder(io.LimitReader(resp.Body, 220000)).Decode(&result) != nil {
+	if json.NewDecoder(io.LimitReader(resp.Body, 1200000)).Decode(&result) != nil {
 		return result, errors.New("unavailable")
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -138,6 +142,8 @@ func safeMessage(err error) string {
 		return "The account session expired. Sign in again."
 	case "save_conflict":
 		return "Another device has a newer save. Choose which save to keep."
+	case "too_large":
+		return "This save exceeds the account limit. The visit's save is still available."
 	case "save_format":
 		return "The account rejected this save format. Your local save is still available."
 	default:
@@ -176,14 +182,18 @@ func (m *accountMenu) attach(action string) error {
 	save := remoteSave(remote)
 	working := save
 	if save == "" {
-		guest, _ := os.ReadFile(m.guest)
-		if len(guest) > 0 {
+		guest, err := readSave(m.guest)
+		if err != nil && !os.IsNotExist(err) {
+			_, _ = m.api.call("POST", "logout", struct{}{})
+			return err
+		}
+		if guest != "" {
 			choice, err := m.ask("Use this visit's guest progress for the new account save? [y/N] ")
 			if err != nil {
 				return err
 			}
 			if strings.EqualFold(choice, "y") {
-				working = string(guest)
+				working = guest
 			}
 		}
 	}
@@ -201,7 +211,50 @@ func (m *accountMenu) attach(action string) error {
 	return m.sync()
 }
 
+func saveTool(profile string, arguments ...string) *exec.Cmd {
+	command := exec.Command(gameProgram, arguments...)
+	command.Env = append(os.Environ(), "TV_ICEBERG_FILE="+profile)
+	return command
+}
+
+func readSave(profile string) (string, error) {
+	primary, err := os.ReadFile(profile)
+	if err != nil {
+		return "", err
+	}
+	for _, suffix := range []string{".routes", ".routes.bak"} {
+		if _, err := os.Stat(profile + suffix); os.IsNotExist(err) {
+			continue
+		} else if err != nil {
+			return "", err
+		}
+		backup, err := saveTool(profile, "--account-save-export").Output()
+		return string(backup), err
+	}
+	return string(primary), nil
+}
+
+func restorePortableSave(profile, save string) error {
+	file, err := os.CreateTemp(filepath.Dir(profile), "import.*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	_, writeErr := file.WriteString(save)
+	closeErr := file.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	return saveTool(profile, "--account-save-import", file.Name()).Run()
+}
+
 func (m *accountMenu) replaceSave(save string) error {
+	if strings.HasPrefix(save, "TVBACKUP1 ") {
+		return restorePortableSave(m.profile, save)
+	}
 	if save == "" {
 		err := os.Remove(m.profile)
 		if err != nil && !os.IsNotExist(err) {
@@ -230,14 +283,13 @@ func (m *accountMenu) sync() error {
 	if m.conflict {
 		return errors.New("save_conflict")
 	}
-	local, err := os.ReadFile(m.profile)
+	save, err := readSave(m.profile)
 	if os.IsNotExist(err) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	save := string(local)
 	if save == m.synced {
 		return nil
 	}
@@ -256,11 +308,11 @@ func (m *accountMenu) refresh() error {
 		return err
 	}
 	if remote.Revision != m.revision {
-		local, err := os.ReadFile(m.profile)
+		local, err := readSave(m.profile)
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
-		if string(local) != m.synced {
+		if local != m.synced {
 			m.conflict = true
 			return errors.New("save_conflict")
 		}
@@ -309,7 +361,7 @@ func (m *accountMenu) play() bool {
 		}
 		profile = m.profile
 	}
-	game := exec.Command("/game/terminal_velocity", "--campaign", "--ssh", "--mute")
+	game := exec.Command(gameProgram, "--campaign", "--ssh", "--mute")
 	game.Stdin, game.Stdout, game.Stderr = os.Stdin, os.Stdout, os.Stderr
 	game.Env = append(os.Environ(), "TV_ICEBERG_FILE="+profile, "TV_PROGRESS_FILE="+profile+".records")
 	if err := game.Start(); err != nil {
