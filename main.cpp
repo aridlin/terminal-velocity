@@ -321,7 +321,7 @@ struct GameState {
   std::vector<double> refill_cooldown;
   std::vector<double> platform_armed_at;
   int last_spring=-1;
-  double last_spring_time=0.;
+  double last_spring_time=0., airborne_refill_time=-1.;
   std::vector<ghosts::Ghost> ghosts;
   bool multiplayer = false;
   std::array<ChapterRecord, 3> records{};
@@ -1430,6 +1430,7 @@ void world_step(GameState &s, const EngineGrid &g, Controls c, double dt) {
         p.rect().intersects({x-refill_reach,y-refill_reach,2*refill_reach,2*refill_reach})) {
       p.dash_available = true;
       s.refill_cooldown[i] = 2.5;
+      if(!p.grounded)s.airborne_refill_time=s.elapsed;
     }
   }
   for (size_t i=0;i<g.springs.size();++i) {

@@ -14,13 +14,23 @@ int main(){try {
     catalogue.profile.language=iceberg::Language::English;
     catalogue.unlock_achievement(iceberg::Achievement::DockChat);
     catalogue.unlock_achievement(iceberg::Achievement::CrownReached);
+    catalogue.unlock_achievement(iceberg::Achievement::PlatformFound);
     catalogue.sync_view();
     for(const auto &[cols,rows]:std::array<std::pair<int,int>,3>{{{34,24},{60,20},{110,34}}}) {
       RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
       ui_check(ui_text(frame).find(cols<76||rows<24?"7 Achievements":"7  ACHIEVEMENTS")!=std::string::npos,
         "the achievements menu entry fits the playable viewport");
       catalogue.tick({.confirm=true,.select_level=7},0.,true,cols,rows);
-      for(int i=0;i<5;++i)catalogue.tick({.inspect=true},0.,true,cols,rows);
+      catalogue.tick({.browse_leg=-1},0.,true,cols,rows);
+      ui_check(catalogue.state.adventure.achievement_group==iceberg::AwardGroup::Secrets,
+        "left wraps from All to Secrets");
+      catalogue.tick({.navigate=40},0.,true,cols,rows);
+      catalogue.tick({.navigate=-2},0.,true,cols,rows);
+      RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
+      ui_check(ui_text(frame).find("◆ Platform for two")!=std::string::npos,
+        "the expanded catalogue renders an earned secret");
+      catalogue.tick({.browse_leg=1},0.,true,cols,rows);
+      catalogue.tick({.browse_leg=-1},0.,true,cols,rows);
       RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
       const auto screen=ui_text(frame);
       ui_check(screen.find("Hidden achievement")!=std::string::npos&&screen.find("The unnumbered floor")==std::string::npos,

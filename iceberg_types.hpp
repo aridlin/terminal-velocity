@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -12,15 +13,18 @@ inline constexpr int DistrictCount = 6;
 // Content registry boundary: increment when another district is fully authored.
 inline constexpr int AuthoredDistrictCount = 6;
 inline constexpr int RoomsPerLeg = 8;
-inline constexpr int UnnumberedFloor=3;
+inline constexpr int UnnumberedFloor=3, NightPlatform=4;
+inline constexpr int NightPlatformTemplate=200+NightPlatform;
+inline constexpr double PlatformGlassLeft=18., PlatformGlassRight=59.;
+inline constexpr double PlatformSignalX=73.;
 inline constexpr uint64_t BasementCircuitCut=1;
 inline constexpr double NightPlateLeft=99., NightPlateRight=103., NightPlateTime=2.1;
 inline constexpr double GardenSnailWalkTime=4.;
-enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket, NightWeighbridge, CarbonDial, CarbonReader };
+enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket, NightWeighbridge, CarbonDial, CarbonReader, HarborWhistle, HeatGauge, GardenSeedDrawer, CrownViewer, PlatformBoard, PlatformBench, PlatformSignal };
 // Side-story state uses the top of the second task word. Existing room tasks
 // use their original indices and retain the same save representation.
 enum class SideFlag : uint64_t {
-  ArchiveCarbonPrinted=1ull<<49,
+  PlatformWaited=1ull<<47, PlatformCleared=1ull<<48, ArchiveCarbonPrinted=1ull<<49,
   HeatworksMugTaken=1ull<<50, HeatworksMugReturned=1ull<<51,
   GardenSnailFound=1ull<<52, GardenSnailWatered=1ull<<53,
   RosterPosted=1ull<<54, RosterSealed=1ull<<55,
@@ -55,8 +59,8 @@ inline constexpr std::array<std::array<Text,3>,3> CarbonDialReadings{{
 }};
 inline constexpr std::array<unsigned,3> CarbonReaderCode{1,2,1};
 inline constexpr Text CarbonReaderRecord{
-  "00:07 · Klatka 11. KURIER: wyjście potwierdzone. DRUGI: wciąż po tej stronie. Kopia miała trafić do pieca. Na odwrocie dopisek Ireny: «Ktoś musi pamiętać, że czekamy».",
-  "00:07 · Stairwell 11. COURIER: exit confirmed. SECOND: still on this side. This copy was meant for the furnace. Irena wrote on the back, ‘Someone has to remember we’re still waiting.’"};
+  "00:07 · Klatka 11. KURIER: wyjście potwierdzone. DRUGI: wciąż po tej stronie. Kopia miała trafić do pieca. Na odwrocie dopisek Ireny: «Ktoś musi pamiętać, że czekamy». Na planie: wejście za szafą 11, pod czytnikiem.",
+  "00:07 · Stairwell 11. COURIER: exit confirmed. SECOND: still on this side. This copy was meant for the furnace. Irena wrote on the back, ‘Someone has to remember we’re still waiting.’ The plan marks an entrance behind cabinet 11, below the reader."};
 struct District {
   Text name, subtitle, objective;
   uint32_t stone, light, shadow, accent;
@@ -223,7 +227,9 @@ enum class Achievement {
   FirstFall, RoughRoom, MadeItAnyway, CleanDistrict, Mastery, CleanMastery, CrownClean,
   WallBounce, FerryRide, VineRide, BalconyRide, SaltBath, AllGear, FirstTestimony,
   ThreeTestimonies, BeltReverse, SiliconeReturn, LostFloor, WitnessTape, BelowTheRoster, RingAgain,
-  NextShift, CrownReached, TrailLeg, LedgeClimb, MailBag, CrownDown, CleanSurvey, CleanLeg, FullRoom, AllMail, MasonrySpring, Detour, CircuitSaved, RoughDistrict, CrownRecovery, LongWayBack, MugReturned, SnailSafe, PunchTomorrow, PowerCut, RosterChoice, PaperTrail, NightLine, LastPassenger, WrenHouse, LostReceipt, NightWeight, SecondImpression, Count
+  NextShift, CrownReached, TrailLeg, LedgeClimb, MailBag, CrownDown, CleanSurvey, CleanLeg, FullRoom, AllMail, MasonrySpring, Detour, CircuitSaved, RoughDistrict, CrownRecovery, LongWayBack, MugReturned, SnailSafe, PunchTomorrow, PowerCut, RosterChoice, PaperTrail, NightLine, LastPassenger, WrenHouse, LostReceipt, NightWeight, SecondImpression,
+  AirRefill, HundredTokens, CleanJourney, QuietLeg, EmptyDelivery, HardLesson, HarborWhistle, HeatGauge,
+  GardenSeedDrawer, CrownViewer, PlatformFound, PlatformEcho, PlatformReleased, Count
 };
 enum class AwardGroup { All, Journey, Skill, Mishaps, Oddities, Secrets };
 struct AchievementInfo { Text title,condition; AwardGroup group; bool hidden=false; };
@@ -284,31 +290,61 @@ inline constexpr std::array Achievements{
   AchievementInfo{{"Dom za jeden guzik","A house for one button"},{"Zwróć z Ogrodów guzik do osiedlowego karmnika.","Return the button from the Gardens to the Estate birdhouse."},AwardGroup::Oddities,true},
   AchievementInfo{{"Między trzecią a czwartą","Between three and four"},{"Odbierz skasowany bilet w porcie.","Collect the punched ticket at the quay."},AwardGroup::Secrets,true},
   AchievementInfo{{"Ciężar własny","Tare weight"},{"Po spotkaniu przy szybie zważ się na wadze peronowej.","After the encounter at the window, step on the platform scale and let it settle."},AwardGroup::Secrets,true},
-  AchievementInfo{{"Drugi odcisk","Second impression"},{"Odczytaj kalkę w Archiwum, korzystając z wydruku wagi.","Read the Archive carbon copy using the scale receipt."},AwardGroup::Secrets,true}
+  AchievementInfo{{"Drugi odcisk","Second impression"},{"Odczytaj kalkę w Archiwum, korzystając z wydruku wagi.","Read the Archive carbon copy using the scale receipt."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Drugi oddech","Second wind"},{"Naładuj zryw ogniwem w powietrzu.","Recharge your dash at a refill cell while airborne."},AwardGroup::Journey},
+  AchievementInfo{{"Stówka w drobnych","A hundred in change"},{"Zarób 100 żetonów na wyposażenie.","Earn 100 outfitter tokens."},AwardGroup::Journey},
+  AchievementInfo{{"Kurier bez skreśleń","Courier in ink"},{"Zapisz ukończenie każdej dzielnicy bez żadnego powrotu.","Record a clean finish for each district."},AwardGroup::Skill},
+  AchievementInfo{{"Lekki bagaż","Travelling light"},{"Ukończ próbę mistrzowską bez żetonów i bez powrotów.","Clear a Mastery Trial with no tokens and no retries."},AwardGroup::Skill},
+  AchievementInfo{{"Pusty kurs","Empty delivery"},{"Po co najmniej pięciu powrotach przejdź pokój z co najmniej trzema żetonami, nie zabierając żadnego.","After five retries, clear a room with at least three tokens without collecting any."},AwardGroup::Mishaps},
+  AchievementInfo{{"Droga przez piekło","Learning the hard way"},{"Ukończ próbę mistrzowską mimo co najmniej 25 powrotów.","Finish a Mastery Trial after at least 25 retries."},AwardGroup::Mishaps},
+  AchievementInfo{{"Mgła potwierdza","Fog acknowledges"},{"Zagwiżdż przy szafce sygnałowej na nabrzeżu.","Blow the whistle at the quay signal box."},AwardGroup::Oddities,true},
+  AchievementInfo{{"Filiżanka ciśnienia","One cup of pressure"},{"Sprawdź zapasowy manometr w Ciepłowni.","Test the spare pressure gauge at the Heating Works."},AwardGroup::Oddities},
+  AchievementInfo{{"Nasiona na wymianę","Seed exchange"},{"Otwórz szufladę z nasionami w Ogrodach.","Open the seed exchange drawer in the Gardens."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Widok na widok","The view of the view"},{"Skorzystaj z lunety na Koronie.","Look through the Crown telescope."},AwardGroup::Oddities,true},
+  AchievementInfo{{"Peron dla dwojga","Platform for two"},{"Wejdź na peron wpisany na kalce.","Enter the platform listed on the carbon copy."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Spóźnione odbicie","Late reflection"},{"Usiądź na ławce i poczekaj, aż szyba cię dogoni.","Sit at the bench and let the glass catch up."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Sygnał wolnej drogi","Clear signal"},{"Nadaj sygnał odjazdu ostatniemu pasażerowi.","Give the last passenger the departure signal."},AwardGroup::Secrets,true}
 };
 static_assert(Achievements.size()==size_t(Achievement::Count));
 inline constexpr unsigned LegacyAwardCount=29;
-static_assert(Achievements.size()-LegacyAwardCount<=32);
+inline constexpr unsigned ExtendedAwardStart=unsigned(Achievement::AirRefill);
+static_assert(ExtendedAwardStart-LegacyAwardCount<=32);
+static_assert(Achievements.size()-ExtendedAwardStart<=32);
+using AwardProgress=std::array<uint64_t,2>;
+
+inline constexpr size_t achievement_word(Achievement id) {
+  return unsigned(id)>=ExtendedAwardStart?1:0;
+}
 // The lower word preserves the original TVICE6 discovery bits. New awards
 // occupy the upper half of the first task word, above task slots 0–23 and curios.
 inline constexpr uint64_t achievement_bit(Achievement id) {
   // Bits 0–2 hold the original hidden testimonies. Keep all five released award bits.
   const unsigned index=unsigned(id);
+  if(achievement_word(id))return uint64_t(1)<<(index-ExtendedAwardStart);
   if(index>=LegacyAwardCount)return uint64_t(1)<<(32+index-LegacyAwardCount);
   return uint64_t(1)<<(index<16?index+16:index-13);
 }
 inline constexpr uint64_t AchievementMask=[] {
   uint64_t mask=0;
-  for(size_t i=0;i<Achievements.size();++i)mask|=achievement_bit(Achievement(i));
+  for(size_t i=0;i<ExtendedAwardStart;++i)mask|=achievement_bit(Achievement(i));
   return mask;
 }();
 inline constexpr double AchievementToastTime=3.8;
 inline uint64_t stored_achievements(const Profile &profile) {
   return (profile.discoveries|(profile.task_items[0]&0xffffffff00000000ull))&AchievementMask;
 }
-inline uint64_t achievement_progress(const Profile &profile) {
-  uint64_t flags=stored_achievements(profile);
-  const auto include=[&](Achievement id,bool earned) {if(earned)flags|=achievement_bit(id);};
+// Room task ids are 0–23 in the first task word. The second word keeps
+// side-story flags at 47–63 and uses its low word for the expanded catalogue.
+inline constexpr uint64_t ExtendedAwardMask=(uint64_t(1)<<(Achievements.size()-ExtendedAwardStart))-1;
+inline AwardProgress stored_award_progress(const Profile &profile) {
+  return {stored_achievements(profile),profile.task_items[1]&ExtendedAwardMask};
+}
+inline bool has_award(const AwardProgress &flags,Achievement id) {
+  return (flags[achievement_word(id)]&achievement_bit(id))!=0;
+}
+inline AwardProgress achievement_progress(const Profile &profile) {
+  auto flags=stored_award_progress(profile);
+  const auto include=[&](Achievement id,bool earned) {if(earned)flags[achievement_word(id)]|=achievement_bit(id);};
   include(Achievement::FirstToken,outfitter_earned(profile)>0);
   include(Achievement::DashJump,profile.quest_counts[6]>0);
   include(Achievement::Gear,profile.cosmetics&(HarborScarf|DockBoots|SignalSatchel));
@@ -334,7 +370,7 @@ inline uint64_t achievement_progress(const Profile &profile) {
   include(Achievement::TrailLeg,profile.endless_best>=RoomsPerLeg);
   include(Achievement::MailBag,(profile.task_items[0]&7)!=0);
   include(Achievement::AllMail,(profile.task_items[0]&7)==7);
-  include(Achievement::CrownDown,(flags&achievement_bit(Achievement::CrownClean))||profile.finished);
+  include(Achievement::CrownDown,has_award(flags,Achievement::CrownClean)||profile.finished);
   include(Achievement::MugReturned,profile.task_items[1]&side_flag(SideFlag::HeatworksMugReturned));
   include(Achievement::PowerCut,profile.task_items[1]&side_flag(SideFlag::BasementPowerCut));
   include(Achievement::RosterChoice,profile.task_items[1]&(side_flag(SideFlag::RosterPosted)|side_flag(SideFlag::RosterSealed)));
@@ -342,6 +378,9 @@ inline uint64_t achievement_progress(const Profile &profile) {
   include(Achievement::PaperTrail,(profile.task_items[1]&clues)==clues);
   include(Achievement::Detour,std::any_of(profile.route_choices.begin(),profile.route_choices.end(),
     [](auto choices){return choices!=0;}));
+  include(Achievement::HundredTokens,outfitter_earned(profile)>=100);
+  include(Achievement::CleanJourney,std::all_of(profile.records.begin(),profile.records.end(),
+    [](const Record &record){return record.complete&&record.best_deaths==0;}));
   return flags;
 }
 
@@ -436,7 +475,7 @@ struct RouteView {
   bool branching=false, available=false;
   Text place;
 };
-enum class TourStopSource { Course, Settlement, Basement, NightWindow, ArchiveReader };
+enum class TourStopSource { Course, Settlement, Basement, NightWindow, ArchiveReader, NightPlatform };
 struct TourStop {
   int district,room;
   double entry_x, entry_floor;
@@ -507,12 +546,13 @@ inline constexpr std::array DebugTour{
   TourStop{2,102,61,48,{"Pokaż Grażynie odpis listy lokatorów","Show Grażyna the copy of the roster"},TourStopSource::Settlement,{"Lista Grażyny","Grażyna’s roster"}},
   TourStop{4,104,104,50,{"Podnieś doniczkę i pomóż ślimakowi","Lift the pot and help the snail"},TourStopSource::Settlement,{"Ślimak w Ogrodach","Gardens snail"}},
   TourStop{1,101,29,48,{"Zabierz kubek z rury i oddaj go Witkowi","Take the mug from the pipe and return it to Witek"},TourStopSource::Settlement,{"Kubek Witka","Witek’s mug"}},
+  TourStop{3,NightPlatformTemplate,8,48,{"Poczekalnia linii 11","Line 11 waiting room"},TourStopSource::NightPlatform,{"Peron 11","Platform 11"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"},TourStopSource::Course,{"Strażnik Korony","Crown Sentinel"}},
 };
 // Keep the quick action pointed at the newest featured sample, independently of list order.
 inline constexpr auto DebugTourLatest = [] {
   for(size_t i=0;i<DebugTour.size();++i)
-    if(DebugTour[i].room==101&&DebugTour[i].source==TourStopSource::Settlement)return i;
+    if(DebugTour[i].source==TourStopSource::NightPlatform)return i;
   return DebugTour.size();
 }();
 static_assert(DebugTourLatest<DebugTour.size());
@@ -541,7 +581,11 @@ struct View {
   bool branch_at_door = false;
   uint64_t switches = 0;
   uint32_t discoveries = 0;
-  uint64_t awards = 0;
+  AwardProgress awards{};
+  bool platform_listening=false;
+  double platform_wait=0., platform_departure=0., pressure_test_left=0.;
+  std::vector<std::pair<double,double>> platform_reflection;
+  double platform_sample_left=0.;
   int night_beat=0;
   double night_left=0., night_plate_time=0.;
   std::array<unsigned,3> carbon_dials{};
