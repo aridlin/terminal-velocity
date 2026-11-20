@@ -2,14 +2,18 @@
   void draw_room_map(int top,int height) {
     const bool has_water=!grid_.water_basins.empty();
     const auto wind=std::find_if(grid_.air_fields.begin(),grid_.air_fields.end(),[&](const auto &field){
-      return (field.turbine||field.reverses||(grid_.windbreak_roof&&field.ax!=0))&&field.active(grid_.switch_flags);
+      return (field.turbine||field.reverses||(grid_.district==5&&field.ax!=0))&&field.active(grid_.switch_flags);
     });
     const bool has_wind=wind!=grid_.air_fields.end();
     const bool turbine=has_wind&&wind->turbine;
     const bool ridge_mast=has_wind&&iceworld::has_ridge_mast(grid_);
     const uint32_t ridge_signal=ridge_mast&&iceworld::ridge_launch_ready(*wind,state_.elapsed)?
       iceworld::RidgeLaunchReady:iceworld::RidgeLaunchWaiting;
-    const char *wind_symbol=has_wind?(turbine?"↗":wind->reverses?"↔":wind->ax<0?"←":"→"):"";
+    const bool has_gust=has_wind&&!turbine;
+    const double wind_strength=has_gust?wind->strength(state_.elapsed):0.;
+    const bool wind_lull=has_gust&&std::abs(wind_strength)<.2;
+    const char *wind_symbol=!has_wind?"":turbine?"↗":wind_lull?"○":wind->ax*wind_strength<0?"←":"→";
+    const uint32_t wind_color=wind_lull?0x8c9bb1:0xb4d7e4;
     const bool has_ice=!grid_.ice_strips.empty()||
       std::any_of(grid_.platforms.begin(),grid_.platforms.end(),[](const auto &platform){return platform.icy&&!platform.fragile;});
     const bool has_fragile=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
@@ -79,7 +83,8 @@
     if(steam_controls)add_feature(tr("⊗ Dopływ pary","⊗ Steam supply"),0xe9ae83);
     if(has_water)add_feature(tr("≈ Woda","≈ Water"),0x66bfd7);
     if(has_ice)add_feature(tr("━ Lód","━ Ice"),0xa6e9ea);
-    if(has_wind)add_feature(wind_symbol+(turbine?tr(" Turbina"," Turbine"):tr(" Wiatr"," Wind")),0xb4d7e4);
+    if(has_wind)add_feature(wind_symbol+(turbine?tr(" Turbina"," Turbine"):
+      wind_lull?tr(" Cisza"," Lull"):tr(" Wiatr"," Wind")),wind_color);
     if(ridge_mast)add_feature(tr("↗ Skok z wiatrem","↗ Gust jump"),ridge_signal);
     if(has_racks)add_feature(tr("▲▼ Regały","▲▼ Racks"),ArchiveRackMarker);
     const auto branch=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[](const auto &node){
@@ -167,6 +172,7 @@
       if(x<grid_.width())break;
     }
     double upper=show_goal?std::min(double(terrain_top),grid_.goal.y):terrain_top;
+    if(has_gust)upper=std::min(upper,wind->area.top());
     for(const auto &platform:grid_.platforms)upper=std::min(upper,platform.base.y-std::abs(platform.dy));
     const int world_top=std::max(0,int(upper)-6);
     auto column=[&](double x){return std::clamp(int(x/grid_.width()*width),0,width-1);};
@@ -275,6 +281,17 @@
       if(tile=='c')cracking_spans.push_back({y,start,last});
       auto &line=map[size_t(y)];
       for(int x=start;x<=last;++x)line[size_t(x)]=tile;
+    }
+    // Tint the exposed lane under the terrain. Its physics rectangle ends
+    // at the overhang's top, leaving the sheltered route clear.
+    if(has_gust) {
+      const auto &area=wind->area;
+      const int last_row=row(std::nextafter(area.bottom(),area.top()));
+      const int last_col=column(std::nextafter(area.right(),area.left()));
+      const uint32_t tint=wind_lull?0x222d40:0x2c3c54;
+      for(int y=row(area.top());y<=last_row;++y)
+        for(int x=column(area.left());x<=last_col;++x)
+          buffer_[first+y][left+x].background=tint;
     }
     // Show the burst footprint behind the terrain and the exact player marker.
     constexpr uint32_t warning_tint=0x4a3d2b,burst_tint=0x59303a;
@@ -433,7 +450,7 @@
       mark(field.area.x+field.area.w*.5,field.area.bottom()-1,"↑",0x9dd39c);
     if(has_wind)
       mark(wind->area.x+(turbine?0.:wind->area.w*.5),turbine?wind->area.bottom()-3:wind->area.y+3,
-        wind_symbol,0xb4d7e4);
+        wind_symbol,wind_color);
     if(ridge_mast)
       mark(iceworld::RidgeLaunchX,iceworld::RidgeLaunchFloor-2,"↗",ridge_signal);
     if(turbine&&iceworld::has_turbine_access(grid_))
