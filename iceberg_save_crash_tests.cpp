@@ -65,6 +65,41 @@ int main() {
   if(!other_slot.save(detached)||!other_slot.load(other)||!other.expeditions[0].completed_legs.empty()) {
     std::cerr<<"FAIL local route history leaked into another save slot\n";return 1;
   }
+  const auto portable=folder/"portable.iceberg";
+  iceberg::Profile imported;
+  if(!iceberg::SaveStore::write_backup(portable,second)||
+     !iceberg::SaveStore::read_backup(portable,imported)||imported.story!=second.story||
+     imported.expeditions[0].completed_legs!=second.expeditions[0].completed_legs||
+     !other_slot.save(imported,true)||!other_slot.load(other)||
+     other.expeditions[0].completed_legs!=second.expeditions[0].completed_legs) {
+    std::cerr<<"FAIL portable restore into a slot with the same standalone profile\n";return 1;
+  }
+  auto corrected=imported;
+  corrected.expeditions[0].completed_legs.back()[0]=6;
+  if(!iceberg::SaveStore::write_backup(portable,corrected)||
+     !iceberg::SaveStore::read_backup(portable,imported)||!other_slot.save(imported,true)||
+     !other_slot.load(other)||other.expeditions[0].completed_legs!=corrected.expeditions[0].completed_legs) {
+    std::cerr<<"FAIL portable restore must replace same-profile history\n";return 1;
+  }
+  auto identity=imported;
+  identity.story+=1;
+  auto blocked=iceberg::SaveStore::slot_file(fallback_path,2);
+  blocked+="."+std::to_string(getpid())+".tmp.routes";
+  std::filesystem::create_directory(blocked);
+  std::ofstream(blocked/"keep")<<"prevents removal";
+  if(other_slot.save(identity,true)||!other_slot.load(other)||other.story!=corrected.story||
+     other.expeditions[0].completed_legs!=corrected.expeditions[0].completed_legs) {
+    std::cerr<<"FAIL portable restore reported success without writing its history\n";return 1;
+  }
+  {
+    std::fstream damaged(portable,std::ios::in|std::ios::out|std::ios::binary);
+    damaged.seekp(-2,std::ios::end);
+    damaged<<'x';
+  }
+  if(iceberg::SaveStore::read_backup(portable,imported)||
+     imported.expeditions[0].completed_legs!=corrected.expeditions[0].completed_legs) {
+    std::cerr<<"FAIL damaged portable history replaced the validated profile\n";return 1;
+  }
   auto recent_history=fallback_path;recent_history+=".routes.bak";
   std::ofstream(recent_history,std::ios::trunc)<<"incomplete history";
   iceberg::Profile progress;
@@ -80,7 +115,7 @@ int main() {
   }
   std::filesystem::remove_all(folder);
   std::cout<<"PASS 200 actual process-kill save trials; previous="<<old_count<<" replacement="<<new_count<<"; every recovered profile and route history match\n";
-  std::cout<<"PASS standalone save import and backup route history recovery\n";
+  std::cout<<"PASS standalone and portable save imports, history write failure and backup route recovery\n";
   return old_count&&new_count?0:1;
 #else
   std::cout<<"SKIP process-kill save stress: POSIX harness; Windows atomic replacement covered by native save tests\n";

@@ -186,6 +186,13 @@ EMSCRIPTEN_KEEPALIVE int web_export_recovery() {
   // The preceding save attempt has already snapped the live session into profile.
   return web_game&&web_game->tour_scene<0&&iceberg::SaveStore("/tmp/terminal-velocity-export.iceberg").save(web_game->profile);
 }
+EMSCRIPTEN_KEEPALIVE unsigned web_import_size_limit() {
+  return iceberg::SaveStore::MaxBackupBytes;
+}
+EMSCRIPTEN_KEEPALIVE int web_export_manual() {
+  return web_game&&web_game->tour_scene<0&&
+    iceberg::SaveStore::write_backup("/tmp/terminal-velocity-manual.iceberg",web_game->profile);
+}
 EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
   if(!web_game||(language!=0&&language!=1))return;
   web_game->profile.language=iceberg::Language(language);
@@ -199,14 +206,14 @@ EMSCRIPTEN_KEEPALIVE void web_set_language(int language) {
 }
 EMSCRIPTEN_KEEPALIVE int web_validate_import_save() {
   iceberg::Profile imported;
-  return iceberg::SaveStore::validate_file("/tmp/terminal-velocity-import-check.iceberg",imported);
+  return iceberg::SaveStore::read_backup("/tmp/terminal-velocity-import-check.iceberg",imported);
 }
 EMSCRIPTEN_KEEPALIVE int web_import_save() {
   iceberg::Profile imported;
   const auto directory=std::filesystem::path(web_save_base).parent_path();
-  if(!iceberg::SaveStore::validate_file(directory/"import.iceberg",imported))return 0;
+  if(!iceberg::SaveStore::read_backup(directory/"import.iceberg",imported))return 0;
   // A valid input with a failed replacement is different from an invalid file.
-  if(!web_game||web_game->tour_scene>=0||!web_game->saves.save(imported))return -1;
+  if(!web_game||web_game->tour_scene>=0||!web_game->saves.save(imported,true))return -1;
   const bool muted=web_game->audio.muted;
   web_game.reset();web_start(imported.seed,-1,muted);return 1;
 }

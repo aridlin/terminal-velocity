@@ -13,7 +13,7 @@ function browser(initial){
   const body=options.body||'',u=new URL(url);const env={...process.env,REDIRECT_STATUS:'200',SCRIPT_FILENAME:path.join(root,'web/server/api.php'),SCRIPT_NAME:'/terminal-velocity/api.php',REQUEST_METHOD:options.method,QUERY_STRING:u.search.slice(1),DOCUMENT_ROOT:path.join(root,'web/server'),HTTP_HOST:'game.test',SERVER_NAME:'game.test',SERVER_PORT:'443',HTTPS:'on',REMOTE_ADDR:'127.0.0.1',HTTP_COOKIE:cookie,HTTP_X_TV_CSRF:options.headers['X-TV-CSRF']||'',HTTP_ORIGIN:'https://game.test',CONTENT_TYPE:'application/json',CONTENT_LENGTH:String(Buffer.byteLength(body)),TV_ACCOUNT_DATA:privateDir};
   const result=spawnSync(php,['-n','-d','extension_dir='+extensions,'-d','extension=pdo_sqlite'],{input:body,env,encoding:'utf8'});assert.equal(result.status,0);const split=result.stdout.indexOf('\r\n\r\n'),headers=result.stdout.slice(0,split),payload=result.stdout.slice(split+4);const status=Number(headers.match(/^Status: (\d+)/m)?.[1]||200);const next=headers.match(/^Set-Cookie: ([^;\r\n]+)/m);if(next)cookie=next[1];return {ok:status<400,json:async()=>JSON.parse(payload)};
  };
- vm.createContext(context);vm.runInContext(source,context);const controller=new context.window.TVAccounts({english:()=>true,ready:()=>true,currentSave:()=>files.get('/persist/progress.dat.iceberg'),needsRedraw:()=>false,clear(){},frame(){frames++;},flush(){}});
+ vm.createContext(context);vm.runInContext(source,context);const controller=new context.window.TVAccounts({english:()=>true,ready:()=>true,currentSave:()=>files.get('/persist/progress.dat.iceberg'),needsRedraw:()=>false,refreshLayout(){},frame(){frames++;},flush(){}});
  return {controller,files,context,frames:()=>frames};
 }
 function pass(label){console.log('PASS',label);}

@@ -31,7 +31,7 @@ Campaign stages are arrival, lesson, route, return, route, return, route, finale
 
 The current writer is TVICE6. TVICE2/3 fixtures exercise migration. Preserve legacy TVP1 records in their own file. Any new serialized state requires an explicit format migration and interrupted-write tests. Checkpoint saves must retain moving-platform time, machinery, collected items and itinerary, rather than regenerate a new route on death.
 
-Completed Endless legs use local `.routes` and `.routes.bak` companions. They are matched to the checksum of the exact TVICE6 payload. An interrupted write leaves the companion of the previous valid save available. A standalone export or cloud transfer carries the current itinerary and progress. Completed history stays with the installation that recorded it.
+Completed Endless legs use local `.routes` and `.routes.bak` companions. They are matched to the checksum of the exact TVICE6 payload. An interrupted write leaves the companion of the previous valid save available. Manual browser backups with completed legs carry the exact profile and its checked companion together in a TVBACKUP1 file. Backups without completed legs use standalone TVICE6. Cloud transfers use the standalone profile and carry the current itinerary and progress.
 
 ## Verification
 
