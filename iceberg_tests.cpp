@@ -317,13 +317,16 @@ int main(int argc,char **argv) {
           [=](const iceberg::TourStop &stop){return stop.room==room&&stop.source==source;});
         return int(found-iceberg::DebugTour.begin());
       };
-      const auto latest=int(iceberg::DebugTourLatest);
+      check(session.grid.template_id==iceberg::NightPlatformTemplate,
+        "the latest sample opens the Platform 11 waiting room");
+      session.load_tour_scene(sample_for(101));
+      const auto mug_sample=session.tour_scene;
       using iceberg::SideFlag;
       press({.interact=true});
       check(session.has_side_flag(SideFlag::HeatworksMugTaken),
-        "the latest sample starts beside a working Heatworks mug");
+        "the Heatworks sample starts beside a working mug");
       press({.restart=true});
-      check(session.tour_scene==latest&&!session.has_side_flag(SideFlag::HeatworksMugTaken),
+      check(session.tour_scene==mug_sample&&!session.has_side_flag(SideFlag::HeatworksMugTaken),
         "Retry restarts the mug sample from its original state");
       session.load_tour_scene(sample_for(104));
       press({.interact=true});

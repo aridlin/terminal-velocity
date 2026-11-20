@@ -476,7 +476,7 @@ addEventListener('keydown',e=>{
  if(tourPage&&!tourPicker&&!awardsOpen)return;
  const menuControl=(uiFlags&1)&&!(uiFlags&(settingsFlag|confirmSaveFlag))&&isMenuSelectionControl(target);
  const menuNavigation=menuControl&&(e.code==='ArrowUp'||e.code==='ArrowDown'||
-  (e.code==='Escape'&&((uiFlags&profilePickerFlag)||awardsOpen))||(awardsOpen&&(e.code==='KeyB'||tourPage)));
+  (e.code==='Escape'&&((uiFlags&profilePickerFlag)||awardsOpen))||(awardsOpen&&(e.code==='KeyB'||e.code==='ArrowLeft'||e.code==='ArrowRight'||tourPage)));
  const cancelReplacement=e.code==='Escape'&&(uiFlags&confirmSaveFlag)&&isSaveReplacementControl(target);
  const tourNavigation=tourPicker&&(tourControls.contains(target)||menuControl)&&
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');

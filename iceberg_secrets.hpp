@@ -3,6 +3,25 @@
 // Entry fixtures are authored locations, independent of expedition randomness.
 namespace iceworld {
 inline EngineGrid build_hidden(int id) {
+  if(id==iceberg::NightPlatform) {
+    using iceberg::SideStory;
+    EngineGrid g(94,61);
+    g.adventure_level=true;g.event_level=false;g.room_role=iceberg::RoomRole::Secret;
+    g.template_id=iceberg::NightPlatformTemplate;g.district=3;
+    g.room_name={"Peron 11","Platform 11"};
+    g.add_solid_rect(0,48,94,13);
+    g.add_solid_rect(0,27,2,21);g.add_solid_rect(92,27,2,21);
+    g.add_solid_rect(2,27,90,2);
+    g.spawn_x=8;g.spawn_y=48-kPlayerHeight;g.checkpoint_points={{8,g.spawn_y}};
+    g.goal={-20,-20,1,1};
+    g.interactions={
+      {{4,44,3,4},InteractionKind::Return,0,{"Wróć do Archiwum","Return to the Archive"}},
+      {{12,44,3,4},InteractionKind::SideStory,int(SideStory::PlatformBoard),{"Przeczytaj tablicę odjazdów","Read the departures board"}},
+      {{34,44,4,4},InteractionKind::SideStory,int(SideStory::PlatformBench),{"Usiądź na ławce","Sit on the bench"}},
+      {{iceberg::PlatformSignalX,44,3,4},InteractionKind::SideStory,int(SideStory::PlatformSignal),
+        {"Nadaj sygnał odjazdu","Give the departure signal"}}};
+    return g;
+  }
   if(id==iceberg::UnnumberedFloor) {
     using iceberg::SideStory;
     EngineGrid g(146,64);

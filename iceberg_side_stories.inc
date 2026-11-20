@@ -16,9 +16,11 @@
       grid.interactions.push_back({area,InteractionKind::SideStory,int(story),label});
     };
     if(grid.template_id==100||grid.template_id==600) {
+      add(grid.template_id==600?Rect{65,39,3,4}:Rect{35,44,1.5,4},SideStory::HarborWhistle,{"Zagwiżdż przy sygnale","Blow the signal whistle"});
       add({2,44,2,4},SideStory::HarborStub,{"Bloczek pocztowy","Postal counterfoil"});
       add({grid.template_id==600?54.:49.,35,3,4},SideStory::HarborTicket,{"Otwórz okienko zwrotów","Open the returns hatch"});
     } else if(grid.template_id==101) {
+      add({40,40,3,4},SideStory::HeatGauge,{"Sprawdź manometr","Test the pressure gauge"});
       add({29,44,3,4},SideStory::HeatworksMug,{"Zabierz kubek z rury","Take the mug from the pipe"});
       add({2,48,2,4},SideStory::HeatworksMugBench,{"Oddaj Witkowi kubek","Return Witek’s mug"});
     } else if(grid.template_id==102) {
@@ -37,14 +39,56 @@
         grid.interactions.push_back({{23.+dial*5,34,1.5,4},InteractionKind::SideStory,int(SideStory::CarbonDial),
           iceberg::CarbonDialLabels[size_t(dial)],dial});
       add({39,34,1.5,4},SideStory::CarbonReader,{"Uruchom czytnik kalek","Run the carbon reader"});
+      if(has_side_flag(iceberg::SideFlag::ArchiveCarbonPrinted))
+        add_platform_entrance();
     } else if(grid.template_id==104) {
+      add({80,29,3,4},SideStory::GardenSeedDrawer,{"Otwórz szufladę nasienną","Open the seed drawer"});
       add({94,46,4,4},SideStory::GardenSnailTap,{"Podlej ziemię przy doniczce","Water the soil by the pot"});
       add({117,46,3,4},SideStory::GardenSnailShelter,{"Przeczytaj tabliczkę","Read the shelter tag"});
       add({104,46,4,4},SideStory::GardensPot,{"Podnieś odwróconą doniczkę","Lift the overturned pot"});
       add({124,35,3,4},SideStory::GardenButton,{"Podnieś guzik","Pick up the button"});
     } else if(grid.template_id==105) {
+      add({109,30,3,4},SideStory::CrownViewer,{"Spójrz przez lunetę","Look through the telescope"});
       add({97,30,4,4},SideStory::CrownPunch,{"Sprawdź kasownik","Test the ticket punch"});
     }
+  }
+  void add_platform_entrance() {
+    grid.interactions.push_back({{49,44,3,4},InteractionKind::Secret,iceberg::NightPlatform,
+      {"Odsuń tył szafy 11","Slide back cabinet 11"}});
+  }
+  void night_platform_step(double dt) {
+    using iceberg::Achievement;
+    using iceberg::SideFlag;
+    if(grid.template_id!=iceberg::NightPlatformTemplate||dt<=0.)return;
+    auto &v=state.adventure;
+    const auto &p=state.player;
+    v.platform_departure=std::max(0.,v.platform_departure-dt);
+    v.platform_sample_left-=dt;
+    if(v.platform_sample_left<=0.) {
+      v.platform_sample_left+=.1;
+      if(v.platform_reflection.size()==12)v.platform_reflection.erase(v.platform_reflection.begin());
+      v.platform_reflection.push_back({p.x,p.y});
+    }
+    if(!v.platform_listening)return;
+    if(p.x<31.||p.x>41.) {
+      v.platform_listening=false;v.platform_wait=0.;
+      return;
+    }
+    if(!p.grounded||std::abs(p.vx)>1.5) {
+      v.platform_wait=0.;
+      return;
+    }
+    const double before=v.platform_wait;
+    v.platform_wait+=dt;
+    if(before<1.&&v.platform_wait>=1.)audio.play(AudioCue::Step2,.5f);
+    if(before<2.45&&v.platform_wait>=2.45)audio.play(AudioCue::Wood2,.5f);
+    if(v.platform_wait<3.6)return;
+    v.platform_listening=false;
+    remember_side_flag(SideFlag::PlatformWaited);
+    unlock_achievement(Achievement::PlatformEcho);
+    notice(t("Na szybie pojawia się od środka: «Kiedy dasz sygnał, przestanę czekać».",
+      "On the inside of the glass, someone writes: ‘When you give the signal, I can stop waiting.’"),6);
+    persist();
   }
   struct SideDocument {
     iceberg::SideFlag flag;
@@ -350,6 +394,7 @@
             "The reader returns a blank card. Check the time, the extra load, and the side."),5);
         } else {
           remember_side_flag(SideFlag::ArchiveCarbonPrinted);
+          add_platform_entrance();
           unlock_achievement(Achievement::SecondImpression);
           audio.play(AudioCue::Motor,.6f);
           audio.play(AudioCue::Paper,.8f);
@@ -391,6 +436,76 @@
           persist();
         } else notice(t("Okienko zwrotów. Nieodebrane bilety trafiają tu z kasownika na Koronie.",
           "Returns hatch. Unclaimed tickets come here from the punch on the Crown."),5);
+        break;
+      case SideStory::HarborWhistle:
+        audio.play(AudioCue::Valve,.52f);
+        unlock_achievement(Achievement::HarborWhistle);
+        notice(t("Daleko za falochronem ktoś odpowiada dwoma krótkimi gwizdami.",
+          "Far beyond the breakwater, someone answers with two short whistles."),5);
+        persist();
+        break;
+      case SideStory::HeatGauge:
+        state.adventure.pressure_test_left=2.8;
+        audio.play(AudioCue::Steam,.55f);
+        unlock_achievement(Achievement::HeatGauge);
+        notice(t("Manometr wskazuje: «Do połowy kubka». Skala jest podpisana ręką Witka.",
+          "The needle reads ‘half a mug’. The scale is in Witek’s handwriting."),5);
+        persist();
+        break;
+      case SideStory::GardenSeedDrawer:
+        audio.play(AudioCue::Wood1,.48f);
+        unlock_achievement(Achievement::GardenSeedDrawer);
+        talk({{-1,{"Rzodkiewka od Ireny. Fasola od Bogdana. Na ostatniej przegródce: «Na pierwszy ogród po powrocie słońca».",
+                    "Radishes from Irena. Beans from Bogdan. The last compartment reads ‘For the first garden after the sun returns.’"}}});
+        persist();
+        break;
+      case SideStory::CrownViewer:
+        audio.play(AudioCue::Metal1,.48f);
+        unlock_achievement(Achievement::CrownViewer);
+        talk({{-1,{"Luneta jest przykręcona na stałe. Widać z niej tył tablicy «Widok na wszystkie dzielnice».",
+                    "The telescope has been bolted in place. It points at the back of the ‘View of every district’ sign."}}});
+        persist();
+        break;
+      case SideStory::PlatformBoard:
+        if(has_side_flag(SideFlag::PlatformCleared)) {
+          notice(t("Ostatni kurs odjechał. Pod rozkładem ktoś dopisał: «Dziękuję».",
+            "The last service has departed. Someone wrote ‘Thank you’ below the timetable."),5);
+          break;
+        }
+        talk({{-1,{"00:07 — DOJAZD DO DOMU. Przyjazd: potwierdzony. Odjazd: oczekuje sygnału.",
+                    "00:07 — HOME SERVICE. Arrival confirmed. Departure awaiting signal."}},
+              {-1,{"Niżej, kredą: «Jeśli w szybie nikogo nie ma, usiądź. Odbicie potrzebuje chwili».",
+                    "Below it, in chalk: ‘If the window’s empty, sit down. It takes the reflection a moment.’"}}});
+        break;
+      case SideStory::PlatformBench:
+        if(has_side_flag(SideFlag::PlatformCleared)) {
+          notice(t("Szyba odbija pustą ławkę za tobą.","The glass reflects the empty bench behind you."),4);
+        } else if(has_side_flag(SideFlag::PlatformWaited)) {
+          notice(t("Napis na szybie wskazuje sygnalizator po prawej.","The writing on the glass points toward the departure signal on the right."),5);
+        } else {
+          state.adventure.platform_listening=true;
+          state.adventure.platform_wait=0.;
+          audio.play(AudioCue::Wood1,.42f);
+          notice(t("Deski uginają się. Chwilę później po drugiej stronie też.",
+            "The bench creaks. A moment later, so does the one on the other side."),4);
+        }
+        break;
+      case SideStory::PlatformSignal:
+        if(has_side_flag(SideFlag::PlatformCleared)) {
+          notice(t("Linia jest wolna. Ktoś zostawił na pulpicie ciepły bilet.","The line is clear. Someone left a warm ticket on the console."),5);
+        } else if(!has_side_flag(SideFlag::PlatformWaited)) {
+          notice(t("Obwód sygnału czeka na potwierdzenie z poczekalni.",
+            "The signal circuit is waiting for a response from the waiting room."),5);
+        } else {
+          remember_side_flag(SideFlag::PlatformCleared);
+          state.adventure.platform_departure=4.;
+          unlock_achievement(Achievement::PlatformReleased);
+          audio.play(AudioCue::Metal2,.65f);
+          audio.play(AudioCue::Rumble,.5f);
+          notice(t("Na tablicy: «W DRODZE». Po chwili znika ostatni wiersz.",
+            "The board reads ‘ON THE WAY’. Then the last line goes blank."),5);
+          persist();
+        }
         break;
       case SideStory::CrownPunch:
         unlock_achievement(Achievement::PunchTomorrow);

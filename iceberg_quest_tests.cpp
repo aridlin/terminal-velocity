@@ -206,6 +206,47 @@ int main() {
                     side.state.adventure.inspect_body==iceberg::CarbonReaderRecord.get(side.profile.language),
         "returning to the machine reveals the completed carbon copy");
       side.tick({.inspect=true},0.);
+      using iceberg::SideFlag;
+      const auto hatch=std::find_if(side.grid.interactions.begin(),side.grid.interactions.end(),
+        [](const auto &node){return node.kind==InteractionKind::Secret&&node.id==iceberg::NightPlatform;});
+      require_quest(hatch!=side.grid.interactions.end(),"printing the copy reveals a physical exit from the Archive");
+      const auto hatch_area=hatch->area;
+      walk_to(side,hatch_area);
+      interact(side);
+      const auto has_new_award=[&](Achievement award) {
+        return iceberg::has_award(iceberg::stored_award_progress(side.profile),award);
+      };
+      require_quest(side.grid.template_id==iceberg::NightPlatformTemplate&&has_new_award(Achievement::PlatformFound),
+        "cabinet 11 opens a secret waiting room");
+      scene(SideStory::PlatformSignal);
+      require_quest(!has_new_award(Achievement::PlatformReleased),
+        "the departure signal waits for an answer from the bench");
+      const auto bench=std::find_if(side.grid.interactions.begin(),side.grid.interactions.end(),
+        [](const auto &node){return node.kind==InteractionKind::SideStory&&node.id==int(SideStory::PlatformBench);});
+      walk_to(side,bench->area,[](const auto &state) {
+        return state.player.grounded&&state.player.x>=34.&&state.player.x<=37.&&std::abs(state.player.vx)<1.;
+      });
+      interact(side);
+      require_quest(side.state.adventure.platform_listening,"sitting starts the delayed response");
+      side.tick({.pause=true},.05);
+      const double paused_wait=side.state.adventure.platform_wait;
+      for(int i=0;i<45;++i)side.tick({},.1);
+      require_quest(side.state.adventure.platform_wait==paused_wait&&!has_new_award(Achievement::PlatformEcho),
+        "pause does not advance the waiting room encounter");
+      side.tick({.pause=true},.05);
+      for(int i=0;i<45;++i)side.tick({},.1);
+      require_quest(has_new_award(Achievement::PlatformEcho)&&side.has_side_flag(SideFlag::PlatformWaited),
+        "waiting earns the reflection discovery");
+      scene(SideStory::PlatformSignal);
+      require_quest(has_new_award(Achievement::PlatformReleased)&&side.state.adventure.platform_departure>0.,
+        "the signal sends the reflected passenger home");
+      require_quest(save.save(side.profile)&&save.load(loaded)&&loaded.hidden_room==iceberg::NightPlatform&&
+        iceberg::has_award(iceberg::stored_award_progress(loaded),Achievement::PlatformReleased),
+        "the detour and expanded catalogue survive a save round trip");
+      const auto platform_exit=side.grid.interactions.front().area;
+      walk_to(side,platform_exit);interact(side);
+      require_quest(side.profile.hidden_room<0&&side.state.player.rect().intersects(hatch_area),
+        "the waiting room exit returns to the cabinet in the Archive");
       side.profile=before_line;side.district=2;side.stage=0;side.load_room(true);
       side.tick({.restart=true},1./120);
       require_quest(side.profile.district_deaths==district_retries+1&&side.profile.district_seconds>district_time,
