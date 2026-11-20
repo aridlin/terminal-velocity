@@ -635,6 +635,10 @@
       line(2,tr("PRZEGLĄD ZMIAN ","DEBUG TOUR ")+std::to_string(v.picker_choice+1)+"/"+std::to_string(count),d.accent,true);
       line(3,tr("Przegląd nie zapisuje postępu.","Tour progress is never saved."),d.light);
       const int room_width=width-4;
+      const auto title_for=[&](const iceberg::TourStop &sample) {
+        const auto &label=*sample.title.pl?sample.title:iceworld::pattern(sample.room).name;
+        return label.get(v.language);
+      };
       const int visible=std::min(iceberg::tour_page_size(rows_),count);
       const int first=std::clamp(v.picker_choice-visible/2,0,count-visible);
       tour_rows_={first,visible,4,edge+1,edge+width-2};
@@ -643,7 +647,7 @@
         const bool chosen=i==v.picker_choice;
         const int y=4+i-first;
         if(chosen)paint_text(y,edge+1,"▸",d.accent);
-        auto title=iceworld::pattern(sample.room).name.get(v.language);
+        auto title=title_for(sample);
         const auto chars=glyphs(title);
         if(int(chars.size())>room_width) {
           title.clear();
@@ -653,7 +657,7 @@
         line(y,title,chosen?d.accent:d.light);
       }
       int y=rows_-7;
-      const auto title=iceworld::pattern(stop.room).name.get(v.language);
+      const auto title=title_for(stop);
       // Keep each list item on one row so paging and tapping use the same cells.
       if(iceberg::cell_length(title)>room_width) {
         for(const auto &part:wrap(title,room_width))if(y<rows_-3)line(y++,part,d.accent);
