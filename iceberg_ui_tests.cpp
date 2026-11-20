@@ -113,6 +113,29 @@ int main(){try {
         "using the relay still shows immediate direction feedback near the switch");
     }
   }
+  {
+    auto settings=game.state;
+    settings.menu=settings.adventure.settings=true;
+    settings.adventure.smooth_camera=true;
+    settings.adventure.pause_on_focus_loss=false;
+    for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
+      settings.adventure.language=language;
+      const bool english=language==iceberg::Language::English;
+      const std::string lang=english?"L Language: ENGLISH":"L Język: POLSKI";
+      const std::string back=english?"ENTER return":"ENTER wróć";
+      for(auto [columns,rows]:{std::pair{60,20},std::pair{76,20},std::pair{38,28}}) {
+        RenderGrid(game.grid,settings,rows,columns,2).draw();
+        const auto text=ui_text(frame);
+        const auto language_position=text.find(lang),return_position=text.find(back);
+        ui_check(language_position!=std::string::npos&&return_position!=std::string::npos&&
+                 text.find('\n',language_position)<return_position,
+          "compact Settings puts Language and Enter on separate rows");
+        ui_check(text.find(english?"7 Smooth camera (exp.) on":"7 Płynna kamera (test) wł.")!=std::string::npos&&
+                 text.find(english?"5 Pause on focus loss off":"5 Pauza po utracie fokusu wył.")!=std::string::npos,
+          "compact Settings shows the focus and camera values");
+      }
+    }
+  }
   Controls enter;enter.confirm=true;Controls book;book.journal=true;Controls map;map.map=true;Controls tab;tab.inspect=true;Controls use;use.interact=true;
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
     game.profile.language=language;game.sync_view();game.state.adventure.map=true;game.state.adventure.selected=1;
