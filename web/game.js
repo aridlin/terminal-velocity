@@ -732,7 +732,8 @@ const steamSoundFiles=document.querySelector('#steam-sound-files');
 const steamSoundStatus=document.querySelector('#steam-sound-status');
 const steamSoundNames=['desktop_toast_default.wav','deck_ui_achievement_toast.wav'];
 const steamSoundCache=()=>caches.open('terminal-velocity-steam-sounds');
-const steamSoundKey=name=>new URL('local-steam-sounds/'+name,document.baseURI).href;
+// The site's base URL changes with each game release. Keep these local keys stable.
+const steamSoundKey=name=>new URL('/.terminal-velocity-steam-sounds/'+name,location.origin).href;
 const loadedSteamSounds=new Set();
 let steamSoundError=null;
 function renderSteamSoundSettings(){
