@@ -248,6 +248,7 @@ public:
     if(mode!=iceberg::Mode::Campaign && run_active) {
       auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
       e.active=true;e.seed=run_seed;e.district=district;e.room=room;e.depth=depth;e.checkpoint=state.checkpoint;
+      e.at_exit=state.won&&expedition_exit_landing().has_value();
       e.collected=0;for(size_t i=0;i<state.collected.size()&&i<64;++i)if(state.collected[i])e.collected|=uint64_t(1)<<i;
       e.switches=grid.switch_flags;e.room_seconds=state.elapsed;e.room_deaths=state.deaths;
       e.seconds=run_seconds;e.deaths=run_deaths;e.treasures=run_treasures;
@@ -576,6 +577,11 @@ public:
         state.spawn_x=x;state.spawn_y=y;state.player.x=x;state.player.y=y;
       }
       state.elapsed=e.room_seconds;state.deaths=e.room_deaths;
+      if(e.at_exit)if(const auto landing=expedition_exit_landing()) {
+        state.player.x=landing->x;state.player.y=landing->y;
+        state.player.grounded=true;state.won=true;
+        state.adventure.door_open=1.;
+      }
     }
     if(resume)restore_route_fork();
     stepper={};sync_view();
@@ -2179,7 +2185,8 @@ public:
       profile.story|=iceberg::CrownSentinelDefeated;
       if(state.deaths==0)unlock_achievement(iceberg::Achievement::CrownClean);
     }
-    if(crown_advanced||old_cp!=state.checkpoint||(state.won&&!at_door)||at_route_fork()!=at_fork||
+    const bool left_expedition_exit=run_active&&mode!=iceberg::Mode::Campaign&&at_door&&!state.won;
+    if(crown_advanced||old_cp!=state.checkpoint||(state.won&&!at_door)||left_expedition_exit||at_route_fork()!=at_fork||
        deaths>0||pickups>0||mastery_progress||profile.discoveries!=discoveries_at_start||
        iceberg::stored_award_progress(profile)!=awards_at_start||autosave_left<=0)persist();
     update_camera(state,grid,columns,std::max(1,rows-7),aspect,

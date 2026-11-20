@@ -233,8 +233,64 @@ void test_harbor_sling_and_surge() {
   require(wave.active(run.elapsed)&&run.deaths==1,"an active crest can catch a low jump near the quay");
 }
 
+void test_expedition_door_resume() {
+  using iceberg::Mode;
+  const auto path=std::filesystem::temp_directory_path()/"tv-expedition-door-test";
+  std::filesystem::create_directories(path);
+  for(auto mode:{Mode::Endless,Mode::Trial}) {
+    const auto file=path/(mode==Mode::Endless?"endless":"trial");
+    iceberg::SessionOptions options;options.mute=true;
+    AdventureSession run(options,file);
+    run.begin_campaign(true);
+    run.profile.cosmetics|=iceberg::MasteryTransitPass;
+    run.begin_run(mode,true);
+    run.room=run.depth=iceberg::RoomsPerLeg-1;
+    run.load_room();
+    const auto original_itinerary=run.profile.expeditions[mode==Mode::Endless?0:1].itinerary;
+    const auto lamp=std::pair{run.state.spawn_x,run.state.spawn_y};
+    run.state.player.x=run.grid.goal.x+(run.grid.goal.w-kPlayerWidth)*.5;
+    run.state.player.y=run.grid.goal.bottom()-kPlayerHeight;
+    run.tick({},1./120.);
+    require(run.state.won,"the last door is playable before the restart");
+    AdventureSession loaded(options,file);
+    loaded.begin_run(mode);
+    require(loaded.room==iceberg::RoomsPerLeg-1&&loaded.state.won&&
+      loaded.grid.touches_exit(loaded.state.player.rect()),
+      "a saved door is immediately ready when the Expedition resumes");
+    require(std::pair{loaded.state.spawn_x,loaded.state.spawn_y}==lamp,
+      "resuming at the exit keeps the original retry lamp");
+    const auto portable=path/"portable";
+    iceberg::Profile imported;
+    require(iceberg::SaveStore::write_backup(portable,loaded.profile)&&
+      iceberg::SaveStore::read_backup(portable,imported)&&
+      imported.expeditions[mode==Mode::Endless?0:1].at_exit,
+      "a portable save preserves the ready doorway");
+
+    loaded.tick({.restart=true},1./120.);
+    AdventureSession retry(options,file);
+    retry.begin_run(mode);
+    require(!retry.state.won&&std::pair{retry.state.player.x,retry.state.player.y}==lamp,
+      "retry clears the saved doorway and returns to the same lamp");
+    retry.state.player.x=retry.grid.goal.x+(retry.grid.goal.w-kPlayerWidth)*.5;
+    retry.state.player.y=retry.grid.goal.bottom()-kPlayerHeight;
+    retry.tick({},1./120.);
+    AdventureSession depart(options,file);
+    depart.begin_run(mode);
+    depart.tick({.confirm=true},1./120.);
+    if(mode==Mode::Endless) {
+      const auto &saved=depart.profile.expeditions[0];
+      require(saved.room==0&&saved.depth==iceberg::RoomsPerLeg&&saved.completed_legs.size()==1&&
+        std::equal(saved.completed_legs.front().begin(),saved.completed_legs.front().end(),original_itinerary.begin()),
+        "confirming a restored door enters the next leg and records the old leg once");
+    } else require(!depart.profile.expeditions[1].active&&depart.profile.trials[0].complete,
+      "confirming the restored Trial door records the result once");
+  }
+  std::filesystem::remove_all(path);
+}
+
 int main() {
   try {
+    test_expedition_door_resume();
     test_heatworks_route_machinery();
     test_garden_vine_and_flytrap();
     test_estate_balcony_and_masonry();

@@ -1,6 +1,24 @@
 // Included inside AdventureSession. Branch decisions are campaign state, not
 // a drawing convention. A fork replaces exactly one non-quest traversal cell.
   int route_leg() const {return stage<=3?0:stage<=5?1:2;}
+  std::optional<Rect> expedition_exit_landing() const {
+    if((grid.switch_flags&grid.goal_requires)!=grid.goal_requires||
+       grid.goal.x<0.||grid.goal.right()>grid.width()||
+       grid.goal.bottom()<1.||grid.goal.bottom()>=grid.height())return std::nullopt;
+    const int floor=int(std::lround(grid.goal.bottom()));
+    const Rect landing{grid.goal.x+(grid.goal.w-kPlayerWidth)*.5,
+      floor-kPlayerHeight,kPlayerWidth,kPlayerHeight};
+    if(std::abs(grid.goal.bottom()-floor)>.001||!grid.touches_exit(landing)||
+       !grid.solid_at(int(std::floor(landing.left())),floor)||
+       !grid.solid_at(int(std::floor(std::nextafter(landing.right(),landing.left()))),floor)||
+       !ledge_clearance(grid,landing))return std::nullopt;
+    for(const auto &pulse:grid.pulses)
+      if(pulse.powered(grid.switch_flags)&&pulse.active(state.elapsed)&&landing.intersects(pulse.damage_area(state.elapsed)))
+        return std::nullopt;
+    for(size_t i=0;i<grid.enemies.size();++i)
+      if(!state.defeated[i]&&landing.intersects(grid.enemies[i].at(state.elapsed)))return std::nullopt;
+    return landing;
+  }
   uint32_t next_expedition_seed() const {return iceberg::mix(run_seed+1);}
   std::vector<int> expedition_itinerary(uint32_t seed,std::span<const int> preceding={}) const {
     const auto &e=profile.expeditions[mode==iceberg::Mode::Endless?0:1];
