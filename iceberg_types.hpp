@@ -158,11 +158,11 @@ inline int transit_token_progress(const Profile &profile,int fare) {
 inline constexpr unsigned OutfitterEarnedShift=8;
 inline constexpr uint32_t OutfitterEarnedMask=255u<<OutfitterEarnedShift;
 inline constexpr uint32_t HarborScarf=1u<<27, DockBoots=1u<<28, SignalSatchel=1u<<29;
-struct OutfitterItem { Text name; int price; uint32_t flag; };
+struct OutfitterItem { Text name,effect; int price; uint32_t flag; };
 inline constexpr std::array OutfitterItems{
-  OutfitterItem{{"Szalik portowy","Harbor scarf"},3,HarborScarf},
-  OutfitterItem{{"Buty dokerskie","Dock boots"},6,DockBoots},
-  OutfitterItem{{"Torba sygnałowa","Signal satchel"},10,SignalSatchel}
+  OutfitterItem{{"Szalik portowy","Harbor scarf"},{"Wygląd","Appearance"},18,HarborScarf},
+  OutfitterItem{{"Buty dokerskie","Dock boots"},{"Lepsza przyczepność","Better grip on ice"},30,DockBoots},
+  OutfitterItem{{"Torba sygnałowa","Signal satchel"},{"Większy zasięg ogniw","Wider dash-cell reach"},42,SignalSatchel}
 };
 inline int outfitter_earned(const Profile &profile) {
   return std::max(int((profile.cosmetics&OutfitterEarnedMask)>>OutfitterEarnedShift),

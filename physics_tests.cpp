@@ -176,6 +176,32 @@ int main() {
     combo.aim_y = 0;
     check(step_combo(g, combo).dash_jump_left == 0 && step_combo(adventure, combo, true).dash_jump_left == 0,
           "classic and reference movement retain same-tick launch behavior");
+    {
+      auto ice_floor=adventure;
+      ice_floor.ice_strips.push_back({0,40,30,2});
+      auto normal=new_state(ice_floor);
+      normal.player.vx=8.;normal.player.grounded=true;
+      auto boots=normal;
+      boots.adventure.cosmetics=iceberg::DockBoots;
+      auto trial=boots;
+      trial.adventure.mode=iceberg::Mode::Trial;
+      world_step(normal,ice_floor,{},1./120);
+      world_step(boots,ice_floor,{},1./120);
+      world_step(trial,ice_floor,{},1./120);
+      check(boots.player.vx<normal.player.vx&&trial.player.vx==normal.player.vx,
+        "Dock boots brake faster on ice and preserve trial physics");
+      auto cells=adventure;cells.refills.push_back({6.65,30.8});
+      auto short_reach=new_state(cells);
+      short_reach.player.x=5.;short_reach.player.y=30.;short_reach.player.dash_available=false;
+      auto satchel=short_reach;
+      satchel.adventure.cosmetics=iceberg::SignalSatchel;
+      auto trial_cell=satchel;trial_cell.adventure.mode=iceberg::Mode::Trial;
+      world_step(short_reach,cells,{},1./120);
+      world_step(satchel,cells,{},1./120);
+      world_step(trial_cell,cells,{},1./120);
+      check(!short_reach.player.dash_available&&satchel.player.dash_available&&!trial_cell.player.dash_available,
+        "the Signal satchel reaches an extra dash cell without affecting trial distances");
+    }
     auto lift = adventure;
     lift.platforms.push_back({{4,36,8,.5},0,.01,3,0});
     auto on_lift = new_state(lift);

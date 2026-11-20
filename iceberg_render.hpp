@@ -850,6 +850,7 @@
     if(shop) {
       const auto &item=iceberg::OutfitterItems[size_t(dialogue.outfitter_item)];
       paint_text(top+2,3,item.name.get(language)+" · "+std::to_string(item.price)+" ◉",0xeee7d6);
+      paint_text(top+4,5,item.effect.get(language),0x9dd4dd);
       const int shortfall=item.price-dialogue.outfitter_tokens;
       choices[0]=(state_.adventure.cosmetics&item.flag)?tr("Kupione","Owned"):
         shortfall>0?tr("Brakuje ","Need ")+std::to_string(shortfall)+" ◉":tr("Kup","Buy");

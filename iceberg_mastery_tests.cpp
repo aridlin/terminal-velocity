@@ -50,9 +50,19 @@ int main() {
       if(shop.profile.cosmetics&iceberg::HarborScarf||iceberg::outfitter_balance(shop.profile)!=2)
         throw std::runtime_error("a purchase cannot exceed the token balance");
       shop.tick(Controls{.pause=true},1./120);
-      shop.profile.district_treasures=iceberg::SurveyTokenFare;
-      shop.tick(use,1./120);
-      for(const auto &item:iceberg::OutfitterItems) {
+      shop.profile.district_treasures=3*iceberg::RoomsPerLeg;
+      shop.tick(use,1./120);shop.tick(previous,1./120);shop.tick(confirm,1./120);
+      shop.tick(confirm,1./120);shop.tick(previous,1./120);shop.tick(confirm,1./120);
+      if(!(shop.profile.cosmetics&iceberg::HarborScarf)||(shop.profile.cosmetics&iceberg::DockBoots)||
+         iceberg::outfitter_balance(shop.profile)!=6)
+        throw std::runtime_error("three tokens per room afford only the starter gear after a leg");
+      shop.tick(Controls{.pause=true},1./120);
+      int budget=5;
+      for(const auto &item:iceberg::OutfitterItems)budget+=item.price;
+      shop.profile.district_treasures=budget;
+      shop.tick(use,1./120);shop.tick(confirm,1./120);
+      for(size_t i=1;i<iceberg::OutfitterItems.size();++i) {
+        const auto &item=iceberg::OutfitterItems[i];
         const int before=iceberg::outfitter_balance(shop.profile);
         shop.tick(previous,1./120);shop.tick(confirm,1./120);
         if(!(shop.profile.cosmetics&item.flag)||iceberg::outfitter_balance(shop.profile)!=before-item.price)
