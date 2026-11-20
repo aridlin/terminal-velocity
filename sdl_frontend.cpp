@@ -1129,6 +1129,7 @@ int terminal_window_main(int argc,char **argv) {
       bool focused=true,fullscreen=false;
       int cell_w=10,cell_h=20,origin_x=0,origin_y=0,zoom=10;
       int smoke_initial_columns=0;bool smoke_zoomed=false,smoke_reset=false,smoke_tap=false;
+      bool smoke_focus_pause=false,smoke_focus_continue=false;
       cell_frame_sink=[&](const CellFrame &frame){
         color(ink);SDL_RenderClear(ren);
         // Draw the same per-cell backgrounds as ANSI, coalesced into row runs.
@@ -1156,13 +1157,30 @@ int terminal_window_main(int argc,char **argv) {
               SDL_PushEvent(&tap);
             }
         }
+        if(args.smoke&&(frames==70||frames==71||frames==80)) {
+          const auto push_key=[](SDL_Scancode key) {
+            SDL_Event event{};event.type=SDL_KEYDOWN;event.key.keysym.scancode=key;
+            SDL_PushEvent(&event);
+          };
+          if(frames==71)push_key(SDL_SCANCODE_P);
+          else {
+            session.profile.pause_on_focus_loss=frames==70;
+            push_key(SDL_SCANCODE_SPACE);push_key(SDL_SCANCODE_X);
+            for(auto focus:{SDL_WINDOWEVENT_FOCUS_LOST,SDL_WINDOWEVENT_FOCUS_GAINED}) {
+              SDL_Event event{};event.type=SDL_WINDOWEVENT;event.window.event=focus;
+              SDL_PushEvent(&event);
+            }
+            if(frames==80)push_key(SDL_SCANCODE_D);
+          }
+        }
+        bool lost_focus=false;
         SDL_Event event;
         while(SDL_PollEvent(&event)) {
           if(event.type==SDL_QUIT)c.quit=true;
           if(event.type==SDL_WINDOWEVENT) {
             if(event.window.event==SDL_WINDOWEVENT_FOCUS_LOST){
-              focused=false;held.fill(false);
-              c.move_pressed.reset();c.aim_pressed.reset();
+              lost_focus=true;focused=false;held.fill(false);
+              c=Controls{.quit=c.quit};
             }
             if(event.window.event==SDL_WINDOWEVENT_FOCUS_GAINED)focused=true;
           }
@@ -1216,6 +1234,8 @@ int terminal_window_main(int argc,char **argv) {
         c.aim_y=vertical();
         if(left()&&right())c.move_pressed=0;
         if(up()&&down())c.aim_pressed=0;
+        const bool clean_focus_input=!c.jump_pressed&&!c.dash_pressed&&!c.jump_held;
+        const bool fresh_focus_move=c.move==1&&c.move_pressed==1;
         if(args.smoke){
           if(frames==60)smoke_tap=c.move==0&&c.aim_y==0&&c.dash_pressed&&
             c.move_pressed==-1&&c.aim_pressed==1;
@@ -1237,7 +1257,12 @@ int terminal_window_main(int argc,char **argv) {
         bool was_blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
         if(c.debug)session.state.debug=!session.state.debug;
         const double cell_aspect=double(cell_h)/cell_w;
+        // A loss and gain can arrive in one poll. Let the session see the
+        // loss before applying fresh input, without advancing the world twice.
+        if(lost_focus&&focused)session.tick({},0.,false,cols,rows,cell_aspect);
         session.tick(c,dt,focused,cols,rows,cell_aspect);
+        if(args.smoke&&frames==70)smoke_focus_pause=clean_focus_input&&session.state.paused;
+        if(args.smoke&&frames==80)smoke_focus_continue=clean_focus_input&&fresh_focus_move&&!session.state.paused;
         bool blocked=session.state.menu||session.state.adventure.dialogue.active()||session.state.paused||session.state.journal||session.state.adventure.map||session.state.adventure.inspecting;
         if(was_blocked!=blocked)held.fill(false);
         if(now>=render_at||args.smoke||!screenshot.empty()) {
@@ -1258,8 +1283,10 @@ int terminal_window_main(int argc,char **argv) {
       if(session.legacy_requested)result=10;
       if(args.smoke){
         std::cout<<"SDL cell view smoke x="<<session.state.player.x<<" zoom="<<smoke_zoomed
-                 <<" reset="<<smoke_reset<<" tap="<<smoke_tap<<'\n';
-        if(session.state.player.x<10||!smoke_zoomed||!smoke_reset||!smoke_tap)result=3;
+                 <<" reset="<<smoke_reset<<" tap="<<smoke_tap
+                 <<" focus_pause="<<smoke_focus_pause<<" focus_continue="<<smoke_focus_continue<<'\n';
+        if(session.state.player.x<10||!smoke_zoomed||!smoke_reset||!smoke_tap||
+           !smoke_focus_pause||!smoke_focus_continue)result=3;
       }
     }
   }
