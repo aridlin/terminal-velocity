@@ -3,6 +3,10 @@
 #include "iceberg_story.hpp"
 
 namespace iceberg {
+inline bool browsing_campaign_leg(const View &view) {
+  return view.mode==Mode::Campaign&&view.map&&view.map_route&&!view.map_room&&
+    view.route.available&&view.route_page>=0&&view.route_page!=view.route.leg;
+}
 inline bool browsing_expedition_room(const View &view) {
   return view.mode!=Mode::Campaign&&view.tour_scene<0&&view.route.available&&view.route.current>=0&&
     view.route_room_selection>=0&&

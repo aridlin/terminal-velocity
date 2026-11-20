@@ -48,7 +48,7 @@ void send_web_ui() {
     (int(district_control)<<14)|(int(s.audio_muted)<<15)|(int(v.save_error)<<16)|(int(v.map&&v.map_room)<<17)|
     (int(fork_door)<<18)|(int(s.menu&&v.confirm_new&&v.selected!=1)<<19)|
     ((web_slot-1)<<20)|(int(v.tour_scene>=0)<<22)|(int(v.save_picker||v.tour_picker)<<23)|(int(v.smooth_camera)<<24)|
-    (int(!s.menu&&v.dialogue.choosing())<<26);
+    (int(!s.menu&&iceberg::browsing_campaign_leg(v))<<25)|(int(!s.menu&&v.dialogue.choosing())<<26);
   if(v.inspecting) {
     const auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,web_game->last_columns,web_game->last_rows);
     const int page=layout.page_at(v.inspect_offset);
