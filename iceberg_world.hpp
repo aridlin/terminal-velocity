@@ -377,7 +377,6 @@ inline EngineGrid build_settlement(int district) {
   g.interactions.push_back({{42,35,4,4},InteractionKind::Npc,npc_b[district],{"Porozmawiaj","Talk"}});
   g.interactions.push_back({{77,44,4,4},InteractionKind::Board,district,{"Tablica wypraw","Expedition board"}});
   if(district==0)g.interactions.push_back({{27,40,3,3},InteractionKind::Secret,0,{"",""}});
-  g.interactions.push_back({{72,44,3,4},InteractionKind::Outfitter,0,{"Sklep portowy","Harbor outfitter"}});
   return g;
 }
 } // namespace iceberg

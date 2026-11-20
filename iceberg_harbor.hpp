@@ -77,7 +77,6 @@ inline EngineGrid build_harbor_settlement_v4() {
   g.interactions.push_back({{110,44,4,4},InteractionKind::Board,0,{"Tablica wypraw","Expedition board"}});
   g.interactions.push_back({{27,40,3,3},InteractionKind::Secret,0,{"",""}});
   place_dock_worker(g,94,48,0);
-  g.interactions.push_back({{72,39,4,4},InteractionKind::Outfitter,0,{"Sklep portowy","Harbor outfitter"}});
   return g;
 }
 inline EngineGrid build_harbor_lesson_v4() {

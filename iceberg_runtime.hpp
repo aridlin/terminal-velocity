@@ -451,6 +451,11 @@ public:
       grid.interactions.push_back({{x,floor-4.,3,4},InteractionKind::Replay,iceberg::SurveyReplay,
         {"Objazd latarni przyboju","Breakwater survey"}});
     }
+    if(grid.template_id==100||grid.template_id==600||grid.template_id==330) {
+      const Rect stall=grid.template_id==600?Rect{72,39,4,4}:
+        grid.template_id==100?Rect{72,44,3,4}:Rect{96,45,4,4};
+      grid.interactions.push_back({stall,InteractionKind::Outfitter,0,{"Sklep portowy","Harbor outfitter"}});
+    }
     grid.protect_exit();
     configure_route_room();
     auto old_view=state.adventure;
