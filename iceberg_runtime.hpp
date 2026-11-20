@@ -884,7 +884,7 @@ public:
     }
     stage=2;run_active=true;load_room(resume);state.menu=false;persist();
     notice(resume?t("WZNOWIONO WYPRAWĘ — ta sama droga","EXPEDITION RESUMED — the same route"):
-      next==iceberg::Mode::Endless?t("WYPRAWA BEZ KOŃCA — każda brama to nowa droga","ENDLESS EXPEDITION — every gate is a new route"):
+      next==iceberg::Mode::Endless?t("WYPRAWA BEZ KOŃCA — osiem pokoi w odcinku","ENDLESS EXPEDITION — eight rooms per leg"):
       t("PRÓBA MISTRZOWSKA — osiem sal, jeden rekord","MASTERY TRIAL — eight rooms, one record"),3,true);
   }
   void advance_room() {
