@@ -85,6 +85,9 @@
     };
     if(grid_.has_hazards())add_feature(tr("░ Ryzyko","░ Hazard"),hazard_color);
     if(remaining_token)add_feature(tr("● Żeton","● Token"),0xedc278);
+    const bool has_slings=std::any_of(grid_.platforms.begin(),grid_.platforms.end(),
+      [](const auto &deck){return deck.harbor_sling;});
+    if(has_slings)add_feature(tr("↕ Zawiesie","↕ Cargo sling"),0xe8b773);
     if(has_balconies)add_feature(tr("↕ Balkon","↕ Balcony lift"),0xe5bfa1);
     if(has_awnings)add_feature(tr("↗ Markizy","↗ Awnings"),awning_color);
     if(has_planter)add_feature(tr("▱ Donica","▱ Planter"),planter_color);
@@ -164,6 +167,9 @@
     if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
       [](const PulseHazard &hazard){return hazard.kind==PulseKind::Scanner;}))
       add_feature(tr("║ Skaner","║ Scanner"),0xe9808a);
+    if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
+      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Surge;}))
+      add_feature(tr("∿ Fala","∿ Surge"),0xa1d7df);
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t piston_docked_color=0xb5d599;
     const bool glass_catwalk=grid_.template_id==iceberg::ArchiveGlassRoom&&has_fragile;
@@ -508,6 +514,7 @@
         case PulseKind::Flytrap:symbol=active?"▲":warning?"!":"▽";break;
         case PulseKind::Masonry:symbol=active?"▼":warning?"!":"◇";break;
         case PulseKind::Scanner:symbol=active?"║":warning?"!":"○";break;
+        case PulseKind::Surge:symbol=active?"≈":warning?"!":"∿";break;
         default:symbol=active?"♨":warning?"↑":"╧";break;
       }
       mark(area.x+area.w*.5,area.bottom(),symbol,active?vent_active:warning?vent_warning:vent_idle);
@@ -519,6 +526,10 @@
     if(has_balconies)for(const auto &deck:grid_.platforms)if(deck.estate_balcony) {
       const auto r=deck.at(state_.elapsed);
       mark(r.x+r.w*.5,r.top(),"↕",0xe5bfa1);
+    }
+    if(has_slings)for(const auto &deck:grid_.platforms)if(deck.harbor_sling) {
+      const auto r=deck.at(state_.elapsed);
+      mark(r.x+r.w*.5,r.top(),"↕",0xe8b773);
     }
     for(const auto &vine:grid_.vines) {
       const auto [x,y]=vine.tip(state_.elapsed);

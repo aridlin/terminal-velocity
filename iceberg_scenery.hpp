@@ -181,6 +181,44 @@
     world_art(x,top,{"",checking_tag?"  ██╱":"  ██",checking_tag?"":"    ╸"},0xbf967b);
   }
 
+  void draw_harbor_sling(const MovingPlatform &lift,const Rect &deck) {
+    const double row=aspect_*scale_,beam_y=lift.base.y-lift.dy-5.8;
+    const double center=deck.x+deck.w*.5,left=deck.x+scale_,right=deck.right()-scale_;
+    const uint32_t dock=lift.stop(state_.elapsed)?0xe8b773:0x8c8581;
+    draw_scenery_pipe({{deck.x-3.,lift.base.y+lift.dy},{deck.x-3.,beam_y},
+      {right+1.5,beam_y}},0x738990);
+    world_art(center-scale_,beam_y-2*row,{"╭─╮","│◉│","╰┬╯"},0xae9480);
+    for(double y=beam_y+row;y<deck.y-2*row;y+=row)world_text(center,y,"┆",0x88a0a7);
+    world_text(center,deck.y-2*row,"▽",dock);
+    world_text(left,deck.y-row,"╲",dock);
+    world_text(right,deck.y-row,"╱",dock);
+    const int cells=std::max(4,int(deck.w/scale_));
+    for(int i=0;i<cells;++i) {
+      const double x=deck.x+i*scale_;
+      world_text(x,deck.y,i==0?"╞":i==cells-1?"╡":"━",dock);
+      world_text(x,deck.y+row,i==0?"╲":i==cells-1?"╱":i%3==0?"▥":"▒",0x8a7769);
+    }
+  }
+
+  void draw_harbor_surge(const PulseHazard &wave) {
+    const double now=state_.elapsed,surface=wave.area.bottom();
+    const bool warn=wave.warning(now),active=wave.active(now);
+    if(!warn&&!active)return;
+    const auto crest=active?wave.damage_area(now):Rect{wave.area.x,surface-.3,wave.area.w,.3};
+    const double row=aspect_*scale_;
+    for(double x=crest.left();x<crest.right();x+=scale_) {
+      world_text(x,crest.top(),active?"≈":"∿",warn?0xb9e1df:0xddf0dd);
+      for(double y=crest.top()+row;y<surface;y+=row)world_text(x,y,"░",0x578c9c);
+    }
+    for(int i=0;i<9;++i) {
+      const double age=active?wave.cycle(now):wave.cycle(now)-PulseHazard::warning_start;
+      const double drift=std::fmod(i*.137+age*6.,1.);
+      const double x=crest.x+crest.w*.5+std::sin(i*3.7)*(.3+drift);
+      const double y=crest.top()-(.1+drift)*(active?1.9:.56);
+      world_text(x,y,i%3==0?"⠂":"·",active?0xccf5ef:0xa1d7df);
+    }
+  }
+
   void draw_harbor_landmarks() {
     const auto &d=iceberg::Districts[0];const int id=grid_.template_id;
     const double time=state_.adventure.presentation_time;

@@ -194,6 +194,48 @@ inline void add_crown_exposed_ridge(EngineGrid &room) {
   }
 }
 
+inline void add_harbor_cargo_sling(EngineGrid &room) {
+  if(room.district!=0||!iceworld::harbor_v4_room(room.template_id))return;
+  if(room.template_id==503||!room.platforms.empty())return; // This lane already has a belt, ferry or lift.
+  const auto &shelves=iceworld::pattern(room.template_id).optional;
+  if(shelves.size()<2)return;
+  const auto &low=shelves[0],&high=shelves[1];
+  const double left=low.x+low.w+.25,width=std::min(7.0,high.x-left-.35);
+  if(width<2.)return;
+  const double upper=high.y+.3,lower=low.y+.6;
+  room.platforms.push_back({.base={left,(upper+lower)*.5,width,.5},.dy=(lower-upper)*.5,
+    .period=6.6,.phase=.5,.harbor_sling=true});
+  const auto route=verify_route(room);
+  if(route.complete&&route.deaths==0)room.verification_policy=route.policy;
+  else room.platforms.pop_back();
+}
+
+inline void add_harbor_tidal_surge(EngineGrid &room) {
+  if(room.district!=0||!iceworld::harbor_v4_room(room.template_id))return;
+  const auto &deck=iceworld::pattern(room.template_id).path;
+  const int baseline_deaths=verify_route(room).deaths;
+  for(size_t i=0;i+1<deck.size();++i) {
+    const auto &before=deck[i],&after=deck[i+1];
+    if(before.kind!='p'||after.x<before.x+before.w+4)continue;
+    const double left=before.x+before.w,right=after.x;
+    const double surface=std::max(before.y,after.y)+2.7;
+    auto channel=room;
+    const bool existing=std::any_of(room.water_basins.begin(),room.water_basins.end(),
+      [left](const auto &water){return left>=water.left()&&left<water.right();});
+    if(!existing)channel.water_basins.push_back({left,surface,right-left,62.-surface});
+    const double waterline=existing?after.y+2.6:surface;
+    const double crest=std::min(before.y,after.y)-.58;
+    channel.pulses.push_back({{left+1.,crest,std::min(2.6,right-left-1.4),waterline-crest},
+      5.4+(room.template_id%3)*.5,.35+(room.template_id%5)*.08,PulseKind::Surge});
+    const auto route=verify_route(channel);
+    if(route.complete&&route.deaths<=baseline_deaths) {
+      channel.verification_policy=route.policy;
+      room=std::move(channel);
+      return;
+    }
+  }
+}
+
 inline void add_crown_seam_shortcut(EngineGrid &room) {
   if(room.district!=5||room.template_id!=61)return;
   auto shortcut=room;
