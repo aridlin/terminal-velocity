@@ -82,6 +82,7 @@
       r.visited=(1u<<unsigned(room+1))-1;
       for(int id:e.itinerary)r.rooms.push_back(iceworld::pattern(id).name);
       const bool timeline=v.map&&!v.map_room;
+      const bool show_features=mode==iceberg::Mode::Endless&&e.layout_version>=4&&tour_scene<0;
       const int selected=v.route_room_selection<0?-1:v.route_room_selection%iceberg::RoomsPerLeg;
       if(mode==iceberg::Mode::Endless&&run_active) {
         r.completed_legs=int(e.completed_legs.size());
@@ -90,7 +91,11 @@
           r.browsed_leg=page-r.completed_legs;
           const auto browse=[&](const auto &leg) {
             for(int id:leg)r.browsed_rooms.push_back(iceworld::pattern(id).name);
-            if(selected<int(leg.size()))r.detail_rhythm=iceworld::pattern(leg[size_t(selected)]).rhythm;
+            if(selected<int(leg.size())) {
+              const int id=leg[size_t(selected)];
+              r.detail_rhythm=iceworld::pattern(id).rhythm;
+              if(show_features&&r.browsed_leg>0)r.detail_feature=iceworld::expedition_feature(id).name;
+            }
           };
           if(r.browsed_leg<0)browse(e.completed_legs[size_t(page)]);
           else if(r.browsed_leg>0)browse(next_expedition_itinerary());
@@ -103,8 +108,16 @@
           return iceworld::pattern(e.itinerary[size_t(index)]).rhythm;
         };
         r.current_rhythm=room_rhythm(room);
-        if(r.browsed_leg==0)
-          r.detail_rhythm=room_rhythm(selected>=0&&selected!=room?selected:room+1);
+        if(show_features) {
+          const auto feature=iceworld::expedition_feature(grid.template_id);
+          if(feature.present&&feature.present(grid))r.current_feature=feature.name;
+        }
+        if(r.browsed_leg==0) {
+          const int detail=selected>=0&&selected!=room?selected:room+1;
+          r.detail_rhythm=room_rhythm(detail);
+          if(show_features&&r.detail_rhythm)
+            r.detail_feature=iceworld::expedition_feature(e.itinerary[size_t(detail)]).name;
+        }
       }
       if(mode==iceberg::Mode::Trial&&!r.rooms.empty())r.rooms.back()=iceworld::MasteryCourseName;
     }
