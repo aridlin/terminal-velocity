@@ -151,7 +151,8 @@ int main(){try {
  for(const auto &scene:std::array{
      ExpeditionScene{4,57,iceberg::IrrigationReplyScene,5,52,50},
      ExpeditionScene{1,13,iceberg::HoistCrewReplyScene,1,12,56},
-     ExpeditionScene{2,24,iceberg::EstateTramReplyScene,2,12,54}}) {
+     ExpeditionScene{2,24,iceberg::EstateTramReplyScene,2,12,54},
+     ExpeditionScene{3,44,iceberg::ArchiveCopiesReplyScene,4,36,50}}) {
   AdventureSession expedition(options,{});
   expedition.begin_campaign(true);
   expedition.profile.unlocked=expedition.run_district=scene.district;
@@ -170,6 +171,13 @@ int main(){try {
   expedition.state.player.y=scene.floor-kPlayerHeight;
   const auto story=expedition.profile.story;
   const auto quests=expedition.profile.quests;
+  const auto switches=expedition.grid.switch_flags;
+  if(scene.scene==iceberg::ArchiveCopiesReplyScene) {
+   expedition.inspect_nearby();
+   dialogue_check(expedition.state.adventure.inspect_title==iceberg::Npcs[4].name,
+     "the clipboard on the conveyor landing identifies Irena");
+   expedition.state.adventure.inspecting=false;
+  }
   for(int option=0;option<2;++option) {
    expedition.interact();
    auto &exchange=expedition.state.adventure.dialogue;
@@ -186,8 +194,9 @@ int main(){try {
                   exchange.lines[0].text.en==reply.said.en&&exchange.lines[1].speaker==scene.speaker&&
                   exchange.lines[1].text.en==reply.answer.text.en,"each Courier choice receives its matching answer");
    for(int i=0;i<30&&exchange.active();++i)expedition.dialogue_next();
-   dialogue_check(!exchange.active()&&expedition.profile.story==story&&expedition.profile.quests==quests,
-                  "the Expedition exchange leaves campaign story and quests intact");
+   dialogue_check(!exchange.active()&&expedition.profile.story==story&&expedition.profile.quests==quests&&
+                  expedition.grid.switch_flags==switches,
+                  "the Expedition exchange leaves campaign story, quests and machinery intact");
   }
  }
  cell_frame_sink={};return 0;

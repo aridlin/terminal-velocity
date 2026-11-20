@@ -76,6 +76,11 @@
     if(grid_.has_hazards())add_feature(tr("░ Ryzyko","░ Hazard"),hazard_color);
     if(remaining_token)add_feature(tr("● Żeton","● Token"),0xedc278);
     if(has_awnings)add_feature(tr("↗ Markizy","↗ Awnings"),awning_color);
+    const auto irena=std::find_if(grid_.interactions.begin(),grid_.interactions.end(),[&](const auto &node){
+      return grid_.template_id==44&&node.kind==InteractionKind::Npc&&node.id==4;
+    });
+    const auto irena_color=iceberg::Npcs[4].color;
+    if(irena!=grid_.interactions.end())add_feature("◉ Irena",irena_color);
     if(!boost_symbols.empty())add_feature(boost_symbols+tr(" Wybicie"," Boost"),0x9dd39c);
     uint64_t steam_controls=0;
     for(const auto &field:grid_.air_fields)
@@ -402,6 +407,8 @@
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,leaf?"◒":"▱",leaf?0xb6d778:trolley_color});
     }
     if(has_wheel)mark(wheel->base.x+wheel->base.w*.5,wheel->base.y,"⊕",wheel_color);
+    if(irena!=grid_.interactions.end())
+      mark(irena->area.x+irena->area.w*.5,irena->area.y+irena->area.h*.5,"◉",irena_color);
     if(has_ferries)for(size_t i=0;i<grid_.platforms.size();++i)if(ferry(i)) {
       const auto deck=grid_.platforms[i].at(state_.elapsed);
       mark_cell({column(deck.x+deck.w*.5),std::max(0,row(deck.y)-1),1,ferry_symbol,ferry_color});

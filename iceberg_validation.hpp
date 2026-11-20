@@ -382,6 +382,8 @@ inline void add_expedition_copy_belts(EngineGrid &room) {
   if(reversed.complete&&reversed.deaths==0) {
     room.interactions.push_back({{45,44,2,3},InteractionKind::Valve,0,
       {"Odwróć środkową taśmę","Reverse the middle belt"}});
+    room.interactions.push_back({{36.75,47.,1.5,3.},InteractionKind::Npc,4,
+      {"Porozmawiaj z Ireną","Talk to Irena"}});
   } else belt.reverse_flag=0;
 }
 
