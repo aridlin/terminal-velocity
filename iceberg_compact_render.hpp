@@ -40,16 +40,18 @@
       }
       if(v.settings) {
         paint_text(4,2,tr("USTAWIENIA","SETTINGS"),d.accent);
-        paint_text(7,2,tr("1 Muzyka: ","1 Music: ")+std::to_string(int(v.music_volume*100))+"%",d.light);
-        paint_text(9,2,tr("2 Efekty: ","2 Effects: ")+std::to_string(int(v.effects_volume*100))+"%",d.light);
-        paint_text(11,2,tr("3 Otoczenie: ","3 Ambience: ")+std::to_string(int(v.ambience_volume*100))+"%",d.light);
-        paint_text(13,2,tr("4 Strój: ","4 Outfit: ")+std::to_string(v.outfit+1),d.light);
-        paint_text(15,2,tr("5 Pauza po utracie fokusu ","5 Pause on focus loss ")+
+        // On the 20-row landscape view, leave a row between the language and the bottom border for Enter.
+        y=rows_<=20?6:7;
+        paint_text(y,2,tr("1 Muzyka: ","1 Music: ")+std::to_string(int(v.music_volume*100))+"%",d.light);
+        paint_text(y+2,2,tr("2 Efekty: ","2 Effects: ")+std::to_string(int(v.effects_volume*100))+"%",d.light);
+        paint_text(y+4,2,tr("3 Otoczenie: ","3 Ambience: ")+std::to_string(int(v.ambience_volume*100))+"%",d.light);
+        paint_text(y+6,2,tr("4 Strój: ","4 Outfit: ")+std::to_string(v.outfit+1),d.light);
+        paint_text(y+8,2,tr("5 Pauza po utracie fokusu ","5 Pause on focus loss ")+
           (v.pause_on_focus_loss?tr("wł.","on"):tr("wył.","off")),d.light);
-        paint_text(16,2,tr("6 Zapisy i przegląd zmian","6 Saves and debug tour"),d.light);
-        paint_text(17,2,tr("7 Płynna kamera (test) ","7 Smooth camera (exp.) ")+
+        paint_text(y+9,2,tr("6 Zapisy i przegląd zmian","6 Saves and debug tour"),d.light);
+        paint_text(y+10,2,tr("7 Płynna kamera (test) ","7 Smooth camera (exp.) ")+
           (v.smooth_camera?tr("wł.","on"):tr("wył.","off")),d.light);
-        paint_text(18,2,tr("L Język: POLSKI","L Language: ENGLISH"),d.light);
+        paint_text(y+11,2,tr("L Język: POLSKI","L Language: ENGLISH"),d.light);
         paint_text(rows_-2,2,tr("ENTER wróć","ENTER return"),d.accent);return;
       }
       paint_text(3,2,tr("POD POWIERZCHNIĄ","BENEATH THE SURFACE"),d.light);
