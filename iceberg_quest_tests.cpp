@@ -47,6 +47,56 @@ int main() {
       inspected.tick(examine,.1);require_quest(!inspected.state.adventure.inspecting&&inspected.profile.hidden_room<0,
         "inspection does not reveal or enter hidden entrances");
     }
+    {
+      using iceberg::Achievement;
+      using iceberg::SideStory;
+      AdventureSession side(options,{});
+      side.begin_campaign(true);
+      side.profile.story=63;
+      side.load_room();
+      auto find=[&](InteractionKind kind,int id) {
+        const auto node=std::find_if(side.grid.interactions.begin(),side.grid.interactions.end(),
+          [&](const Interaction &entry){return entry.kind==kind&&entry.id==id;});
+        if(node==side.grid.interactions.end())throw std::runtime_error("missing side story interaction");
+        return reach_area(node->area);
+      };
+      auto use=[&](InteractionKind kind,int id) {walk_to(side,find(kind,id));interact(side);};
+      auto scene=[&](SideStory id){use(InteractionKind::SideStory,int(id));};
+      auto earned=[&](Achievement id){return (side.profile.discoveries&iceberg::achievement_bit(id))!=0;};
+      scene(SideStory::HarborStub);
+      side.district=2;side.stage=0;side.load_room();
+      const auto basement=iceberg::UnnumberedFloor;
+      const auto entrance=find(InteractionKind::Secret,basement);
+      use(InteractionKind::Secret,basement);
+      require_quest(side.profile.hidden_room==-1&&!earned(Achievement::LostFloor),
+        "one clue leaves the optional stairwell locked");
+      scene(SideStory::EstatePlate);
+      use(InteractionKind::Secret,basement);
+      require_quest(side.profile.hidden_room==basement&&earned(Achievement::LostFloor),
+        "matching clues open the optional stairwell");
+      scene(SideStory::Intercom);finish_dialogue(side);
+      scene(SideStory::Tape);
+      require_quest(!earned(Achievement::WitnessTape),"starting the tape leaves the award pending");
+      finish_dialogue(side);
+      require_quest(earned(Achievement::WitnessTape),"finishing the tape earns the award");
+      scene(SideStory::Roster);
+      require_quest(!earned(Achievement::BelowTheRoster),"copying the roster leaves its return award pending");
+      const auto return_shaft=std::find_if(side.grid.interactions.rbegin(),side.grid.interactions.rend(),
+        [](const Interaction &node){return node.kind==InteractionKind::Return;});
+      walk_to(side,reach_area(return_shaft->area));interact(side);
+      require_quest(side.profile.hidden_room<0&&side.state.player.rect().intersects(entrance)&&earned(Achievement::BelowTheRoster),
+        "the service shaft returns to the same Estate entrance and awards the roster");
+      scene(SideStory::Casting);
+      use(InteractionKind::Npc,3);
+      require_quest(earned(Achievement::SiliconeReturn)&&side.state.adventure.dialogue.lines.front().speaker==3,
+        "the Estate rooftop prop gets a unique response from Grażyna");
+      finish_dialogue(side);
+      side.district=3;side.stage=0;side.load_room();
+      scene(SideStory::EmergencyBell);
+      require_quest(!earned(Achievement::RingAgain),"the first bell press gives the warning");
+      interact(side);
+      require_quest(earned(Achievement::RingAgain),"ringing again after the warning earns the joke award");
+    }
     game.profile.story=63;
     for(int q:{0,1,2,3,4,7})game.profile.quests[size_t(q)]=1;
     for(int id:{0,4,8,12,16,20,13,17,21,24,28,32,26,30,34,36,40,44}) {

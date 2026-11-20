@@ -36,6 +36,7 @@
     auto panel=[&](const std::string &title){frame(0,0,cols_,rows_,d.stone);paint_text(1,2,title,d.accent,true);};
     if(state_.menu) {
       if(v.save_picker||v.tour_picker){draw_profile_picker();return;}
+      if(v.achievement_menu){frame(0,0,cols_,rows_,d.stone);draw_award_entries(true,4);return;}
       panel("TERMINAL VELOCITY");
       if(v.confirm_new) {
         y=5;compact_paragraph(y,restart_title(),rows_-3,d.accent);++y;
@@ -60,15 +61,15 @@
         paint_text(rows_-2,2,tr("ENTER wróć","ENTER return"),d.accent);return;
       }
       paint_text(3,2,tr("POD POWIERZCHNIĄ","BENEATH THE SURFACE"),d.light);
-      const std::array<std::string,6> labels{
+      const std::array<std::string,7> labels{
         v.can_continue?tr("Kontynuuj podróż","Continue journey"):tr("Rozpocznij podróż","Begin journey"),
         tr("Nowa historia","New story"),
         v.endless_resume?tr("Wznów wyprawę","Resume expedition"):tr("Wyprawa bez końca","Endless expedition"),
         v.trial_resume?tr("Wznów próbę","Resume trial"):
           v.trial_replay?tr("Powtórz próbę","Replay trial"):tr("Próba mistrzowska","Mastery trial"),
-        tr("Ustawienia","Settings"),tr("Trasy klasyczne","Classic courses")};
-      for(int i=0;i<6;++i)paint_text((rows_<24?4+i:5+i*2),2,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+" "+labels[size_t(i)],v.selected==i?d.accent:0xc8bbb8);
-      const int notice_row=rows_<24?14:20;
+        tr("Ustawienia","Settings"),tr("Trasy klasyczne","Classic courses"),tr("Osiągnięcia","Achievements")};
+      for(int i=0;i<int(labels.size());++i)paint_text((rows_<28?4+i:5+i*2),2,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+" "+labels[size_t(i)],v.selected==i?d.accent:0xc8bbb8);
+      const int notice_row=rows_<24?15:rows_<28?18:22;
       if(v.selected==2||v.selected==3) {
         const auto &record=v.trials[size_t(v.run_district)];
         std::vector<std::string> stats;

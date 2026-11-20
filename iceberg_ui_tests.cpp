@@ -10,6 +10,31 @@ int main(){try {
   AdventureSession game(options,"/tmp/tv-ui-test-unused");game.begin_campaign(true);
   CellFrame frame;cell_frame_sink=[&](const CellFrame &f){frame=f;};
   {
+    AdventureSession catalogue(options,{});
+    catalogue.profile.language=iceberg::Language::English;
+    catalogue.unlock_achievement(iceberg::Achievement::DockChat);
+    catalogue.sync_view();
+    for(const auto &[cols,rows]:std::array<std::pair<int,int>,3>{{{34,24},{60,20},{110,34}}}) {
+      RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
+      ui_check(ui_text(frame).find(cols<76||rows<24?"7 Achievements":"7  ACHIEVEMENTS")!=std::string::npos,
+        "the achievements menu entry fits the playable viewport");
+      catalogue.tick({.confirm=true,.select_level=7},0.,true,cols,rows);
+      for(int i=0;i<5;++i)catalogue.tick({.inspect=true},0.,true,cols,rows);
+      RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
+      const auto screen=ui_text(frame);
+      ui_check(screen.find("Hidden achievement")!=std::string::npos&&screen.find("The unnumbered floor")==std::string::npos,
+        "the secret group lists locked awards without leaking their names");
+      catalogue.tick({.inspect=true},0.,true,cols,rows);
+      catalogue.tick({.navigate=5},0.,true,cols,rows);
+      RenderGrid(catalogue.grid,catalogue.state,rows,cols,2).draw();
+      ui_check(ui_text(frame).find("◆ On the shift")!=std::string::npos,
+        "earned awards show their name in the scrolling catalogue");
+      catalogue.tick({.pause=true},0.,true,cols,rows);
+      ui_check(catalogue.state.menu&&!catalogue.state.adventure.achievement_menu,
+        "back returns to the main menu without starting a run");
+    }
+  }
+  {
     AdventureSession awards(options,{});
     awards.begin_campaign(true);
     awards.profile.language=iceberg::Language::English;

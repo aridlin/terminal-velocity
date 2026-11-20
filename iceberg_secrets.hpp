@@ -3,6 +3,32 @@
 // Entry fixtures are authored locations, independent of expedition randomness.
 namespace iceworld {
 inline EngineGrid build_hidden(int id) {
+  if(id==iceberg::UnnumberedFloor) {
+    using iceberg::SideStory;
+    EngineGrid g(146,64);
+    g.adventure_level=true;g.event_level=false;g.room_role=iceberg::RoomRole::Secret;
+    g.template_id=200+id;g.district=2;
+    g.room_name={"Poniżej parteru","Below the ground floor"};
+    g.add_solid_rect(0,45,30,19);
+    g.add_solid_rect(40,48,25,16);
+    g.add_solid_rect(77,51,30,13);
+    g.add_solid_rect(117,51,29,13);
+    g.add_solid_rect(0,20,2,25);g.add_solid_rect(144,20,2,31);
+    g.add_hazard_rect(30,60,10,4);g.add_hazard_rect(65,60,12,4);g.add_hazard_rect(107,60,10,4);
+    g.water_basins={{30,58,10,6},{65,57,12,7},{107,56,10,8}};
+    g.platforms.push_back({.base={69,50,5,.6},.dy=2,.period=4.8,.phase=.25,.service_lift=true});
+    g.pulses.push_back({{87,47,6,4},4.4,.55,PulseKind::Surge});
+    g.spawn_x=7;g.spawn_y=45-kPlayerHeight;
+    g.checkpoint_points={{7,g.spawn_y},{80,51-kPlayerHeight}};
+    g.goal={-20,-20,1,1};
+    g.interactions={
+      {{4,41,4,4},InteractionKind::Return,0,{"Wróć na klatkę","Return to the stairwell"}},
+      {{19,41,4,4},InteractionKind::SideStory,int(SideStory::Intercom),{"Podnieś słuchawkę","Lift the receiver"}},
+      {{51,44,4,4},InteractionKind::SideStory,int(SideStory::Tape),{"Uruchom magnetofon","Play the tape"}},
+      {{126,47,4,4},InteractionKind::SideStory,int(SideStory::Roster),{"Skopiuj listę","Make a copy"}},
+      {{137,47,4,4},InteractionKind::Return,0,{"Wróć szybem serwisowym","Return by the service shaft"}}};
+    return g;
+  }
   EngineGrid g(78,58);
   g.adventure_level=true;g.event_level=false;g.room_role=iceberg::RoomRole::Secret;
   g.template_id=200+id;g.district=0;

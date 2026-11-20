@@ -11,8 +11,8 @@ int web_slot=1;
 EM_JS(void, browser_frame, (const uint32_t *cells,int cols,int rows), {
   if(window.tvFrame)window.tvFrame(HEAPU32.subarray(cells>>>2,(cells>>>2)+cols*rows*4),cols,rows);
 });
-EM_JS(void, browser_ui, (int flags,int route_legs,int travel_district,int tour_picker,int audio_ready,int clips,const char *error), {
-  if(window.tvUI)window.tvUI({flags,routeLegs:route_legs,travelDistrict:travel_district,tourPicker:!!tour_picker,audioReady:audio_ready,clips,error:UTF8ToString(error)});
+EM_JS(void, browser_ui, (int flags,int route_legs,int travel_district,int tour_picker,int awards_open,int audio_ready,int clips,const char *error), {
+  if(window.tvUI)window.tvUI({flags,routeLegs:route_legs,travelDistrict:travel_district,tourPicker:!!tour_picker,awardsOpen:!!awards_open,audioReady:audio_ready,clips,error:UTF8ToString(error)});
 });
 EM_JS(void, browser_save_ready, (), {
   if(window.tvSaveReady)window.tvSaveReady();
@@ -64,7 +64,7 @@ void send_web_ui() {
       route_legs=int(leg>0)|(int((leg+1)*iceberg::RoomsPerLeg<count)<<1);
     }
   }
-  browser_ui(flags,route_legs,travel_district,s.menu&&v.tour_picker,web_game->audio.ready(),
+  browser_ui(flags,route_legs,travel_district,s.menu&&v.tour_picker,s.menu&&v.achievement_menu,web_game->audio.ready(),
     int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }
@@ -149,6 +149,11 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
     c.confirm=true;
   }
   for(int i=0;i<7;++i)if(p(20+i))c.select_level=i+1;
+  const auto &view=web_game->state.adventure;
+  if(p(30)&&web_game->state.menu&&!view.settings&&!view.confirm_new&&!view.tour_picker&&
+     !view.save_picker&&!view.achievement_menu) {
+    c.select_level=7;c.confirm=true;
+  }
   const auto last_save=web_game->save_revision;
   const int previous_slot=web_slot;
   web_game->tick(c,std::isfinite(dt)?dt:0,focused!=0,std::clamp(cols,34,160),std::clamp(rows,cols>=56?20:24,60),2);

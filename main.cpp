@@ -418,7 +418,7 @@ struct Patrol {
     return {left + (z < w ? z : 2 * w - z), y, 1.1, 1.0};
   }
 };
-enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence, Epilogue, RouteChoice, DockWorker, SurveyChart, Outfitter };
+enum class InteractionKind { Npc, Board, Valve, Note, Task, Secret, Return, Shortcut, Replay, Rescue, Carry, Deliver, Evidence, Epilogue, RouteChoice, DockWorker, SurveyChart, Outfitter, SideStory };
 struct Interaction {
   Rect area;
   InteractionKind kind;
