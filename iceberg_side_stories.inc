@@ -10,7 +10,7 @@
       grid.interactions.push_back({area,InteractionKind::SideStory,int(story),label});
     };
     if(grid.template_id==100||grid.template_id==600) {
-      add({6,44,3,4},SideStory::HarborStub,{"Bloczek pocztowy","Postal counterfoil"});
+      add({2,44,2,4},SideStory::HarborStub,{"Bloczek pocztowy","Postal counterfoil"});
     } else if(grid.template_id==101) {
       add({23,44,3,4},SideStory::HeatworksMug,{"Sprawdź kubek na rurze","Check the mug on the pipe"});
     } else if(grid.template_id==102) {
