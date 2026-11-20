@@ -236,6 +236,10 @@ EMSCRIPTEN_KEEPALIVE void web_guest_profile() {
   const bool muted=web_game->audio.muted;
   web_game->saves.save(fresh);web_game.reset();web_start(fresh.seed,-1,muted);
 }
+EMSCRIPTEN_KEEPALIVE void web_test_achievement_sound() {
+  if(web_game)web_game->audio.play(AudioCue::Achievement);
+}
+
 EMSCRIPTEN_KEEPALIVE void web_account_pause() {
   if(!web_game)return;
   web_game->discard_pending_movement();
