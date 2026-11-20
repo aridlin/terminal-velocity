@@ -290,6 +290,45 @@ int main() {
     vent_run.tick({},1./120.);
     check(vent_run.grid.pulses.front().active(vent_run.state.elapsed)&&vent_mix(),
       "the steam burst still has its own audible cue");
+    AdventureSession planter_run(vent_options,{});
+    planter_run.start_tour(int(iceberg::DebugTour.size())-2);
+    planter_run.profile.music_volume=planter_run.profile.ambience_volume=0.f;
+    planter_run.profile.effects_volume=1.f;
+    planter_run.audio.init("assets/audio",false,true);
+    auto &ride=planter_run.state;
+    const auto &planter=planter_run.grid.platforms.front();
+    const double before_upper=planter.period*.5-.004;
+    ride.elapsed=before_upper;
+    const auto deck=planter.at(ride.elapsed);
+    ride.player.x=deck.x+1.;
+    ride.player.y=deck.y-kPlayerHeight;
+    ride.player.grounded=true;
+    ride.player.support=0;
+    const auto planter_silent=[&] {
+      if(!planter_run.audio.render(frames.data(),48000))throw std::runtime_error("could not mix planter cue");
+      return std::none_of(frames.begin(),frames.end(),[](float x){return std::abs(x)>.0001f;});
+    };
+    ride.paused=true;
+    planter_run.tick({},.1);
+    check(ride.elapsed==before_upper&&planter_silent(),"pausing before the upper stop stays quiet");
+    ride.paused=false;
+    planter_run.tick({},1./120.);
+    GameAudio wood_stop;
+    wood_stop.init("assets/audio",false,true);
+    wood_stop.set_mix(0.f,1.f,0.f);
+    wood_stop.play(AudioCue::Wood2,.7f);
+    std::vector<float> expected(frames.size());
+    check(wood_stop.render(expected.data(),48000)&&!planter_silent()&&
+      std::equal(expected.begin(),expected.end(),frames.begin(),[](float a,float b){return std::abs(a-b)<.00001f;}),
+      "reaching the upper stop plays the recorded wood cue exactly once");
+    planter_run.tick({},1./120.);
+    check(planter_silent(),"the planter does not replay its arrival during the dwell");
+    ride.elapsed=before_upper;
+    ride.player.x=10.;
+    ride.player.y=54.-kPlayerHeight;
+    ride.player.support=-1;
+    planter_run.tick({},1./120.);
+    check(planter_silent(),"an empty planter makes no arrival sound");
     GameAudio silent;
     silent.init("missing-audio", true);
     check(!silent.ready() && silent.error().empty(),

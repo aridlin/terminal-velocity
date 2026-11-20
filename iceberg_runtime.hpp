@@ -1669,6 +1669,8 @@ public:
          !grid.platforms[size_t(before.support)].fragile)audio.play(AudioCue::Lift,.45f);
       for(size_t i=0;i<grid.platforms.size();++i) {
         const auto &deck=grid.platforms[i];
+        if(deck.swing_length>0.&&state.player.support==int(i)&&
+           deck.stop(old_elapsed)!=1&&deck.stop(state.elapsed)==1)audio.play(AudioCue::Wood2,.7f);
         if(deck.fragile&&deck.available(state,i,old_elapsed)&&!deck.available(state,i,state.elapsed)&&
            std::hypot(deck.base.x-state.player.x,deck.base.y-state.player.y)<16)
           audio.play(AudioCue::Stone2,.65f);
