@@ -152,6 +152,40 @@
     return true;
   }
 
+  void draw_seed_tray_frame(const MovingPlatform &platform) {
+    const auto &base=platform.base;
+    const auto deck=platform.at(state_.elapsed);
+    const double crown=base.y-platform.dy-3.;
+    const double row=aspect_*scale_;
+    const double pulley=base.x+base.w*.5;
+    const double counterweight_x=base.x-1.5;
+    const double counterweight_y=2*base.y-deck.y;
+    constexpr uint32_t rail=0x638478, rope=0x9e967b;
+    for(double x=counterweight_x;x<=base.right();x+=scale_)world_text(x,crown,"═",rail);
+    world_text(counterweight_x,crown,"╭",rail);
+    world_text(base.right()-scale_,crown,"╮",rail);
+    world_text(pulley,crown,"◉",rope);
+    for(double y=crown+row;y<=base.y+platform.dy;y+=row)
+      world_text(base.right()-scale_,y,"║",rail);
+    for(double y=crown+row;y<deck.y;y+=row)world_text(pulley,y,"│",rope);
+    for(double y=crown+row;y<counterweight_y;y+=row)world_text(counterweight_x,y,"│",rope);
+    world_text(counterweight_x,counterweight_y,"▣",rope);
+    const int dock=platform.stop(state_.elapsed);
+    for(int side:{-1,1})
+      world_text(base.right()+scale_,base.y+side*platform.dy,
+        dock==side?"●":"○",dock==side?0xbfe8a5:rail);
+  }
+  void draw_seed_tray(const Rect &deck) {
+    const int width=std::max(3,int(deck.w/scale_));
+    std::string lip="╞",slats="╰";
+    for(int i=0;i<width-2;++i) {
+      lip+="═";
+      slats+=i%2==0?"▥":"─";
+    }
+    lip+="╡";slats+="╯";
+    world_text(deck.x,deck.y,lip,0xf0cb82);
+    world_text(deck.x,deck.y+aspect_*scale_,slats,0xb19b6d);
+  }
   void draw_irrigation_scoop(const Rect &deck) {
     const int cells=std::max(3,int(std::round(deck.w/scale_)));
     std::string rim="╓",body="╰";
@@ -230,7 +264,7 @@
         world_text(74,47.2,"╔╤╗",0x9dbbb7);
         if(std::fmod(clock,1.25)<.7)world_text(75.2,48.5,"·",0x92e1ec);
       }
-      if(id==56)world_art(60,30,{"╭──────────────────────╮","│  ╭─╮   ╭─╮   ╭─╮     │","│  │⠿│   │⠿│   │⠿│     │","│  ╰─╯   ╰─╯   ╰─╯     │","├──────────────────────┤","│  01    02    03      │","╰──────────────────────╯"},d.stone);
+      if(id==iceberg::GardenSeedBank)world_art(70,30,{"╭──────────────────────╮","│  ╭─╮   ╭─╮   ╭─╮     │","│  │⠿│   │⠿│   │⠿│     │","│  ╰─╯   ╰─╯   ╰─╯     │","├──────────────────────┤","│  01    02    03      │","╰──────────────────────╯"},d.stone);
       if((id==57&&!draw_irrigation_wheel())||id==81)wheel(88,25);
       if(id==48||id==59)world_art(67,8,{"     ╭───────────────╮","  ╭──┤░░░░░░░░░░░░░░░├──╮","  ╰──┴───────────────┴──╯","    ╲       │       ╱","     ╲      │      ╱"},d.stone);
       for(const auto &platform:grid_.platforms)

@@ -291,7 +291,10 @@ int main() {
     check(vent_run.grid.pulses.front().active(vent_run.state.elapsed)&&vent_mix(),
       "the steam burst still has its own audible cue");
     AdventureSession planter_run(vent_options,{});
-    planter_run.start_tour(int(iceberg::DebugTour.size())-2);
+    const auto hanging_beds=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==54;});
+    check(hanging_beds!=iceberg::DebugTour.end(),"Debug Tour includes Hanging Beds");
+    planter_run.start_tour(int(hanging_beds-iceberg::DebugTour.begin()));
     planter_run.profile.music_volume=planter_run.profile.ambience_volume=0.f;
     planter_run.profile.effects_volume=1.f;
     planter_run.audio.init("assets/audio",false,true);
