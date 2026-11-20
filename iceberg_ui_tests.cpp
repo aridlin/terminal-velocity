@@ -1675,11 +1675,12 @@ int main(){try {
         const auto next=(en?"Planned: ":"Plan: ")+route.rooms[size_t(route.current+1)].get(language);
         const auto &run=game.profile.expeditions[mode==iceberg::Mode::Endless?0:1];
         ui_check(route.detail_rhythm==iceworld::pattern(run.itinerary[size_t(route.current+1)]).rhythm&&
-          normalized.find(current+" "+next+" · ")!=std::string::npos,
+          normalized.find(next+" · ")!=std::string::npos,
           "the expedition plan shows the next authored traversal type beside the full title");
-        ui_check(text.find(title)!=std::string::npos&&text.find(progress)!=std::string::npos&&
-          normalized.find(current+" "+next)!=std::string::npos,
-          "expedition map shows progress and both complete room names at all supported sizes");
+        ui_check(route.current_rhythm==iceworld::pattern(run.itinerary[size_t(route.current)]).rhythm&&
+          text.find(title)!=std::string::npos&&text.find(progress)!=std::string::npos&&
+          normalized.find(current+" · ")!=std::string::npos&&normalized.find(next)!=std::string::npos,
+          "expedition map shows both complete room names and the current traversal type at supported sizes");
         game.tick(tab,1./120);
       }
     }
@@ -1784,6 +1785,8 @@ int main(){try {
         RenderGrid(game.grid,game.state,size.second,size.first,2).draw();
         ui_check(normalize_ui(ui_text(frame)).find(destination)!=std::string::npos,
           "the final room on the timeline shows where its exit leads");
+        if(mode==iceberg::Mode::Trial)
+          ui_check(!v.route.current_rhythm,"the authored Mastery finale has no generated traversal label");
       }
     }
     std::vector<iceberg::Text> next_leg_preview;
@@ -1871,15 +1874,31 @@ int main(){try {
         for(auto dimensions:{std::pair{34,24},std::pair{56,20},std::pair{110,34}}) {
           RenderGrid(game.grid,game.state,dimensions.second,dimensions.first,2).draw();
           const auto text=route_details();
-          ui_check(text.find(location+" "+v.route.place.get(language)+" "+selected+
-                           v.route.browsed_rooms[1].get(language))!=std::string::npos,
+          ui_check(text.find(location+" "+v.route.place.get(language)+" · ")!=std::string::npos&&
+                   text.find(selected+v.route.browsed_rooms[1].get(language))!=std::string::npos,
                    "future preview distinguishes the physical and selected locations at each viewport size");
+        }
+        auto compact=game.state;
+        auto &compact_view=compact.adventure;
+        auto &compact_route=compact_view.route;
+        const auto long_name=en?iceworld::pattern(52).name:iceworld::pattern(12).name;
+        compact_view.route_room_selection+=6;
+        compact_route.place=compact_route.browsed_rooms.back()=long_name;
+        compact_route.current_rhythm=compact_route.detail_rhythm=iceberg::Rhythm::Precision;
+        const auto typed_name=long_name.get(language)+(en?" · Precise landings":" · Precyzyjne lądowania");
+        for(auto [cols,rows]:{std::pair{34,24},std::pair{56,20}}) {
+          RenderGrid(game.grid,compact,rows,cols,2).draw();
+          const auto text=route_details();
+          ui_check(text.find(location+" "+typed_name)!=std::string::npos&&
+                   text.find((en?"Room 8: ":"Pokój 8: ")+typed_name)!=std::string::npos&&
+                   text.find(en?"Exit starts leg 5":"Wyjście do odcinka 5")!=std::string::npos,
+                   "the compact preview keeps both long room details and the exit destination");
         }
         game.tick(previous_leg,0);game.tick(previous_leg,0);
         RenderGrid(game.grid,game.state,24,34,2).draw();
         ui_check(ui_text(frame).find(en?"Completed leg 2":"Ukończony odcinek 2")!=std::string::npos&&
-                 route_details().find(location+" "+v.route.place.get(language)+" "+selected+
-                           v.route.browsed_rooms[1].get(language))!=std::string::npos,
+                 route_details().find(location+" "+v.route.place.get(language)+" · ")!=std::string::npos&&
+                 route_details().find(selected+v.route.browsed_rooms[1].get(language))!=std::string::npos,
                  "history displays the courier's active leg and room separately from the historical selection");
         game.tick(next_leg,0);game.tick(next_leg,0);
       }
