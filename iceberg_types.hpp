@@ -185,6 +185,30 @@ inline bool survey_pass(const Profile &profile) {
   return (profile.cosmetics&SurveyTransitPass)||transit_token_progress(profile,SurveyTokenFare)==SurveyTokenFare;
 }
 
+enum class Achievement { FirstToken, DashJump, Gear, Survey, Journey };
+struct AchievementInfo { Text title,condition; };
+inline constexpr std::array Achievements{
+  AchievementInfo{{"Pierwszy żeton","First token"},{"Zbierz żeton","Collect a token"}},
+  AchievementInfo{{"Zryw w górę","Dash and lift"},{"Wykonaj skok ze zrywu","Land a dash jump"}},
+  AchievementInfo{{"Na miarę","Fitted out"},{"Kup wyposażenie","Buy a piece of gear"}},
+  AchievementInfo{{"Do latarni","To the breakwater"},{"Ukończ objazd latarni","Finish Breakwater Survey"}},
+  AchievementInfo{{"Ponad Koroną","Beyond the Crown"},{"Ukończ podróż","Complete the Journey"}}
+};
+inline constexpr unsigned AchievementShift=16;
+inline constexpr uint32_t AchievementMask=((1u<<Achievements.size())-1u)<<AchievementShift;
+inline constexpr uint32_t achievement_bit(Achievement id) {return 1u<<(AchievementShift+unsigned(id));}
+inline constexpr double AchievementToastTime=3.8;
+inline uint32_t achievement_progress(const Profile &profile) {
+  uint32_t flags=profile.discoveries&AchievementMask;
+  const auto include=[&](Achievement id,bool earned) {if(earned)flags|=achievement_bit(id);};
+  include(Achievement::FirstToken,outfitter_earned(profile)>0);
+  include(Achievement::DashJump,profile.quest_counts[6]>0);
+  include(Achievement::Gear,profile.cosmetics&(HarborScarf|DockBoots|SignalSatchel));
+  include(Achievement::Survey,profile.cosmetics&SurveyCourseComplete);
+  include(Achievement::Journey,profile.finished);
+  return flags;
+}
+
 enum class DialogueCue { None, CrownAirlock };
 enum class CrownShot { Chamber, Stairwell, Hearing, Quay, Daybreak };
 inline constexpr uint64_t CrownReplyCheckpoint=uint64_t(CrownShot::Daybreak)+1;
@@ -372,6 +396,8 @@ struct View {
   int machinery_kind=0;
   uint64_t machinery_changed=0;
   double presentation_time=0, npc_reaction_left=0, lamp_left=0, death_left=0;
+  int achievement_toast=-1;
+  double achievement_left=0;
   static constexpr double water_splash_duration=.42;
   double water_splash_left=0, water_splash_x=0, water_splash_y=0;
   int reacting_npc=-1;

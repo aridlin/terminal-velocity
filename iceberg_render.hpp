@@ -785,9 +785,23 @@
       paint_text(rows_-2,2,tr("J/P wróć","J/P return"),d.light);
       return;
     }
-    std::array<std::string,3> tabs{tr("Aktywne","Active"),tr("Ukończone","Completed"),tr("Notatki","Notes")};
-    std::string tabline;for(int i=0;i<3;++i){if(i)tabline+=" · ";tabline+=i==v.journal_tab?"["+tabs[size_t(i)]+"]":tabs[size_t(i)];}
+    const bool narrow=cols_<48;
+    const std::array<std::string,4> tabs{tr("Aktywne","Active"),
+      narrow?tr("Gotowe","Done"):tr("Ukończone","Completed"),
+      narrow?tr("Akta","Notes"):tr("Notatki","Notes"),
+      narrow?tr("Cele","Awards"):tr("Osiągnięcia","Achievements")};
+    std::string tabline;for(int i=0;i<4;++i){if(i)tabline+=" · ";tabline+=i==v.journal_tab?"["+tabs[size_t(i)]+"]":tabs[size_t(i)];}
     paint_text(3,2,tabline,d.light);
+    if(v.journal_tab==3) {
+      for(size_t i=0;i<iceberg::Achievements.size();++i) {
+        const auto &award=iceberg::Achievements[i];
+        const bool unlocked=v.discoveries&iceberg::achievement_bit(iceberg::Achievement(i));
+        paint_text(5+int(i)*2,2,(unlocked?"◆ ":"◇ ")+award.title.get(l),unlocked?0xffd68a:d.light);
+        paint_text(6+int(i)*2,4,award.condition.get(l),0xa8bfc2);
+      }
+      paint_text(rows_-2,2,tr("B zakładka · TAB wróć","B tab · TAB return"),d.light);
+      return;
+    }
     auto entries=iceberg::journal_entries(v);
     if(entries.empty()) {
       int y=7;for(const auto &line:wrap(v.journal_tab==1?tr("Ukończone zadania i ich skutki pojawią się tutaj.","Completed tasks and their outcomes will appear here."):tr("Znalezione dokumenty możesz tutaj przeczytać ponownie.","Documents you find can be read again here."),cols_-4))paint_text(y++,2,line,0xeee7d6);
@@ -912,6 +926,27 @@
     return stats;
   }
 #include "iceberg_compact_render.hpp"
+  void draw_achievement_toast() {
+    const auto &v=state_.adventure;
+    if(v.achievement_toast<0||v.achievement_left<=0.||state_.menu||state_.paused||
+       v.map||state_.journal||v.inspecting||v.dialogue.active()||v.tour_scene>=0)return;
+    const double progress=std::min({(iceberg::AchievementToastTime-v.achievement_left)/.24,
+      v.achievement_left/.26,1.});
+    constexpr int width=28,height=4;
+    const int left=cols_-width-2,bottom=rows_-3;
+    const int top=bottom-height+int(std::ceil(height*(1.-progress*progress*(3.-2.*progress))));
+    const auto &name=iceberg::Achievements[size_t(v.achievement_toast)].title.get(v.language);
+    for(int y=std::max(4,top);y<std::min(bottom,top+height);++y) {
+      const bool border=y==top||y==top+height-1;
+      for(int x=left;x<left+width;++x) {
+        const char *glyph=border?(x==left||x==left+width-1?"+":"─"):
+          (x==left||x==left+width-1?"│":" ");
+        put(y,x,{glyph,Color::Decor,false,false,0,0xc4aa73,0x18242b});
+      }
+    }
+    if(top+1<bottom)paint_text(top+1,left+2,tr("✧ OSIĄGNIĘCIE","✧ ACHIEVEMENT"),0xc4aa73,true);
+    if(top+2<bottom)paint_text(top+2,left+2,name,0xffe3a5,true);
+  }
   void draw_iceberg() {
     const auto &dialogue=state_.adventure.dialogue;
     if(dialogue.active()&&dialogue.cinematic&&!state_.menu&&!state_.journal) {
@@ -921,6 +956,7 @@
     const auto &v=state_.adventure;
     draw_iceberg_world();
     draw_room_shutter();
+    draw_achievement_toast();
     if(v.death_left>0&&!state_.menu&&!state_.paused&&!state_.journal&&!v.map&&!v.inspecting&&!dialogue.active()) {
       const auto label=tr("ŚMIERĆ · POWRÓT DO LAMPY","DIED · BACK AT CHECKPOINT");
       const int width=iceberg::cell_length(label),left=(cols_-width)/2;

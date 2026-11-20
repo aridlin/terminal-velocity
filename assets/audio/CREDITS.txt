@@ -16,6 +16,7 @@ Sound effects by Kenney (https://kenney.nl):
 Creative Commons CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
 Effects were decoded from original OGG recordings, low-pass filtered, loudness normalized, and given a 3 ms fade-in.
 
+The achievement chime is an original synthesized effect released under CC0 1.0.
 The score and environmental sound effects use recordings. The Crown film has synthesized speech.
 The file/source mapping and SHA-256 hashes are in manifest.json.
 

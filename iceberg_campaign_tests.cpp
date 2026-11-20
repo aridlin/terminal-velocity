@@ -91,7 +91,7 @@ int main() {
     }
   }
   for(auto quest:game.profile.quests)if(quest!=0)throw std::runtime_error("Critical-path pilot accepted an optional resident task");
-  if(game.profile.discoveries)throw std::runtime_error("Critical-path pilot entered an optional secret");
+  if(game.profile.discoveries&~iceberg::AchievementMask)throw std::runtime_error("Critical-path pilot entered an optional secret");
   std::cout<<"Campaign finished="<<game.profile.finished<<" content_boundary="<<game.profile.at_content_boundary<<" last="<<last<<" target="<<pilot.target<<" xy="<<game.state.player.x<<","<<game.state.player.y<<" rooms="<<rooms<<" active_seconds="<<game.profile.campaign_seconds<<'\n';
   std::cout<<"PASS ending requires no optional resident tasks or secret discoveries\n";
   return game.profile.finished||game.profile.at_content_boundary?0:1;

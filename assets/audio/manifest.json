@@ -558,5 +558,14 @@
       "pl-8.mp3": "ad489df61d70d7b64af09fe7e1276a59604a70e88d0b6e6c443412bea3b82d35",
       "pl-9.mp3": "b16f6ad81d663ec2edafd057ec608e1cc944c4b25853ddfadc674b1fcbacbd2c"
     }
+  },
+  {
+    "file": "achievement.wav",
+    "source": "Original synthesized Terminal Velocity achievement chime",
+    "author": "Terminal Velocity",
+    "license": "CC0-1.0",
+    "changes": "Original three-note chime, 24 kHz mono PCM WAV.",
+    "source_sha256": "cd20deb9c5b3b42532b12b569664f44a3ec26292e525fcde346ad3e98db970a9",
+    "sha256": "cd20deb9c5b3b42532b12b569664f44a3ec26292e525fcde346ad3e98db970a9"
   }
 ]
