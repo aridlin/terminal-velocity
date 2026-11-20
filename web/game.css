@@ -5,7 +5,7 @@
 
 .route-browse{display:inline-flex;gap:6px}
 .menu-actions{display:flex;flex-shrink:0;justify-content:center;gap:8px;padding:6px 8px}
-#tour-controls{display:flex;align-self:center;flex-shrink:0;gap:6px;margin:4px 8px}
+#tour-controls{display:flex;flex-wrap:wrap;justify-content:center;align-self:center;flex-shrink:0;max-width:calc(100% - 16px);gap:6px;margin:4px 8px}
 /* Keep Select clear of the save replacement buttons if its prompt opens. */
 #menu-selection-actions{justify-content:flex-start}
 #replace-save{border-color:#e4ad68}

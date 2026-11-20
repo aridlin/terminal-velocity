@@ -431,7 +431,7 @@ addEventListener('keydown',e=>{
  const tourPage=e.code==='PageUp'||e.code==='PageDown';
  if(tourPage&&!tourPicker)return;
  const tourNavigation=tourPicker&&tourControls.contains(target)&&
-  (tourPage||e.code.startsWith('Arrow')||e.code==='Escape');
+  (tourPage||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  const timelineDirection=isTimelineDirection(target);
  const mapShortcut=(timelineDirection||isExpeditionMapAction(target))&&timelineShortcuts.has(e.code);
