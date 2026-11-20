@@ -18,7 +18,28 @@ int main(){try {
     awards.tick({},1./120);
     const auto bit=iceberg::achievement_bit(iceberg::Achievement::FirstToken);
     ui_check(awards.profile.discoveries&bit,"a real token records its achievement");
+    auto &notice=awards.state.adventure;
+    for(auto [cols,rows]:{std::pair{33,34},std::pair{56,19}}) {
+      for(int i=0;i<42;++i)awards.tick({},.1,true,cols,rows);
+      ui_check(notice.achievement_toast<0&&awards.achievement_queue.size()==1,
+        "a pending achievement waits while the gameplay viewport is too small");
+    }
+    awards.tick({.map=true},.1);
+    ui_check(notice.map&&notice.achievement_toast<0&&awards.achievement_queue.size()==1,
+      "opening the map does not start a hidden achievement or its chime");
+    awards.tick({.map=true},.1);
+    ui_check(!notice.map&&notice.achievement_toast<0,
+      "closing the map leaves the achievement ready for the first gameplay frame");
     awards.tick({},.08);awards.tick({},.08);
+    const double visible_time=notice.achievement_left;
+    ui_check(notice.achievement_toast==int(iceberg::Achievement::FirstToken)&&visible_time>0.,
+      "the pending achievement starts when gameplay is visible");
+    for(int i=0;i<42;++i)awards.tick({},.1,true,34,23);
+    ui_check(notice.achievement_left==visible_time,
+      "a visible achievement keeps its remaining time after shrinking the viewport");
+    awards.tick({},.1,true,34,24);
+    ui_check(notice.achievement_left<visible_time&&notice.achievement_left>0.,
+      "the same achievement resumes at the minimum playable size");
     for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
       auto toast=awards.state;
       const auto locate=[&]() {

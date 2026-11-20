@@ -1595,7 +1595,6 @@ public:
       v.death_left=std::max(0.,v.death_left-dt);
       v.machinery_left=std::max(0.,v.machinery_left-dt);v.lamp_left=std::max(0.,v.lamp_left-dt);
       if(v.dialogue.active())v.pickup_left=std::max(0.,v.pickup_left-dt);
-      if(focused)advance_achievement_toast(dt);
     }
     if(state.menu) {menu(c,dt);sync_view();audio.update(AudioScene::Menu,2,dt,focused);return;}
     if(c.menu_request&&tour_scene>=0){end_tour();return;}
@@ -1774,6 +1773,8 @@ public:
         sync_view();return;
       }
     }
+    // Only start or age the toast on a frame that reaches gameplay.
+    if(focused)advance_achievement_toast(dt);
     Player before=state.player;
     int old_deaths=state.deaths,old_pickups=state.sweets_count(),old_cp=state.checkpoint;
     int old_crown_hits=state.crown.hits;
