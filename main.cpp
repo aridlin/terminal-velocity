@@ -365,6 +365,7 @@ struct MovingPlatform {
   bool irrigation_scoop = false;
   bool cargo_hoist = false;
   bool chute_leaf = false;
+  double swing_pivot = 0, swing_length = 0;
   static constexpr double CrackTime = .55, RestoreTime = 2.9;
   double crack_age(const GameState &state, size_t index, double time) const {
     const double start = state.platform_armed_at[index];
@@ -377,7 +378,7 @@ struct MovingPlatform {
   }
   double offset(double t) const {
     const double cycle=t/period+phase;
-    if(!tram&&!archive_trolley&&!cargo_hoist&&!chute_leaf)return std::sin(cycle*6.283185307179586);
+    if(!tram&&!archive_trolley&&!cargo_hoist&&!chute_leaf&&swing_length<=0.)return std::sin(cycle*6.283185307179586);
     const double half_cycle=std::fmod(cycle,1.)*2;
     const double travel=std::clamp((std::fmod(half_cycle,1.)-.22)/.78,0.,1.);
     const double eased=travel*travel*(3-2*travel);
@@ -390,7 +391,12 @@ struct MovingPlatform {
   Rect at(double t) const {
     const double a=offset(t);
     const double horizontal=irrigation_scoop?offset(t+period*.25):a;
-    return {base.x + dx * horizontal, base.y + dy * a, base.w, base.h};
+    const double left=base.x+dx*horizontal;
+    if(swing_length>0.) {
+      const double reach=left+base.w*.5-swing_pivot;
+      return {left,base.y+std::sqrt(std::max(0.,swing_length*swing_length-reach*reach)),base.w,base.h};
+    }
+    return {left,base.y+dy*a,base.w,base.h};
   }
 };
 struct Patrol {

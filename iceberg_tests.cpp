@@ -699,8 +699,8 @@ int main(int argc,char **argv) {
     const auto roof_sample=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
       [](const auto &stop){return stop.room==35;});
     AdventureSession roof(options,{});
-    check(roof_sample==iceberg::DebugTour.end()-2&&iceberg::DebugTour.back().room==iceberg::CrownSentinel,
-      "the Estate roof sample leaves the Crown finale last");
+    check(roof_sample==iceberg::DebugTour.begin()+28&&iceberg::DebugTour.back().room==iceberg::CrownSentinel,
+      "the Estate roof keeps its stop number and the Crown finale stays last");
     roof.start_tour(int(roof_sample-iceberg::DebugTour.begin()));
     check(roof.grid.template_id==35&&roof.grid.springs.size()==2&&
           roof.grid.springs[0].awning&&roof.grid.springs[1].awning,
@@ -731,6 +731,51 @@ int main(int argc,char **argv) {
         throw std::runtime_error("Estate awnings changed the lower route for seed "+std::to_string(seed));
     }
     check(true,"Estate awnings retain the original exit, tokens and lamps across 32 seeds");
+    garden_run.itinerary[4]=54;
+    garden_run.layout_version=3;gardens.load_room();
+    check(gardens.grid.template_id==54&&gardens.grid.platforms.empty(),
+      "a legacy Hanging Beds save keeps its original platforms");
+    garden_run.layout_version=iceberg::ContentVersion;gardens.load_room();
+    check(gardens.grid.template_id==54&&gardens.grid.platforms.size()==1&&verify_route(gardens.grid).complete,
+      "the current Hanging Beds Expedition has a planter and an original through-route");
+    AdventureSession swing(options,{});
+    swing.start_tour(int(iceberg::DebugTour.size())-2);
+    check(swing.grid.template_id==54&&swing.grid.platforms.size()==1,
+      "the Hanging Beds tour starts beside the working planter");
+    const auto &planter=swing.grid.platforms.front();
+    const auto west=planter.at(0),east=planter.at(planter.period/2);
+    check(planter.stop(.5)==-1&&planter.stop(2)==0&&planter.stop(4)==1&&east.y+4.<west.y,
+      "the suspended planter pauses at both ends and rises toward the upper shelf");
+    const auto ride_step=[&](Controls input){swing.tick(input,.1);};
+    ride_step({});ride_step({});
+    ride_step({.move=1,.jump_held=true});ride_step({.move=1,.jump_held=true});
+    ride_step({.move=-1,.jump_held=true});ride_step({});
+    check(swing.state.player.support==0,"walking off the west bed boards the planter at the lower stop");
+    const auto boarded=swing.state.player.rect();
+    bool stayed_aboard=true;
+    for(int n=0;n<40&&planter.stop(swing.state.elapsed)!=1;++n) {
+      ride_step({});
+      stayed_aboard&=swing.state.player.support==0&&swing.state.deaths==0;
+    }
+    check(stayed_aboard,"the planter carries the courier without directional input");
+    check(planter.stop(swing.state.elapsed)==1&&swing.state.player.x>=boarded.x+5.8&&
+          swing.state.player.rect().bottom()<boarded.bottom()-4.,
+      "the planter carries the courier up to its far stop");
+    constexpr std::array landing_input{1,0,1,1,0,0,-1};
+    for(size_t n=0;n<landing_input.size();++n)
+      ride_step({.move=landing_input[n],.jump_held=true,.jump_pressed=n==0});
+    ride_step({.move=1});ride_step({.move=1});
+    check(swing.state.deaths==0&&swing.state.player.grounded&&swing.state.player.support<0&&
+          std::abs(swing.state.player.rect().bottom()-40.)<.01&&swing.state.collected[3],
+      "one ordinary jump reaches the original upper bed and collects its token");
+    for(unsigned seed=0;seed<32;++seed) {
+      auto beds=verified_room(54,iceberg::mix(seed),4);
+      const auto tokens=beds.sweets,lamps=beds.checkpoint_points;
+      add_garden_hanging_planter(beds);
+      if(beds.platforms.size()!=1||beds.sweets!=tokens||beds.checkpoint_points!=lamps||!verify_route(beds).complete)
+        throw std::runtime_error("Hanging Beds route changed for seed "+std::to_string(seed));
+    }
+    check(true,"Hanging Beds retains the original route, tokens and lamps across 32 seeds");
     auto chute=verified_room(58,iceberg::mix(73),4);
     check(chute.platforms.empty(),"older Leaf Chute layouts retain the stepped descent");
     add_expedition_ice(chute);

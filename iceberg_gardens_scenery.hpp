@@ -65,6 +65,54 @@
     world_art(x,pod.y-row,{"╭"+shell+"╮"},0xb9d77b);
   }
 
+  void draw_hanging_planter_frame(const MovingPlatform &platform) {
+    const double pivot=platform.swing_pivot,y=platform.base.y;
+    const double row=aspect_*scale_;
+    constexpr uint32_t iron=0x67877b;
+    draw_scenery_pipe({{pivot-3.,48.},{pivot-3.,y-row},{pivot+3.,y-row},
+      {pivot+3.,48.}},iron);
+    world_text(pivot-2*scale_,y-row,"╞═══╡",iron);
+    world_text(pivot,y-row,"┬",iron);
+    world_text(pivot,y,"◉",0xbacaa0);
+    const bool ready=platform.stop(state_.elapsed)==-1;
+    draw_scenery_pipe({{58,48},{58,45.2}},iron);
+    prop_art(58,43.7,{"╭─╮",ready?"│→│":"│○│","╰┬╯"},
+      ready?0xc1dfa2:0x77918b);
+  }
+
+  void draw_hanging_planter(const MovingPlatform &platform,const Rect &deck) {
+    const double row=aspect_*scale_;
+    const auto [pivot_x,pivot_y]=screen(platform.swing_pivot,platform.base.y);
+    constexpr uint32_t rope=0x9bb5a2;
+    // Join each rim attachment to the pivot in cell space. Long horizontal
+    // steps use straight segments between corners so the straps stay intact.
+    for(double tie:{deck.left()+scale_,deck.right()-scale_}) {
+      const auto [tie_x,tie_y]=screen(tie,deck.y);
+      const int rise=std::max(1,tie_y-pivot_y);
+      int previous=pivot_x;
+      for(int y=1;y<rise;++y) {
+        const int x=int(std::lround(std::lerp(double(pivot_x),double(tie_x),double(y)/rise)));
+        if(pivot_y+y>=4&&pivot_y+y<rows_-3) {
+          for(int segment=previous;segment<x-1;++segment)paint_text(pivot_y+y,segment,"─",rope);
+          if(x>previous)paint_text(pivot_y+y,x-1,"╲",rope);
+          paint_text(pivot_y+y,x,x==previous?"│":"╲",rope);
+        }
+        previous=x;
+      }
+    }
+    const int cells=std::max(4,int(std::round(deck.w/scale_)));
+    std::string rim="╞",soil="╲",leaves=" ";
+    for(int i=1;i<cells-1;++i) {
+      rim+="═";
+      soil+="▒";
+      leaves+=i%3==1?"♣":" ";
+    }
+    rim+="╡";soil+="╱";
+    world_art(deck.x,deck.y+row,{soil},0x9f8165);
+    world_art(deck.x,deck.y-row,{leaves},0x88a87b);
+    world_text(deck.x,deck.y,rim,0xcfe5a2);
+  }
+
   bool draw_irrigation_wheel() {
     const auto first=std::find_if(grid_.platforms.begin(),grid_.platforms.end(),
       [](const MovingPlatform &platform){return platform.irrigation_scoop;});
@@ -182,6 +230,7 @@
       if(id==48||id==59)world_art(67,8,{"     ╭───────────────╮","  ╭──┤░░░░░░░░░░░░░░░├──╮","  ╰──┴───────────────┴──╯","    ╲       │       ╱","     ╲      │      ╱"},d.stone);
       for(const auto &platform:grid_.platforms)
         if(platform.chute_leaf)draw_leaf_chute(platform);
+        else if(platform.swing_length>0.)draw_hanging_planter_frame(platform);
       if(id==51||id==54||id==58)for(int i=0;i<4;++i)world_art(35+i*21,22-i*2,{"┬       ┬","│ ╭─╮   │","│╭╯ ╰╮  │","╰┤   ├──╯"," ╰───╯"},d.stone);
     }
     for(const auto &bridge:grid_.growth) {
