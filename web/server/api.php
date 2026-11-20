@@ -12,23 +12,40 @@ function fail(string $code, int $status): never { answer(['error' => $code], $st
 function query(PDO $db, string $sql, array $values = []): PDOStatement {
     $statement = $db->prepare($sql); $statement->execute($values); return $statement;
 }
-function validSave(string $body): bool {
-    if (strlen($body)>65536 || !preg_match('/\ATVICE[2-6] ([0-9]{1,20})\n([\x09\x0a\x0d\x20-\x7e]+)\z/D', $body, $parts)) return false;
+const MAX_PORTABLE_SAVE_BYTES = 524288;
+function checkSaveHash(string $body, string $expected): bool {
     // The native save's 64-bit FNV checksum, computed as two exact 32-bit limbs.
     $high=342167472; $low=1939669891;
-    for($i=0,$n=strlen($parts[2]);$i<$n;$i++) {
-        $low ^= ord($parts[2][$i]); $product=$low*435;
+    for($i=0,$n=strlen($body);$i<$n;$i++) {
+        $low ^= ord($body[$i]); $product=$low*435;
         $high=($high*435+intdiv($product,4294967296)+$low*256)&0xffffffff;
         $low=$product&0xffffffff;
     }
     $wantedHigh=0; $wantedLow=0;
-    foreach(str_split($parts[1]) as $digit) {
+    foreach(str_split($expected) as $digit) {
         $product=$wantedLow*10+(int)$digit;
         $wantedHigh=$wantedHigh*10+intdiv($product,4294967296);
         if($wantedHigh>4294967295)return false;
         $wantedLow=$product&0xffffffff;
     }
     return $high===$wantedHigh && $low===$wantedLow;
+}
+function saveAnchor(string $body): ?string {
+    if (strlen($body)>65536 || !preg_match('/\ATVICE[2-6] ([0-9]{1,20})\n([\x09\x0a\x0d\x20-\x7e]+)\z/D', $body, $parts)) return null;
+    return checkSaveHash($parts[2], $parts[1]) ? ltrim($parts[1], '0') : null;
+}
+function portablePrimary(string $backup): ?string {
+    $size = strlen($backup);
+    if ($size>MAX_PORTABLE_SAVE_BYTES || !preg_match('/\ATVBACKUP1 ([0-9]{1,5})\n/', $backup, $header)) return null;
+    $start = strlen($header[0]); $length = (int)$header[1];
+    if ($length<=0 || $length>65536 || $start+$length>=$size) return null;
+    $primary = substr($backup, $start, $length);
+    $anchor = saveAnchor($primary);
+    if ($anchor===null || !preg_match('/\GTVROUTE1 ([0-9]{1,20}) ([0-9]{1,20})\n/', $backup, $journal, 0, $start+$length)) return null;
+    if (ltrim($journal[1], '0')!==$anchor) return null;
+    $routes = substr($backup, $start+$length+strlen($journal[0]));
+    if ($routes==='' || strspn($routes, "0123456789 \n")!==strlen($routes) || !checkSaveHash($routes, $journal[2])) return null;
+    return $primary;
 }
 try {
     $local = getenv('TV_ACCOUNT_TEST_HTTP') === '1' && in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
@@ -40,7 +57,10 @@ try {
         $origin = ($secure ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? '');
         if ($_SERVER['HTTP_ORIGIN'] !== $origin) fail('origin', 403);
     }
-    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 100000) fail('too_large', 413);
+    $action = $_GET['action'] ?? 'session';
+    $portable = ($_SERVER['HTTP_X_TV_SAVE_FORMAT'] ?? '') === 'portable';
+    $requestLimit = $method==='PUT' && $action==='save' && $portable ? 1200000 : 100000;
+    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > $requestLimit) fail('too_large', 413);
     $dataDir = getenv('TV_ACCOUNT_DATA') ?: dirname(__DIR__, 2) . '/terminal-velocity-private';
     if (!is_dir($dataDir) && !mkdir($dataDir, 0700, true)) throw new RuntimeException('storage');
     $realData = realpath($dataDir); $documentRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? '');
@@ -52,6 +72,7 @@ try {
       CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER REFERENCES users(id), expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS saves (user_id INTEGER PRIMARY KEY REFERENCES users(id), revision INTEGER NOT NULL, body TEXT NOT NULL, updated INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS history (user_id INTEGER REFERENCES users(id), revision INTEGER, body TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY(user_id,revision));
+      CREATE TABLE IF NOT EXISTS portable_saves (user_id INTEGER REFERENCES users(id), revision INTEGER, backup TEXT NOT NULL, PRIMARY KEY(user_id,revision));
       CREATE TABLE IF NOT EXISTS limits (bucket TEXT PRIMARY KEY, start INTEGER NOT NULL, attempts INTEGER NOT NULL);');
     $now = time();
     query($db, 'DELETE FROM sessions WHERE expires < ?', [$now]);
@@ -70,7 +91,6 @@ try {
         query($db, 'INSERT INTO sessions VALUES(?,?,?)', [hash('sha256', $token), $user, $session['expires']]);
         $setCookie($token, $session['expires']);
     };
-    $action = $_GET['action'] ?? 'session';
     if ($method === 'GET' && $action === 'session') {
         if (!$session) $newSession(null);
         $name = $session['user_id'] ? query($db, 'SELECT name FROM users WHERE id=?', [$session['user_id']])->fetchColumn() : null;
@@ -80,8 +100,9 @@ try {
     if ($method !== 'GET') {
         if (!hash_equals(hash('sha256', $token . ':csrf'), $_SERVER['HTTP_X_TV_CSRF'] ?? '')) fail('csrf', 403);
         if (!str_starts_with(strtolower($_SERVER['CONTENT_TYPE'] ?? ''), 'application/json')) fail('content_type', 415);
-        $raw = file_get_contents('php://input', false, null, 0, 100001);
-        if (strlen($raw) > 100000) fail('too_large', 413);
+        if ($action==='save' && !$session['user_id']) fail('login_required',401);
+        $raw = file_get_contents('php://input', false, null, 0, $requestLimit+1);
+        if (strlen($raw) > $requestLimit) fail('too_large', 413);
         try { $input = json_decode($raw, true, 16, JSON_THROW_ON_ERROR); } catch (JsonException $e) { fail('json', 400); }
         if (!is_array($input)) fail('json', 400);
     }
@@ -116,20 +137,35 @@ try {
     if ($method === 'POST' && $action === 'logout') { $newSession(null); answer(['username'=>null,'csrf'=>hash('sha256',$token.':csrf')]); }
     $user=$session['user_id']; if (!$user) fail('login_required',401);
     if ($action === 'save' && $method === 'GET') {
-        $save=query($db,'SELECT revision,body,updated FROM saves WHERE user_id=?',[$user])->fetch(PDO::FETCH_ASSOC);
-        answer($save ? ['revision'=>(int)$save['revision'],'save'=>$save['body'],'updated'=>(int)$save['updated']] : ['revision'=>0,'save'=>null,'updated'=>null]);
+        $save=query($db,'SELECT saves.revision,saves.body,saves.updated,portable_saves.backup FROM saves LEFT JOIN portable_saves USING(user_id,revision) WHERE saves.user_id=?',[$user])->fetch(PDO::FETCH_ASSOC);
+        if (!$save) answer(['revision'=>0,'save'=>null,'updated'=>null]);
+        answer(['revision'=>(int)$save['revision'],'save'=>$portable?($save['backup']??$save['body']):$save['body'],'updated'=>(int)$save['updated']]);
     }
     if ($action === 'save' && $method === 'PUT') {
         $rateLimit('save:'.$user,120,60);
         $body=$input['save'] ?? null; $expected=$input['revision'] ?? null;
-        if (!is_string($body) || !validSave($body) || !is_int($expected) || $expected<0) fail('save_format',400);
+        if (!is_string($body) || !is_int($expected) || $expected<0) fail('save_format',400);
+        $backup=null;
+        if ($portable && str_starts_with($body, 'TVBACKUP1 ')) {
+            if (strlen($body)>MAX_PORTABLE_SAVE_BYTES) fail('too_large',413);
+            $backup=$body;
+            $body=portablePrimary($backup);
+            if ($body===null) fail('save_format',400);
+        } elseif (saveAnchor($body)===null) fail('save_format',400);
         $db->exec('BEGIN IMMEDIATE');
         $old=query($db,'SELECT revision,body,updated FROM saves WHERE user_id=?',[$user])->fetch(PDO::FETCH_ASSOC);
         $revision=$old?(int)$old['revision']:0;
         if ($revision!==$expected) { $db->exec('ROLLBACK'); fail('save_conflict',409); }
         if ($old) query($db,'INSERT OR REPLACE INTO history VALUES(?,?,?,?)',[$user,$revision,$old['body'],$old['updated']]);
         query($db,'INSERT INTO saves VALUES(?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET revision=excluded.revision,body=excluded.body,updated=excluded.updated',[$user,$revision+1,$body,$now]);
+        if ($backup!==null) {
+            query($db,'INSERT INTO portable_saves VALUES(?,?,?)',[$user,$revision+1,$backup]);
+        } elseif ($old && $old['body']===$body) {
+            // A standalone upload of the same checkpoint must retain its history.
+            query($db,'INSERT INTO portable_saves SELECT user_id,?,backup FROM portable_saves WHERE user_id=? AND revision=?',[$revision+1,$user,$revision]);
+        }
         query($db,'DELETE FROM history WHERE user_id=? AND revision NOT IN (SELECT revision FROM history WHERE user_id=? ORDER BY revision DESC LIMIT 5)',[$user,$user]);
+        query($db,'DELETE FROM portable_saves WHERE user_id=? AND revision<>? AND revision NOT IN (SELECT revision FROM history WHERE user_id=?)',[$user,$revision+1,$user]);
         $db->exec('COMMIT'); answer(['revision'=>$revision+1,'updated'=>$now]);
     }
     fail('not_found',404);

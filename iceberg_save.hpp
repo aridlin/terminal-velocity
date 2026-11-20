@@ -234,6 +234,13 @@ class SaveStore {
   static void write_history(std::ostream &output,uint64_t anchor,const std::string &payload) {
     output<<"TVROUTE1 "<<anchor<<' '<<checksum(payload)<<'\n'<<payload;
   }
+  static void write_portable(std::ostream &output,const std::string &primary,
+                             const Expedition &expedition,uint64_t anchor) {
+    const bool has_history=expedition.active&&!expedition.completed_legs.empty();
+    if(has_history)output<<"TVBACKUP1 "<<primary.size()<<'\n';
+    output<<primary;
+    if(has_history)write_history(output,anchor,history_payload(expedition));
+  }
   bool save_history(const Expedition &expedition,uint64_t anchor,uint64_t previous,
                     std::filesystem::path temporary,bool replace_matching_history) const {
     if(!expedition.active||expedition.completed_legs.empty())return true;
@@ -374,13 +381,27 @@ public:
     const auto payload=profile_payload(profile);
     const auto anchor=checksum(payload);
     const auto primary="TVICE6 "+std::to_string(anchor)+'\n'+payload;
-    const auto &expedition=profile.expeditions[0];
-    const bool has_history=expedition.active&&!expedition.completed_legs.empty();
     std::ofstream output(file,std::ios::binary|std::ios::trunc);
-    if(has_history)output<<"TVBACKUP1 "<<primary.size()<<'\n';
-    output<<primary;
-    if(has_history)write_history(output,anchor,history_payload(expedition));
+    write_portable(output,primary,profile.expeditions[0],anchor);
     output.close();
+    return bool(output);
+  }
+  // SSH can snapshot alongside a running game. Open the primary once, then
+  // look for the companion anchored to those exact bytes.
+  bool export_backup(std::ostream &output) const {
+    std::error_code ec;
+    const auto size=std::filesystem::file_size(path_,ec);
+    if(ec||size>MaxProfileBytes)return false;
+    std::ifstream input(path_,std::ios::binary);
+    const std::string primary((std::istreambuf_iterator<char>(input)),{});
+    if(primary.size()>MaxProfileBytes)return false;
+    std::istringstream standalone(primary);
+    Profile profile;
+    uint64_t anchor=0;
+    if(!read_profile(standalone,profile,nullptr,&anchor))return false;
+    auto &expedition=profile.expeditions[0];
+    restore_history(expedition,anchor);
+    write_portable(output,primary,expedition,anchor);
     return bool(output);
   }
   bool save(const Profile &p,bool require_history=false) {

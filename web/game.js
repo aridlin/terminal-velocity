@@ -761,11 +761,11 @@ function maybeStartAccount(){
 }
 
 function readAccountSave(){
- if(Module._web_save())return Module.FS.readFile(currentSavePath());
+ if(Module._web_save())return readManualBackup();
  if(!Module._web_primary_usable_for_account())throw Error('save_write_failed');
  if(!Module._web_export_recovery())throw Error('save_write_failed');
  const recovery='/tmp/terminal-velocity-export.iceberg';
- try{return Module.FS.readFile(recovery);}
+ try{return readManualBackup();}
  finally{Module.FS.unlink(recovery);}
 }
 function readManualBackup(){

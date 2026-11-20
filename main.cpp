@@ -3215,6 +3215,18 @@ iceberg::SessionOptions adventure_options(const Args &args) {
 
 #ifndef TERMINAL_VELOCITY_NO_TUI_MAIN
 int main(int argc, char **argv) {
+#ifdef __linux__
+  if(argc==2&&std::string_view(argv[1])=="--account-save-export") {
+    return iceberg::SaveStore().export_backup(std::cout)?0:1;
+  }
+  if(argc==3&&std::string_view(argv[1])=="--account-save-import") {
+    iceberg::SaveStore store;
+    iceberg::Profile imported,previous;
+    if(!iceberg::SaveStore::read_backup(argv[2],imported))return 1;
+    store.load(previous);
+    return store.save(imported,true)?0:1;
+  }
+#endif
   const Args args = parse_args(argc, argv);
   if (args.relay_port) {
     try {
