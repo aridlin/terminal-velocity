@@ -198,8 +198,12 @@ int main(){try {
   guidance.stage=2;guidance.load_room();
   Controls map_and_travel=map;map_and_travel.navigate=-1;map_and_travel.confirm=true;
   guidance.tick(map_and_travel,0);
-  ui_check(guidance.state.adventure.map&&guidance.state.adventure.selected==0&&guidance.profile.visit_district<0,
-    "opening the district map cannot navigate or travel in the opening frame");
+  ui_check(guidance.state.adventure.map&&guidance.state.adventure.map_room&&guidance.profile.visit_district<0,
+    "Map opens the campaign minimap and ignores a selection on the opening frame");
+  RenderGrid(guidance.grid,guidance.state,24,34,2).draw();
+  ui_check(ui_text(frame).find("[B] District map")!=std::string::npos,
+    "the compact minimap names the B destination beside its title");
+  guidance.tick(tab,0);
   RenderGrid(guidance.grid,guidance.state,24,34,2).draw();
   auto route_hint=normalize_ui(ui_body(frame));
   ui_check(route_hint.find("Use this room's exit")!=std::string::npos&&
@@ -208,7 +212,7 @@ int main(){try {
   guidance.tick(enter,0);guidance.tick(map,0);
   ui_check(!guidance.state.adventure.map&&guidance.state.adventure.notice_left==0,
     "confirming the current district leaves no travel notice over gameplay");
-  guidance.tick(map,0);
+  guidance.tick(map,0);guidance.tick(tab,0);
   Controls pick_district=enter;pick_district.navigate=-1;guidance.tick(pick_district,0);
   ui_check(guidance.state.adventure.map&&guidance.state.adventure.selected==1&&guidance.profile.visit_district<0,
     "navigating and confirming together leaves the newly selected district on the map");
@@ -218,7 +222,7 @@ int main(){try {
   guidance.tick(enter,0);
   ui_check(guidance.profile.visit_district==1&&!guidance.state.adventure.map,
     "confirmation still travels to the selected settlement");
-  guidance.tick(map,0);
+  guidance.tick(map,0);guidance.tick(tab,0);
   RenderGrid(guidance.grid,guidance.state,24,34,2).draw();
   ui_check(normalize_ui(ui_body(frame)).find("Use the board to return to your route")!=std::string::npos,
     "the visited settlement names its board's return action");
@@ -228,7 +232,7 @@ int main(){try {
   ui_check(focus.state.menu&&!focus.state.paused,"losing focus in the menu does not create a gameplay pause");
   focus.begin_campaign(true);
   Controls pause_overlay;pause_overlay.pause=true;
-  focus.tick(map,0);focus.tick(tab,0);focus.tick(tab,0);
+  focus.tick(map,0);
   const double reading_time=focus.state.elapsed;
   lose_and_regain_focus();
   ui_check(focus.state.adventure.map&&focus.state.adventure.map_room&&!focus.state.paused&&focus.state.elapsed==reading_time,
@@ -432,7 +436,7 @@ int main(){try {
   auto &archive=features.profile.expeditions[0];
   archive.active=true;archive.district=3;archive.seed=archive.origin_seed=75;
   archive.itinerary={38,36,37,39,40,41,42,43};
-  features.begin_run(iceberg::Mode::Endless);features.tick(map,1./120);features.tick(tab,1./120);
+  features.begin_run(iceberg::Mode::Endless);features.tick(map,1./120);
   auto count_map=[&](const char *glyph,uint32_t rgb) {
     int count=0;
     for(size_t y=4;y+7<frame.size();++y)for(const auto &cell:frame[y])
@@ -1315,7 +1319,7 @@ int main(){try {
   ui_check(count_map("━",0xa6e9ea)==0&&ui_text(frame).find("━ Ice")==std::string::npos,
     "the legacy dry layout does not show ice glyphs or a legend");
   features.begin_campaign(true);features.stage=1;features.load_room();
-  features.tick(map,1./120);features.tick(tab,1./120);features.tick(tab,1./120);
+  features.tick(map,1./120);
   RenderGrid(features.grid,features.state,24,34,2).draw();
   ui_check(count_map("≈",0x66bfd7)>0&&ui_text(frame).find("≈ Water")!=std::string::npos,
     "the compact Harbor lesson map shows the real ferry waterline");
@@ -1399,7 +1403,7 @@ int main(){try {
     return node.kind==InteractionKind::RouteChoice;
   });
   ui_check(passage!=harbor_fork.grid.interactions.end(),"the current Harbor room has a real alternate passage");
-  harbor_fork.tick(map,1./120);harbor_fork.tick(tab,1./120);harbor_fork.tick(tab,1./120);
+  harbor_fork.tick(map,1./120);
   for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
     harbor_fork.profile.language=language;harbor_fork.sync_view();
     const bool en=language==iceberg::Language::English;
@@ -1462,10 +1466,12 @@ int main(){try {
   AdventureSession preview(options,"/tmp/tv-ui-route-preview-unused");preview.begin_campaign(true);
   preview.stage=2;preview.load_room();
   Controls next_leg;next_leg.navigate=1;
-  preview.tick(map,1./120);preview.tick(tab,1./120);preview.tick(next_leg,1./120);
+  preview.tick(map,1./120);preview.tick(tab,1./120);preview.tick(tab,1./120);preview.tick(next_leg,1./120);
   preview.tick(map,1./120);preview.tick(map,1./120);
+  ui_check(preview.state.adventure.map_room,"reopening the campaign map defaults to the minimap");
+  preview.tick(tab,1./120);preview.tick(tab,1./120);
   ui_check(preview.state.adventure.map_route&&preview.state.adventure.route_page==1,
-    "reopening a route map keeps the previewed leg");
+    "switching back to the route keeps the previewed leg");
   for(auto language:{iceberg::Language::English,iceberg::Language::Polish}) {
     auto &v=preview.state.adventure;
     preview.profile.language=language;preview.sync_view();
@@ -1483,11 +1489,11 @@ int main(){try {
     ui_check(ui_text(frame).find(hint)==std::string::npos,"the return hint disappears on the current campaign leg");
     preview.tick(next_leg,1./120);
   }
-  preview.advance_room();preview.tick(map,1./120);
+  preview.advance_room();preview.tick(map,1./120);preview.tick(tab,1./120);preview.tick(tab,1./120);
   ui_check(preview.state.adventure.map_route&&preview.state.adventure.route_page==-1,
     "advancing a room returns the route view to the active leg");
   preview.stage=4;preview.room=0;preview.load_room();
-  preview.tick(map,1./120);
+  preview.tick(map,1./120);preview.tick(tab,1./120);preview.tick(tab,1./120);
   Controls previous_leg;previous_leg.navigate=-1;
   preview.tick(previous_leg,1./120);preview.tick(enter,1./120);
   const auto &current_route=preview.state.adventure;
@@ -1545,8 +1551,8 @@ int main(){try {
     }
     return true;
   };
-  ui_check(paused.state.paused&&overlay_visible("JOURNEY MAP"),"the map is readable over pause on wide and compact screens");
-  paused.state.adventure.selected=1;paused.tick(enter,1./120);
+  ui_check(paused.state.paused&&overlay_visible("ROOM MAP"),"the map is readable over pause on wide and compact screens");
+  paused.tick(tab,1./120);paused.state.adventure.selected=1;paused.tick(enter,1./120);
   ui_check(paused.state.paused&&paused.state.adventure.map,"confirm on a locked district preserves pause");
   paused.tick(pause,1./120);
   ui_check(paused.state.paused&&!paused.state.adventure.map,"close the map before resuming the world");
@@ -1593,7 +1599,7 @@ int main(){try {
   ui_check(game.state.adventure.map&&game.grid.district==0,"switching to districts and confirming together cannot start travel");
   game.tick(enter,1./120);ui_check(!game.state.adventure.map&&game.grid.district==1&&game.profile.visit_district==1,"unlocked district travel enters the named settlement");
   ui_check(game.state.adventure.notice.find("ARRIVED")!=std::string::npos&&game.state.adventure.door_left>0,"allowed travel has arrival feedback and door animation");
-  game.tick(map,1./120);game.state.adventure.selected=0;game.tick(enter,1./120);
+  game.tick(map,1./120);game.tick(tab,1./120);game.state.adventure.selected=0;game.tick(enter,1./120);
   ui_check(game.grid.district==0&&game.profile.visit_district<0,"map returns to preserved route");
   game.profile.quests={1,2,3,0,0,0,1,0};game.profile.quest_counts[0]=1;game.profile.discoveries=0;game.sync_view();
   game.tick(book,1./120);auto entries=iceberg::journal_entries(game.state.adventure);
@@ -1734,13 +1740,13 @@ int main(){try {
     for(int i=0;i<(mode==iceberg::Mode::Endless?9:2);++i)game.advance_room();
     auto x=game.state.player.x;
     game.tick(map,1./120);
-    ui_check(game.state.adventure.map&&game.state.adventure.map_route&&!game.state.adventure.map_room,
-      "J opens the active expedition route");
+    ui_check(game.state.adventure.map&&game.state.adventure.map_room,
+      "J opens the expedition or Mastery room minimap first");
     Controls up;up.navigate=-1;
-    game.tick(tab,1./120);game.tick(up,1./120);game.tick(enter,1./120);
+    game.tick(up,1./120);game.tick(enter,1./120);
     const auto &v=game.state.adventure;
     ui_check(v.map&&v.map_route&&v.map_room&&v.route_page==-1&&game.state.player.x==x,
-      "B opens the room map while district navigation and confirmation leave the expedition paused in place");
+      "navigation and confirmation leave the minimap paused in place");
     const int room=mode==iceberg::Mode::Endless?1:2;
     ui_check(v.route.available&&v.route.current==room&&v.route.visited==(1u<<(room+1))-1,"expedition route marks only the rooms reached in this leg");
     for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
@@ -1756,6 +1762,8 @@ int main(){try {
         }
         ui_check(room_map.find(en?"ROOM MAP":"PLAN POKOJU")!=std::string::npos&&courier&&exit&&
           room_map.find("▪")!=std::string::npos,"the room map marks terrain, player and exit at all supported sizes");
+        ui_check(room_map.find(en?"[B] Timeline":"[B] Oś trasy")!=std::string::npos,
+          "the expedition minimap names the timeline switch at every supported width");
         game.tick(tab,1./120);
         auto &route=game.state.adventure.route;
         // Representative long, localized names that exceed a compact map line.
@@ -1840,7 +1848,7 @@ int main(){try {
     for(int i=0;i<leg_start+8;++i)game.tick(previous_room,0);
     ui_check(v.route_room_selection==0&&v.route.current==room+1,
       "browsing stops at the first room without changing expedition progress");
-    game.tick(map,0);game.tick(map,0);
+    game.tick(map,0);game.tick(map,0);game.tick(tab,0);
     ui_check(v.route_room_selection==-1&&v.route.current==room+1,
       "reopening the expedition timeline returns the selection to the current room");
 
@@ -1877,7 +1885,7 @@ int main(){try {
         game.grid.room_name.get(iceberg::Language::English)==final_name.get(iceberg::Language::English),
         "the planned final trial room title matches the course on arrival");
     }
-    game.tick(map,0);
+    game.tick(map,0);game.tick(tab,0);
     for(auto language:{iceberg::Language::Polish,iceberg::Language::English}) {
       game.profile.language=language;game.sync_view();
       const auto destination=ending(language==iceberg::Language::English);
@@ -1917,7 +1925,7 @@ int main(){try {
       "confirming the preselected run resumes the same route and room");
     if(mode==iceberg::Mode::Endless) {
       const auto completed=v.route.rooms;
-      game.advance_room();game.tick(map,0);
+      game.advance_room();game.tick(map,0);game.tick(tab,0);
       RenderGrid(game.grid,game.state,24,34,2).draw();
       ui_check(v.route.current==0&&v.route.visited==1&&
         ui_text(frame).find("Leg 3 · Depth 16")!=std::string::npos,
@@ -2021,7 +2029,7 @@ int main(){try {
       game.tick(enter,.1);
       ui_check(v.map&&!iceberg::browsing_expedition_room(v)&&v.route.browsed_leg==0&&game.state.elapsed==elapsed,
         "Enter also returns from the future preview without taking an exit");
-      game.tick(open_menu,0);game.tick(enter,0);game.tick(map,0);
+      game.tick(open_menu,0);game.tick(enter,0);game.tick(map,0);game.tick(tab,0);
       game.tick(previous_room,0);
       ui_check(v.route.browsed_leg==-1,"resuming the same Expedition from the menu retains its session history");
       game.tick(map,0);
@@ -2065,7 +2073,7 @@ int main(){try {
       "the Debug Tour journal keeps a stop's instructions after the entry notice expires");
   }
   game.begin_campaign(false);game.tick(map,1./120);
-  ui_check(game.state.adventure.map&&!game.state.adventure.map_route,"returning to the campaign opens district travel");
+  ui_check(game.state.adventure.map&&game.state.adventure.map_room,"returning to the campaign opens the minimap");
   Controls menu;menu.menu_request=true;game.tick(menu,1./120);
   game.profile.expeditions[0].active=true;game.profile.expeditions[0].district=0;
   game.profile.endless_best=17;

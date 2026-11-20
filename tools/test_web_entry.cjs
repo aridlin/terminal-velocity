@@ -564,7 +564,7 @@ const server=http.createServer((req,res)=>{
      await page.evaluate(async()=>{for(let i=0;i<3;i++)await new Promise(requestAnimationFrame);});
     };
     await page.keyboard.press('j');
-    await page.waitForFunction(()=>!!(uiFlags&128)&&entryFrame.includes('JOURNEY MAP'));
+    await page.waitForFunction(()=>!!(uiFlags&128)&&entryFrame.includes('ROOM MAP'));
     await clickGameCanvas();
     assert.equal(await page.evaluate(()=>window.canvasConfirms),0,'clicking the paused map does not confirm travel');
     assert.equal(await page.evaluate(()=>entryFrame.includes('A MOMENT TO BREATHE')),false);
@@ -594,7 +594,9 @@ const server=http.createServer((req,res)=>{
 
 
     await page.screenshot({path:path.join(out,'web-opening-en.png')});
-    await page.keyboard.press('j');await page.waitForFunction(()=>!!(window.entryFlags&128));
+    await page.keyboard.press('j');await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
+    assert.match(await page.evaluate(()=>entryFrame),/\[B\] District map/);
+    await page.keyboard.press('b');await page.waitForFunction(()=>!(uiFlags&((1<<17)|2048)));
     await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await page.waitForTimeout(100);
     assert.ok(await page.evaluate(()=>!!(entryFlags&128)),'locked travel keeps district map open');
     assert.match(await page.evaluate(()=>entryFrame),/Finish Lower Harbor/,'locked travel explains route and pump condition');
@@ -959,7 +961,8 @@ const server=http.createServer((req,res)=>{
   const desktopBrowse=desktopToolbar.locator('.route-browse');
   await desktopMap.click();
   await expedition.waitForFunction(()=>uiFlags&128);
-  assert.equal(await desktopSwitch.isVisible(),false,'the Campaign has its own map controls');
+  assert.equal(await desktopSwitch.isVisible(),true,'the Campaign shows its map change control');
+  assert.equal(await desktopSwitch.textContent(),'B · District map');
   assert.equal(await desktopBrowse.isVisible(),false);
   await desktopToolbar.locator('[data-tap="12"]').click();
   await expedition.waitForFunction(()=>uiFlags&1);
@@ -979,7 +982,10 @@ const server=http.createServer((req,res)=>{
    };
   });
   await desktopMap.click();
-  await expedition.waitForFunction(()=>uiFlags&128);
+  await expedition.waitForFunction(()=>uiFlags&(1<<17));
+  assert.equal(await desktopSwitch.textContent(),'B · Timeline');
+  await desktopSwitch.click();
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('EXPEDITION TIMELINE'));
   const nextRoom=desktopBrowse.getByRole('button',{name:'Next room'});
   const previousRoom=desktopBrowse.getByRole('button',{name:'Previous room'});
   await nextRoom.click();
@@ -1050,13 +1056,13 @@ const server=http.createServer((req,res)=>{
   assert.equal(await expedition.evaluate(()=>document.activeElement===canvas),true);
   assert.equal(await desktopBrowse.isVisible(),false);
   assert.equal(await desktopSwitch.getAttribute('aria-label'),'Show route timeline');
-  assert.equal(await desktopSwitch.textContent(),'Timeline');
+  assert.equal(await desktopSwitch.textContent(),'B · Timeline');
   await desktopSwitch.press('b');
   await expedition.waitForFunction(()=>(uiFlags&(128|(1<<17)))===128);
   await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 7:')&&
    window.desktopMapFrame.includes('EXPEDITION TIMELINE'));
   assert.equal(await desktopSwitch.evaluate(button=>document.activeElement===button),true);
-  assert.equal(await desktopSwitch.textContent(),'Room map');
+  assert.equal(await desktopSwitch.textContent(),'B · Room map');
   await expedition.keyboard.press('ArrowRight');
   await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 7:'));
   await expedition.keyboard.press('ArrowDown');
@@ -1285,6 +1291,8 @@ const server=http.createServer((req,res)=>{
   console.log('PASS a quick touch slide drops the obsolete direction before the next frame');
   await page.keyboard.press('j');
   await page.waitForFunction(()=>(uiFlags&(64|128))===128);
+  await page.keyboard.press('b');
+  await page.waitForFunction(()=>!(uiFlags&(1<<17)));
   const mapDown=await page.locator('#touch [data-key="3"]').boundingBox();
   await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[
    {x:mapDown.x+mapDown.width/2,y:mapDown.y+mapDown.height/2,id:1}
@@ -1456,31 +1464,31 @@ const server=http.createServer((req,res)=>{
      const route=page.locator('#touch-inspect');
      const use=page.locator('#touch-use');
      if(await page.evaluate(()=>!!(uiFlags&2048))){
-      assert.equal(await route.innerText(),'Room');
+      assert.equal(await route.innerText(),'B · Room map');
       await route.tap();
       await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
      }
      if(await page.evaluate(()=>!!(uiFlags&(1<<17)))){
-      assert.equal(await route.innerText(),'Districts');
+      assert.equal(await route.innerText(),'B · District map');
       await route.tap();
       await page.waitForFunction(()=>!(uiFlags&(2048|(1<<17))));
      }
-     assert.equal(await route.innerText(),'Route');
+     assert.equal(await route.innerText(),'B · Journey route');
      assert.equal(await use.getAttribute('aria-label'),'Close map');
      assert.deepEqual(await touchDirectionNames(),['Previous district','Next district']);
      await route.tap();
      await page.waitForFunction(()=>!!(uiFlags&2048));
-     assert.equal(await route.innerText(),'Room');
+     assert.equal(await route.innerText(),'B · Room map');
      assert.deepEqual(await touchDirectionNames(),['Previous leg','Next leg']);
      await route.tap();
      await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
-     assert.equal(await route.innerText(),'Districts');
+     assert.equal(await route.innerText(),'B · District map');
      assert.equal(await use.getAttribute('aria-label'),'Close map');
      await use.tap();
      await page.waitForFunction(()=>!(uiFlags&128));
      await button.tap();
      await page.waitForFunction(()=>(uiFlags&(128|(1<<17)))===(128|(1<<17)));
-     assert.equal(await route.innerText(),'Districts','fullscreen reopens the room map');
+     assert.equal(await route.innerText(),'B · District map','fullscreen reopens the room map');
      await use.tap();
     }else {
      assert.equal(await inspectControl.getAttribute('aria-label'),'Next quest tab');
@@ -1706,11 +1714,12 @@ const server=http.createServer((req,res)=>{
    for(const key of [4,5])assert.equal(await page.locator('#touch [data-key="'+key+'"]').isVisible(),false,
     'the map hides jump and dash');
    if(roomMap){
-    await inspectControl.tap();
-    await page.waitForFunction(()=>!!(uiFlags&(1<<17)));
+    assert.equal(await inspectControl.textContent(),'B · Timeline');
     assert.equal(await page.locator('#touch .directions').isVisible(),false,'the room map has no directional actions');
     assert.deepEqual(await touchDirectionNames(),['Up','Down']);
    }else{
+    await inspectControl.tap();
+    await page.waitForFunction(()=>!(uiFlags&(1<<17)));
     assert.deepEqual(await touchDirectionNames(),['Previous room','Next room']);
     const previousLeg=page.locator('#touch').getByRole('button',{name:'Previous leg'});
     const nextLeg=page.locator('#touch').getByRole('button',{name:'Next leg'});

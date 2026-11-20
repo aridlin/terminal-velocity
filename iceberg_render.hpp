@@ -740,11 +740,16 @@
       v.mode==iceberg::Mode::Trial?tr("OŚ PRÓBY","MASTERY TIMELINE"):tr("MAPA PODRÓŻY","JOURNEY MAP");
     paint_text(1,2,overlay_title,d.accent,true);
     if(v.map) {
+      if(v.tour_scene<0) {
+        const auto action=v.mode!=iceberg::Mode::Campaign?
+          (v.map_room?tr("Oś trasy","Timeline"):tr("Plan pokoju","Room map")):
+          v.map_room?tr("Dzielnice","District map"):v.map_route?tr("Plan pokoju","Room map"):tr("Trasa","Journey route");
+        paint_text(2,2,"[B]",d.accent,true);
+        paint_text(2,6,action,d.light);
+      }
       if(v.map_room) {
         draw_room_map(3,rows_-7);
-        const auto back=v.tour_scene>=0?tr("J/P wróć","J/P return"):v.mode==iceberg::Mode::Campaign?
-          tr("B dzielnice · J/P wróć","B districts · J/P return"):tr("B oś trasy · J/P wróć","B timeline · J/P return");
-        paint_text(rows_-2,2,back,d.light);
+        paint_text(rows_-2,2,tr("J/P wróć","J/P return"),d.light);
         return;
       }
       if(v.mode!=iceberg::Mode::Campaign) {
@@ -752,9 +757,9 @@
         paint_text(rows_-3,2,iceberg::browsing_expedition_room(v)?
           tr("ENTER obecny pokój · J/P wróć","ENTER current room · J/P back"):
           tr("J/P wróć","J/P back"),d.light);
-        paint_text(rows_-2,2,v.route.rooms.empty()?tr("B plan pokoju","B room map"):
-          v.mode==iceberg::Mode::Endless?tr("↑↓ pokoje · ←→ odc. · B plan","↑↓ rooms · ←→ legs · B room map"):
-          tr("↑↓ pokoje · B plan pokoju","↑↓ rooms · B room map"),d.light);
+        if(!v.route.rooms.empty())
+          paint_text(rows_-2,2,v.mode==iceberg::Mode::Endless?tr("↑↓ pokoje · ←→ odcinki","↑↓ rooms · ←→ legs"):
+            tr("↑↓ pokoje","↑↓ rooms"),d.light);
         return;
       }
       paint_text(3,2,v.map_route?tr("  Dzielnice  ·  [Trasa]","  Districts  ·  [Route]"):tr("[Dzielnice]  ·   Trasa","[Districts]  ·   Route"),d.light);
@@ -774,7 +779,7 @@
         iceberg::district_travel_available(v,v.selected)?tr("↑↓ wybór · ENTER podróż","↑↓ select · ENTER travel"):
         tr("↑↓ wybór","↑↓ select");
       paint_text(rows_-3,2,selection,d.light);
-      paint_text(rows_-2,2,v.map_route?tr("B pokój · J/P wróć","B room · J/P return"):tr("B trasa · J/P wróć","B route · J/P return"),d.light);
+      paint_text(rows_-2,2,tr("J/P wróć","J/P return"),d.light);
       return;
     }
     std::array<std::string,3> tabs{tr("Aktywne","Active"),tr("Ukończone","Completed"),tr("Notatki","Notes")};
