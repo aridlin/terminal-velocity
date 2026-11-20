@@ -352,6 +352,7 @@ inline constexpr std::array DebugTour{
   TourStop{1,424,84,51,{"Odczekaj lub przeskocz po sygnale dyszy","Wait out a vent cycle or jump the warning plume"}},
   TourStop{2,27,34,38,{"Wsiądź na ruchomy balkon, gdy zjedzie na dół",
     "Step onto the balcony when it reaches the lower landing"}},
+  TourStop{2,28,112.5,21,{"Pył zapowiada spadający gruz","Watch for dust before the masonry falls"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 // Keep the quick action pointed at the newest featured sample, independently of list order.
