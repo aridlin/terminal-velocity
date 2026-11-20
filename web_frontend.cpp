@@ -57,7 +57,8 @@ void send_web_ui() {
   int route_legs=0;
   if(!s.menu&&v.map&&!v.map_room&&v.tour_scene<0&&v.mode!=iceberg::Mode::Campaign) {
     const auto [selected,count]=web_game->expedition_route_position();
-    flags|=(int(count>0&&selected>0)<<29)|(int(selected+1<count)<<30);
+    flags|=(int(iceberg::browsing_expedition_room(v))<<25)|
+      (int(count>0&&selected>0)<<29)|(int(selected+1<count)<<30);
     if(v.mode==iceberg::Mode::Endless&&count>iceberg::RoomsPerLeg) {
       const int leg=selected/iceberg::RoomsPerLeg;
       route_legs=int(leg>0)|(int((leg+1)*iceberg::RoomsPerLeg<count)<<1);

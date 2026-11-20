@@ -1577,7 +1577,10 @@ public:
     }
     if(v.map&&!v.map_room&&!c.inspect&&mode!=iceberg::Mode::Campaign&&!v.route.rooms.empty()) {
       const auto [selected,count]=expedition_route_position();
-      if(c.browse_leg&&mode==iceberg::Mode::Endless) {
+      if(c.confirm) {
+        v.route_room_selection=-1;
+        navigation_repeat_direction=0;
+      } else if(c.browse_leg&&mode==iceberg::Mode::Endless) {
         const int current_leg=selected/iceberg::RoomsPerLeg;
         const int last_leg=(count-1)/iceberg::RoomsPerLeg;
         const int target=std::clamp(current_leg+c.browse_leg,0,last_leg);

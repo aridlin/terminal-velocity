@@ -1007,6 +1007,10 @@ const server=http.createServer((req,res)=>{
   await desktopSwitch.press('Enter');
   await expedition.waitForFunction(()=>(uiFlags&(128|(1<<17)))===128);
   await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Room 7:'));
+  await desktopBrowse.getByRole('button',{name:'Return to current room'}).click();
+  await expedition.waitForFunction(()=>!!(uiFlags&128)&&window.desktopMapFrame?.includes('<01>')&&
+   !window.desktopMapFrame?.includes('Room 7:')&&window.desktopMapFrame?.includes('Planned:'));
+  console.log('PASS desktop Now returns to the current room without closing the timeline');
   await previousRoom.focus();
   await expedition.keyboard.press('j');
   await expedition.waitForFunction(()=>!(uiFlags&128));
@@ -1685,6 +1689,12 @@ const server=http.createServer((req,res)=>{
     try{
      await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 8:'),null,{timeout:5000});
     }finally{await page.keyboard.up('ArrowDown');}
+    assert.equal(await action.getAttribute('aria-label'),'Return to current room');
+    await action.tap();
+    await page.waitForFunction(()=>!!(uiFlags&128)&&window.expeditionFrame?.includes('Planned:')&&
+     !window.expeditionFrame?.includes('Room 8:'));
+    assert.equal(await action.getAttribute('aria-label'),'Close map');
+    console.log('PASS touch Now returns to the current room and restores the map close action');
    }
    await action.tap();
    await page.waitForFunction(()=>!(uiFlags&128));

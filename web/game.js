@@ -142,7 +142,7 @@ const forkDoorFlag=1<<18;
 const blockingFlags=1|2|4|8|64|128;
 const doorwayContext=flags=>flags&blockingFlags?0:flags&(doorReadyFlag|forkDoorFlag);
 const replaceRunFlag=1<<19;
-const replyChoiceFlag=1<<26;
+const routeReturnFlag=1<<25,replyChoiceFlag=1<<26;
 const previousInspectionPageFlag=1<<27,nextInspectionPageFlag=1<<28;
 const previousRouteRoomFlag=1<<29,nextRouteRoomFlag=1<<30;
 const routeDirectionSelector='.route-browse [data-key],#touch .directions [data-key]';
@@ -263,6 +263,9 @@ function translateUI(){
  }else if(uiFlags&forkDoorFlag){
   touchUse.textContent=tr('Przejście B','Passage B');
   touchUse.setAttribute('aria-label',touchUse.textContent);
+ }else if(uiFlags&routeReturnFlag){
+  touchUse.textContent=tr('Teraz','Now');
+  touchUse.setAttribute('aria-label',tr('Wróć do obecnego pokoju','Return to current room'));
  }else if(readOnlyMapOpen()){
   touchUse.textContent=tr('Wróć','Back');
   touchUse.setAttribute('aria-label',tr('Zamknij mapę','Close map'));
@@ -373,10 +376,12 @@ window.tvUI=u=>{
  // A doorway still reads held movement while its shutter opens.
  if((u.flags&inputContextFlags)!==(uiFlags&inputContextFlags))clearInput();
  const doorChanged=doorwayContext(u.flags)!==doorwayContext(uiFlags);
- if(doorChanged||travelChanged){
+ const routeReturnChanged=!!((u.flags^uiFlags)&routeReturnFlag);
+ if(doorChanged||travelChanged||routeReturnChanged){
   // Cancel only contacts for obsolete destinations; independent inputs stay active.
   for(const [id,pointer] of pointers)
-   if((doorChanged&&pointer.doorConfirm)||(travelChanged&&pointer.travelConfirm))finishPointer(id,false);
+   if((doorChanged&&pointer.doorConfirm)||(travelChanged&&pointer.travelConfirm)||
+      (routeReturnChanged&&pointer.button?.id==='touch-use'))finishPointer(id,false);
  }
  travelDistrict=nextTravelDistrict;
  lastBlocked=!!(u.flags&(blockingFlags|doorReadyFlag));
@@ -482,6 +487,7 @@ for(const button of document.querySelectorAll('[data-key]')){
   }
   if(button.id==='touch-inspect'&&((uiFlags&(confirmSaveFlag|profilePickerFlag))||questRecordOpen()))return 9;
   if(button.id!=='touch-use'||!lastBlocked)return +button.dataset.key;
+  if(uiFlags&routeReturnFlag)return 8;
   if(readOnlyMapOpen())return 11;
   return (overlayFlags()&64)||(uiFlags&replaceRunFlag)?6:8;
  };
