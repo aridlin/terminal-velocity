@@ -748,7 +748,7 @@
         return;
       }
       if(v.mode!=iceberg::Mode::Campaign) {
-        draw_iceberg_route_map(3,rows_-7);
+        draw_iceberg_route_map(3,rows_-6);
         paint_text(rows_-3,2,iceberg::browsing_expedition_room(v)?
           tr("ENTER obecny pokój · J/P wróć","ENTER current room · J/P back"):
           tr("J/P wróć","J/P back"),d.light);

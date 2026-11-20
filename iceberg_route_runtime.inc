@@ -93,11 +93,15 @@
           else if(r.browsed_leg>0)browse(expedition_itinerary(next_expedition_seed()));
         }
       }
-      if(timeline&&r.browsed_leg==0) {
-        const int shown=selected>=0&&selected!=room?selected:room+1;
-        const bool mastery_course=mode==iceberg::Mode::Trial&&shown==int(e.itinerary.size())-1;
-        if(!mastery_course&&shown>=0&&shown<int(e.itinerary.size()))
-          r.detail_rhythm=iceworld::pattern(e.itinerary[size_t(shown)]).rhythm;
+      if(timeline) {
+        const auto room_rhythm=[&](int index)->std::optional<iceberg::Rhythm> {
+          const int count=int(e.itinerary.size());
+          if(index<0||index>=count||(mode==iceberg::Mode::Trial&&index==count-1))return {};
+          return iceworld::pattern(e.itinerary[size_t(index)]).rhythm;
+        };
+        r.current_rhythm=room_rhythm(room);
+        if(r.browsed_leg==0)
+          r.detail_rhythm=room_rhythm(selected>=0&&selected!=room?selected:room+1);
       }
       if(mode==iceberg::Mode::Trial&&!r.rooms.empty())r.rooms.back()=iceworld::MasteryCourseName;
     }

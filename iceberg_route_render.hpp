@@ -770,17 +770,6 @@
       if(row>top+4)for(const auto &line:lines)clipped(row++,5,line,0xffd68a);
       return;
     }
-    // Put the room details just below the route and wrap at terminal-cell width.
-    int row=top+7;
-    if(browsing_other_leg) {
-      const auto location=tr("Teraz: odc. ","Now: leg ")+std::to_string(endless_leg)+
-        tr(", pok. ",", room ")+std::to_string(r.current+1);
-      row=paragraph(row,location,0xffd68a);
-    }
-    const auto place=browsing_other_leg?r.place.get(v.language):current;
-    row=paragraph(row,place,0xffd68a);
-    const int count=int(rooms.size());
-    const bool browsing=selected>=0&&selected<count&&selected!=current_room;
     static constexpr std::array<iceberg::Text,6> rhythms{{
       {"Skoki w biegu","Running jumps"},
       {"Precyzyjne lądowania","Precise landings"},
@@ -789,7 +778,21 @@
       {"Eksploracja","Exploration"},
       {"Szerokie lądowania","Wide landings"}
     }};
-    const auto rhythm=r.detail_rhythm?" · "+rhythms[size_t(*r.detail_rhythm)].get(v.language):std::string{};
+    const auto rhythm_suffix=[&](std::optional<iceberg::Rhythm> rhythm) {
+      return rhythm?" · "+rhythms[size_t(*rhythm)].get(v.language):std::string{};
+    };
+    // Put the room details just below the route and wrap at terminal-cell width.
+    int row=top+7;
+    if(browsing_other_leg) {
+      const auto location=tr("Teraz: odc. ","Now: leg ")+std::to_string(endless_leg)+
+        tr(", pok. ",", room ")+std::to_string(r.current+1);
+      row=paragraph(row,location,0xffd68a);
+    }
+    const auto place=browsing_other_leg?r.place.get(v.language):current;
+    row=paragraph(row,place+rhythm_suffix(r.current_rhythm),0xffd68a);
+    const int count=int(rooms.size());
+    const bool browsing=selected>=0&&selected<count&&selected!=current_room;
+    const auto rhythm=rhythm_suffix(r.detail_rhythm);
     if(browsing) {
       const auto detail=tr("Pokój ","Room ")+std::to_string(selected+1)+": "+rooms[size_t(selected)].get(v.language);
       row=paragraph(row,detail+rhythm,0xc7d9df);
