@@ -332,7 +332,13 @@ const server=http.createServer((req,res)=>{
     const box=await pause.boundingBox();
     await page.locator('#game').focus();
     await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
-    await page.keyboard.press('Enter');
+    assert.deepEqual(await page.evaluate(()=>{
+     const accepted=canvas.dispatchEvent(new KeyboardEvent('keydown',{
+      code:'Enter',key:'Enter',isComposing:true,bubbles:true,cancelable:true,
+     }));
+     return {accepted,started};
+    }),{accepted:true,started:false},'composing Enter does not launch the game');
+    await page.keyboard.press('NumpadEnter');
     await page.waitForFunction(()=>started&&(uiFlags&256));
     assert.equal(await page.evaluate(()=>uiFlags&(1|2)),0,'Start cannot replay an earlier toolbar click');
     assert.equal(await pause.isEnabled(),true);
@@ -391,7 +397,7 @@ const server=http.createServer((req,res)=>{
     });
     await page.keyboard.up('d');
     assert.deepEqual(focusPause,{paused:true,held:0,pressed:0},'short focus loss pauses immediately and drops held input');
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('NumpadEnter');
     await page.waitForFunction(()=>!(uiFlags&2));
     console.log('PASS short focus loss between animation frames pauses and resumes with cleared input');
 

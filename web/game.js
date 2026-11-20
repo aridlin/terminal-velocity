@@ -405,7 +405,9 @@ window.tvUI=u=>{
     (hadSettingsFocus&&settingsKeys.hidden)||(hadTourFocus&&tourControls.hidden)))
   canvas.focus({preventScroll:true});
 };
-const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25,Digit7:26,PageUp:28,PageDown:29};
+const composingKey=e=>e.isComposing||e.keyCode===229;
+const confirmKey=e=>e.code==='Enter'||e.code==='NumpadEnter';
+const keyMap={ArrowLeft:0,KeyA:0,ArrowRight:1,KeyD:1,ArrowUp:2,KeyW:2,ArrowDown:3,KeyS:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyF:6,KeyB:7,Enter:8,NumpadEnter:8,Escape:9,KeyP:9,Tab:10,KeyJ:11,KeyM:12,KeyR:13,KeyN:14,KeyL:15,KeyU:16,Digit1:20,Digit2:21,Digit3:22,Digit4:23,Digit5:24,Digit6:25,Digit7:26,PageUp:28,PageDown:29};
 function recompute(){
  held=0;
  for(const code of keyboard)held|=1<<keyMap[code];
@@ -417,13 +419,14 @@ addEventListener('keydown',e=>{
   if(shiftKey)shiftKeys.add(e.code);
   if(!shiftKey||shiftKeys.size>1)dashShift='';
  }
+ if(composingKey(e)){dashShift='';return;}
  const target=e.target instanceof Element?e.target:null;
- const settingsBack=e.code==='Escape'&&!e.isComposing&&e.keyCode!==229&&settingsKeys.contains(target);
+ const settingsBack=e.code==='Escape'&&settingsKeys.contains(target);
  const pauseScreen=(uiFlags&(2|64|128))===2;
  const tourPage=e.code==='PageUp'||e.code==='PageDown';
  if(tourPage&&!tourPicker)return;
  const tourNavigation=tourPicker&&tourControls.contains(target)&&
-  (tourPage||e.code.startsWith('Arrow')||e.code==='Escape')&&!e.isComposing&&e.keyCode!==229;
+  (tourPage||e.code.startsWith('Arrow')||e.code==='Escape');
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
     !settingsBack&&!tourNavigation&&!(isTimelineDirection(target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
@@ -444,7 +447,7 @@ addEventListener('keyup',e=>{
  shiftKeys.delete(e.code);
  if(e.code===dashShift){
   dashShift='';
-  if(!e.shiftKey)tap(5);
+  if(!e.shiftKey&&!composingKey(e))tap(5);
  }
  if(keyboard.delete(e.code))recompute();
 });
@@ -704,8 +707,8 @@ async function toggleFullscreen(){
  }finally{fullscreenTransition=false;}
 }
 addEventListener('keydown',e=>{
- if(e.isComposing||e.keyCode===229)return;
- if((e.code==='Enter'&&e.altKey)||(e.code==='Escape'&&expanded()&&!accounts?.active)){
+ if(composingKey(e))return;
+ if((confirmKey(e)&&e.altKey)||(e.code==='Escape'&&expanded()&&!accounts?.active)){
   e.preventDefault();e.stopImmediatePropagation();
   if(!e.repeat)toggleFullscreen();
  }
@@ -1071,7 +1074,8 @@ canvas.onclick=event=>{
  if(context)tap(8);
 };
 addEventListener('keydown',e=>{
- if(!started&&e.code==='Enter'&&!e.defaultPrevented&&(e.target===canvas||e.target===document.body))start.click();
+ if(!started&&confirmKey(e)&&!composingKey(e)&&!e.defaultPrevented&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&
+    (e.target===canvas||e.target===document.body))start.click();
 });
 async function finishBoot(storageError,canWrite=true){
  if(bootFailed)return;
