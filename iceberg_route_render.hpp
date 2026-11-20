@@ -142,6 +142,7 @@
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
     const bool has_vents=!grid_.pulses.empty();
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
+    constexpr uint32_t piston_docked_color=0xb5d599;
     constexpr uint32_t fragile_color=0xd5aa80,cracking_color=0xf1c66f,gap_color=0x85c0cd;
     struct FieldLandmark {const char *symbol;iceberg::Text legend;uint32_t color;};
     static constexpr std::array<FieldLandmark,3> field_landmarks{{
@@ -449,7 +450,12 @@
     }
     for(const auto &platform:grid_.platforms)if(platform.service_lift||platform.cargo_hoist||platform.pressure_piston) {
       const auto deck=platform.at(state_.elapsed);
-      mark(deck.x+deck.w*.5,deck.y,"↕",service_lift_color);
+      const double center=deck.x+deck.w*.5;
+      const int docked=platform.pressure_piston?platform.stop(state_.elapsed):0;
+      mark(center,deck.y,"↕",docked?piston_docked_color:service_lift_color);
+      if(platform.pressure_piston)
+        for(int side:{-1,1})if(side!=docked)
+          mark(center,platform.base.y+side*platform.dy,"○",stop_color);
     }
     bool recharging=false;
     if(has_refills)for(size_t i=0;i<grid_.refills.size();++i) {
@@ -577,7 +583,13 @@
     }
     if(has_service_lift)paint_text(legend++,2,tr("↕ Winda serwisowa","↕ Service lift"),service_lift_color);
     if(has_cargo_hoist)paint_text(legend++,2,tr("↕ Winda towarowa","↕ Cargo hoist"),service_lift_color);
-    if(has_pressure_piston)paint_text(legend++,2,tr("↕ Tłok","↕ Pressure piston"),service_lift_color);
+    if(has_pressure_piston) {
+      const auto name=tr("↕ Tłok","↕ Pressure piston");
+      paint_text(legend,2,name,service_lift_color);
+      const int separator=2+iceberg::cell_length(name);
+      paint_text(legend,separator," · ",0xc7d9df);
+      paint_text(legend++,separator+3,tr("○ Postój","○ Dock"),stop_color);
+    }
     if(has_seam||has_gutter)
       paint_text(legend++,2,has_gutter?tr("↑ Rynny","↑ Gutter climb"):tr("↑ Wąski szyb","↑ Wall-kick shaft"),seam_color);
     if(has_belts) {
