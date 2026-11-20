@@ -258,6 +258,7 @@ inline constexpr int ArchiveTrolleyNotice = 42;
 inline constexpr int ArchiveDryingLetter = 43;
 inline constexpr int ArchiveGlassRoom = 36;
 inline constexpr int IrrigationCallBox = 44;
+inline constexpr int GardenSeedBank = 56;
 inline constexpr int CrownSentinel = 701;
 inline constexpr uint64_t CrownArenaReached = uint64_t(1) << 46;
 inline constexpr uint64_t CrownSentinelDefeated = uint64_t(1) << 47;
@@ -294,12 +295,13 @@ inline constexpr std::array DebugTour{
   TourStop{3,ArchiveGlassRoom,50,46,{"Skacz, zanim szyby pękną pod stopami","Jump again before the glass breaks"}},
   TourStop{1,421,58.5,47,{"Wskocz na tłok, gdy zapali się dolna lampka","Board a piston when its lower lamp lights"}},
   TourStop{4,54,57.5,48,{"Wskocz do donicy i wysiądź przy górnej grządce","Ride the planter and jump to the upper bed"}},
+  TourStop{4,GardenSeedBank,56.5,50,{"Wjedź tacą na półki z nasionami","Ride the seed tray up to the shelves"}},
   TourStop{5,CrownSentinel,18,48,{"Strażnik Korony — finał","Crown Sentinel — finale"}},
 };
 // Keep the quick action pointed at the newest featured sample, independently of list order.
 inline constexpr auto DebugTourLatest = [] {
   for(size_t i=0;i<DebugTour.size();++i)
-    if(DebugTour[i].room==ArchiveGlassRoom)return i;
+    if(DebugTour[i].room==GardenSeedBank)return i;
   return DebugTour.size();
 }();
 static_assert(DebugTourLatest<DebugTour.size());

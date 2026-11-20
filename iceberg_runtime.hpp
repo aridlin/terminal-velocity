@@ -306,6 +306,7 @@ public:
     add_expedition_channel_bridge(room);
     add_expedition_fragile_pots(room);
     add_garden_hanging_planter(room);
+    add_garden_seed_tray(room);
     strengthen_expedition_wind(room);
     add_fractured_ribs(room);
     add_overhang_windbreak(room);

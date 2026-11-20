@@ -309,7 +309,7 @@ int main(int argc,char **argv) {
       check(session.tour_scene<0,"debug tour waits for an in-flight account action");
       session.profile_action_busy=false;
       press({.new_run=true});
-      check(session.tour_scene==int(iceberg::DebugTourLatest)&&session.grid.template_id==iceberg::ArchiveGlassRoom,
+      check(session.tour_scene==int(iceberg::DebugTourLatest)&&session.grid.template_id==iceberg::GardenSeedBank,
         "N opens the latest sample from the picker");
       session.end_tour();
       check(session.save_revision==write_count&&bytes(path)==first_save&&bytes(secondary)==second_save&&bytes(tertiary)==third_save,
@@ -746,7 +746,10 @@ int main(int argc,char **argv) {
     check(gardens.grid.template_id==54&&gardens.grid.platforms.size()==1&&verify_route(gardens.grid).complete,
       "the current Hanging Beds Expedition has a planter and an original through-route");
     AdventureSession swing(options,{});
-    swing.start_tour(int(iceberg::DebugTour.size())-2);
+    const auto hanging_beds=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
+      [](const auto &stop){return stop.room==54;});
+    check(hanging_beds!=iceberg::DebugTour.end(),"Debug Tour includes Hanging Beds");
+    swing.start_tour(int(hanging_beds-iceberg::DebugTour.begin()));
     check(swing.grid.template_id==54&&swing.grid.platforms.size()==1,
       "the Hanging Beds tour starts beside the working planter");
     const auto &planter=swing.grid.platforms.front();
@@ -783,6 +786,37 @@ int main(int argc,char **argv) {
         throw std::runtime_error("Hanging Beds route changed for seed "+std::to_string(seed));
     }
     check(true,"Hanging Beds retains the original route, tokens and lamps across 32 seeds");
+    AdventureSession seed_bank(options,{});
+    seed_bank.start_tour(int(iceberg::DebugTourLatest));
+    check(seed_bank.grid.template_id==iceberg::GardenSeedBank&&seed_bank.grid.platforms.size()==1&&
+          seed_bank.grid.platforms.front().seed_tray,"the Seed Bank tour opens by the working tray");
+    const auto tray_step=[&](Controls input,int count=1) {
+      for(int n=0;n<count;++n)seed_bank.tick(input,.1);
+    };
+    tray_step({});
+    tray_step({.move=1,.jump_held=true,.jump_pressed=true});
+    tray_step({.move=1,.jump_held=true});
+    tray_step({},6);
+    check(seed_bank.state.player.support==0&&seed_bank.grid.platforms.front().stop(.8)==1,
+      "a regular jump boards the Seed Bank tray while it waits at the lower dock");
+    tray_step({},31);
+    check(seed_bank.state.player.support==0&&std::abs(seed_bank.state.player.rect().bottom()-36.)<.01,
+      "the tray carries the courier to the upper shelf");
+    tray_step({.move=1},4);
+    tray_step({.move=1,.jump_held=true,.jump_pressed=true});
+    tray_step({.move=1,.jump_held=true},3);
+    tray_step({.jump_held=true});
+    tray_step({},4);
+    check(seed_bank.state.deaths==0&&seed_bank.state.collected[2]&&seed_bank.state.player.grounded&&
+          seed_bank.state.player.support<0,"a regular jump from the tray reaches the first seed shelf token");
+    for(unsigned seed=0;seed<16;++seed) {
+      auto bank=verified_room(iceberg::GardenSeedBank,iceberg::mix(seed),4);
+      const auto tokens=bank.sweets,lamps=bank.checkpoint_points;
+      add_garden_seed_tray(bank);
+      if(bank.platforms.size()!=1||bank.sweets!=tokens||bank.checkpoint_points!=lamps||!verify_route(bank).complete)
+        throw std::runtime_error("Seed Bank route changed for seed "+std::to_string(seed));
+    }
+    check(true,"the Seed Bank tray retains the lower route, tokens and checkpoints across 16 seeds");
     AdventureSession pistons(options,{});
     const auto piston_stop=std::find_if(iceberg::DebugTour.begin(),iceberg::DebugTour.end(),
       [](const auto &stop){return stop.room==421;});

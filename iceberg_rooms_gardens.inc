@@ -22,7 +22,7 @@
     ,{55,{"Ciepły zbiornik","The warm reservoir"},Rhythm::Recovery,
       {{3,45,24},{33,43,18},{57,45,20},{83,43,18},{107,41,18},{131,39,23}},
       {{62,34,9},{79,29,10},{97,33,10}}}
-    ,{56,{"Bank nasion","The seed bank"},Rhythm::Explore,
+    ,{GardenSeedBank,{"Bank nasion","The seed bank"},Rhythm::Explore,
       {{3,56,18},{27,53,12},{45,50,13},{64,47,16},{86,44,13},{105,41,13},{124,38,16},{146,35,20}},
       {{68,36,8},{83,31,8},{99,27,10}}}
     ,{57,{"Koło nawadniające","The irrigation wheel"},Rhythm::Timing,
