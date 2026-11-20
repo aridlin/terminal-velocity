@@ -24,6 +24,7 @@
       add({29,44,3,4},SideStory::HeatworksMug,{"Zabierz kubek z rury","Take the mug from the pipe"});
       add({2,48,2,4},SideStory::HeatworksMugBench,{"Oddaj Witkowi kubek","Return Witek’s mug"});
     } else if(grid.template_id==102) {
+      add({44,44,3,4},SideStory::EstateDoormat,{"Podnieś wycieraczkę","Lift the doormat"});
       add({34,44,4,4},SideStory::EstatePlate,{"Blaszka pod schodami","Plate under the stairs"});
       add({104,30,4,4},SideStory::Casting,{"Podnieś odlew","Pick up the casting"});
       add({113,30,3,4},SideStory::EstateBirdhouse,{"Obejrzyj karmnik","Inspect the birdhouse"});
@@ -41,7 +42,9 @@
       add({39,34,1.5,4},SideStory::CarbonReader,{"Uruchom czytnik kalek","Run the carbon reader"});
       if(has_side_flag(iceberg::SideFlag::ArchiveCarbonPrinted))
         add_platform_entrance();
+      add({94,44,3,4},SideStory::ArchiveLostProperty,{"Punkt rzeczy znalezionych","Lost property counter"});
     } else if(grid.template_id==104) {
+      add({66,46,3,4},SideStory::GardenSeedPod,{"Potrząśnij suchym strąkiem","Shake the dry pod"});
       add({80,29,3,4},SideStory::GardenSeedDrawer,{"Otwórz szufladę nasienną","Open the seed drawer"});
       add({94,46,4,4},SideStory::GardenSnailTap,{"Podlej ziemię przy doniczce","Water the soil by the pot"});
       add({117,46,3,4},SideStory::GardenSnailShelter,{"Przeczytaj tabliczkę","Read the shelter tag"});
@@ -62,12 +65,23 @@
     if(grid.template_id!=iceberg::NightPlatformTemplate||dt<=0.)return;
     auto &v=state.adventure;
     const auto &p=state.player;
+    const double previous_departure=v.platform_departure;
     v.platform_departure=std::max(0.,v.platform_departure-dt);
+    if(previous_departure>0.&&v.platform_departure==0.)audio.play(AudioCue::Metal1,.36f);
     v.platform_sample_left-=dt;
     if(v.platform_sample_left<=0.) {
       v.platform_sample_left+=.1;
       if(v.platform_reflection.size()==12)v.platform_reflection.erase(v.platform_reflection.begin());
       v.platform_reflection.push_back({p.x,p.y});
+    }
+    if(v.platform_shutter_open&&std::abs(p.x-iceberg::PlatformShutterX)<=4.&&p.grounded&&std::abs(p.vx)<1.5) {
+      const double before=v.platform_shutter_time;
+      v.platform_shutter_time=std::min(iceberg::PlatformShutterWait,before+dt);
+      if(before<.8&&v.platform_shutter_time>=.8)audio.play(AudioCue::Metal1,.3f);
+      if(before<1.7&&v.platform_shutter_time>=1.7)audio.play(AudioCue::Step2,.4f);
+      if(before<iceberg::PlatformShutterWait&&v.platform_shutter_time>=iceberg::PlatformShutterWait)audio.play(AudioCue::Cloth,.55f);
+    } else if(v.platform_shutter_time<iceberg::PlatformShutterWait) {
+      v.platform_shutter_time=0.;
     }
     if(!v.platform_listening)return;
     if(p.x<31.||p.x>41.) {
@@ -452,6 +466,23 @@
           "The needle reads ‘half a mug’. The scale is in Witek’s handwriting."),5);
         persist();
         break;
+      case SideStory::EstateDoormat:
+        audio.play(AudioCue::Cloth,.4f);
+        if(has_side_flag(SideFlag::LastCoatFiled))
+          notice(t("Pod wycieraczką jest suchy klucz. Na jego kółku: «Zosia» napisane tym samym pismem.",
+            "There’s a dry key under the mat. Its ring says ‘Zosia’, in the same handwriting."),6);
+        else
+          notice(t("Pod wycieraczką ktoś napisał ołówkiem: «Mamo, zapukaj. Klucz się zgubił».",
+            "Someone wrote in pencil under the mat: ‘Mum, knock. I lost my key.’"),6);
+        break;
+      case SideStory::GardenSeedPod:
+        state.adventure.seed_pod_left=iceberg::SeedPodBurstTime;
+        audio.play(AudioCue::Cloth,.55f);
+        unlock_achievement(Achievement::SeedShower);
+        notice(t("Suche nasiona za kołnierzem. Na tabliczce Celina dopisała: «Rozsiew przez kuriera».",
+          "Dry seeds down your collar. Celina added a line to the tag: ‘Dispersed by courier.’"),4);
+        persist();
+        break;
       case SideStory::GardenSeedDrawer:
         audio.play(AudioCue::Wood1,.48f);
         unlock_achievement(Achievement::GardenSeedDrawer);
@@ -488,6 +519,49 @@
           audio.play(AudioCue::Wood1,.42f);
           notice(t("Deski uginają się. Chwilę później po drugiej stronie też.",
             "The bench creaks. A moment later, so does the one on the other side."),4);
+        }
+        break;
+      case SideStory::PlatformShutter: {
+        auto &v=state.adventure;
+        if(has_side_flag(SideFlag::LastCoatFound)) {
+          notice(t("Za zasuwą widać zwykłą ścianę. Gładką, bez żadnego otworu.",
+            "There’s a plain wall behind the shutter. Smooth, with no opening."),5);
+        } else if(!has_side_flag(SideFlag::PlatformCleared)||v.platform_departure>0.) {
+          notice(t("Zasuwa jest połączona z sygnalizatorem. Ani drgnie.",
+            "The shutter is linked to the departure signal. It won't budge."),4);
+        } else if(!v.platform_shutter_open) {
+          v.platform_shutter_open=true;
+          audio.play(AudioCue::Metal2,.54f);
+          notice(t("Po drugiej stronie ktoś przestaje drapać. Zostań chwilę przy okienku.",
+            "Someone on the other side stops scratching. Stay by the hatch a moment."),5);
+        } else if(v.platform_shutter_time>=iceberg::PlatformShutterWait) {
+          remember_side_flag(SideFlag::LastCoatFound);
+          v.platform_shutter_open=false;
+          v.platform_shutter_time=0.;
+          unlock_achievement(Achievement::LastCoat);
+          animate_pickup(node,0);
+          talk({{-1,{"Spod zasuwy wysuwa się mokry płaszcz. W kieszeni kwit: «Dla Ireny w Archiwum. Powiedz Zosi, że wysiadłam».",
+                      "A wet coat slides under the shutter. There’s a slip in the pocket: ‘For Irena at the Archive. Tell Zosia I got off.’"}}});
+          persist();
+        } else {
+          notice(t("Przytrzymaj zasuwę. Ktoś jest tuż obok.","Hold the shutter. Someone is just out of sight."),4);
+        }
+        break;
+      }
+      case SideStory::ArchiveLostProperty:
+        if(has_side_flag(SideFlag::LastCoatFiled)) {
+          notice(t("Na pustym wieszaku wisi kartka: «Mamo, jestem w domu».",
+            "A note hangs from the empty hook: ‘Mum, I’m home.’"),5);
+        } else if(has_side_flag(SideFlag::LastCoatFound)) {
+          remember_side_flag(SideFlag::LastCoatFiled);
+          unlock_achievement(Achievement::HeldForCollection);
+          audio.play(AudioCue::Cloth,.6f);
+          talk({{-1,{"Na haczyku z numerem 11 wisi suchy płaszcz, identyczny z mokrym. W suchej kieszeni: «Mamo, jestem w domu». Wieszasz swój obok.",
+                      "A dry coat hangs on hook 11, identical to the wet one. In the dry pocket: ‘Mum, I’m home.’ You hang yours beside it."}}});
+          persist();
+        } else {
+          notice(t("Wieszaki 1–10 zdjęto. Przy jedenastce: «Nie likwidować. Wciąż ktoś przychodzi po odbiór».",
+            "Hooks 1–10 have been removed. Beside eleven: ‘Do not remove. Still being collected.’"),5);
         }
         break;
       case SideStory::PlatformSignal:

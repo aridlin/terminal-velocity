@@ -22,6 +22,43 @@ int main() {
     iceberg::SessionOptions options;options.no_save=true;options.mute=true;options.seed=73;
     AdventureSession game(options,std::filesystem::temp_directory_path()/"tv-quest-nosave");game.begin_campaign(true);
     {
+      using iceberg::Achievement;
+      AdventureSession rider(options,{});
+      rider.begin_campaign(true);
+      const std::array rides{
+        std::pair{&MovingPlatform::cargo_hoist,Achievement::CargoLift},
+        std::pair{&MovingPlatform::pressure_piston,Achievement::PressureLift},
+        std::pair{&MovingPlatform::chute_leaf,Achievement::LeafFlume},
+        std::pair{&MovingPlatform::archive_rack,Achievement::ArchiveRide}
+      };
+      for(const auto &[fixture,award]:rides) {
+        EngineGrid g(40,28);
+        g.adventure_level=true;g.spawn_x=12;g.spawn_y=8;
+        g.add_solid_rect(0,25,40,3);
+        g.platforms.push_back({.base={8,12,10,.5},.dy=.5,.period=4.});
+        g.platforms.front().*fixture=true;
+        g.goal={36,23,1,2};
+        install_test_room(rider,std::move(g));
+        const auto earned=[&] {
+          return iceberg::has_award(iceberg::stored_award_progress(rider.profile),award);
+        };
+        require_quest(!earned(),"being in a room with a ride does not earn its award");
+        for(int i=0;i<60&&rider.state.player.support<0;++i)rider.tick({},1./120);
+        require_quest(rider.state.player.support==0&&earned(),"actually landing on the deck earns its ride award");
+      }
+      EngineGrid hazard(40,28);
+      hazard.adventure_level=true;hazard.spawn_x=8;hazard.spawn_y=25-kPlayerHeight;
+      hazard.add_solid_rect(0,25,40,3);
+      hazard.add_hazard_rect(14,22,3,3);
+      hazard.goal={36,23,1,2};
+      install_test_room(rider,std::move(hazard));
+      rider.tick({.move=1,.dash_pressed=true},1./120);
+      for(int i=0;i<50&&rider.state.deaths==0;++i)rider.tick({.move=1},1./120);
+      require_quest(rider.state.deaths==1&&iceberg::has_award(
+        iceberg::stored_award_progress(rider.profile),Achievement::DashingHeadfirst),
+        "dashing into a hazard earns a mishap award after a real return");
+    }
+    {
       AdventureSession inspected(options,std::filesystem::temp_directory_path()/"tv-inspect-nosave");
       inspected.begin_campaign(true);install_test_room(inspected,iceworld::build_room(0,73,0));
       auto object=inspected.grid.interactions.front();
@@ -243,6 +280,37 @@ int main() {
       require_quest(save.save(side.profile)&&save.load(loaded)&&loaded.hidden_room==iceberg::NightPlatform&&
         iceberg::has_award(iceberg::stored_award_progress(loaded),Achievement::PlatformReleased),
         "the detour and expanded catalogue survive a save round trip");
+      scene(SideStory::PlatformShutter);
+      require_quest(!side.state.adventure.platform_shutter_open,
+        "the lost-property shutter stays locked while the train departs");
+      for(int i=0;i<45;++i)side.tick({},.1);
+      auto near_shutter=find(InteractionKind::SideStory,int(SideStory::PlatformShutter));
+      walk_to(side,near_shutter,[](const auto &state) {
+        return state.player.grounded&&std::abs(state.player.x-iceberg::PlatformShutterX)<1.8&&std::abs(state.player.vx)<1.;
+      });
+      interact(side);
+      require_quest(side.state.adventure.platform_shutter_open&&!has_new_award(Achievement::LastCoat),
+        "the shutter opens after the last service without immediately revealing its contents");
+      for(int i=0;i<12;++i)side.tick({},.1);
+      side.tick({.pause=true},.05);
+      const auto shutter_time=side.state.adventure.platform_shutter_time;
+      for(int i=0;i<40;++i)side.tick({},.1);
+      require_quest(side.state.adventure.platform_shutter_time==shutter_time,
+        "pausing preserves the lost-property encounter beat");
+      side.tick({.pause=true},.05);
+      walk_to(side,reach_area({51,44,1,4}));
+      require_quest(side.state.adventure.platform_shutter_time==0.,
+        "walking away before the figure arrives resets its approach");
+      walk_to(side,near_shutter,[](const auto &state) {
+        return state.player.grounded&&std::abs(state.player.x-iceberg::PlatformShutterX)<1.8&&std::abs(state.player.vx)<1.;
+      });
+      for(int i=0;i<40;++i)side.tick({},.1);
+      interact(side);
+      finish_dialogue(side);
+      require_quest(has_new_award(Achievement::LastCoat)&&side.has_side_flag(SideFlag::LastCoatFound),
+        "the coat is collected by choice after waiting");
+      require_quest(save.save(side.profile)&&save.load(loaded)&&side.profile.task_items==loaded.task_items,
+        "the coat and the new award bits survive TVICE6 serialization");
       const auto platform_exit=side.grid.interactions.front().area;
       walk_to(side,platform_exit);interact(side);
       require_quest(side.profile.hidden_room<0&&side.state.player.rect().intersects(hatch_area),
@@ -250,6 +318,18 @@ int main() {
       require_quest(side.state.adventure.platform_reflection.empty()&&
         !side.state.adventure.platform_listening&&side.state.adventure.platform_departure==0.,
         "leaving the waiting room clears its transient presentation");
+      scene(SideStory::ArchiveLostProperty);
+      finish_dialogue(side);
+      require_quest(has_new_award(Achievement::HeldForCollection)&&side.has_side_flag(SideFlag::LastCoatFiled),
+        "returning the coat to the Archive completes the secret without changing the route");
+      side.district=2;side.stage=0;side.load_room(true);
+      scene(SideStory::EstateDoormat);
+      require_quest(side.state.adventure.notice.find("Zosia")!=std::string::npos,
+        "the returned coat changes what can be found at the Estate doormat");
+      side.district=4;side.stage=0;side.load_room(true);
+      scene(SideStory::GardenSeedPod);
+      require_quest(has_new_award(Achievement::SeedShower)&&side.state.adventure.seed_pod_left>0.,
+        "shaking the optional seed pod produces a burst and a playful achievement");
       side.profile=before_line;side.district=2;side.stage=0;side.load_room(true);
       side.tick({.restart=true},1./120);
       require_quest(side.profile.district_deaths==district_retries+1&&side.profile.district_seconds>district_time,

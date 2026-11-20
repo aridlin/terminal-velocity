@@ -19,7 +19,9 @@ inline EngineGrid build_hidden(int id) {
       {{12,44,3,4},InteractionKind::SideStory,int(SideStory::PlatformBoard),{"Przeczytaj tablicę odjazdów","Read the departures board"}},
       {{34,44,4,4},InteractionKind::SideStory,int(SideStory::PlatformBench),{"Usiądź na ławce","Sit on the bench"}},
       {{iceberg::PlatformSignalX,44,3,4},InteractionKind::SideStory,int(SideStory::PlatformSignal),
-        {"Nadaj sygnał odjazdu","Give the departure signal"}}};
+        {"Nadaj sygnał odjazdu","Give the departure signal"}},
+      {{iceberg::PlatformShutterX,44,2,4},InteractionKind::SideStory,int(SideStory::PlatformShutter),
+        {"Podnieś zasuwę okienka","Lift the hatch shutter"}}};
     return g;
   }
   if(id==iceberg::UnnumberedFloor) {
