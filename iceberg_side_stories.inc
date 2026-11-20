@@ -16,7 +16,7 @@
       grid.interactions.push_back({area,InteractionKind::SideStory,int(story),label});
     };
     if(grid.template_id==100||grid.template_id==600) {
-      add(grid.template_id==600?Rect{65,39,3,4}:Rect{35,44,1.5,4},SideStory::HarborWhistle,{"Zagwiżdż przy sygnale","Blow the signal whistle"});
+      add(grid.template_id==600?Rect{88,44,3,4}:Rect{35,44,1.5,4},SideStory::HarborWhistle,{"Zagwiżdż przy sygnale","Blow the signal whistle"});
       add({2,44,2,4},SideStory::HarborStub,{"Bloczek pocztowy","Postal counterfoil"});
       add({grid.template_id==600?54.:49.,35,3,4},SideStory::HarborTicket,{"Otwórz okienko zwrotów","Open the returns hatch"});
     } else if(grid.template_id==101) {
