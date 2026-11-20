@@ -7,7 +7,31 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
+#include <vector>
 
+namespace {
+constexpr std::array SteamCueFiles{"desktop_toast_default.wav","deck_ui_achievement_toast.wav"};
+#ifndef __EMSCRIPTEN__
+std::vector<std::filesystem::path> steam_sound_directories() {
+  std::vector<std::filesystem::path> dirs;
+  if(const auto *override_path=std::getenv("TV_STEAM_SOUNDS");override_path&&*override_path)
+    dirs.emplace_back(override_path);
+#ifdef _WIN32
+  for(const char *variable:{"ProgramFiles(x86)","ProgramFiles"})
+    if(const auto *root=std::getenv(variable);root&&*root)
+      dirs.push_back(std::filesystem::path(root)/"Steam"/"steamui"/"sounds");
+#else
+  if(const auto *data=std::getenv("XDG_DATA_HOME");data&&*data)
+    dirs.push_back(std::filesystem::path(data)/"Steam"/"steamui"/"sounds");
+  if(const auto *home=std::getenv("HOME");home&&*home)
+    for(const char *root:{".steam/root",".local/share/Steam",".var/app/com.valvesoftware.Steam/.local/share/Steam"})
+      dirs.push_back(std::filesystem::path(home)/root/"steamui"/"sounds");
+#endif
+  return dirs;
+}
+#endif
+}
 struct GameAudio::Impl {
   ma_engine engine{};
   ma_context context{};
@@ -33,6 +57,15 @@ struct GameAudio::Impl {
   std::array<float, size_t(AudioCue::Count)> effect_levels{};
   std::array<std::array<Clip, 2>, size_t(AudioCue::Count)> effects;
   std::array<unsigned, size_t(AudioCue::Count)> next{};
+#ifdef __EMSCRIPTEN__
+  std::array<std::array<Clip,2>,SteamCueFiles.size()> browser_rewards;
+#endif
+  void unload(Clip &clip) {
+    if(!clip.loaded)return;
+    ma_sound_uninit(&clip.sound);
+    clip.loaded=false;
+    --clips;
+  }
   std::array<double, 4> quiet_time{};
   int current_track = -1;
   AudioScene current_scene = AudioScene::Menu;
@@ -54,6 +87,9 @@ struct GameAudio::Impl {
       for (auto &clip : voices)
         if (clip.loaded)
           ma_sound_uninit(&clip.sound);
+#ifdef __EMSCRIPTEN__
+    for(auto &voices:browser_rewards)for(auto &clip:voices)unload(clip);
+#endif
     if (film_take.loaded) ma_sound_uninit(&film_take.sound);
     if (boss_echo.loaded) ma_sound_uninit(&boss_echo.sound);
     ma_engine_uninit(&engine);
@@ -153,16 +189,27 @@ bool GameAudio::ensure_ready() {
   const char *names[] = {"jump",       "dash",   "pickup", "death",
                          "checkpoint", "land",   "step1",  "step2",
                          "refill", "spring", "menu", "win",
-    "wood1", "wood2", "metal1", "metal2", "stone1", "stone2", "valve", "voice", "paper", "bounce", "door", "steam", "lift", "cloth", "motor", "rumble", "spark", "talk0", "talk1", "talk2", "talk3", "talk4", "talk5", "talk6", "talk7", "achievement"};
+    "wood1", "wood2", "metal1", "metal2", "stone1", "stone2", "valve", "voice", "paper", "bounce", "door", "steam", "lift", "cloth", "motor", "rumble", "spark", "talk0", "talk1", "talk2", "talk3", "talk4", "talk5", "talk6", "talk7", "achievement", "achievement"};
   const float volumes[] = {.45f, .4f,  .35f, .4f, .4f,  .3f,
                            .17f, .17f, .35f, .4f, .22f, .45f,
-    .38f,.38f,.32f,.32f,.4f,.4f,.55f,.3f,.42f,.4f, .32f,.22f,.25f,.2f,.36f,.42f,.25f, .40f,.38f,.36f,.36f,.34f,.38f,.34f,.32f,.38f};
+    .38f,.38f,.32f,.32f,.4f,.4f,.55f,.3f,.42f,.4f, .32f,.22f,.25f,.2f,.36f,.42f,.25f, .40f,.38f,.36f,.36f,.34f,.38f,.34f,.32f,.38f,.38f};
+  static_assert(std::size(names)==size_t(AudioCue::Count)&&std::size(volumes)==std::size(names));
   std::copy(std::begin(volumes), std::end(volumes), impl_->effect_levels.begin());
+#ifndef __EMSCRIPTEN__
+  const auto steam_dirs=steam_sound_directories();
+#endif
   for (size_t i = 0; i < size_t(AudioCue::Count); ++i)
-    for (auto &voice : impl_->effects[i])
-      if (impl_->load(voice, directory_ / (std::string(names[i]) + ".wav"),
-                      flags | MA_SOUND_FLAG_DECODE))
-        ma_sound_set_volume(&voice.sound, volumes[i]);
+    for (auto &voice : impl_->effects[i]) {
+#ifndef __EMSCRIPTEN__
+      if(i>=size_t(AudioCue::Achievement))
+        for(const auto &dir:steam_dirs)
+          if(impl_->load(voice,dir/SteamCueFiles[i-size_t(AudioCue::Achievement)],
+                         flags|MA_SOUND_FLAG_DECODE,false))break;
+#endif
+      if(!voice.loaded)
+        impl_->load(voice,directory_/(std::string(names[i])+".wav"),flags|MA_SOUND_FLAG_DECODE);
+      if(voice.loaded)ma_sound_set_volume(&voice.sound,volumes[i]);
+    }
   return true;
 }
 void GameAudio::play(AudioCue cue, float strength) {
@@ -177,7 +224,19 @@ void GameAudio::play(AudioCue cue, float strength) {
   size_t i = size_t(cue);
   if (i >= impl_->effects.size())
     return;
-  auto &voice = impl_->effects[i][impl_->next[i]++ % 2];
+  const auto slot=impl_->next[i]++%2;
+  auto *clip=&impl_->effects[i][slot];
+#ifdef __EMSCRIPTEN__
+  if(i>=size_t(AudioCue::Achievement)) {
+    const auto kind=i-size_t(AudioCue::Achievement);
+    auto &imported=impl_->browser_rewards[kind][slot];
+    impl_->unload(imported);
+    if(impl_->load(imported,std::filesystem::path("/steam-sounds")/SteamCueFiles[kind],
+                   MA_SOUND_FLAG_NO_SPATIALIZATION|MA_SOUND_FLAG_WAIT_INIT|MA_SOUND_FLAG_DECODE,false))
+      clip=&imported;
+  }
+#endif
+  auto &voice=*clip;
   if (!voice.loaded)
     return;
   voice.strength=std::clamp(strength,0.f,1.f);
@@ -329,9 +388,16 @@ void GameAudio::set_mix(float music, float effects, float ambience) {
   music_gain_ = std::clamp(music, 0.f, 1.f);
   effects_gain_ = std::clamp(effects, 0.f, 1.f);
   ambience_gain_ = std::clamp(ambience, 0.f, 1.f);
-  if (impl_) for (size_t i=0;i<impl_->effects.size();++i)
-    for (auto &clip:impl_->effects[i]) if (clip.loaded)
-      ma_sound_set_volume(&clip.sound, impl_->effect_levels[i] * effects_gain_ * clip.strength);
+  if(!impl_)return;
+  auto adjust=[&](auto &voices,size_t cue) {
+    for(auto &clip:voices)if(clip.loaded)
+      ma_sound_set_volume(&clip.sound,impl_->effect_levels[cue]*effects_gain_*clip.strength);
+  };
+  for(size_t i=0;i<impl_->effects.size();++i)adjust(impl_->effects[i],i);
+#ifdef __EMSCRIPTEN__
+  for(size_t i=0;i<impl_->browser_rewards.size();++i)
+    adjust(impl_->browser_rewards[i],size_t(AudioCue::Achievement)+i);
+#endif
 }
 void GameAudio::set_environment(int district, bool silence) {
   environment_ = std::clamp(district, -1, 5);

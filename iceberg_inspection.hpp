@@ -19,6 +19,7 @@ inline std::vector<std::string> inspection_wrap(const std::string &text,int widt
 inline std::vector<std::string> inspection_art(InspectionArt kind,int detail=0) {
   const char *drawing="";
   switch(kind) {
+  case InspectionArt::Achievement: break;
   case InspectionArt::Parcel:drawing=R"ART(       ╭────┬────╮
       ╱     │     ╲
      ╱  ░░░ │ ░░░  ╲
@@ -247,10 +248,14 @@ struct InspectionLayout {
     return int(std::upper_bound(page_starts.begin(),page_starts.end(),offset)-page_starts.begin())-1;
   }
 };
-inline InspectionLayout inspection_layout(const std::string &title,const std::string &body,int cols,int rows) {
+inline InspectionLayout inspection_layout(const std::string &title,const std::string &body,int cols,int rows,bool achievement=false) {
   InspectionLayout l;l.title=inspection_wrap(title,cols-4);l.art_y=3+int(l.title.size())+1;
   if(cols>=56){l.art_x=2;l.text_x=33;l.text_y=l.art_y;l.text_width=cols-35;l.text_rows=rows-3-l.text_y;}
   else {l.art_x=(cols-28)/2;l.text_x=2;l.text_y=l.art_y+13;l.text_width=cols-4;l.text_rows=rows-3-l.text_y;}
+  if(achievement){
+    l.art_x=2;l.text_x=11;l.text_y=l.art_y;
+    l.text_width=cols-13;l.text_rows=rows-3-l.text_y;
+  }
   l.text_rows=std::max(1,l.text_rows);l.body=inspection_wrap(body,l.text_width);
   size_t offset=0;
   for(size_t line=0;line<l.body.size();++line) {

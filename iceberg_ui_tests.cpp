@@ -102,7 +102,7 @@ int main(){try {
       auto toast=awards.state;
       const auto locate=[&]() {
         for(int y=4;y<rows-3;++y)for(int x=0;x<cols;++x)
-          if(frame[size_t(y)][size_t(x)].glyph=="✧"&&frame[size_t(y)][size_t(x)].rgb==0xc4aa73)
+          if(frame[size_t(y)][size_t(x)].glyph=="◉"&&frame[size_t(y)][size_t(x)].rgb==0xc4aa73)
             return std::pair{x,y};
         return std::pair{-1,-1};
       };
@@ -113,7 +113,7 @@ int main(){try {
       RenderGrid(awards.grid,toast,rows,cols,2).draw();
       const auto settled=locate();
       ui_check(initial.first==cols-28&&settled.first==initial.first&&settled.second<initial.second&&
-        ui_text(frame).find("First token")!=std::string::npos,
+        ui_text(frame).find("First token")!=std::string::npos&&ui_text(frame).find("B · details")!=std::string::npos,
         "the achievement slides up from the bottom right without covering the controls");
       toast.journal=true;toast.adventure.journal_tab=3;
       RenderGrid(awards.grid,toast,rows,cols,2).draw();
@@ -121,6 +121,40 @@ int main(){try {
         ui_text(frame).find("◇ Dash and lift")!=std::string::npos,
         "the quest book shows both earned and available achievements");
     }
+  }
+
+  {
+    for(const auto locale:{iceberg::Language::English,iceberg::Language::Polish})
+      for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}) {
+        using iceberg::Achievement;
+        AdventureSession awards(options,{});
+        awards.begin_campaign(true);
+        awards.profile.language=locale;
+        awards.unlock_achievement(Achievement::CrownClean);
+        awards.unlock_achievement(Achievement::FirstToken);
+        for(int i=0;i<5;++i)awards.tick({},.08,true,cols,rows);
+        auto &v=awards.state.adventure;
+        RenderGrid(awards.grid,awards.state,rows,cols,2).draw();
+        ui_check(frame[size_t(rows-7)][size_t(cols-28)].glyph=="♜"&&
+          frame[size_t(rows-7)][size_t(cols-28)].rgb==0xffd17d&&
+          frame[size_t(rows-9)][size_t(cols-31)].background!=0x18242b,
+          "a rare toast displays its own icon and lit frame");
+        awards.tick({.inspect=true},.08,true,cols,rows);
+        const auto &item=iceberg::Achievements[size_t(Achievement::CrownClean)];
+        RenderGrid(awards.grid,awards.state,rows,cols,2).draw();
+        ui_check(v.inspecting&&v.inspect_title==item.title.get(locale)&&
+          normalize_ui(ui_body(frame)).find(item.condition.get(locale))!=std::string::npos&&
+          v.achievement_toast<0&&awards.achievement_queue.size()==1,
+          "B opens the visible reward's full description while the next reward waits");
+        awards.tick({.inspect=true},.08,true,cols,rows);
+        ui_check(!v.inspecting&&v.achievement_toast<0,"B closes achievement details without starting the next cue");
+        awards.tick({},.08,true,cols,rows);
+        ui_check(v.achievement_toast==int(Achievement::FirstToken),
+          "the next notification resumes after reading the previous reward");
+        awards.tick({.map=true},.08,true,cols,rows);
+        awards.tick({.inspect=true},.08,true,cols,rows);
+        ui_check(v.map&&!v.map_room&&!v.inspecting,"B still switches map views while a reward is pending");
+      }
   }
 
   {

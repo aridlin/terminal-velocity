@@ -20,7 +20,7 @@ enum class AudioCue {
   Wood1, Wood2, Metal1, Metal2, Stone1, Stone2,
   Valve, Voice, Paper, Bounce, Door, Steam, Lift, Cloth, Motor, Rumble, Spark,
   Talk0, Talk1, Talk2, Talk3, Talk4, Talk5, Talk6, Talk7,
-  Achievement, Count
+  Achievement, RareAchievement, Count
 };
 enum class AudioScene { Menu, Play, Paused, Win };
 // Plays downloaded recordings only. Implementation lives outside game physics.

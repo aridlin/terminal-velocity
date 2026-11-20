@@ -823,7 +823,7 @@ public:
     v.achievement_toast=int(achievement_queue.front());
     achievement_queue.erase(achievement_queue.begin());
     v.achievement_left=iceberg::AchievementToastTime;
-    audio.play(AudioCue::Achievement);
+    audio.play(iceberg::Achievements[size_t(v.achievement_toast)].rare?AudioCue::RareAchievement:AudioCue::Achievement);
   }
   void offer_outfitter_item(int index) {
     talk({{iceberg::ReplyPrompt,{}}});
@@ -1814,7 +1814,8 @@ public:
       select_resume_option();sync_view();return;
     }
     if(v.inspecting) {
-      auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,columns,rows);
+      auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,columns,rows,
+      v.inspect_art==iceberg::InspectionArt::Achievement);
       const int page=layout.page_at(v.inspect_offset);
       const bool advance=c.confirm||c.interact;
       if(c.inspect||c.pause||(advance&&page+1==layout.pages))v.inspecting=false;
@@ -1826,7 +1827,21 @@ public:
     }
     const bool toggle_overlay=c.pause||c.map||c.journal;
     if(c.inspect&&!toggle_overlay&&!v.dialogue.active()&&!state.paused&&!state.journal&&!v.map) {
-      inspect_nearby();sync_view();if(v.inspecting)return;
+      if(iceberg::achievement_toast_visible(v)&&columns>=34&&rows>=(columns>=56?20:24)) {
+        const auto &award=iceberg::Achievements[size_t(v.achievement_toast)];
+        v.inspect_title=award.title.get(v.language);
+        v.inspect_body=award.condition.get(v.language);
+        v.inspect_icon=award.icon;
+        v.inspect_art=iceberg::InspectionArt::Achievement;
+        v.inspect_detail=award.rare;
+        v.inspect_offset=0;
+        v.achievement_toast=-1;
+        v.achievement_left=0.;
+        v.inspecting=true;
+        discard_pending_movement();
+      } else inspect_nearby();
+      sync_view();
+      if(v.inspecting)return;
     }
     if(v.dialogue.active()&&state.journal&&!c.pause&&(c.map||c.journal))
       v.dialogue={}; // Let the requested overlay consume the input.

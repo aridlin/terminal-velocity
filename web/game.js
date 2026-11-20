@@ -164,6 +164,7 @@ function clearPresses(){
   pointer.dash=null;
  }
 }
+let awardToast=false;
 const overlayFlags=()=>uiFlags&1?0:uiFlags;
 const pauseScreenOpen=()=>(overlayFlags()&(2|8|64|128))===2;
 const settingsFlag=1<<4;
@@ -381,6 +382,9 @@ function translateUI(){
  }else if(switchingMap){
   touchInspect.textContent='B · '+mapViewLabel;
   inspectLabel=mapViewAction;
+ }else{
+  touchInspect.textContent=awardToast?tr('Opis','Details'):tr('Obejrzyj','Inspect');
+  if(awardToast)inspectLabel=tr('Opis osiągnięcia','Achievement details');
  }
  touchInspect.setAttribute('aria-label',inspectLabel||touchInspect.textContent);
  document.querySelector('#focus-pause').setAttribute('aria-pressed',String(!!(uiFlags&4096)));
@@ -388,6 +392,7 @@ function translateUI(){
  soundButton.setAttribute('aria-pressed',String(started&&!(uiFlags&soundMutedFlag)));
  if(!started)start.textContent=bootFailed?tr('Odśwież','Reload'):ready?tr('Uruchom','Start'):tr('Ładowanie…','Loading…');
  renderSaveStatus();
+ renderSteamSoundSettings();
 }
 function selectLanguage(language){
  english=language==='en';explicitBootLanguage=true;
@@ -405,7 +410,8 @@ window.tvUI=u=>{
  const nextTravelDistrict=u.travelDistrict??-1;
  const travelChanged=nextTravelDistrict!==travelDistrict;
  // The game sends UI state every frame. Only a transition changes the controls.
- if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&!travelChanged&&tourPicker===!!u.tourPicker&&awardsOpen===!!u.awardsOpen)return;
+ if(u.flags===uiFlags&&english===nextEnglish&&routeLegs===nextRouteLegs&&!travelChanged&&tourPicker===!!u.tourPicker&&awardsOpen===!!u.awardsOpen&&awardToast===!!u.awardToast)return;
+ awardToast=!!u.awardToast;
  if(tourPicker!==!!u.tourPicker||awardsOpen!==!!u.awardsOpen)clearInput();
  awardsOpen=!!u.awardsOpen;
  tourPicker=!!u.tourPicker;
@@ -721,6 +727,68 @@ function drawBoot(){
 }
 const playfield=document.querySelector('#playfield');
 const settingsKeys=document.querySelector('#settings-keys');
+const importSteamSounds=document.querySelector('#import-steam-sounds');
+const steamSoundFiles=document.querySelector('#steam-sound-files');
+const steamSoundStatus=document.querySelector('#steam-sound-status');
+const steamSoundNames=['desktop_toast_default.wav','deck_ui_achievement_toast.wav'];
+const steamSoundCache=()=>caches.open('terminal-velocity-steam-sounds');
+const steamSoundKey=name=>new URL('local-steam-sounds/'+name,document.baseURI).href;
+const loadedSteamSounds=new Set();
+let steamSoundError=null;
+function renderSteamSoundSettings(){
+ const count=loadedSteamSounds.size;
+ importSteamSounds.title=tr('Wybierz oba pliki powiadomień z folderu Steam steamui/sounds','Choose the two notification WAVs from Steam’s steamui/sounds folder');
+ importSteamSounds.textContent=tr('Dźwięki Steam','Steam sounds')+(count?' · '+count+'/2':'');
+ steamSoundStatus.textContent=steamSoundError?tr(...steamSoundError):'';
+ steamSoundStatus.hidden=!steamSoundError;
+}
+function installSteamSound(name,bytes){
+ Module.FS.writeFile('/steam-sounds/'+name,bytes);
+ loadedSteamSounds.add(name);
+}
+async function restoreSteamSounds(){
+ try{
+  const cache=await steamSoundCache();
+  for(const name of steamSoundNames){
+   const stored=await cache.match(steamSoundKey(name));
+   const bytes=stored&&new Uint8Array(await stored.arrayBuffer());
+   if(bytes&&!loadedSteamSounds.has(name))installSteamSound(name,bytes);
+  }
+  renderSteamSoundSettings();
+ }catch{}
+}
+importSteamSounds.onclick=()=>steamSoundFiles.click();
+steamSoundFiles.onchange=async()=>{
+ const files=Array.from(steamSoundFiles.files);
+ steamSoundFiles.value='';
+ if(!files.length)return;
+ importSteamSounds.disabled=true;
+ steamSoundError=null;
+ try{
+  let cache;
+  try{cache=await steamSoundCache();}catch{}
+  let valid=0,remembered=0;
+  for(const file of files){
+   const name=file.name.toLowerCase();
+   if(!steamSoundNames.includes(name)||file.size<44||file.size>2*1024*1024)continue;
+   const bytes=new Uint8Array(await file.arrayBuffer());
+   if(String.fromCharCode(...bytes.subarray(0,4))!=='RIFF'||String.fromCharCode(...bytes.subarray(8,12))!=='WAVE')continue;
+   installSteamSound(name,bytes);
+   ++valid;
+   try{if(cache){await cache.put(steamSoundKey(name),new Response(bytes));++remembered;}}catch{}
+  }
+  if(!valid)steamSoundError=[
+   'Wybierz desktop_toast_default.wav lub deck_ui_achievement_toast.wav z folderu steamui/sounds.',
+   'Choose desktop_toast_default.wav or deck_ui_achievement_toast.wav from steamui/sounds.'];
+  else if(remembered<valid)steamSoundError=['Dźwięki działają do odświeżenia strony.','Sounds are available until the page reloads.'];
+ }catch{
+  steamSoundError=['Nie udało się wczytać plików WAV.','Could not read the WAV files.'];
+ }finally{
+  importSteamSounds.disabled=false;
+  renderSteamSoundSettings();
+  canvas.focus({preventScroll:true});
+ }
+};
 const retryButton=document.querySelector('#toolbar [data-tap="13"]');
 const soundButton=document.querySelector('#sound');
 const soundAnchor=soundButton.nextElementSibling;
@@ -1207,6 +1275,8 @@ var Module={
    // Starting its write transaction can throw if the connection is closing.
    if(typeof reconcile==='function')idbfs.reconcile=(local,remote,done)=>
     runStorageOperation(finish=>reconcile.call(idbfs,local,remote,finish),done);
+   Module.FS.mkdir('/steam-sounds');
+   restoreSteamSounds();
    Module.FS.mkdir(persistentSaveDirectory);
    Module.FS.mount(idbfs,{},persistentSaveDirectory);
    restoreBrowserStorage().catch(failStartup);

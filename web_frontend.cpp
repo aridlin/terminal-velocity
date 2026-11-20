@@ -11,8 +11,8 @@ int web_slot=1;
 EM_JS(void, browser_frame, (const uint32_t *cells,int cols,int rows), {
   if(window.tvFrame)window.tvFrame(HEAPU32.subarray(cells>>>2,(cells>>>2)+cols*rows*4),cols,rows);
 });
-EM_JS(void, browser_ui, (int flags,int route_legs,int travel_district,int tour_picker,int awards_open,int audio_ready,int clips,const char *error), {
-  if(window.tvUI)window.tvUI({flags,routeLegs:route_legs,travelDistrict:travel_district,tourPicker:!!tour_picker,awardsOpen:!!awards_open,audioReady:audio_ready,clips,error:UTF8ToString(error)});
+EM_JS(void, browser_ui, (int flags,int route_legs,int travel_district,int tour_picker,int awards_open,int award_toast,int audio_ready,int clips,const char *error), {
+  if(window.tvUI)window.tvUI({flags,routeLegs:route_legs,travelDistrict:travel_district,tourPicker:!!tour_picker,awardsOpen:!!awards_open,awardToast:!!award_toast,audioReady:audio_ready,clips,error:UTF8ToString(error)});
 });
 EM_JS(void, browser_save_ready, (), {
   if(window.tvSaveReady)window.tvSaveReady();
@@ -50,7 +50,8 @@ void send_web_ui() {
     ((web_slot-1)<<20)|(int(v.tour_scene>=0)<<22)|(int(v.save_picker||v.tour_picker)<<23)|(int(v.smooth_camera)<<24)|
     (int(!s.menu&&iceberg::browsing_campaign_leg(v))<<25)|(int(!s.menu&&v.dialogue.choosing())<<26);
   if(v.inspecting) {
-    const auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,web_game->last_columns,web_game->last_rows);
+    const auto layout=iceberg::inspection_layout(v.inspect_title,v.inspect_body,web_game->last_columns,web_game->last_rows,
+      v.inspect_art==iceberg::InspectionArt::Achievement);
     const int page=layout.page_at(v.inspect_offset);
     flags|=(int(page>0)<<27)|(int(page+1<layout.pages)<<28);
   }
@@ -64,7 +65,9 @@ void send_web_ui() {
       route_legs=int(leg>0)|(int((leg+1)*iceberg::RoomsPerLeg<count)<<1);
     }
   }
-  browser_ui(flags,route_legs,travel_district,s.menu&&v.tour_picker,s.menu&&v.achievement_menu,web_game->audio.ready(),
+  const int cols=web_game->last_columns,rows=web_game->last_rows;
+  const bool toast=!s.menu&&!s.paused&&!s.journal&&cols>=34&&rows>=(cols>=56?20:24)&&iceberg::achievement_toast_visible(v);
+  browser_ui(flags,route_legs,travel_district,s.menu&&v.tour_picker,s.menu&&v.achievement_menu,toast,web_game->audio.ready(),
     int(web_game->audio.loaded_clips()),web_game->audio.error().c_str());
 }
 }

@@ -13,6 +13,10 @@ inline std::vector<size_t> award_entries(AwardGroup group) {
     if(group==AwardGroup::All||Achievements[i].group==group)entries.push_back(i);
   return entries;
 }
+inline bool achievement_toast_visible(const View &view) {
+  return view.achievement_toast>=0&&view.achievement_left>0.&&
+    !view.map&&!view.inspecting&&!view.dialogue.active()&&view.tour_scene<0;
+}
 inline bool browsing_campaign_leg(const View &view) {
   return view.mode==Mode::Campaign&&view.map&&view.map_route&&!view.map_room&&
     view.route.available&&view.route_page>=0&&view.route_page!=view.route.leg;
