@@ -146,7 +146,10 @@ const routeReturnFlag=1<<25,replyChoiceFlag=1<<26;
 const previousInspectionPageFlag=1<<27,nextInspectionPageFlag=1<<28;
 const previousRouteRoomFlag=1<<29,nextRouteRoomFlag=1<<30;
 const routeDirectionSelector='.route-browse [data-key],#touch .directions [data-key]';
-const expeditionTimelineOpen=()=>(overlayFlags()&(128|expeditionFlag|roomMapFlag|tourFlag))===(128|expeditionFlag);
+const expeditionMapOpen=()=>(overlayFlags()&(128|expeditionFlag|tourFlag))===(128|expeditionFlag);
+const expeditionTimelineOpen=()=>expeditionMapOpen()&&!(overlayFlags()&roomMapFlag);
+const isExpeditionMapSwitch=element=>expeditionMapOpen()&&element instanceof Element&&
+ element.matches('.map-view-switch,#touch-inspect');
 const isTimelineDirection=element=>expeditionTimelineOpen()&&element instanceof Element&&element.matches(routeDirectionSelector);
 const timelineShortcuts=new Set(['KeyB','KeyJ','KeyP','Escape']);
 const readOnlyMapOpen=()=>!!((overlayFlags()&128)&&travelDistrict<0);
@@ -195,7 +198,7 @@ function translateUI(){
  const navigationBlocked=inspecting||(reading&&!questRecordOpen());
  const hasPreviousPage=!!(overlay&previousInspectionPageFlag);
  const hasNextPage=!!(overlay&nextInspectionPageFlag);
- const expeditionMap=!!((overlay&128)&&(overlay&expeditionFlag)&&!(overlay&tourFlag));
+ const expeditionMap=expeditionMapOpen();
  const showRoute=!!(overlay&roomMapFlag);
  const timeline=expeditionTimelineOpen();
  const legControls=timeline&&routeLegs!==0;
@@ -304,8 +307,8 @@ function translateUI(){
  }else delete touchControls.dataset.compactControls;
  nameTouchDirections(overlay);
  for(const controls of document.querySelectorAll('.route-browse'))controls.hidden=!timeline;
- const mapViewLabel=showRoute?tr('Trasa','Route'):tr('Pokój','Room');
- const mapViewAction=showRoute?tr('Pokaż trasę','Show route map'):tr('Pokaż plan pokoju','Show room map');
+ const mapViewLabel=showRoute?tr('Oś trasy','Timeline'):tr('Plan pokoju','Room map');
+ const mapViewAction=showRoute?tr('Pokaż oś trasy','Show route timeline'):tr('Pokaż plan pokoju','Show room map');
  for(const button of document.querySelectorAll('.map-view-switch')){
   button.hidden=!expeditionMap;
   if(!expeditionMap)continue;
@@ -367,6 +370,7 @@ window.tvUI=u=>{
  if(tourPicker!==!!u.tourPicker)clearInput();
  tourPicker=!!u.tourPicker;
  const hadTimelineFocus=isTimelineDirection(document.activeElement);
+ const hadMapSwitchFocus=isExpeditionMapSwitch(document.activeElement);
  const hadSettingsFocus=settingsKeys.contains(document.activeElement);
  const hadTourFocus=tourControls.contains(document.activeElement);
  routeLegs=nextRouteLegs;
@@ -402,6 +406,7 @@ window.tvUI=u=>{
  }
  translateUI();
  if(!accounts?.active&&((hadTimelineFocus&&!expeditionTimelineOpen())||
+    (hadMapSwitchFocus&&!expeditionMapOpen())||
     (hadSettingsFocus&&settingsKeys.hidden)||(hadTourFocus&&tourControls.hidden)))
   canvas.focus({preventScroll:true});
 };
@@ -428,8 +433,11 @@ addEventListener('keydown',e=>{
  const tourNavigation=tourPicker&&tourControls.contains(target)&&
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape');
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
+ const timelineDirection=isTimelineDirection(target);
+ const mapShortcut=(timelineDirection||isExpeditionMapSwitch(target))&&timelineShortcuts.has(e.code);
+ const timelineNavigation=timelineDirection&&e.code.startsWith('Arrow');
  if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
-    !settingsBack&&!tourNavigation&&!(isTimelineDirection(target)&&(e.code.startsWith('Arrow')||timelineShortcuts.has(e.code))))return;
+    !settingsBack&&!tourNavigation&&!mapShortcut&&!timelineNavigation)return;
  if(accounts?.active||!started||keyMap[e.code]===undefined||e.ctrlKey||e.metaKey||e.altKey)return;
  e.preventDefault();
  if(e.repeat)return;
