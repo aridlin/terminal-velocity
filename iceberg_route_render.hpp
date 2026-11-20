@@ -170,6 +170,12 @@
     if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
       [](const PulseHazard &hazard){return hazard.kind==PulseKind::Surge;}))
       add_feature(tr("∿ Fala","∿ Surge"),0xa1d7df);
+    const auto has_arc=[&](bool powered_on) {
+      return std::any_of(grid_.pulses.begin(),grid_.pulses.end(),[&](const auto &pulse){
+        return pulse.kind==PulseKind::Arc&&pulse.powered(grid_.switch_flags)==powered_on;});
+    };
+    if(has_arc(true))add_feature(tr("⊗/≈ Przewód · ! Uwaga","⊗/≈ Cable · ! Warning"),vent_active);
+    if(has_arc(false))add_feature(tr("○ Brak zasilania","○ Power off"),vent_idle);
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t piston_docked_color=0xb5d599;
     const bool glass_catwalk=grid_.template_id==iceberg::ArchiveGlassRoom&&has_fragile;
@@ -345,6 +351,7 @@
     // Show the burst footprint behind the terrain and the exact player marker.
     constexpr uint32_t warning_tint=0x4a3d2b,burst_tint=0x59303a;
     for(const auto &vent:grid_.pulses) {
+      if(!vent.powered(grid_.switch_flags))continue;
       const bool active=vent.active(state_.elapsed);
       if(!active&&!vent.warning(state_.elapsed))continue;
       const auto area=active?vent.damage_area(state_.elapsed):vent.area;
