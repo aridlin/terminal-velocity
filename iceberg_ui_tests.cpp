@@ -49,7 +49,7 @@ int main(){try {
       for(const auto &[cols,rows]:std::array<std::pair<int,int>,2>{{{34,24},{110,34}}}) {
         RenderGrid(tour.grid,tour.state,rows,cols,2).draw();
         const auto screen=ui_text(frame);
-        for(size_t i=iceberg::DebugTour.size()-7;i<iceberg::DebugTour.size();++i)
+        for(size_t i=iceberg::DebugTour.size()-8;i<iceberg::DebugTour.size();++i)
           ui_check(screen.find(iceberg::DebugTour[i].title.get(language))!=std::string::npos,
             "the compact and wide tour menus name each authored stop");
         ui_check(screen.find(language==iceberg::Language::English?"Borrowed boardwalks":"Pożyczone pomosty")==std::string::npos,

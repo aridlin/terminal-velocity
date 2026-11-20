@@ -383,8 +383,9 @@ public:
     const auto &stop=iceberg::DebugTour[size_t(index)];
     mode=iceberg::Mode::Endless;district=stop.district;stage=2;room=depth=0;run_seed=73;run_active=false;
     profile.task_items[0]=0;
-    if(stop.source==iceberg::TourStopSource::Settlement) {
-      if(stop.room==103)remember_curio(iceberg::Curio::BasementCall);
+    if(stop.source==iceberg::TourStopSource::Settlement||stop.source==iceberg::TourStopSource::ArchiveReader) {
+      if(stop.source==iceberg::TourStopSource::ArchiveReader)remember_curio(iceberg::Curio::NightPlateRecorded);
+      else if(stop.room==103)remember_curio(iceberg::Curio::BasementCall);
       profile.task_items[1]=stop.room==102?iceberg::side_flag(iceberg::SideFlag::Roster):0;
       grid=iceworld::build_settlement(district);
       place_side_stories();
@@ -1278,6 +1279,16 @@ public:
       if(node.id==int(SideStory::ArchiveLine)) {
         describe(t("Linia 11","Line 11"),t("Wtyk jest wyjęty. Pod szybką tkwi plakietka: «Klatka 11».",
           "The plug is unplugged. A tag under the glass reads ‘Stairwell 11’."),"╪",Art::Speaker);return;
+      }
+      if(node.id==int(SideStory::CarbonReader)||node.id==int(SideStory::CarbonDial)) {
+        const bool printed=has_side_flag(SideFlag::ArchiveCarbonPrinted);
+        const auto instructions=t("Ustaw godzinę, dodatkowe obciążenie i ostemplowaną stronę według wydruku wagi. Potem użyj czytnika.",
+          "Set the time, the extra load, and the stamped side from the scale receipt. Then use the reader.");
+        const auto receipt=t("Twój wydruk · 00:07 · OBCIĄŻENIE 2 · PO TEJ STRONIE.",
+          "Your receipt · 00:07 · LOAD 2 · THIS SIDE.");
+        auto body=printed?iceberg::CarbonReaderRecord.get(profile.language):instructions;
+        if(!printed&&has_curio(iceberg::Curio::NightPlateRecorded))body+=" "+receipt;
+        describe(printed?t("Kopia spod taśmy","Carbon copy"):t("Czytnik kalek","Carbon reader"),body,"▤",Art::File);return;
       }
       if(node.id==int(SideStory::NightWeighbridge)) {
         const auto body=has_curio(iceberg::Curio::NightPlateRecorded)?
