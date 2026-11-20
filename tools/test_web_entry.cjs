@@ -1034,6 +1034,12 @@ const server=http.createServer((req,res)=>{
    window.desktopMapFrame.includes('EXPEDITION TIMELINE'));
   assert.equal(await desktopSwitch.evaluate(button=>document.activeElement===button),true);
   assert.equal(await desktopSwitch.textContent(),'Room map');
+  await expedition.keyboard.press('ArrowRight');
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 7:'));
+  await expedition.keyboard.press('ArrowDown');
+  await expedition.waitForFunction(()=>window.desktopMapFrame?.includes('Next leg 2')&&window.desktopMapFrame?.includes('Room 8:'));
+  assert.equal(await desktopSwitch.evaluate(button=>document.activeElement===button),true);
+  console.log('PASS focused map view switch supports room and leg arrows');
   await desktopBrowse.getByRole('button',{name:'Return to current room'}).click();
   await expedition.waitForFunction(()=>!!(uiFlags&128)&&window.desktopMapFrame?.includes('<01>')&&
    !window.desktopMapFrame?.includes('Room 7:')&&window.desktopMapFrame?.includes('Planned:'));
@@ -1732,6 +1738,11 @@ const server=http.createServer((req,res)=>{
     assert.equal(await action.evaluate(button=>document.activeElement===button),true);
     await page.keyboard.press('b');
     await page.waitForFunction(()=>!(uiFlags&(1<<17))&&window.expeditionFrame?.includes('Room 8:'));
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 7:'));
+    assert.equal(await action.evaluate(button=>document.activeElement===button),true);
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(()=>window.expeditionFrame?.includes('Room 8:'));
     const mapTouch=await page.context().newCDPSession(page);
     const mapActionPoint=await point(action,1);
     try{
