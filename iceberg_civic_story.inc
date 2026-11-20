@@ -213,6 +213,21 @@ inline const CivicReply &civic_reply(int scene,int option) {
     }};
     return replies[size_t(option)];
   }
+  if(scene==EstateRosterReplyScene) {
+    static const std::array<CivicReply,2> replies{{
+      {{"Wywieś liczbę","Post the count"},
+       {"Wywieś sprostowanie. Czternaście osób, bez nazwisk. Niech sąsiedzi wiedzą, że drzwi zamknięto za wcześnie.",
+        "Post a correction. Fourteen people, no names. Let the neighbors know the door was shut too early."},
+       {3,{"Przypnę je przy biurku i podpiszę. Gdy przyjdą je zdjąć, będę przy biurku. Tym razem będą musieli mnie zapytać.",
+           "I'll pin it by my desk and sign it. When they come to take it down, I'll be at the desk. This time they'll have to ask me."}}},
+      {{"Zapieczętuj odpis","Seal the copy"},
+       {"Zapieczętuj odpis. Zosia powinna móc sama zdecydować, komu go pokazać.",
+        "Seal the copy. Zosia should get to decide who sees it."},
+       {3,{"Na kopercie napiszę, gdzie może mnie znaleźć. To mój podpis na tamtym spisie. Jeśli zechce go przeczytać, przeczytam go z nią od początku.",
+           "I'll write where she can find me on the envelope. That's my signature on the old roster. If she wants to read it, I'll sit with her and start from the beginning."}}},
+    }};
+    return replies[size_t(option)];
+  }
   if(scene==ArchiveShelterReplyScene) {
     static const std::array<CivicReply,2> replies{{
       {{"Pokaż nakaz opłat","Show the charging order"},

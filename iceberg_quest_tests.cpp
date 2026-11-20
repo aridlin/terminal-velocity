@@ -101,6 +101,29 @@ int main() {
       walk_to(side,reach_area(return_shaft->area));interact(side);
       require_quest(side.profile.hidden_room<0&&side.state.player.rect().intersects(entrance)&&earned(Achievement::BelowTheRoster),
         "the service shaft returns to the same Estate entrance and awards the roster");
+      const auto before_choice=side.profile;
+      for(int option:{0,1}) {
+        using iceberg::SideFlag;
+        side.profile=before_choice;
+        side.load_room(true);
+        scene(SideStory::RosterDesk);
+        auto &dialogue=side.state.adventure.dialogue;
+        for(int i=0;i<20&&dialogue.active()&&!dialogue.choosing();++i)side.tick({.confirm=true},0.);
+        require_quest(dialogue.choosing()&&dialogue.reply_scene==iceberg::EstateRosterReplyScene,
+          "the returned roster opens a choice with Grażyna");
+        if(option)side.tick({.navigate=1},0.);
+        side.tick({.confirm=true},0.);
+        require_quest(side.has_side_flag(SideFlag::RosterPosted)==(option==0)&&
+          side.has_side_flag(SideFlag::RosterSealed)==(option==1)&&side.profile.story==before_choice.story,
+          "both roster choices persist without changing main story progression");
+        finish_dialogue(side);
+        side.load_room(true);
+        scene(SideStory::RosterDesk);
+        require_quest(side.state.adventure.inspecting&&side.state.adventure.inspect_title==
+          (option==0?side.t("Sprostowanie","Correction notice"):side.t("Zapieczętowany odpis","Sealed copy")),
+          "revisiting the desk shows the chosen record instead of repeating the exchange");
+        side.tick({.inspect=true},0.);
+      }
       scene(SideStory::Casting);
       use(InteractionKind::Npc,3);
       require_quest(earned(Achievement::SiliconeReturn)&&side.state.adventure.dialogue.lines.front().speaker==3,
