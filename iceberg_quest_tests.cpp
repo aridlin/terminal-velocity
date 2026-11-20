@@ -177,6 +177,50 @@ int main() {
     {
       using iceberg::SideStory;
       using iceberg::SideFlag;
+      AdventureSession heat(options,{});
+      heat.begin_campaign(true);
+      heat.profile.story=63;heat.district=1;heat.stage=0;heat.load_room();
+      const auto target=[&](SideStory id) {
+        const auto node=std::find_if(heat.grid.interactions.begin(),heat.grid.interactions.end(),
+          [id](const Interaction &entry){return entry.kind==InteractionKind::SideStory&&entry.id==int(id);});
+        if(node==heat.grid.interactions.end())throw std::runtime_error("missing heatworks prop");
+        return *node;
+      };
+      require_quest(!heat.side_story_available(target(SideStory::HeatworksMugBench)),
+        "Witek's bench does not displace the opening lamp or briefing");
+      walk_to(heat,reach_area(target(SideStory::HeatworksMug).area));
+      heat.tick({.inspect=true},0.);
+      require_quest(heat.state.adventure.inspecting&&!heat.has_side_flag(SideFlag::HeatworksMugTaken),
+        "inspecting the mug reads its note without picking it up");
+      heat.tick({.inspect=true},0.);
+      interact(heat);
+      require_quest(heat.has_side_flag(SideFlag::HeatworksMugTaken)&&
+        !heat.side_story_available(target(SideStory::HeatworksMug)),
+        "the lifted mug is carried and cannot be picked up twice");
+      const auto carried=heat.profile;
+      for(int option:{0,1}) {
+        heat.profile=carried;heat.load_room(true);
+        walk_to(heat,reach_area(target(SideStory::HeatworksMugBench).area));interact(heat);
+        auto &dialogue=heat.state.adventure.dialogue;
+        for(int i=0;i<20&&dialogue.active()&&!dialogue.choosing();++i)heat.tick({.confirm=true},0.);
+        require_quest(dialogue.choosing()&&dialogue.reply_scene==iceberg::HeatworksMugReplyScene&&
+          !heat.has_side_flag(SideFlag::HeatworksMugReturned),"the mug remains carried until the courier replies");
+        if(option)heat.tick({.navigate=1},0.);
+        heat.tick({.confirm=true},0.);
+        const auto &reply=iceberg::civic_reply(iceberg::HeatworksMugReplyScene,option);
+        require_quest(heat.has_side_flag(SideFlag::HeatworksMugReturned)&&heat.profile.story==carried.story&&
+          dialogue.active()&&dialogue.lines.back().text.en==reply.answer.text.en,
+          "both replies return the mug and get their own answer without changing the main story");
+        finish_dialogue(heat);
+        heat.load_room(true);
+        walk_to(heat,reach_area(target(SideStory::HeatworksMugBench).area));interact(heat);
+        require_quest(heat.state.adventure.inspecting&&heat.state.adventure.inspect_body.find("Ania")!=std::string::npos,
+          "returning later opens the signed shift rota beside the mug");
+      }
+    }
+    {
+      using iceberg::SideStory;
+      using iceberg::SideFlag;
       AdventureSession garden(options,{});
       garden.begin_campaign(true);
       garden.profile.story=63;garden.district=4;garden.stage=0;garden.load_room();

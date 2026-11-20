@@ -12,7 +12,8 @@
     if(grid.template_id==100||grid.template_id==600) {
       add({2,44,2,4},SideStory::HarborStub,{"Bloczek pocztowy","Postal counterfoil"});
     } else if(grid.template_id==101) {
-      add({29,44,3,4},SideStory::HeatworksMug,{"Sprawdź kubek na rurze","Check the mug on the pipe"});
+      add({29,44,3,4},SideStory::HeatworksMug,{"Zabierz kubek z rury","Take the mug from the pipe"});
+      add({2,48,2,4},SideStory::HeatworksMugBench,{"Oddaj Witkowi kubek","Return Witek’s mug"});
     } else if(grid.template_id==102) {
       add({34,44,4,4},SideStory::EstatePlate,{"Blaszka pod schodami","Plate under the stairs"});
       add({104,30,4,4},SideStory::Casting,{"Podnieś odlew","Pick up the casting"});
@@ -81,6 +82,8 @@
     using iceberg::SideFlag;
     switch(SideStory(node.id)) {
       case SideStory::Casting:return !has_side_flag(SideFlag::Casting);
+      case SideStory::HeatworksMug:return !has_side_flag(SideFlag::HeatworksMugTaken);
+      case SideStory::HeatworksMugBench:return has_side_flag(SideFlag::HeatworksMugTaken);
       case SideStory::GardenSnailShelter:return has_side_flag(SideFlag::GardenSnailWatered);
       default:return true;
     }
@@ -96,6 +99,12 @@
   static constexpr iceberg::Text GardenSnailTag{
     "Dziadek mówił, że ślimaki wracają tam, gdzie ostatnio znalazły wodę. Posadziłam tę funkię, żeby ten miał dokąd wrócić. — Celina",
     "Granddad said snails go back to the last place they found water. I planted this hosta so this one would have somewhere to come back to. — Celina"};
+  static constexpr iceberg::Text HeatworksMugNote{
+    "Zimna herbata. Na karteczce: «Zostaw ciepły obieg do końca nocnej zmiany. Witek nie śpi od wtorku».",
+    "Cold tea. The note reads: ‘Leave the hot circuit on through the night shift. Witek hasn't slept since Tuesday.’"};
+  static constexpr iceberg::Text HeatworksMugRota{
+    "Przy parującym kubku leży rozpiska: «6:00 — Ania przejmuje obieg. Witek idzie do domu». Poniżej dwa podpisy.",
+    "Beside the steaming mug is a rota: ‘6:00 — Ania takes the circuit. Witek goes home.’ Two signatures underneath."};
   bool side_story_interact(const Interaction &node) {
     using iceberg::Achievement;
     using iceberg::SideFlag;
@@ -183,9 +192,19 @@
         persist();
         break;
       case SideStory::HeatworksMug:
-        audio.play(AudioCue::Cloth,.6f);
-        notice(t("Zimna herbata. Pod kubkiem karteczka: «Ciepły obieg odkręcaj po nocnej zmianie. Witek nie śpi od wtorku».",
-          "Cold tea. A note under the mug: ‘Open the hot circuit after the night shift. Witek hasn't slept since Tuesday.’"),7);
+        remember_side_flag(SideFlag::HeatworksMugTaken);
+        animate_pickup(node,0);
+        notice(t("Kubek Witka w torbie. Jego stół jest przy wejściu.",
+          "Witek’s mug is in your bag. His bench is by the entrance."),4);
+        persist();
+        break;
+      case SideStory::HeatworksMugBench:
+        if(has_side_flag(SideFlag::HeatworksMugReturned))inspect_nearby();
+        else talk({{1,{"Wiedziałem, że został na rurze. Od wtorku podgrzewam tę samą herbatę. Przed chwilą Ania zabrała mi klucz od kotłowni.",
+                       "I knew I'd left it on the pipe. I've been reheating the same tea since Tuesday. Ania just took the boiler-room key off me."}},
+                   {1,{"Wrócę po odpoczynku. Kubek zostawię jej na zmianę. Kolejki do jednego kubka jeszcze nam nie wpisali do rozpiski.",
+                       "I'll come back after I've slept. She can have the mug for her shift. They haven't put a queue for it on the rota yet."}}},
+                  0,iceberg::HeatworksMugReplyScene);
         break;
       case SideStory::GardensPot:
         if(!has_side_flag(SideFlag::GardenSnailFound)) {

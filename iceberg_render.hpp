@@ -748,8 +748,24 @@
         prop_art(x,y,{"╭───────╮","│ ▤▤▤▤  │","╞═══════╡","│ ▱ ▱ ▱ │","┴───────┴"},0xaa9679);break;
       case SideStory::EmergencyBell:
         prop_art(x,y,{"╭───╮","│ ⌂ │","╰─┬─╯","  │  "},0xa49e89);break;
-      case SideStory::HeatworksMug:
-        prop_art(x,y,{"╭──╮╮","╰──╯╯"},0xc2a58a);break;
+      case SideStory::HeatworksMug: {
+        const auto bits=state_.adventure.task_items[1];
+        draw_scenery_pipe({{21,y-.65},{x+1,y-.65},{x+1,y}},0x816955);
+        if(!(bits&iceberg::side_flag(iceberg::SideFlag::HeatworksMugTaken)))
+          prop_art(x,y-.65,{"╭──╮╮","╰──╯╯"},0xc2a58a);
+        break;
+      }
+      case SideStory::HeatworksMugBench: {
+        const auto bits=state_.adventure.task_items[1];
+        const bool returned=bits&iceberg::side_flag(iceberg::SideFlag::HeatworksMugReturned);
+        prop_art(x,y,returned?std::vector<std::string>{"╭──╮╮ ▤ ","╰──╯╯   ","╞══════╡","│      │"}:
+          std::vector<std::string>{"╞══════╡","│      │"},0xc2a58a);
+        if(returned) {
+          const double rise=std::fmod(state_.adventure.presentation_time,.95);
+          world_text(x-1.1+.25*rise,y-3.6-1.8*rise,rise<.5?"·":"∿",0x9ea697);
+        }
+        break;
+      }
       case SideStory::GardensPot: {
         const auto bits=state_.adventure.task_items[1];
         const auto &v=state_.adventure;
