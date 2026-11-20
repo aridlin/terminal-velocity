@@ -809,6 +809,24 @@
           std::vector<std::string>{"╔═11═╗","║╭╮ ○║","╚╪═══╝"," ╰╴"},live?0xb2a07d:0x748387);
         break;
       }
+      case SideStory::NightWeighbridge: {
+        using iceberg::Curio;
+        const auto &v=state_.adventure;
+        const bool recorded=v.task_items[0]&iceberg::curio_bit(Curio::NightPlateRecorded);
+        const bool weighing=v.night_plate_time>0.;
+        const bool second=v.night_plate_time>=.9||recorded;
+        draw_scenery_pipe({{x,45},{x,49.7},{iceberg::NightPlateLeft,49.7},{iceberg::NightPlateLeft,50.9}},0x515a5d);
+        prop_art(x,y-3.,{"╔═══════╗",second?"║ ◴   ◷ ║":weighing?"║ ◴   · ║":"║ ○   ○ ║",
+          recorded?"╚══▤════╝":"╚═══════╝"},second?0xba8d6d:0x748282);
+        world_text(iceberg::NightPlateLeft,y-.12,"▰",0xb09b66);
+        world_text(iceberg::NightPlateRight-.52,y-.12,"▰",0xb09b66);
+        if(weighing&&second)
+          for(int i=0;i<3;++i) {
+            const double phase=std::fmod(v.night_plate_time*1.7+i*.26,1.);
+            world_text(x+.45+i*.55,y-4.-phase*2.8,"·",phase<.5?0xd1ab7b:0x786552);
+          }
+        break;
+      }
       case SideStory::NightWindow:
         prop_art(x+1,y-6.,{"╔═══╤═══╗","║░░ │  ░║","║░  │ ░░║","╚═══╧═══╝"},0x47535a);break;
       case SideStory::GardenButton:

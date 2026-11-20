@@ -14,8 +14,9 @@ inline constexpr int AuthoredDistrictCount = 6;
 inline constexpr int RoomsPerLeg = 8;
 inline constexpr int UnnumberedFloor=3;
 inline constexpr uint64_t BasementCircuitCut=1;
+inline constexpr double NightPlateLeft=99., NightPlateRight=103., NightPlateTime=2.1;
 inline constexpr double GardenSnailWalkTime=4.;
-enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket };
+enum class SideStory { HarborStub, EstatePlate, ArchiveCopy, Casting, Intercom, Tape, Roster, EmergencyBell, HeatworksMug, GardensPot, CrownPunch, RosterDesk, BasementBreaker, GardenSnailTap, GardenSnailShelter, HeatworksMugBench, ArchiveLine, NightWindow, GardenButton, EstateBirdhouse, HarborTicket, NightWeighbridge };
 // Side-story state uses the top of the second task word. Existing room tasks
 // use their original indices and retain the same save representation.
 enum class SideFlag : uint64_t {
@@ -27,7 +28,8 @@ enum class SideFlag : uint64_t {
 };
 inline constexpr uint64_t side_flag(SideFlag flag) {return static_cast<uint64_t>(flag);}
 enum class Curio : uint64_t { BasementCall=1ull<<24, GardenButton=1ull<<25,
-  GardenButtonReturned=1ull<<26, ArchiveCall=1ull<<27, CrownTicket=1ull<<28, HarborTicket=1ull<<29 };
+  GardenButtonReturned=1ull<<26, ArchiveCall=1ull<<27, CrownTicket=1ull<<28, HarborTicket=1ull<<29,
+  NightWindowSeen=1ull<<30, NightPlateRecorded=1ull<<31 };
 inline constexpr uint64_t curio_bit(Curio curio) {return static_cast<uint64_t>(curio);}
 enum class Language { Polish, English };
 enum class Mode { Campaign, Endless, Trial };
@@ -208,7 +210,7 @@ enum class Achievement {
   FirstFall, RoughRoom, MadeItAnyway, CleanDistrict, Mastery, CleanMastery, CrownClean,
   WallBounce, FerryRide, VineRide, BalconyRide, SaltBath, AllGear, FirstTestimony,
   ThreeTestimonies, BeltReverse, SiliconeReturn, LostFloor, WitnessTape, BelowTheRoster, RingAgain,
-  NextShift, CrownReached, TrailLeg, LedgeClimb, MailBag, CrownDown, CleanSurvey, CleanLeg, FullRoom, AllMail, MasonrySpring, Detour, CircuitSaved, RoughDistrict, CrownRecovery, LongWayBack, MugReturned, SnailSafe, PunchTomorrow, PowerCut, RosterChoice, PaperTrail, NightLine, LastPassenger, WrenHouse, LostReceipt, Count
+  NextShift, CrownReached, TrailLeg, LedgeClimb, MailBag, CrownDown, CleanSurvey, CleanLeg, FullRoom, AllMail, MasonrySpring, Detour, CircuitSaved, RoughDistrict, CrownRecovery, LongWayBack, MugReturned, SnailSafe, PunchTomorrow, PowerCut, RosterChoice, PaperTrail, NightLine, LastPassenger, WrenHouse, LostReceipt, NightWeight, Count
 };
 enum class AwardGroup { All, Journey, Skill, Mishaps, Oddities, Secrets };
 struct AchievementInfo { Text title,condition; AwardGroup group; bool hidden=false; };
@@ -267,7 +269,8 @@ inline constexpr std::array Achievements{
   AchievementInfo{{"Linia nocna","Night line"},{"Po rozmowie z portiernią odbierz połączenie z linii 11 w Archiwum.","After speaking to the basement intercom, answer Line 11 in the Archive."},AwardGroup::Secrets,true},
   AchievementInfo{{"Ostatni pasażer","Last passenger"},{"Zweryfikuj meldunek z linii 11 przy wyłączonej sieci.","Verify Line 11’s report with the circuit cut."},AwardGroup::Secrets,true},
   AchievementInfo{{"Dom za jeden guzik","A house for one button"},{"Zwróć z Ogrodów guzik do osiedlowego karmnika.","Return the button from the Gardens to the Estate birdhouse."},AwardGroup::Oddities,true},
-  AchievementInfo{{"Między trzecią a czwartą","Between three and four"},{"Odbierz skasowany bilet w porcie.","Collect the punched ticket at the quay."},AwardGroup::Secrets,true}
+  AchievementInfo{{"Między trzecią a czwartą","Between three and four"},{"Odbierz skasowany bilet w porcie.","Collect the punched ticket at the quay."},AwardGroup::Secrets,true},
+  AchievementInfo{{"Ciężar własny","Tare weight"},{"Po spotkaniu przy szybie zważ się na wadze peronowej.","After the encounter at the window, step on the platform scale and let it settle."},AwardGroup::Secrets,true}
 };
 static_assert(Achievements.size()==size_t(Achievement::Count));
 inline constexpr unsigned LegacyAwardCount=29;
@@ -525,7 +528,7 @@ struct View {
   uint32_t discoveries = 0;
   uint64_t awards = 0;
   int night_beat=0;
-  double night_left=0.;
+  double night_left=0., night_plate_time=0.;
   std::array<unsigned, 8> quests{};
   std::array<unsigned, 8> quest_counts{};
   std::array<uint64_t,2> task_items{};

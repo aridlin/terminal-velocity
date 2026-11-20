@@ -116,6 +116,31 @@
   static constexpr iceberg::Text HeatworksMugRota{
     "Przy parującym kubku leży rozpiska: «6:00 — Ania przejmuje obieg. Witek idzie do domu». Poniżej dwa podpisy.",
     "Beside the steaming mug is a rota: ‘6:00 — Ania takes the circuit. Witek goes home.’ Two signatures underneath."};
+  void weighbridge_step(double dt) {
+    using iceberg::Curio;
+    auto &v=state.adventure;
+    const auto &p=state.player;
+    const double x=p.x+kPlayerWidth*.5;
+    if(!has_curio(Curio::NightWindowSeen)||has_curio(Curio::NightPlateRecorded)||
+       !p.grounded||std::abs(p.vx)>1.5||x<iceberg::NightPlateLeft||x>=iceberg::NightPlateRight||
+       std::abs(p.rect().bottom()-51.)>.10) {
+      v.night_plate_time=0.;
+      return;
+    }
+    if(v.night_plate_time==0.)audio.play(AudioCue::Metal1,.24f);
+    const double before=v.night_plate_time;
+    v.night_plate_time+=dt;
+    if(before<.9&&v.night_plate_time>=.9)audio.play(AudioCue::Step2,.52f);
+    if(v.night_plate_time>=iceberg::NightPlateTime) {
+      v.night_plate_time=0.;
+      remember_curio(Curio::NightPlateRecorded);
+      unlock_achievement(iceberg::Achievement::NightWeight);
+      audio.play(AudioCue::Paper,.85f);
+      notice(t("Waga wydrukowała dwa odczyty. Drugi rośnie, choć stoisz w miejscu.",
+        "The scale prints two readings. The second rises while you stand still."),6);
+      persist();
+    }
+  }
   void night_line_step(const Player &before,int old_deaths,double dt) {
     auto &v=state.adventure;
     if(grid.template_id==103&&has_curio(iceberg::Curio::BasementCall)&&
@@ -123,14 +148,15 @@
        int((state.elapsed+.75)/4.)>int((state.elapsed-dt+.75)/4.))
       audio.play(AudioCue::Metal1,.42f);
     if(grid.template_id!=200+iceberg::UnnumberedFloor)return;
-    if(state.deaths!=old_deaths){v.night_beat=0;v.night_left=0.;return;}
+    if(state.deaths!=old_deaths){v.night_beat=0;v.night_left=v.night_plate_time=0.;return;}
     v.night_left=std::max(0.,v.night_left-dt);
     const double x=state.player.x;
     if(profile.discoveries&iceberg::achievement_bit(iceberg::Achievement::WitnessTape)) {
       if(before.x<98&&x>=98)audio.play(AudioCue::Step1,.48f);
       if(before.x<105&&x>=105)audio.play(AudioCue::Step2,.44f);
     }
-    if(!(grid.switch_flags&iceberg::BasementCircuitCut))return;
+    if(!(grid.switch_flags&iceberg::BasementCircuitCut)){v.night_plate_time=0.;return;}
+    if(dt>0.)weighbridge_step(dt);
     if(v.night_beat==1&&before.x>112&&x<=112) {
       v.night_beat=2;v.night_left=1.5;
       audio.play(AudioCue::Metal2,.41f);
@@ -291,6 +317,7 @@
           inspect_nearby();break;
         }
         auto &v=state.adventure;
+        remember_curio(Curio::NightWindowSeen);
         v.night_beat=1;v.night_left=2.8;
         audio.play(AudioCue::Rumble,.62f);
         unlock_achievement(Achievement::LastPassenger);
@@ -299,6 +326,9 @@
         persist();
         break;
       }
+      case SideStory::NightWeighbridge:
+        inspect_nearby();
+        break;
       case SideStory::GardenButton:
         remember_curio(Curio::GardenButton);
         animate_pickup(node,0);

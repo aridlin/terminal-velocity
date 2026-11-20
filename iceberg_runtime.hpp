@@ -1279,6 +1279,14 @@ public:
         describe(t("Linia 11","Line 11"),t("Wtyk jest wyjęty. Pod szybką tkwi plakietka: «Klatka 11».",
           "The plug is unplugged. A tag under the glass reads ‘Stairwell 11’."),"╪",Art::Speaker);return;
       }
+      if(node.id==int(SideStory::NightWeighbridge)) {
+        const auto body=has_curio(iceberg::Curio::NightPlateRecorded)?
+          t("00:07 · OBCIĄŻENIE 1: KURIER. OBCIĄŻENIE 2: OCZEKUJE. W rubryce «gdzie» ktoś wcisnął pieczątkę: «po tej stronie».",
+            "00:07 · LOAD 1: COURIER. LOAD 2: WAITING. Someone stamped the location field ‘THIS SIDE’."):
+          t("Instrukcja: stań nieruchomo między żółtymi kreskami, aż wskazówki się zatrzymają. Do pomiaru bez zasilania służy zapasowa sprężyna.",
+            "Stand still between the yellow lines until the needles settle. A backup spring takes measurements with the power off.");
+        describe(t("Waga peronowa","Platform scale"),body,"◴",Art::File);return;
+      }
       if(node.id==int(SideStory::NightWindow)) {
         describe(t("Szyba obserwacyjna","Observation window"),
           grid.switch_flags&iceberg::BasementCircuitCut?
