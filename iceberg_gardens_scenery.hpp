@@ -1,4 +1,40 @@
 // RenderGrid members. Glass, irrigation and rootwork share the world camera.
+  void draw_swing_vine(const SwingVine &vine,bool held) {
+    const auto [x,y]=vine.tip(state_.elapsed);
+    const double row=aspect_*scale_;
+    const int steps=std::max(1,int((y-vine.y)/row));
+    const char *strand=x>vine.x+.3?"╲":x<vine.x-.3?"╱":"│";
+    draw_scenery_pipe({{vine.x-3.,0.},{vine.x-3.,vine.y-row},
+      {vine.x+3.,vine.y-row},{vine.x+3.,0.}},0x627c71);
+    world_text(vine.x,vine.y,"●",0xd3e49c);
+    for(int i=1;i<steps;++i) {
+      const double f=double(i)/steps;
+      const double px=std::lerp(vine.x,x,f),py=std::lerp(vine.y,y,f);
+      world_text(px,py,strand,0x93bf70);
+      if(i%4==0)world_text(px+scale_,py,i%8==0?"❧":"╴",0x719b62);
+    }
+    if(held)world_text(x-1.5*scale_,y-1.5*row,"◆",0xf0e397);
+    else world_text(x,y,"○",0xbee984);
+  }
+
+  void draw_flytrap(const PulseHazard &trap) {
+    const double now=state_.elapsed,row=aspect_*scale_;
+    const double x=trap.area.x+trap.area.w*.5,y=trap.area.bottom();
+    const bool active=trap.active(now),warning=trap.warning(now);
+    const auto jaw=active?0xf78088:warning?0xebc676:0x9ed082;
+    world_text(x-2*scale_,y-row,"╰╮│╭╯",0x77985d);
+    world_text(x-3*scale_,y-2*row,active?" ╭▲▲╮ ":warning?"╲     ╱":"╰─┬┬─╯",jaw);
+    if(active)world_text(x-3*scale_,trap.area.top()," ╰▼▼╯ ",jaw);
+    if(!active&&!warning)return;
+    const double age=active?trap.cycle(now):trap.cycle(now)-PulseHazard::warning_start;
+    for(int i=0;i<8;++i) {
+      const double spread=.25+age*7.;
+      const double dx=std::sin(i*4.56)*spread;
+      const double lift=.8+std::fmod(age*9.+i*.27,2.1);
+      world_text(x+dx,y-lift,active?"✦":i%2==0?"·":"⠄",jaw);
+    }
+  }
+
   void draw_leaf_ferry(const MovingPlatform &platform,const Rect &leaf) {
     const int cells=std::max(4,int(leaf.w/scale_));
     const int middle=cells/2;

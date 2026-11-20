@@ -149,7 +149,12 @@
     constexpr uint32_t belt_color=0xa0d6df,trolley_color=0xaee1df,wheel_color=0xc5a36d;
     constexpr uint32_t refill_color=0x8ee0dd,recharging_color=0x7895a0;
     const bool has_refills=!grid_.dash_locked()&&!grid_.refills.empty();
-    const bool has_vents=!grid_.pulses.empty();
+    const bool has_vents=std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
+      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Steam;});
+    if(!grid_.vines.empty())add_feature(tr("○ Pnącze","○ Swing vine"),0xbee984);
+    if(std::any_of(grid_.pulses.begin(),grid_.pulses.end(),
+      [](const PulseHazard &hazard){return hazard.kind==PulseKind::Flytrap;}))
+      add_feature(tr("▲ Muchołówka","▲ Flytrap"),0xebc676);
     constexpr uint32_t service_lift_color=0xe4ad68,seam_color=0xc4deeb;
     constexpr uint32_t piston_docked_color=0xb5d599;
     const bool glass_catwalk=grid_.template_id==iceberg::ArchiveGlassRoom&&has_fragile;
@@ -489,11 +494,16 @@
     for(const auto &vent:grid_.pulses) {
       const bool active=vent.active(state_.elapsed),warning=vent.warning(state_.elapsed);
       mark(vent.area.x+vent.area.w*.5,vent.area.bottom(),
+        vent.kind==PulseKind::Flytrap?(active?"▲":warning?"!":"▽"):
         active?"♨":warning?"↑":"╧",active?vent_active:warning?vent_warning:vent_idle);
     }
     for(size_t i=0;i<grid_.sweets.size();++i)if(!state_.collected[i]) {
       const auto [x,y]=grid_.sweets[i];
       mark(x,y,"●",0xedc278);
+    }
+    for(const auto &vine:grid_.vines) {
+      const auto [x,y]=vine.tip(state_.elapsed);
+      mark(x,y,"○",0xbee984);
     }
     for(const auto &spring:grid_.springs)
       mark(spring.x+spring.w*.5,spring.y,spring_symbol(spring),spring.awning?awning_color:0x9dd39c);

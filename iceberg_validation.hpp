@@ -594,3 +594,29 @@ inline void add_expedition_steam(EngineGrid &room) {
   if(route.complete)room.verification_policy=route.policy;
   else room.air_fields.pop_back();
 }
+
+inline void add_garden_vines_and_traps(EngineGrid &room) {
+  if(room.district!=4||room.room_role!=iceberg::RoomRole::Traverse)return;
+  const auto &layout=iceworld::pattern(room.template_id);
+  if(iceworld::district_of(layout)!=4||layout.optional.size()<3)return;
+  const auto &takeoff=layout.optional[0],&landing=layout.optional[1],&bed=layout.optional[2];
+  const double left=takeoff.x+takeoff.w-.85;
+  const double right=landing.x-.85;
+  const double length=(right-left)*.5/std::sin(.86);
+  const double angle_y=length*std::cos(.86);
+  const SwingVine vine{(left+right)*.5,takeoff.y-4.2-angle_y,length,-1.57};
+  // Sample the swept body, including the sag at mid-span. Keep vines out
+  // of existing trellises and off the ground on every room variant.
+  for(int sample=0;sample<=64;++sample)
+    if(!ledge_clearance(room,vine.rider(sample/64.*(2.*std::acos(-1.)/1.85))))return;
+  const PulseHazard trap{{bed.x+bed.w-1.9,bed.y-2.35,1.8,2.35},
+    4.4+(room.template_id%3)*.35,.42+(room.template_id%4)*.12,PulseKind::Flytrap};
+  auto decorated=room;
+  decorated.vines.push_back(vine);
+  decorated.pulses.push_back(trap);
+  const auto route=verify_route(decorated);
+  if(route.complete&&route.deaths==0) {
+    decorated.verification_policy=route.policy;
+    room=std::move(decorated);
+  }
+}

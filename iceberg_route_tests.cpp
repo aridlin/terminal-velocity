@@ -2,8 +2,41 @@
 #include "main.cpp"
 #include <stdexcept>
 void require(bool okay,const char *why){if(!okay)throw std::runtime_error(why);std::cout<<"PASS "<<why<<'\n';}
+void test_garden_vine_and_flytrap() {
+  constexpr double dt=1./120.;
+  auto room=verified_room(48,73,4);
+  add_garden_vines_and_traps(room);
+  require(room.vines.size()==1&&room.pulses.size()==1,"Garden terrace has a swing vine and a flytrap");
+  auto run=new_state(room);
+  run.spawn_x=55.4;run.spawn_y=39.-kPlayerHeight;
+  reset_player(run);
+  for(int i=0;i<4;++i)world_step(run,room,{},dt);
+  for(int i=0;i<2;++i)world_step(run,room,{.move=1},dt);
+  Controls jump{.move=1,.jump_held=true,.jump_pressed=true};
+  for(int i=0;i<23;++i){world_step(run,room,jump,dt);jump.jump_pressed=false;}
+  require(run.player.vine==0,"a held jump catches the vine just past the edge of the terrace");
+  for(int i=0;i<60;++i)world_step(run,room,{},dt);
+  const double momentum=run.player.vx;
+  world_step(run,room,{.move=1,.jump_held=true,.jump_pressed=true},dt);
+  require(momentum>7.&&run.player.vine<0&&run.player.vx>=momentum-.5&&run.player.vy<-20.,
+    "the second jump releases the vine and preserves forward momentum");
+  for(int i=0;i<90&&!run.player.grounded;++i)
+    world_step(run,room,{.move=run.player.x<67.5?1:-1,.jump_held=true},dt);
+  require(run.deaths==0&&run.player.grounded&&run.player.x>=66.&&
+    std::abs(run.player.y+kPlayerHeight-34.)<.05,"a swing reaches the high terrace without a dash");
+  const auto &trap=room.pulses.front();
+  run.player.x=trap.area.x+.25;run.player.y=trap.area.bottom()-kPlayerHeight;
+  run.elapsed=trap.period*(1.9-trap.phase);
+  world_step(run,room,{},dt);
+  require(trap.warning(run.elapsed)&&run.deaths==0,"the flytrap warns before it can hit");
+  run.elapsed=trap.period*(1.1-trap.phase);
+  world_step(run,room,{},dt);
+  require(trap.active(run.elapsed)&&run.deaths==1&&run.player.vine==-1,"the flytrap snaps and retries at the checkpoint");
+}
+
 int main() {
   try {
+    test_garden_vine_and_flytrap();
     for(unsigned seed=0;seed<10000;++seed) {
       auto itinerary=iceworld::make_itinerary(seed,0,24,4);
       for(int leg=0;leg<3;++leg) {

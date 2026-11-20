@@ -51,8 +51,17 @@
   }
   std::string gameplay_hint() const {
     const auto &view=state_.adventure;
-    if(view.notice_left>0&&(!view.entry_notice||view.prompt.empty()))return view.notice;
-    return view.prompt.empty()?quest_focus_hint():view.prompt;
+    const auto &player=state_.player;
+    if(view.notice_left>0&&!view.entry_notice)return view.notice;
+    if(player.vine>=0)return tr("Skok: puść pnącze","Jump: release vine");
+    if(!view.prompt.empty())return view.prompt;
+    for(const auto &vine:grid_.vines) {
+      const auto [x,y]=vine.tip(state_.elapsed);
+      if(std::abs(player.x-x)<7.&&std::abs(player.y-y)<5.5)
+        return tr("Przytrzymaj skok, by złapać","Hold jump to grab vine");
+    }
+    if(view.notice_left>0)return view.notice;
+    return quest_focus_hint();
   }
   void paint_text(int row,int col,const std::string &s,uint32_t rgb,bool bold=false) {
     for(auto ch:glyphs(s))put(row,col++,{ch,Color::Text,false,bold,0,rgb});
@@ -364,6 +373,8 @@
     if(grid_.district==4) {
       for(const auto &platform:grid_.platforms)if(platform.chute_leaf)draw_leaf_chute(platform);
       draw_garden_ice();
+      for(size_t i=0;i<grid_.vines.size();++i)
+        draw_swing_vine(grid_.vines[i],state_.player.vine==int(i));
     }
     if(grid_.district==1)for(const auto &jet:grid_.air_fields) {
       if(jet.turbine) {
@@ -450,7 +461,10 @@
       double left=closed?1.:((gate.flag&v.machinery_changed)&&v.machinery_left>0?std::max(0.,1-(v.machinery_duration-v.machinery_left)/.7):0.);
       for(double y=gate.area.y;y<gate.area.y+gate.area.h*left;y+=.6)world_text(gate.area.x,y,"▒▒▒",d.accent);
     }
-    for(const auto &pulse:grid_.pulses)draw_pulse_vent(pulse);
+    for(const auto &pulse:grid_.pulses) {
+      if(pulse.kind==PulseKind::Flytrap)draw_flytrap(pulse);
+      else draw_pulse_vent(pulse);
+    }
     for(size_t i=0;i<grid_.enemies.size();++i)if(!state_.defeated[i]) {
       auto p=grid_.enemies[i].at(state_.elapsed);prop_art(p.x+p.w*.5,p.bottom(),{" ▄▄▄ ","◢▐▣▌◣"," ╱ ╲ "},0xeb6a74);
     }
