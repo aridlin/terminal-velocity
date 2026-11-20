@@ -450,8 +450,9 @@ addEventListener('keydown',e=>{
   (tourPage||e.code.startsWith('Arrow')||e.code==='Escape'||e.code==='KeyN');
  if(e.code==='Tab'&&(e.shiftKey||e.target!==canvas||pauseScreen))return;
  const timelineDirection=isTimelineDirection(target);
- const mapShortcut=(timelineDirection||isExpeditionMapAction(target))&&timelineShortcuts.has(e.code);
- const timelineNavigation=timelineDirection&&e.code.startsWith('Arrow');
+ const mapAction=isExpeditionMapAction(target);
+ const mapShortcut=(timelineDirection||mapAction)&&timelineShortcuts.has(e.code);
+ const timelineNavigation=(timelineDirection||(mapAction&&expeditionTimelineOpen()))&&e.code.startsWith('Arrow');
  if(target?.closest('button,a,input,select,textarea,[contenteditable]')&&
     !resumeShortcut&&!settingsBack&&!menuNavigation&&!cancelReplacement&&!tourNavigation&&
     !mapShortcut&&!timelineNavigation)return;
