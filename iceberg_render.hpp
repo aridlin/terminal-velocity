@@ -751,20 +751,42 @@
       world_art(x-2,31,{"╔═══╗","╚═╤═╝"},0x545d62);
       world_text(x-1,32,"▪▪▪",x==8||cleared?0xaf9566:0x79795c);
     }
-    constexpr int panes=5;
-    for(int i=0;i<panes;++i) {
-      const int x=17+i*9;
-      world_art(x,37,{"╔════════╗","║   ╱    ║","║  ╱     ║","║        ║",
-        "║        ║","║   ╱    ║","╚════════╝"},i%2?0x485663:0x515f6a);
-    }
+    const auto [left,top]=screen(17,37);
+    const auto [right,bottom]=screen(62,43);
+    const int first_row=std::max(4,top),last_row=std::min(rows_-4,bottom);
+    const int first_col=std::max(0,left),last_col=std::min(cols_-1,right);
+    const auto glass_cell=[&](int row,int col,const std::string &glyph,uint32_t color) {
+      put(row,col,{glyph,Color::Decor,false,false,0,color,0x141f28});
+    };
+    for(int row=first_row;row<=last_row;++row)
+      for(int col=first_col;col<=last_col;++col) {
+        if(row==top||row==bottom)
+          glass_cell(row,col,"─",0x647481);
+        else glass_cell(row,col,(col-left+row-top)%17==0?"╱":" ",0x2f4655);
+      }
+    const auto shadow=[&](double x,double y,uint32_t color) {
+      const auto [col,head]=screen(x,y);
+      const auto shape=std::array{"▄","█","╱"};
+      for(int i=0;i<int(shape.size());++i) {
+        const int row=head+i;
+        if(row>top&&row<bottom&&row>=first_row&&row<=last_row&&col>left&&col<right)
+          glass_cell(row,col,shape[size_t(i)],color);
+      }
+    };
     if(!cleared&&v.platform_reflection.size()>=11) {
       auto [x,y]=v.platform_reflection.front();
       if(x>=iceberg::PlatformGlassLeft&&x<iceberg::PlatformGlassRight)
-        world_art(x-1,std::clamp(y-1.7,37.5,40.5),{" ▄▄ ","▐█▌ "," ▌▐ "},0x394b53);
+        shadow(x,std::clamp(y-1.7,37.5,39.5),0x4f6773);
     }
     if(v.platform_listening&&v.platform_wait>1.) {
       const auto x=std::lerp(54.,38.,std::clamp((v.platform_wait-1.)/2.2,0.,1.));
-      world_art(x,39.5,{" ▄▄ ","▐█▌ "," ▌▐ "},0x777567);
+      shadow(x,38.5,0x928878);
+    }
+    for(int x:{17,26,35,44,53,62}) {
+      const int col=screen(x,37).first;
+      if(col<first_col||col>last_col)continue;
+      for(int row=first_row;row<=last_row;++row)
+        glass_cell(row,col,row==top||row==bottom?"┼":"│",0x647481);
     }
     if(waited&&!cleared)world_text(36,40,"···  ───→",0xafa08c);
     const auto drip=std::fmod(t,2.5);
