@@ -1289,6 +1289,8 @@ translateUI();resize();watchEngineLoad();
 window.tvPartyControls=enabled=>{
  clearInput();start.hidden=enabled||started;
  if(enabled){for(const button of document.querySelectorAll('#touch button,#toolbar [data-tap]'))button.disabled=false;}
- else setGameButtons(started);
+ else{setGameButtons(started);renderSaveStatus();}
 };
 last=performance.now();requestAnimationFrame(frame);
+
+window.tvPartyStatus=message=>{if(window.tvParty?.active&&saveStatus.textContent!==message)saveStatus.textContent=message;};

@@ -77,8 +77,8 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE void web_party_boot(int muted) {
   if(!web_game&&!web_party_sound){web_party_sound=std::make_unique<GameAudio>();web_party_sound->init(audio_directory(),bool(muted));}
 }
-EMSCRIPTEN_KEEPALIVE void web_party_mute() {
-  auto *audio=web_game?&web_game->audio:web_party_sound.get();if(audio)audio->muted=!audio->muted;
+EMSCRIPTEN_KEEPALIVE int web_party_mute() {
+  auto *audio=web_game?&web_game->audio:web_party_sound.get();if(audio)audio->muted=!audio->muted;return audio?int(audio->muted):1;
 }
 EMSCRIPTEN_KEEPALIVE void web_party_audio(unsigned cues,int district,int focused) {
   auto *audio=web_game?&web_game->audio:web_party_sound.get();if(!audio)return;

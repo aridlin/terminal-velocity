@@ -1,9 +1,10 @@
 /* All multiplayer setup, errors and room codes are drawn inside the game canvas. */
 (()=>{
- const canvas=document.getElementById('game');let socket=null,setup=null,mask=0,edges=0,lastSend=0,error='',room='',mode='race',token='',lastFrame=null;
+ const canvas=document.getElementById('game');let socket=null,setup=null,mask=0,edges=0,lastSend=0,error='',room='',mode='race',token='',lastFrame=null,lastSettings=[76,34,true];
  const api=window.tvParty={active:false};
  const english=()=>document.documentElement.lang==='en';
  const text=(pl,en)=>english()?en:pl;
+ function toggleSound(){const muted=window.Module?._web_party_mute?.();if(typeof muted==='number')document.getElementById('sound')?.setAttribute('aria-pressed',String(!!muted));}
  function panel(lines){
   if(!window.tvFrame)return;
   const w=76,h=34,data=new Uint32Array(w*h*4);
@@ -23,7 +24,7 @@
   socket.onmessage=event=>{
    if(typeof event.data==='string'){
     const f=event.data.split(' ');
-    if(f[0]==='WELCOME'){room=f[1];token=f[3];lastSend=0;}
+    if(f[0]==='WELCOME'){room=f[1];token=f[3];lastSend=0;window.tvPartyStatus?.(`${mode==='race'?text('Wyścig','Race'):text('Współpraca','Co-op')} · ${room}`);}
     else if(f[0]==='ERROR'){token='';error=event.data.slice(6);panel([text('Nie można dołączyć','Unable to join'),error,text('M: wróć','M: return')]);}
     return;
    }
@@ -54,11 +55,12 @@
   if(!api.active)return;
   if(setup){showSetup();return;}
   if(socket?.readyState!==WebSocket.OPEN)return;
-  if(pressed&(1<<16))window.Module?._web_party_mute?.();
+  if(pressed&(1<<16))toggleSound();
+  lastSettings=[Math.max(34,Math.min(160,cols)),Math.max(cols>=56?20:24,Math.min(60,rows)),isEnglish];
   edges|=pressed;const now=performance.now();
   if(now-lastSend<16)return;
   // Existing touch buttons and keyboard use the same action bits as native input.
-  socket.send(`I ${focused?((held|mask|edges)&0x3ffff):0} ${Math.max(34,Math.min(160,cols))} ${Math.max(cols>=56?20:24,Math.min(60,rows))} ${isEnglish?1:0}`);edges=0;lastSend=now;
+  socket.send(`I ${(held|mask|edges)&0x3ffff} ${Math.max(34,Math.min(160,cols))} ${Math.max(cols>=56?20:24,Math.min(60,rows))} ${isEnglish?1:0}`);edges=0;lastSend=now;
  };
  const keys={KeyA:0,ArrowLeft:0,KeyD:1,ArrowRight:1,KeyW:2,ArrowUp:2,KeyS:3,ArrowDown:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyB:7,Enter:8,KeyP:9,Tab:10,KeyJ:11,KeyR:13,KeyU:16};
  document.addEventListener('keydown',event=>{
@@ -70,11 +72,12 @@
    if(event.code==='Backspace')room=room.slice(0,-1);
    if(event.code==='ArrowUp'||event.code==='ArrowDown')mode=mode==='race'?'coop':'race';
    if(event.code==='Enter'&&room.length===6)connect(room);
-   showSetup();return;
+   if(setup)showSetup();return;
   }
-  if(keys[event.code]!==undefined){event.preventDefault();event.stopImmediatePropagation();const bit=1<<keys[event.code];mask|=bit;if(!event.repeat){edges|=bit;if(event.code==='KeyU')window.Module?._web_party_mute?.();}}
+  if(keys[event.code]!==undefined){event.preventDefault();event.stopImmediatePropagation();const bit=1<<keys[event.code];mask|=bit;if(!event.repeat){edges|=bit;if(event.code==='KeyU')toggleSound();}}
  },true);
  document.addEventListener('keyup',event=>{if(api.active&&keys[event.code]!==undefined){mask&=~(1<<keys[event.code]);event.preventDefault();event.stopImmediatePropagation();}},true);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)mask=edges=0;});
  window.addEventListener('blur',()=>{mask=edges=0;if(api.active)window.Module?._web_party_audio?.(0,0,0);});
  canvas.addEventListener('pointerup',event=>{
   if(!api.active)return;
@@ -95,13 +98,19 @@
    if(!api.active||setup)return;event.preventDefault();event.stopImmediatePropagation();
    button.setPointerCapture(event.pointerId);
    if(key===12){leave();return;}
+   if(key===16){toggleSound();return;}
    const bit=1<<key;mask|=bit;edges|=bit;
   },true);
   const release=event=>{if(api.active){mask&=~(1<<key);event.preventDefault();event.stopImmediatePropagation();}};
   button.addEventListener('pointerup',release,true);button.addEventListener('pointercancel',release,true);
-  button.addEventListener('click',event=>{if(api.active){event.preventDefault();event.stopImmediatePropagation();if(event.detail===0){if(key===12)leave();else edges|=1<<key;}}},true);
+  button.addEventListener('click',event=>{if(api.active){event.preventDefault();event.stopImmediatePropagation();if(event.detail===0){if(key===12)leave();else if(key===16)toggleSound();else edges|=1<<key;}}},true);
  }
-for(const button of document.querySelectorAll('[data-party]'))button.addEventListener('click',()=>{
+// Background tabs keep their slot without retaining movement controls.
+ setInterval(()=>{
+  if(!api.active||setup||socket?.readyState!==WebSocket.OPEN||performance.now()-lastSend<250)return;
+  const [cols,rows,en]=lastSettings;socket.send(`I 0 ${cols} ${rows} ${en?1:0}`);lastSend=performance.now();
+ },250);
+ for(const button of document.querySelectorAll('[data-party]'))button.addEventListener('click',()=>{
   try{window.Module?._web_save?.();}catch{}
   if(button.dataset.party==='join'){window.tvPartyControls?.(true);api.active=true;setup=true;room='';mode='race';error='';showSetup();canvas.focus();}
   else{mode=button.dataset.party;connect('new');}

@@ -50,7 +50,7 @@ int main(int argc,char **argv) {
       cell_frame_sink=[&](const CellFrame &f){frame=f;};
       RenderGrid(p.grid,p.state,rows,cols,2).draw();cell_frame_sink={};
       // Render the other courier as a solid, colored silhouette, including co-op waiting.
-      if(match.same_room()&&!p.state.adventure.map&&!p.state.adventure.inspecting&&!p.state.journal) {
+      if(match.connected[1-slot]&&match.same_room()&&!p.state.adventure.map&&!p.state.adventure.inspecting&&!p.state.journal) {
         const auto &other=match.players[1-slot]->state.player;
         int x=int(std::floor((other.x-p.state.camera_x)/.4));
         int y=4+int(std::floor((other.y-p.state.camera_y)/.8));
