@@ -92,7 +92,9 @@ class Room:
             if self.process.returncode is None:self.process.kill()
 
 class Service:
-    def __init__(self,engine,max_rooms=16):self.engine,self.max_rooms,self.rooms=engine,max_rooms,{}
+    def __init__(self,engine,max_rooms=16):
+        self.engine,self.max_rooms,self.rooms=engine,max_rooms,{}
+        self.create_lock=asyncio.Lock()
     async def session(self,peer):
         room=None;slot=None
         try:
@@ -102,13 +104,14 @@ class Service:
             _,code,mode,version,token=fields
             if version!='1' or mode not in ('race','coop'):raise ValueError('Version or mode mismatch')
             if code=='new':
-                if len(self.rooms)>=self.max_rooms:raise ValueError('Server full')
-                while True:
-                    code=str(secrets.randbelow(900000)+100000)
-                    if code not in self.rooms:break
-                proc=await asyncio.create_subprocess_exec(self.engine,mode,str(secrets.randbits(31)),code,
-                    stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,limit=200000)
-                room=Room(self,code,mode,proc);self.rooms[code]=room
+                async with self.create_lock:
+                    if len(self.rooms)>=self.max_rooms:raise ValueError('Server full')
+                    while True:
+                        code=str(secrets.randbelow(900000)+100000)
+                        if code not in self.rooms:break
+                    proc=await asyncio.create_subprocess_exec(self.engine,mode,str(secrets.randbits(31)),code,
+                        stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,limit=200000)
+                    room=Room(self,code,mode,proc);self.rooms[code]=room
             else:
                 if not re.fullmatch(r'[0-9]{6}',code):raise ValueError('Six-digit room code required')
                 room=self.rooms.get(code)
