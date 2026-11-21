@@ -26,7 +26,9 @@ class Room:
         self.input_settings=[(76,34,1),(76,34,1)]
         self.stale=[False,False]
         self.frozen=[False,False]
-        self.jobs = [asyncio.create_task(self.tick()), asyncio.create_task(self.read())]
+        self.outboxes=[asyncio.Queue(maxsize=1),asyncio.Queue(maxsize=1)]
+        self.jobs = [asyncio.create_task(self.tick()), asyncio.create_task(self.read()),
+                     asyncio.create_task(self.send(0)),asyncio.create_task(self.send(1)),asyncio.create_task(self.errors())]
     def command(self, line):
         if self.process.returncode is None:
             self.process.stdin.write((line+'\n').encode())
@@ -52,11 +54,30 @@ class Room:
         finally:await self.close()
     async def read(self):
         try:
-            while line:=await self.process.stdout.readline():
-                slot, payload=line.split(b' ',1);peer=self.peers[int(slot)]
-                if peer:await asyncio.wait_for(peer.send(pack_frame(bytes.fromhex(payload.decode()))),2)
-        except (ValueError,ConnectionError,asyncio.TimeoutError):pass
+            while True:
+                header=await self.process.stdout.readexactly(8)
+                slot,length=struct.unpack('<II',header)
+                if slot>1 or length<8 or length>153608:raise ValueError('Invalid worker frame')
+                payload=await self.process.stdout.readexactly(length)
+                if self.peers[slot]:
+                    queue=self.outboxes[slot]
+                    if queue.full():queue.get_nowait()
+                    queue.put_nowait(pack_frame(payload))
+        except asyncio.IncompleteReadError:pass
+        except Exception as error:print('Worker stream failed',self.code,type(error).__name__,flush=True)
         finally:await self.close()
+    async def send(self,slot):
+        while True:
+            payload=await self.outboxes[slot].get();peer=self.peers[slot]
+            if not peer:continue
+            try:await asyncio.wait_for(peer.send(payload),2)
+            except Exception:
+                if self.peers[slot] is peer:
+                    self.peers[slot]=None;self.command(f'C {slot} 0')
+                with contextlib.suppress(Exception):await asyncio.wait_for(peer.close(),2)
+    async def errors(self):
+        while line:=await self.process.stderr.readline():
+            print('Worker',self.code,line[:500].decode(errors='replace').strip(),flush=True)
     async def close(self):
         if self.owner.rooms.get(self.code) is not self:return
         self.owner.rooms.pop(self.code,None)
@@ -86,7 +107,7 @@ class Service:
                     code=str(secrets.randbelow(900000)+100000)
                     if code not in self.rooms:break
                 proc=await asyncio.create_subprocess_exec(self.engine,mode,str(secrets.randbits(31)),code,
-                    stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL,limit=400000)
+                    stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,limit=200000)
                 room=Room(self,code,mode,proc);self.rooms[code]=room
             else:
                 if not re.fullmatch(r'[0-9]{6}',code):raise ValueError('Six-digit room code required')

@@ -93,7 +93,7 @@ struct Match {
     if(forfeit)return mode==Mode::Coop?t("Partner opuścił wyprawę. M: menu","Partner left the expedition. M: menu"):
       forfeit_winner==i?t("WYGRANA — partner opuścił wyścig","YOU WIN — partner left the race"):t("Wyścig przerwany","Race interrupted");
     if(!connected[1-i])return t("Oczekiwanie na kuriera ","Waiting for courier ")+std::to_string(2-i);
-    if(!started)return ready[0]&&ready[1]?"Start: "+std::to_string(int(std::ceil(countdown))):t("ENTER/E: gotowy","ENTER/E: ready");
+    if(!started)return ready[0]&&ready[1]?"Start: "+std::to_string(int(std::ceil(countdown))):ready[i]?t("Gotowy — czekasz na partnera","Ready — waiting for partner"):t("ENTER/E: gotowy","ENTER/E: ready");
     if(ended)return mode==Mode::Coop?t("WSPÓLNA DOSTAWA","DELIVERED TOGETHER"):finish[0]==finish[1]?t("REMIS","DRAW"):(finish[i]<finish[1-i]?t("WYGRANA","YOU WIN"):t("KONIEC WYŚCIGU","RACE FINISHED"));
     if(finish[i]>=0)return t("Twój czas: ","Your time: ")+format_time(finish[i])+"s";
     if(mode==Mode::Coop&&players[i]->state.won)return t("Poczekaj przy wyjściu na partnera","Wait at the exit for your partner");

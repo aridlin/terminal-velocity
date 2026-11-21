@@ -1,7 +1,7 @@
 #define TERMINAL_VELOCITY_NO_TUI_MAIN
 #include "../main.cpp"
 #include "match.hpp"
-// Pipe protocol is local to the gateway. Each outgoing line is slot + hex frame.
+// Local pipe output: little-endian slot, byte length, then the cell frame.
 int main(int argc,char **argv) {
   const bool coop=argc>1&&std::string(argv[1])=="coop";
   const uint32_t seed=argc>2?uint32_t(std::stoul(argv[2])):1;
@@ -96,9 +96,10 @@ int main(int argc,char **argv) {
         if(cp>=128){const int n=cp<224?2:cp<240?3:4;cp&=(1u<<(7-n))-1;for(int j=1;j<n&&j<int(s.size());++j)cp=(cp<<6)|(static_cast<unsigned char>(s[j])&63);}
         put(cp);put(cell_color(cell));put(cell_background(cell));put((cell.bold?1u:0u)|(first_cell?metadata:0));first_cell=false;
       }
-      const char *hex="0123456789abcdef";std::cout<<slot<<' ';
-      for(unsigned char b:bytes)std::cout<<hex[b>>4]<<hex[b&15];
-      std::cout<<'\n';
+      std::string header;
+      for(uint32_t value:{uint32_t(slot),uint32_t(bytes.size())})for(int n=0;n<4;++n){header+=char(value&255);value>>=8;}
+      std::cout.write(header.data(),std::streamsize(header.size()));
+      std::cout.write(bytes.data(),std::streamsize(bytes.size()));
     }
     std::cout.flush();
   }

@@ -716,7 +716,7 @@ function resize(){
   cols=portraitPhone?Math.max(56,Math.ceil(width/6.5)):Math.max(76,Math.min(160,Math.floor(width/10)));
   rows=Math.max(portraitPhone?20:24,Math.min(48,Math.floor(height/(width/cols*2))));
  }
- previous=new Uint32Array(0);if(!started)drawBoot();
+ previous=new Uint32Array(0);if(!started&&!window.tvParty?.active)drawBoot();
 }addEventListener('resize',resize);
 function drawBoot(){
  const w=38,h=24,cells=new Uint32Array(w*h*4);for(let i=0;i<w*h;i++){cells[i*4]=32;cells[i*4+1]=0xc8bbb8;cells[i*4+2]=0x101923;}
@@ -1236,7 +1236,7 @@ var Module={
  },
  setStatus(){
   if(engineLoadTimer!==null)watchEngineLoad();
-  if(!started)drawBoot();
+  if(!started&&!window.tvParty?.active)drawBoot();
  },
  onAbort:failStartup
 };

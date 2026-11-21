@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Real socket tests: shared private lobby, native/browser transport, validation, reconnect."""
-import asyncio,struct,sys
+import asyncio,struct,sys,os,time,re
 from websockets.asyncio.client import connect
 
 async def frame(ws):
@@ -18,16 +18,19 @@ async def frame(ws):
    return text
  raise AssertionError('No frame')
 async def main():
- uri='ws://127.0.0.1:27889'
+ host=os.environ.get('TV_MP_TEST_HOST','127.0.0.1')
+ uri=os.environ.get('TV_MP_TEST_WS_URL',f'ws://{host}:{os.environ.get("TV_MP_TEST_WS_PORT","27889")}')
+ origin=os.environ.get('TV_MP_TEST_ORIGIN','http://127.0.0.1:8877')
+ tcp_port=int(os.environ.get('TV_MP_TEST_TCP_PORT','27890'))
  for mode in ['race','coop']:
-  async with connect(uri,origin='http://127.0.0.1:8877') as one:
+  async with connect(uri,origin=origin) as one:
    await one.send(f'JOIN new {mode} 1 -')
    welcome=(await one.recv()).split();assert welcome[0]=='WELCOME';code=welcome[1];token=welcome[3]
-   reader,writer=await asyncio.open_connection('127.0.0.1',27890)
+   reader,writer=await asyncio.open_connection(host,tcp_port)
    writer.write(f'JOIN {code} {mode} 1 -\n'.encode());await writer.drain()
    n=struct.unpack('<I',await reader.readexactly(4))[0]
    assert (await reader.readexactly(n)).startswith(b'WELCOME ')
-   async with connect(uri,origin='http://127.0.0.1:8877') as third:
+   async with connect(uri,origin=origin) as third:
     await third.send(f'JOIN {code} {mode} 1 -');assert (await third.recv()).startswith('ERROR ')
    await one.send('I 256 76 34 1');writer.write(b'I 256 76 34 1\n');await writer.drain()
    text=await frame(one);assert code in text
@@ -41,11 +44,11 @@ async def main():
    writer.close();await writer.wait_closed()
    print('PASS',mode,'shared browser/native lobby, frame dimensions, full-room rejection, invalid-input rejection')
   await asyncio.sleep(.1)
-  async with connect(uri,origin='http://127.0.0.1:8877') as resumed:
+  async with connect(uri,origin=origin) as resumed:
    await resumed.send(f'JOIN {code} {mode} 1 {token}');assert (await resumed.recv()).startswith('WELCOME ')
    await resumed.send('I 0 34 24 0');await frame(resumed)
    print('PASS reconnect identity and compact Polish frame')
- async with connect(uri,origin='http://127.0.0.1:8877') as bad:
+ async with connect(uri,origin=origin) as bad:
   await bad.send('JOIN new race 999 -');assert (await bad.recv()).startswith('ERROR ')
  print('PASS incompatible protocol rejected')
 if __name__=='__main__':asyncio.run(main())
