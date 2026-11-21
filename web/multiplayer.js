@@ -16,7 +16,7 @@
  function connect(code,reconnect=false){
   setup=null;error='';room=code;api.active=true;mask=edges=0;if(!reconnect)token='';
   panel([text('Łączenie…','Connecting…'),text('M: wróć do gry jednoosobowej','M: return to single player')]);
-  const endpoint=document.querySelector('meta[name="tv-multiplayer-url"]')?.content||'wss://prol.aridlin.pl/terminal-velocity/multiplayer';
+  const endpoint=document.querySelector('meta[name="tv-multiplayer-url"]')?.content||'wss://het.aridlin.pl/terminal-velocity/multiplayer';
   socket=new WebSocket(endpoint);socket.binaryType='arraybuffer';
   socket.onopen=()=>socket.send(`JOIN ${code} ${mode} 1 ${reconnect&&token?token:"-"}`);
   socket.onmessage=event=>{

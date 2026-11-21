@@ -23,10 +23,12 @@ python3 -m venv .multiplayer-venv
 
 The service binds loopback by default. A TLS reverse proxy should forward `/terminal-velocity/multiplayer` WebSocket upgrades to port27889; expose native TCP27890 only when intended (`--tcp-host`). No account credentials or player save files are transmitted. Rooms are limited to16, two players each; messages, input rates, frame sizes and slow clients are bounded. Empty rooms expire after60seconds. Input inactivity disconnects after10seconds. Keep the engine/service under a dedicated unprivileged user and retain rollback for updates. No deployment is claimed by this document.
 
-The browser default endpoint is `wss://prol.aridlin.pl/terminal-velocity/multiplayer`; an HTML meta `tv-multiplayer-url` overrides it for local testing. WebSocket origins are explicitly allowed with `--origin`.
+The browser default endpoint is `wss://het.aridlin.pl/terminal-velocity/multiplayer`; an HTML meta `tv-multiplayer-url` overrides it for local testing. WebSocket origins are explicitly allowed with `--origin`.
 
 ## Checks
 
 `multiplayer_match_tests` covers the match lifecycle, actual ordinary-input traversal, independent race progression and shared co-op state. `multiplayer/test_service.py` connects real browser WebSockets and native TCP to test room admission, code matching, protocol checks, reconnection and actual cell frames. Existing single-player suites remain required.
 
 Pending before release: complete a two-person terminal/SDL/browser play review, measure latency/bandwidth, verify mute/focus/resizing and control restoration, run native Windows CI, deploy the actual service, and verify public endpoints. Desktop/browser clients retry a dropped connection using their existing per-slot token; reconnection still needs real interruption testing.
+
+The public gateway terminates valid HTTPS/WSS at het.aridlin.pl and forwards to the ProLiant through its existing WireGuard tunnel. The public native endpoint is het.aridlin.pl:27890. The ProLiant remains the simulation host. A root-owned multiplayer-endpoint file beside the native executable can specify127.0.0.1:27890 for the jailed SSH entrance.
