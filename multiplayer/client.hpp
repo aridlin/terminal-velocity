@@ -145,7 +145,10 @@ struct Lobby {
     if(pressed&128){editing=false;return;}
     if(pressed&256) {
       if(selected>=2&&!editing){editing=true;return;}
-      args.endpoint="prol.aridlin.pl:27890";args.mode=selected%2?"coop":"race";
+      args.endpoint="prol.aridlin.pl:27890";
+      std::ifstream endpoint_file(audio_directory().parent_path().parent_path()/"multiplayer-endpoint");
+      std::string configured;if(endpoint_file>>configured&&configured.size()<128&&configured.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:-")==std::string::npos)args.endpoint=configured;
+      args.mode=selected%2?"coop":"race";
       args.room=selected<2?"new":room;submitted=true;
     }
   }

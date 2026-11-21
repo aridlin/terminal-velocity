@@ -52,7 +52,7 @@ def main():
             folder.mkdir()
             for name in files + ['README.md', 'README.pl.md', 'DEVELOPMENT.md', 'THIRD_PARTY.md']:
                 shutil.copy2(ROOT / name, folder / name)
-            for name in ['assets', 'docs']:
+            for name in ['assets', 'docs'] + (['multiplayer'] if platform == 'linux-x64' else []):
                 shutil.copytree(ROOT / name, folder / name, ignore=shutil.ignore_patterns('media') if name == 'docs' else None)
             hashes = []
             for name in files:
