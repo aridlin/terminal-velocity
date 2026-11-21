@@ -54,7 +54,7 @@ async def main():
     times=re.findall(r'([0-9]+\.[0-9]{2})s',latest)
     assert times and float(times[0])>=1, 'Match clock stalled: '+latest[:300]
     assert samples>=20, 'Insufficient live frames'
-    print('PASS',mode,'live countdown, clock and continuous browser/native frames',samples)
+    print('PASS',mode,'live countdown, clock and continuous browser/native frames',samples,'frames;',times[0]+'s match clock after',round(time.monotonic()-started,2),'s wall time')
    except BaseException:
     drain.cancel();raise
    # Malformed native input must disconnect only the offender, preserving the match.

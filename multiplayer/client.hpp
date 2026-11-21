@@ -100,7 +100,7 @@ public:
       if(pending.size()<size+4)break;
       auto payload=pending.substr(4,size);pending.erase(0,size+4);
       if(payload.rfind("WELCOME ",0)==0){std::istringstream in(payload);std::string type;int slot;in>>type>>code>>slot>>token;status="Room "+code;continue;}
-      if(payload.rfind("ERROR ",0)==0)throw std::runtime_error(payload.substr(6));
+      if(payload.rfind("ERROR ",0)==0){std::string message=payload.substr(6,160);for(char &ch:message)if(static_cast<unsigned char>(ch)<32||ch==127)ch=' ';throw std::runtime_error(message);}
       if(payload.size()<8)throw std::runtime_error("Truncated frame");
       const auto cols=get(payload.data());auto rows=get(payload.data()+4);
       if(rows&0x80000000u) {
@@ -137,8 +137,9 @@ inline unsigned input_mask(const Controls &c) {
 }
 struct ConnectionArgs {
   std::string endpoint,room="new",mode="race";
-  bool english=false;
-  explicit ConnectionArgs(int argc,char **argv){iceberg::Profile profile;iceberg::SaveStore().load(profile);english=profile.language==iceberg::Language::English;for(int i=1;i<argc;++i){std::string a=argv[i];if(i+1<argc){if(a=="--language")english=std::string(argv[++i])=="en";else if(a=="--online")endpoint=argv[++i];else if(a=="--room")room=argv[++i];else if(a=="--mode")mode=argv[++i];}}}
+  bool english=false,muted=false;
+  float music=.65f,effects=.75f,ambience=.55f;
+  explicit ConnectionArgs(int argc,char **argv){iceberg::Profile profile;iceberg::SaveStore().load(profile);english=profile.language==iceberg::Language::English;music=profile.music_volume;effects=profile.effects_volume;ambience=profile.ambience_volume;for(int i=1;i<argc;++i){std::string a=argv[i];if(a=="--mute")muted=true;if(i+1<argc){if(a=="--language")english=std::string(argv[++i])=="en";else if(a=="--online")endpoint=argv[++i];else if(a=="--room")room=argv[++i];else if(a=="--mode")mode=argv[++i];}}}
 };
 struct Lobby {
   int selected=0,cursor=0;bool editing=false,submitted=false;
@@ -201,7 +202,8 @@ inline int terminal_client(const ConnectionArgs &args) {
   Remote client(args.endpoint,args.room,args.mode);
   TerminalGuard terminal(true);TuiInput input(InputMode::Ssh);
   if(!terminal.active())throw std::runtime_error("Online play needs a terminal or --terminal-view");
-  GameAudio audio;audio.init(audio_directory(),std::getenv("SSH_CONNECTION")!=nullptr||std::getenv("SSH_TTY")!=nullptr);
+  GameAudio audio;audio.init(audio_directory(),args.muted||std::getenv("SSH_CONNECTION")!=nullptr||std::getenv("SSH_TTY")!=nullptr);
+  audio.set_mix(args.music,args.effects,args.ambience);
   auto last=std::chrono::steady_clock::now(),send_at=last;
   unsigned edges=0;
   std::cout<<"Connecting to multiplayer…\r\n"<<std::flush;

@@ -1499,7 +1499,8 @@ int online_window(const party::ConnectionArgs &args) {
   try {
     Font font;const auto file=audio_directory().parent_path()/"cell-font.ttf";
     if(!font.init(file.string(),(audio_directory().parent_path()/"font.ttf").string()))throw std::runtime_error("Font unavailable");
-    GameAudio party_audio;party_audio.init(audio_directory());
+    GameAudio party_audio;party_audio.init(audio_directory(),args.muted);
+    party_audio.set_mix(args.music,args.effects,args.ambience);
     auto audio_at=std::chrono::steady_clock::now();
     unsigned held=0,pulse=0;bool running=true,focused=true,fullscreen=false;
     auto send_at=std::chrono::steady_clock::now();
@@ -1563,7 +1564,7 @@ int main(int argc,char **argv) {
   cells|=explicit_cells;
   for(;;) {
     int result=cells?terminal_window_main(argc,argv):diagnostic_window_main(argc,argv);
-    if(result==12){party::ConnectionArgs lobby(0,nullptr);online_window(lobby);continue;}
+    if(result==12){party::ConnectionArgs lobby(argc,argv);online_window(lobby);continue;}
     if(result!=10)return result;
     cells=!cells;
   }
