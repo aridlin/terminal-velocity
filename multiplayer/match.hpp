@@ -25,7 +25,8 @@ struct Match {
     const int id=p.district*12+int((iceberg::mix(seed)%12+unsigned(progress[i])*5)%12);
     p.grid=verified_room(id,iceberg::mix(seed+unsigned(progress[i])),p.district);
     p.state=new_state(p.grid);p.state.menu=false;p.state.multiplayer=true;
-    p.profile.pause_on_focus_loss=false;p.stepper={};p.sync_view();
+    p.profile.pause_on_focus_loss=false;p.stepper={};
+    update_camera(p.state,p.grid,p.last_columns,std::max(1,p.last_rows-7),2,10);p.sync_view();
   }
   bool same_room()const{return progress[0]==progress[1];}
   void step(std::array<Controls,2> controls,double dt=1./120) {

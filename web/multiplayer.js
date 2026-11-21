@@ -12,9 +12,10 @@
   window.tvFrame(data,w,h);
  }
  function showSetup(){panel([text('GRA WIELOOSOBOWA','MULTIPLAYER'),text('Wpisz sześciocyfrowy kod pokoju:','Enter the six-digit room code:'),room.padEnd(6,'_'),text('↑↓: wyścig / współpraca','↑↓: race / co-op'),mode==='race'?text('WYŚCIG','RACE'):text('WSPÓŁPRACA','CO-OP'),text('ENTER: dołącz · ESC: wróć','ENTER: join · ESC: back'),error,'1       2       3       4       5','','6       7       8       9       0','','⌫       TRYB / MODE          ENTER',text('Wróć','Back')]);}
- function leave(){api.active=false;setup=null;mask=edges=0;socket?.close();socket=null;canvas.focus();}
+ function leave(){api.active=false;setup=null;mask=edges=0;socket?.close();socket=null;window.tvPartyControls?.(false);canvas.focus();}
  function connect(code,reconnect=false){
   setup=null;error='';room=code;api.active=true;mask=edges=0;if(!reconnect)token='';
+  window.tvPartyControls?.(true);window.Module?._web_party_boot?.(0);
   panel([text('Łączenie…','Connecting…'),text('M: wróć do gry jednoosobowej','M: return to single player')]);
   const endpoint=document.querySelector('meta[name="tv-multiplayer-url"]')?.content||'wss://het.aridlin.pl/terminal-velocity/multiplayer';
   socket=new WebSocket(endpoint);socket.binaryType='arraybuffer';
@@ -48,7 +49,7 @@
   socket.onclose=()=>{if(api.active&&!setup){panel([text('Połączenie utracone. Ponowne łączenie…','Connection lost. Reconnecting…'),text('M: wróć do gry','M: return to game')]);if(token)setTimeout(()=>{if(api.active&&!setup)connect(room,true);},1500);}};
   canvas.focus();
  }
- api.openSetup=()=>{api.active=true;setup=true;room='';mode='race';error='';showSetup();canvas.focus();};
+ api.openSetup=()=>{window.tvPartyControls?.(true);api.active=true;setup=true;room='';mode='race';error='';showSetup();canvas.focus();};
  api.tick=(held,pressed,cols,rows,isEnglish,focused)=>{
   if(!api.active)return;
   if(setup){showSetup();return;}
@@ -87,9 +88,22 @@
   if(setup)showSetup();
  },true);
 
- for(const button of document.querySelectorAll('[data-party]'))button.addEventListener('click',()=>{
+ 
+ for(const button of document.querySelectorAll('[data-key],[data-tap]')) {
+  const key=Number(button.dataset.key??button.dataset.tap);
+  button.addEventListener('pointerdown',event=>{
+   if(!api.active||setup)return;event.preventDefault();event.stopImmediatePropagation();
+   button.setPointerCapture(event.pointerId);
+   if(key===12){leave();return;}
+   const bit=1<<key;mask|=bit;edges|=bit;
+  },true);
+  const release=event=>{if(api.active){mask&=~(1<<key);event.preventDefault();event.stopImmediatePropagation();}};
+  button.addEventListener('pointerup',release,true);button.addEventListener('pointercancel',release,true);
+  button.addEventListener('click',event=>{if(api.active){event.preventDefault();event.stopImmediatePropagation();if(event.detail===0){if(key===12)leave();else edges|=1<<key;}}},true);
+ }
+for(const button of document.querySelectorAll('[data-party]'))button.addEventListener('click',()=>{
   try{window.Module?._web_save?.();}catch{}
-  if(button.dataset.party==='join'){api.active=true;setup=true;room='';mode='race';error='';showSetup();canvas.focus();}
+  if(button.dataset.party==='join'){window.tvPartyControls?.(true);api.active=true;setup=true;room='';mode='race';error='';showSetup();canvas.focus();}
   else{mode=button.dataset.party;connect('new');}
  });
 })();

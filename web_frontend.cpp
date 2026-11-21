@@ -4,6 +4,7 @@
 
 namespace {
 std::unique_ptr<AdventureSession> web_game;
+std::unique_ptr<GameAudio> web_party_sound;
 std::vector<uint32_t> web_cells;
 bool web_account_was_paused=false;
 const char *web_save_base="/persist/progress.dat.iceberg";
@@ -73,14 +74,19 @@ void send_web_ui() {
 }
 }
 extern "C" {
-EMSCRIPTEN_KEEPALIVE void web_party_mute() {if(web_game)web_game->audio.muted=!web_game->audio.muted;}
+EMSCRIPTEN_KEEPALIVE void web_party_boot(int muted) {
+  if(!web_game&&!web_party_sound){web_party_sound=std::make_unique<GameAudio>();web_party_sound->init(audio_directory(),bool(muted));}
+}
+EMSCRIPTEN_KEEPALIVE void web_party_mute() {
+  auto *audio=web_game?&web_game->audio:web_party_sound.get();if(audio)audio->muted=!audio->muted;
+}
 EMSCRIPTEN_KEEPALIVE void web_party_audio(unsigned cues,int district,int focused) {
-  if(!web_game)return;
-  web_game->audio.set_climax(false,0);web_game->audio.film_voice(-1,false,0,false);
-  web_game->audio.set_environment(std::clamp(district,0,5));
-  web_game->audio.update(AudioScene::Play,2,.05,bool(focused));
+  auto *audio=web_game?&web_game->audio:web_party_sound.get();if(!audio)return;
+  audio->set_climax(false,0);audio->film_voice(-1,false,0,false);
+  audio->set_environment(std::clamp(district,0,5));
+  audio->update(AudioScene::Play,2,.05,bool(focused));
   static constexpr AudioCue kinds[]={AudioCue::Jump,AudioCue::Dash,AudioCue::Pickup,AudioCue::Death,AudioCue::Checkpoint,AudioCue::Land,AudioCue::Door,AudioCue::Step1,AudioCue::Valve};
-  if(focused)for(int bit=0;bit<9;++bit)if(cues&(1u<<bit))web_game->audio.play(kinds[bit]);
+  if(focused)for(int bit=0;bit<9;++bit)if(cues&(1u<<bit))audio->play(kinds[bit]);
 }
 EMSCRIPTEN_KEEPALIVE void web_set_start_slot(int slot) {
   if(!web_game&&slot>=1&&slot<=iceberg::SaveStore::SlotCount)web_slot=slot;

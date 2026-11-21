@@ -1067,7 +1067,7 @@ start.onclick=()=>{
   setGameButtons(true);
   translateUI();
   refreshSaveControls();
-  last=performance.now();canvas.focus();requestAnimationFrame(frame);
+  last=performance.now();canvas.focus();
  } catch(error) {
   failStartup(error);
  }
@@ -1131,6 +1131,7 @@ canvas.addEventListener('pointercancel',event=>{
  if(canvasPress?.id===event.pointerId)canvasPress=null;
 });
 canvas.onclick=event=>{
+ if(window.tvParty?.active)return;
  const press=canvasPress;
  canvasPress=null;
  if(accounts?.active||importPending)return;
@@ -1259,7 +1260,7 @@ const entryRelease=page=>/^\.\/releases\/([a-f0-9]{12})\/$/.exec(
 const loadedRelease=entryRelease(document);
 let checkingRelease=false;
 async function refreshIdleEntry(){
- if(!loadedRelease||started||checkingRelease||document.hidden)return;
+ if(!loadedRelease||started||window.tvParty?.active||checkingRelease||document.hidden)return;
  checkingRelease=true;
  const controller=new AbortController();
  const deadline=setTimeout(()=>controller.abort(),2500);
@@ -1282,3 +1283,11 @@ if(loadedRelease){
 }
 
 translateUI();resize();watchEngineLoad();
+
+// Multiplayer can start directly from entry without creating a campaign profile.
+window.tvPartyControls=enabled=>{
+ clearInput();start.hidden=enabled||started;
+ if(enabled){for(const button of document.querySelectorAll('#touch button,#toolbar [data-tap]'))button.disabled=false;}
+ else setGameButtons(started);
+};
+last=performance.now();requestAnimationFrame(frame);
