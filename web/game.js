@@ -1289,7 +1289,7 @@ translateUI();resize();watchEngineLoad();
 window.tvPartyControls=enabled=>{
  clearInput();start.hidden=enabled||started;
  if(enabled){for(const button of document.querySelectorAll('#touch button,#toolbar [data-tap]'))button.disabled=false;}
- else{setGameButtons(started);renderSaveStatus();}
+ else{setGameButtons(started);renderSaveStatus();if(!started)drawBoot();}
 };
 last=performance.now();requestAnimationFrame(frame);
 

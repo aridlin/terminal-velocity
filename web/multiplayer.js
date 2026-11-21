@@ -13,9 +13,10 @@
   window.tvFrame(data,w,h);
  }
  function showSetup(){panel([text('GRA WIELOOSOBOWA','MULTIPLAYER'),text('Wpisz sześciocyfrowy kod pokoju:','Enter the six-digit room code:'),room.padEnd(6,'_'),text('↑↓: wyścig / współpraca','↑↓: race / co-op'),mode==='race'?text('WYŚCIG','RACE'):text('WSPÓŁPRACA','CO-OP'),text('ENTER: dołącz · ESC: wróć','ENTER: join · ESC: back'),error,'1       2       3       4       5','','6       7       8       9       0','','⌫       TRYB / MODE          ENTER',text('Wróć','Back')]);}
- function leave(){api.active=false;setup=null;mask=edges=0;socket?.close();socket=null;window.tvPartyControls?.(false);canvas.focus();}
+ function closeSocket(){const old=socket;socket=null;if(old){old.onmessage=old.onclose=old.onerror=null;old.close();}}
+ function leave(){api.active=false;setup=null;mask=edges=0;closeSocket();token='';lastFrame=null;window.Module?._web_party_audio?.(0,0,0);window.tvPartyControls?.(false);canvas.focus();}
  function connect(code,reconnect=false){
-  setup=null;error='';room=code;api.active=true;mask=edges=0;if(!reconnect)token='';
+  closeSocket();setup=null;error='';room=code;api.active=true;mask=edges=0;if(!reconnect)token='';
   window.tvPartyControls?.(true);window.Module?._web_party_boot?.(0);
   panel([text('Łączenie…','Connecting…'),text('M: wróć do gry jednoosobowej','M: return to single player')]);
   const endpoint=document.querySelector('meta[name="tv-multiplayer-url"]')?.content||'wss://het.aridlin.pl/terminal-velocity/multiplayer';
@@ -47,10 +48,10 @@
    lastFrame={data,w,h};window.tvFrame(data,w,h);
   };
   socket.onerror=()=>{error=text('Serwer jest niedostępny. M: wróć.','Server unavailable. M: return.');panel([text('MULTIPLAYER','MULTIPLAYER'),error]);};
-  socket.onclose=()=>{if(api.active&&!setup){panel([text('Połączenie utracone. Ponowne łączenie…','Connection lost. Reconnecting…'),text('M: wróć do gry','M: return to game')]);if(token)setTimeout(()=>{if(api.active&&!setup)connect(room,true);},1500);}};
+  socket.onclose=()=>{if(api.active&&!setup){if(error&&!token){panel([text('Nie można dołączyć','Unable to join'),error,text('M: wróć','M: return')]);return;}panel([text('Połączenie utracone. Ponowne łączenie…','Connection lost. Reconnecting…'),text('M: wróć do gry','M: return to game')]);if(token){const closedSocket=socket;setTimeout(()=>{if(api.active&&!setup&&socket===closedSocket)connect(room,true);},1500);}}};
   canvas.focus();
  }
- api.openSetup=()=>{window.tvPartyControls?.(true);api.active=true;setup=true;room='';mode='race';error='';showSetup();canvas.focus();};
+ api.openSetup=()=>{closeSocket();token='';window.tvPartyControls?.(true);api.active=true;setup=true;room='';mode='race';error='';showSetup();canvas.focus();};
  api.tick=(held,pressed,cols,rows,isEnglish,focused)=>{
   if(!api.active)return;
   if(setup){showSetup();return;}
@@ -112,7 +113,7 @@
  },250);
  for(const button of document.querySelectorAll('[data-party]'))button.addEventListener('click',()=>{
   try{window.Module?._web_save?.();}catch{}
-  if(button.dataset.party==='join'){window.tvPartyControls?.(true);api.active=true;setup=true;room='';mode='race';error='';showSetup();canvas.focus();}
+  if(button.dataset.party==='join')api.openSetup();
   else{mode=button.dataset.party;connect('new');}
  });
 })();

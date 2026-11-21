@@ -105,6 +105,7 @@ EMSCRIPTEN_KEEPALIVE int web_saved_language() {
 EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language,int muted) {
   iceberg::SessionOptions options;options.seed=seed;options.mute=muted!=0;options.save_slot=web_slot;
   if(language==0||language==1){options.language=iceberg::Language(language);options.language_override=true;}
+  web_party_sound.reset();
   web_game=std::make_unique<AdventureSession>(options,web_save_base);
   cell_frame_sink=[](const CellFrame &frame) {
     int rows=int(frame.size()),cols=rows?int(frame[0].size()):0;
