@@ -3,7 +3,7 @@
 #steam-sound-settings{flex:0 0 100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 #steam-sound-settings button{flex:0 auto;cursor:pointer}
 #steam-sound-settings button:disabled{cursor:default}
-#steam-sound-status{display:block;margin:0}#settings-keys button{flex:1}#toolbar{justify-content:center}header,footer,#touch{flex-shrink:0}
+#settings-keys button{flex:1}#toolbar{justify-content:center}header,footer,#touch{flex-shrink:0}
 
 .credits{display:block;text-align:center;color:#9baeb7;font-size:10px;margin-top:3px}
 

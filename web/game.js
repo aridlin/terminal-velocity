@@ -728,70 +728,16 @@ function drawBoot(){
 }
 const playfield=document.querySelector('#playfield');
 const settingsKeys=document.querySelector('#settings-keys');
-const importSteamSounds=document.querySelector('#import-steam-sounds');
-const steamSoundFiles=document.querySelector('#steam-sound-files');
-const steamSoundStatus=document.querySelector('#steam-sound-status');
 const testSteamSound=document.querySelector('#test-steam-sound');
-const steamSoundName='deck_ui_achievement_toast.wav';
-const steamSoundCache=()=>caches.open('terminal-velocity-steam-sounds');
-// The site's base URL changes with each game release. Keep the local key stable.
-const steamSoundKey=new URL('/.terminal-velocity-steam-sounds/'+steamSoundName,location.origin).href;
-let steamSoundLoaded=false,steamSoundError=null;
+let achievementSoundBundled=false;
 function renderSteamSoundSettings(){
- importSteamSounds.title=tr('Wybierz '+steamSoundName+' z folderu Steam steamui/sounds','Choose '+steamSoundName+' from Steam’s steamui/sounds folder');
- importSteamSounds.textContent=tr('Dźwięk Steam','Steam sound')+(steamSoundLoaded?' ✓':'');
  testSteamSound.textContent=tr('Test dźwięku osiągnięcia','Test achievement sound');
- testSteamSound.disabled=!started||!steamSoundLoaded||Boolean(uiFlags&soundMutedFlag);
- steamSoundStatus.textContent=steamSoundError?tr(...steamSoundError):'';
- steamSoundStatus.hidden=!steamSoundError;
+ testSteamSound.hidden=!achievementSoundBundled;
+ testSteamSound.disabled=!started||Boolean(uiFlags&soundMutedFlag);
 }
-function installSteamSound(bytes){
- Module.FS.writeFile('/steam-sounds/'+steamSoundName,bytes);
- steamSoundLoaded=true;
-}
-async function restoreSteamSound(){
- try{
-  const cache=await steamSoundCache();
-  const stored=await cache.match(steamSoundKey);
-  if(stored){
-   const bytes=new Uint8Array(await stored.arrayBuffer());
-   if(!steamSoundLoaded)installSteamSound(bytes);
-  }
-  renderSteamSoundSettings();
- }catch{}
-}
-importSteamSounds.onclick=()=>steamSoundFiles.click();
 testSteamSound.onclick=()=>{
  Module._web_test_achievement_sound();
  canvas.focus({preventScroll:true});
-};
-steamSoundFiles.onchange=async()=>{
- const file=steamSoundFiles.files[0];
- steamSoundFiles.value='';
- if(!file)return;
- importSteamSounds.disabled=true;
- steamSoundError=null;
- try{
-  let bytes;
-  if(file.name.toLowerCase()===steamSoundName&&file.size>=44&&file.size<=2*1024*1024)
-   bytes=new Uint8Array(await file.arrayBuffer());
-  if(!bytes||String.fromCharCode(...bytes.subarray(0,4))!=='RIFF'||String.fromCharCode(...bytes.subarray(8,12))!=='WAVE'){
-   steamSoundError=['Wybierz '+steamSoundName+' z folderu Steam steamui/sounds.',
-                    'Choose '+steamSoundName+' from Steam’s steamui/sounds folder.'];
-   return;
-  }
-  installSteamSound(bytes);
-  try{
-   const cache=await steamSoundCache();
-   await cache.put(steamSoundKey,new Response(bytes));
-  }catch{steamSoundError=['Dźwięk działa do odświeżenia strony.','The sound is available until the page reloads.'];}
- }catch{
-  steamSoundError=['Nie udało się wczytać pliku WAV.','Could not read the WAV file.'];
- }finally{
-  importSteamSounds.disabled=false;
-  renderSteamSoundSettings();
-  canvas.focus({preventScroll:true});
- }
 };
 const retryButton=document.querySelector('#toolbar [data-tap="13"]');
 const soundButton=document.querySelector('#sound');
@@ -1279,8 +1225,7 @@ var Module={
    // Starting its write transaction can throw if the connection is closing.
    if(typeof reconcile==='function')idbfs.reconcile=(local,remote,done)=>
     runStorageOperation(finish=>reconcile.call(idbfs,local,remote,finish),done);
-   Module.FS.mkdir('/steam-sounds');
-   restoreSteamSound();
+   achievementSoundBundled=Module.FS.analyzePath('/steam-sounds/deck_ui_achievement_toast.wav').exists;
    Module.FS.mkdir(persistentSaveDirectory);
    Module.FS.mount(idbfs,{},persistentSaveDirectory);
    restoreBrowserStorage().catch(failStartup);
