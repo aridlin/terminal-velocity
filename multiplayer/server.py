@@ -101,7 +101,7 @@ class Service:
                 f=line.split()
                 if len(f)!=5 or f[0]!='I':raise ValueError('Invalid input')
                 mask,cols,rows,language=map(int,f[1:])
-                if not (0<=mask<1<<18 and 34<=cols<=160 and 24<=rows<=60 and language in (0,1)):raise ValueError('Invalid input')
+                if not (0<=mask<1<<18 and 34<=cols<=160 and (24 if cols<56 else 20)<=rows<=60 and language in (0,1)):raise ValueError('Invalid input')
                 now=time.monotonic()
                 if now-interval>=1:interval=now;count=0
                 count+=1

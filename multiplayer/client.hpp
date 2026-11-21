@@ -54,7 +54,7 @@ public:
   void input(unsigned mask,int cols,int rows,bool english) {
     if(fd==ghosts::invalid_socket)return;
     send_line("I "+std::to_string(mask)+" "+std::to_string(std::clamp(cols,34,160))+" "+
-      std::to_string(std::clamp(rows,24,60))+" "+std::to_string(int(english)));
+      std::to_string(std::clamp(rows,cols>=56?20:24,60))+" "+std::to_string(int(english)));
   }
   static std::string glyph(uint32_t cp) {
     std::string out;
@@ -105,7 +105,7 @@ public:
       const auto cols=get(payload.data());auto rows=get(payload.data()+4);
       if(rows&0x80000000u) {
         rows&=0x7fffffffu;
-        if(cols<34||cols>160||rows<24||rows>60)throw std::runtime_error("Invalid packed dimensions");
+        if(cols<34||cols>160||rows<(cols>=56?20:24)||rows>60)throw std::runtime_error("Invalid packed dimensions");
         std::string expanded=payload.substr(0,8);for(int j=0;j<4;++j)expanded[4+j]=char((rows>>(j*8))&255);
         size_t at=8,cells=0;
         while(at<payload.size()) {
@@ -117,7 +117,7 @@ public:
         }
         payload=std::move(expanded);
       }
-      if(cols<34||cols>160||rows<24||rows>60||payload.size()!=8+cols*rows*16)throw std::runtime_error("Invalid cell dimensions");
+      if(cols<34||cols>160||rows<(cols>=56?20:24)||rows>60||payload.size()!=8+cols*rows*16)throw std::runtime_error("Invalid cell dimensions");
       cues|=(get(payload.data()+20)>>1)&511;district=int(get(payload.data()+20)>>24);
       frame.assign(rows,std::vector<Cell>(cols));size_t at=8;
       for(auto &row:frame)for(auto &cell:row){cell.glyph=glyph(get(payload.data()+at));cell.rgb=get(payload.data()+at+4);cell.background=get(payload.data()+at+8);cell.bold=get(payload.data()+at+12)&1;at+=16;}
@@ -164,7 +164,7 @@ struct Lobby {
     }
   }
   CellFrame draw(int cols=76,int rows=34) const {
-    cols=std::clamp(cols,34,160);rows=std::clamp(rows,24,60);
+    cols=std::clamp(cols,34,160);rows=std::clamp(rows,cols>=56?20:24,60);
     CellFrame frame(rows,std::vector<Cell>(cols));
     for(auto &row:frame)for(auto &cell:row){cell.background=0x101923;cell.rgb=0xd5e8ed;}
     auto line=[&](int y,const std::string &text){int x=2;for(size_t i=0;i<text.size()&&x<cols-2;){const unsigned char c=text[i];const size_t n=c<128?1:c<224?2:c<240?3:4;frame[y][x++].glyph=text.substr(i,n);i+=n;}};
@@ -173,8 +173,8 @@ struct Lobby {
     for(int i=0;i<4;++i)line(5+i*2,std::string(selected==i?"> ":"  ")+choices[i]);
     line(14,"Room / Pokój: "+room);
     if(editing)line(15,std::string(14+cursor,' ')+"^");
-    line(18,editing?"W/S: digit  A/D: cursor  ENTER: join  B: back":"W/S: choose  ENTER: confirm  Q/M: leave");
-    line(21,error);
+    line(17,editing?"W/S: digit  A/D: cursor  ENTER: join  B: back":"W/S: choose  ENTER: confirm  Q/M: leave");
+    line(std::min(rows-2,21),error);
     return frame;
   }
 };

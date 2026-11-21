@@ -29,7 +29,7 @@
    }
    if(event.data.byteLength<8||event.data.byteLength>153608)return;
    const view=new DataView(event.data),w=view.getUint32(0,true),encodedRows=view.getUint32(4,true),h=encodedRows&0x7fffffff;
-   if(w<34||w>160||h<24||h>60)return;
+   if(w<34||w>160||h<(w>=56?20:24)||h>60)return;
    const data=new Uint32Array(w*h*4);
    if(encodedRows>>>31){
     let at=8,cell=0;
@@ -58,7 +58,7 @@
   edges|=pressed;const now=performance.now();
   if(now-lastSend<16)return;
   // Existing touch buttons and keyboard use the same action bits as native input.
-  socket.send(`I ${focused?((held|mask|edges)&0x3ffff):0} ${Math.max(34,Math.min(160,cols))} ${Math.max(24,Math.min(60,rows))} ${isEnglish?1:0}`);edges=0;lastSend=now;
+  socket.send(`I ${focused?((held|mask|edges)&0x3ffff):0} ${Math.max(34,Math.min(160,cols))} ${Math.max(cols>=56?20:24,Math.min(60,rows))} ${isEnglish?1:0}`);edges=0;lastSend=now;
  };
  const keys={KeyA:0,ArrowLeft:0,KeyD:1,ArrowRight:1,KeyW:2,ArrowUp:2,KeyS:3,ArrowDown:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyB:7,Enter:8,KeyP:9,Tab:10,KeyJ:11,KeyR:13,KeyU:16};
  document.addEventListener('keydown',event=>{
@@ -88,7 +88,7 @@
   if(setup)showSetup();
  },true);
 
- 
+
  for(const button of document.querySelectorAll('[data-key],[data-tap]')) {
   const key=Number(button.dataset.key??button.dataset.tap);
   button.addEventListener('pointerdown',event=>{

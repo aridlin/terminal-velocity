@@ -1525,7 +1525,7 @@ int online_window(const party::ConnectionArgs &args) {
       }
       int width,height;SDL_GetRendererOutputSize(ren,&width,&height);
       const int cell=std::max(6,std::min(width/110,height/68));
-      const int cols=std::clamp(width/cell,34,160),rows=std::clamp(height/(cell*2),24,60);
+      const int cols=std::clamp(width/cell,34,160),rows=std::clamp(height/(cell*2),cols>=56?20:24,60);
       auto now=std::chrono::steady_clock::now();
       if(!remote) {
         lobby.tick(held|pulse);pulse=0;

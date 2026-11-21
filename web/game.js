@@ -13,6 +13,7 @@ function setGameButtons(enabled){
  for(const button of gameButtons)button.disabled=!enabled;
 }
 setGameButtons(false);
+for(const button of document.querySelectorAll('[data-party]'))button.disabled=true;
 const mobile=()=>matchMedia('(pointer:coarse)').matches||innerWidth<760||(innerHeight<500&&innerWidth<1100);
 const languageKey='terminal-velocity.language',pendingLanguageKey='terminal-velocity.pending-language';
 let pendingBootLanguage=null;
@@ -1180,7 +1181,7 @@ async function finishBoot(storageError,canWrite=true){
   browserStorageWritable=!storageError&&canWrite;
   if(storageError)browserSaveStatus=['Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups'];
   else if(!canWrite)browserSaveStatus=['Inna karta zapisuje — pobierz kopię','Another tab is saving — download a copy'];
-  ready=true;start.disabled=false;translateUI();
+  ready=true;start.disabled=false;for(const button of document.querySelectorAll('[data-party]'))button.disabled=false;translateUI();
   drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
  }catch(error){failStartup(error);}
 }

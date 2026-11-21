@@ -21,7 +21,8 @@ int main(int argc,char **argv) {
     if(op=='I') {
       if(!(input>>slot>>a>>b>>c>>d)||slot<0||slot>1)continue;
       pressed[slot]|=a&~masks[slot];masks[slot]=a&0x3ffff;
-      auto &p=*match.players[slot];p.last_columns=std::clamp(b,34,160);p.last_rows=std::clamp(c,24,60);
+      auto &p=*match.players[slot];p.last_columns=std::clamp(b,34,160);p.last_rows=std::clamp(c,p.last_columns>=56?20:24,60);
+      update_camera(p.state,p.grid,p.last_columns,std::max(1,p.last_rows-7),2,10);
       p.profile.language=d?iceberg::Language::English:iceberg::Language::Polish;
       continue;
     }

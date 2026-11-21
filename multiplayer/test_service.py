@@ -13,7 +13,7 @@ async def frame(ws):
     while at<len(data):
      run=struct.unpack_from('<H',data,at)[0];at+=2;expanded.extend(data[at:at+16]*run);at+=16
     data=expanded
-   assert 34<=cols<=160 and 24<=rows<=60 and len(data)==8+cols*rows*16
+   assert 34<=cols<=160 and (24 if cols<56 else 20)<=rows<=60 and len(data)==8+cols*rows*16
    text=''.join(chr(struct.unpack_from('<I',data,8+i*16)[0]) for i in range(cols*rows))
    return text
  raise AssertionError('No frame')
