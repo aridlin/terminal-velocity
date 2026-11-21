@@ -127,7 +127,8 @@ inline unsigned input_mask(const Controls &c) {
 }
 struct ConnectionArgs {
   std::string endpoint,room="new",mode="race";
-  explicit ConnectionArgs(int argc,char **argv){for(int i=1;i<argc;++i){std::string a=argv[i];if(i+1<argc){if(a=="--online")endpoint=argv[++i];else if(a=="--room")room=argv[++i];else if(a=="--mode")mode=argv[++i];}}}
+  bool english=false;
+  explicit ConnectionArgs(int argc,char **argv){iceberg::Profile profile;iceberg::SaveStore().load(profile);english=profile.language==iceberg::Language::English;for(int i=1;i<argc;++i){std::string a=argv[i];if(i+1<argc){if(a=="--language")english=std::string(argv[++i])=="en";else if(a=="--online")endpoint=argv[++i];else if(a=="--room")room=argv[++i];else if(a=="--mode")mode=argv[++i];}}}
 };
 struct Lobby {
   int selected=0,cursor=0;bool editing=false,submitted=false;
@@ -158,9 +159,9 @@ struct Lobby {
     for(auto &row:frame)for(auto &cell:row){cell.background=0x101923;cell.rgb=0xd5e8ed;}
     auto line=[&](int y,const std::string &text){int x=2;for(size_t i=0;i<text.size()&&x<cols-2;){const unsigned char c=text[i];const size_t n=c<128?1:c<224?2:c<240?3:4;frame[y][x++].glyph=text.substr(i,n);i+=n;}};
     line(2,"MULTIPLAYER");
-    const char *choices[]={"Create race / Utworz wyscig","Create co-op / Utworz wspolprace","Join race / Dolacz do wyscigu","Join co-op / Dolacz do wspolpracy"};
+    const char *choices[]={"Create race / Utwórz wyścig","Create co-op / Utwórz współpracę","Join race / Dołącz do wyścigu","Join co-op / Dołącz do współpracy"};
     for(int i=0;i<4;++i)line(5+i*2,std::string(selected==i?"> ":"  ")+choices[i]);
-    line(14,"Room / Pokoj: "+room);
+    line(14,"Room / Pokój: "+room);
     if(editing)line(15,std::string(14+cursor,' ')+"^");
     line(18,editing?"W/S: digit  A/D: cursor  ENTER: join  B: back":"W/S: choose  ENTER: confirm  Q/M: leave");
     line(21,error);
@@ -190,7 +191,7 @@ inline int terminal_client(const ConnectionArgs &args) {
   Remote client(args.endpoint,args.room,args.mode);
   TerminalGuard terminal(true);TuiInput input(InputMode::Ssh);
   if(!terminal.active())throw std::runtime_error("Online play needs a terminal or --terminal-view");
-  GameAudio audio;audio.init(audio_directory(),std::getenv("SSH_CONNECTION")!=nullptr);
+  GameAudio audio;audio.init(audio_directory(),std::getenv("SSH_CONNECTION")!=nullptr||std::getenv("SSH_TTY")!=nullptr);
   auto last=std::chrono::steady_clock::now(),send_at=last;
   unsigned edges=0;
   std::cout<<"Connecting to multiplayer…\r\n"<<std::flush;
@@ -199,7 +200,7 @@ inline int terminal_client(const ConnectionArgs &args) {
     const Controls controls=input.poll(std::min(dt,.1));if(controls.quit||controls.menu_request)return 0;
     if(controls.mute_audio)audio.muted=!audio.muted;
     const unsigned mask=input_mask(controls);edges|=mask&~31u;
-    if(now>=send_at){const auto size=term_size();client.input(input.focused?(mask&31u)|edges:0,size.cols,size.rows,true);edges=0;send_at=now+std::chrono::milliseconds(16);}
+    if(now>=send_at){const auto size=term_size();client.input(input.focused?(mask&31u)|edges:0,size.cols,size.rows,args.english);edges=0;send_at=now+std::chrono::milliseconds(16);}
     if(client.poll()) {
       audio.set_environment(client.district);play_cues(audio,client.cues);
       std::string out="\x1b[H";uint32_t fg=~0u,bg=~0u;

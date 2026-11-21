@@ -1535,7 +1535,7 @@ int online_window(const party::ConnectionArgs &args) {
           SDL_RenderPresent(ren);SDL_Delay(16);continue;}
       }
       auto &client=*remote;
-      if(now>=send_at){client.input(focused?held|pulse:0,cols,rows,true);pulse=0;send_at=now+std::chrono::milliseconds(16);}
+      if(now>=send_at){client.input(focused?held|pulse:0,cols,rows,args.english);pulse=0;send_at=now+std::chrono::milliseconds(16);}
       if(client.poll()){party_audio.set_environment(client.district);party::play_cues(party_audio,client.cues);}
       party_audio.update(AudioScene::Play,2,std::min(.1,std::chrono::duration<double>(now-audio_at).count()),focused);audio_at=now;
       color(ink);SDL_RenderClear(ren);

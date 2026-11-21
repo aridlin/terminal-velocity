@@ -81,12 +81,13 @@ struct Match {
     }
   }
   std::string status(int i)const {
-    if(!connected[1-i])return "Waiting for courier "+std::to_string(2-i)+" / Oczekiwanie na kuriera";
-    if(!started)return ready[0]&&ready[1]?"Start: "+std::to_string(int(std::ceil(countdown))):"ENTER/E: ready / gotowy";
-    if(ended)return mode==Mode::Coop?"DELIVERED TOGETHER / WSPOLNA DOSTAWA":finish[0]==finish[1]?"DRAW / REMIS":(finish[i]<finish[1-i]?"YOU WIN / WYGRANA":"FINISHED / KONIEC");
-    if(finish[i]>=0)return "Finished: "+std::to_string(finish[i])+"s · Waiting for courier";
-    if(mode==Mode::Coop&&players[i]->state.won)return "Wait at the exit for your partner / Poczekaj na partnera";
-    return std::string(mode==Mode::Race?"RACE / WYSCIG":"CO-OP / WSPOLPRACA")+"  "+std::to_string(std::min(Rooms,progress[i]+1))+"/8  "+std::to_string(clock)+"s";
+    const auto t=[&](const char *pl,const char *en){return std::string(players[i]->profile.language==iceberg::Language::English?en:pl);};
+    if(!connected[1-i])return t("Oczekiwanie na kuriera ","Waiting for courier ")+std::to_string(2-i);
+    if(!started)return ready[0]&&ready[1]?"Start: "+std::to_string(int(std::ceil(countdown))):t("ENTER/E: gotowy","ENTER/E: ready");
+    if(ended)return mode==Mode::Coop?t("WSPÓLNA DOSTAWA","DELIVERED TOGETHER"):finish[0]==finish[1]?t("REMIS","DRAW"):(finish[i]<finish[1-i]?t("WYGRANA","YOU WIN"):t("KONIEC WYŚCIGU","RACE FINISHED"));
+    if(finish[i]>=0)return t("Twój czas: ","Your time: ")+std::to_string(finish[i])+"s";
+    if(mode==Mode::Coop&&players[i]->state.won)return t("Poczekaj przy wyjściu na partnera","Wait at the exit for your partner");
+    return (mode==Mode::Race?t("WYŚCIG","RACE"):t("WSPÓŁPRACA","CO-OP"))+"  "+std::to_string(std::min(Rooms,progress[i]+1))+"/8  "+std::to_string(clock)+"s";
   }
 };
 }
