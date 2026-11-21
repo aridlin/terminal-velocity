@@ -46,7 +46,10 @@ public:
     constexpr int send_flags=MSG_NOSIGNAL;
 #endif
     const int n=int(send(fd,bytes.data(),int(bytes.size()),send_flags));
-    if(n!=int(bytes.size()))throw std::runtime_error("Multiplayer connection stalled; reconnect to continue");
+    if(n!=int(bytes.size())) {
+      if(!token.empty()){ghosts::close_socket(fd);fd=ghosts::invalid_socket;retry_at=ghosts::seconds()+1;return;}
+      throw std::runtime_error("Multiplayer connection stalled");
+    }
   }
   void input(unsigned mask,int cols,int rows,bool english) {
     if(fd==ghosts::invalid_socket)return;
@@ -73,6 +76,13 @@ public:
     char block[65536];
     for(int i=0;i<32;++i) {
       int n=int(recv(fd,block,sizeof(block),0));
+      if(n<0) {
+#ifdef _WIN32
+        const int error=WSAGetLastError();if(error!=WSAEWOULDBLOCK&&error!=WSAEINTR)n=0;
+#else
+        if(errno!=EAGAIN&&errno!=EWOULDBLOCK&&errno!=EINTR)n=0;
+#endif
+      }
       if(n==0) {
         ghosts::close_socket(fd);fd=ghosts::invalid_socket;pending.clear();status="Reconnecting…";retry_at=ghosts::seconds()+1;
         if(!frame.empty()){for(auto &cell:frame[1])cell.glyph=" ";const std::string text="Connection lost - reconnecting. Match is paused.";for(size_t x=0;x<text.size()&&x+1<frame[1].size();++x)frame[1][x+1].glyph=text.substr(x,1);}
@@ -108,7 +118,7 @@ public:
         payload=std::move(expanded);
       }
       if(cols<34||cols>160||rows<24||rows>60||payload.size()!=8+cols*rows*16)throw std::runtime_error("Invalid cell dimensions");
-      cues|=(get(payload.data()+20)>>1)&255;district=int(get(payload.data()+20)>>24);
+      cues|=(get(payload.data()+20)>>1)&511;district=int(get(payload.data()+20)>>24);
       frame.assign(rows,std::vector<Cell>(cols));size_t at=8;
       for(auto &row:frame)for(auto &cell:row){cell.glyph=glyph(get(payload.data()+at));cell.rgb=get(payload.data()+at+4);cell.background=get(payload.data()+at+8);cell.bold=get(payload.data()+at+12)&1;at+=16;}
       changed=true;
@@ -117,8 +127,8 @@ public:
   }
 };
 inline void play_cues(GameAudio &audio,unsigned cues) {
-  static constexpr AudioCue kinds[]={AudioCue::Jump,AudioCue::Dash,AudioCue::Pickup,AudioCue::Death,AudioCue::Checkpoint,AudioCue::Land,AudioCue::Door,AudioCue::Step1};
-  for(int bit=0;bit<8;++bit)if(cues&(1u<<bit))audio.play(kinds[bit]);
+  static constexpr AudioCue kinds[]={AudioCue::Jump,AudioCue::Dash,AudioCue::Pickup,AudioCue::Death,AudioCue::Checkpoint,AudioCue::Land,AudioCue::Door,AudioCue::Step1,AudioCue::Valve};
+  for(int bit=0;bit<9;++bit)if(cues&(1u<<bit))audio.play(kinds[bit]);
 }
 inline unsigned input_mask(const Controls &c) {
   return (c.move<0?1:0)|(c.move>0?2:0)|(c.aim_y<0?4:0)|(c.fast_fall?8:0)|(c.jump_held||c.jump_pressed?16:0)|

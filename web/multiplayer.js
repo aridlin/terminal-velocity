@@ -41,7 +41,7 @@
     if(cell!==w*h)return;
    }else{if(event.data.byteLength!==8+w*h*16)return;for(let i=0;i<data.length;i++)data[i]=view.getUint32(8+i*4,true);}
    const flags=data[3];data[3]&=1;
-   window.Module?._web_party_audio?.((flags>>>1)&255,flags>>>24,document.hasFocus()?1:0);
+   window.Module?._web_party_audio?.((flags>>>1)&511,flags>>>24,document.hasFocus()?1:0);
    lastFrame={data,w,h};window.tvFrame(data,w,h);
   };
   socket.onerror=()=>{error=text('Serwer jest niedostępny. M: wróć.','Server unavailable. M: return.');panel([text('MULTIPLAYER','MULTIPLAYER'),error]);};
@@ -74,7 +74,7 @@
   if(keys[event.code]!==undefined){event.preventDefault();event.stopImmediatePropagation();const bit=1<<keys[event.code];mask|=bit;if(!event.repeat){edges|=bit;if(event.code==='KeyU')window.Module?._web_party_mute?.();}}
  },true);
  document.addEventListener('keyup',event=>{if(api.active&&keys[event.code]!==undefined){mask&=~(1<<keys[event.code]);event.preventDefault();event.stopImmediatePropagation();}},true);
- window.addEventListener('blur',()=>{mask=edges=0;});
+ window.addEventListener('blur',()=>{mask=edges=0;if(api.active)window.Module?._web_party_audio?.(0,0,0);});
  canvas.addEventListener('pointerup',event=>{
   if(!api.active)return;
   const rect=canvas.getBoundingClientRect();const x=(event.clientX-rect.left)/rect.width*76,y=(event.clientY-rect.top)/rect.height*34;

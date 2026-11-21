@@ -11,6 +11,7 @@ int main(int argc,char **argv) {
   std::array<int,2> masks{},pressed{};
   unsigned frames=0;
   std::array<int,2> old_deaths{},old_pickups{},old_checkpoint{},old_progress{};
+  std::array<uint64_t,2> old_switches{};
   std::array<bool,2> old_grounded{true,true},old_dash{};
   std::string line;
   while(std::getline(std::cin,line)) {
@@ -66,7 +67,7 @@ int main(int argc,char **argv) {
       if(match.started)label(2,p.profile.language==iceberg::Language::English?"Eight rooms across districts · P: personal pause · M: leave":"Osiem pokoi dzielnic · P: osobista pauza · M: wyjdź");
       if(!match.started)label(2,"ENTER: ready · 8 rooms · "+std::string(coop?"Shared switches, pickups and exits":"First courier to finish wins"));
       unsigned cues=0;
-      if(p.state.deaths!=old_deaths[slot])cues|=1u<<3;
+      if(p.state.deaths>old_deaths[slot])cues|=1u<<3;
       if(p.state.sweets_count()>old_pickups[slot])cues|=1u<<2;
       if(p.state.checkpoint>old_checkpoint[slot])cues|=1u<<4;
       if(!p.state.player.grounded&&old_grounded[slot]&&p.state.player.vy<0)cues|=1u;
@@ -75,16 +76,19 @@ int main(int argc,char **argv) {
       if(dashing&&!old_dash[slot])cues|=1u<<1;
       if(match.progress[slot]!=old_progress[slot])cues|=1u<<6;
       if(frames%48==0&&p.state.player.grounded&&std::abs(p.state.player.vx)>1)cues|=1u<<7;
+      if(p.grid.switch_flags&~old_switches[slot])cues|=1u<<8;
+      old_switches[slot]=p.grid.switch_flags;
       old_deaths[slot]=p.state.deaths;old_pickups[slot]=p.state.sweets_count();old_checkpoint[slot]=p.state.checkpoint;
       old_grounded[slot]=p.state.player.grounded;old_dash[slot]=dashing;old_progress[slot]=match.progress[slot];
-      frame[0][0].braille_mask=(cues<<1)|(unsigned(p.grid.district)<<24);
+      const unsigned metadata=(cues<<1)|(unsigned(p.grid.district)<<24);
       std::string bytes;
       auto put=[&](uint32_t value){for(int n=0;n<4;++n){bytes+=char(value&255);value>>=8;}};
       put(cols);put(rows);
+      bool first_cell=true;
       for(auto &row:frame)for(auto &cell:row) {
         auto &s=cell.glyph;uint32_t cp=s.empty()?32:static_cast<unsigned char>(s[0]);
         if(cp>=128){const int n=cp<224?2:cp<240?3:4;cp&=(1u<<(7-n))-1;for(int j=1;j<n&&j<int(s.size());++j)cp=(cp<<6)|(static_cast<unsigned char>(s[j])&63);}
-        put(cp);put(cell_color(cell));put(cell_background(cell));put((cell.bold?1u:0u)|cell.braille_mask);
+        put(cp);put(cell_color(cell));put(cell_background(cell));put((cell.bold?1u:0u)|(first_cell?metadata:0));first_cell=false;
       }
       const char *hex="0123456789abcdef";std::cout<<slot<<' ';
       for(unsigned char b:bytes)std::cout<<hex[b>>4]<<hex[b&15];
