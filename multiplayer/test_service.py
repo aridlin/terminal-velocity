@@ -34,13 +34,34 @@ async def main():
     await third.send(f'JOIN {code} {mode} 1 -');assert (await third.recv()).startswith('ERROR ')
    await one.send('I 256 76 34 1');writer.write(b'I 256 76 34 1\n');await writer.drain()
    text=await frame(one);assert code in text
+   # Keep both transports live through the countdown and exercise real inputs.
+   # Draining both peers also catches a blocked worker/frame queue.
+   native_messages=asyncio.Queue()
+   async def native_frames():
+    while True:
+     size=struct.unpack('<I',await reader.readexactly(4))[0]
+     message=await reader.readexactly(size)
+     if message.startswith(b'ERROR '):await native_messages.put(message);return
+   drain=asyncio.create_task(native_frames())
+   started=time.monotonic();latest='';samples=0
+   try:
+    while time.monotonic()-started<5.5:
+     mask=2 if time.monotonic()-started>3.5 else 0
+     await one.send(f'I {mask} 76 34 1');writer.write(f'I {mask} 76 34 1\n'.encode());await writer.drain()
+     latest=await frame(one);samples+=1
+     await asyncio.sleep(.025)
+    assert ('RACE' if mode=='race' else 'CO-OP') in latest
+    times=re.findall(r'([0-9]+\.[0-9]{2})s',latest)
+    assert times and float(times[0])>=1, 'Match clock stalled: '+latest[:300]
+    assert samples>=20, 'Insufficient live frames'
+    print('PASS',mode,'live countdown, clock and continuous browser/native frames',samples)
+   except BaseException:
+    drain.cancel();raise
    # Malformed native input must disconnect only the offender, preserving the match.
    writer.write(b'I -1 76 34 1\n');await writer.drain()
    # Read buffered frame(s) followed by error.
-   for _ in range(30):
-    n=struct.unpack('<I',await reader.readexactly(4))[0];data=await reader.readexactly(n)
-    if data.startswith(b'ERROR '):break
-   else:raise AssertionError('Bad input was accepted')
+   assert (await asyncio.wait_for(native_messages.get(),10)).startswith(b'ERROR ')
+   await drain
    writer.close();await writer.wait_closed()
    print('PASS',mode,'shared browser/native lobby, frame dimensions, full-room rejection, invalid-input rejection')
   await asyncio.sleep(.1)
