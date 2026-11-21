@@ -1,6 +1,6 @@
 # Online expeditions (development)
 
-Two couriers share an eight-room expedition. Race advances each courier independently and records their finishing order/time. Co-op shares machinery, pickups and checkpoints, and opens the next room once both reach the exit. Everyone confirms readiness before a common countdown. A disconnected player freezes the match; reconnect uses an opaque per-slot token. Matches are isolated from campaign saves, achievements and solo records.
+Two couriers share an eight-room expedition. Race advances each courier independently and records their finishing order/time. Co-op shares machinery, pickups and checkpoints, and opens the next room once both reach the exit. Everyone confirms readiness before a common countdown. A disconnected player freezes the match for a30-second reconnect grace period; race then resolves by forfeit, while co-op ends without claiming completion. Reconnect uses an opaque per-slot token. Matches are isolated from campaign saves, achievements and solo records.
 
 The host runs the real 120 Hz game simulation, collision, checkpoints, interactions and room generation. Clients send controls and receive compressed Unicode cell frames at 30 Hz; they cannot submit positions, switch flags or results. Network latency therefore affects input response. Desktop clients currently connect using the command below; browser creation/join setup is inside the canvas.
 
@@ -21,7 +21,7 @@ python3 -m venv .multiplayer-venv
 .multiplayer-venv/bin/python multiplayer/server.py --engine ./multiplayer_engine
 ```
 
-The service binds loopback by default. A TLS reverse proxy should forward `/terminal-velocity/multiplayer` WebSocket upgrades to port27889; expose native TCP27890 only when intended (`--tcp-host`). No account credentials or player save files are transmitted. Rooms are limited to16, two players each; messages, input rates, frame sizes and slow clients are bounded. Empty rooms expire after60seconds. Input inactivity disconnects after10seconds. Keep the engine/service under a dedicated unprivileged user and retain rollback for updates. No deployment is claimed by this document.
+The service binds loopback by default. A TLS reverse proxy should forward `/terminal-velocity/multiplayer` WebSocket upgrades to port27889; expose native TCP27890 only when intended (`--tcp-host`). No account credentials or player save files are transmitted. Rooms are limited to16, two players each; messages, input rates, frame sizes and slow clients are bounded. Empty rooms expire after60seconds. Stale input releases held controls after350ms and freezes a missing player after2seconds; input inactivity disconnects the socket after10seconds. Keep the engine/service under a dedicated unprivileged user and retain rollback for updates. No deployment is claimed by this document.
 
 The browser default endpoint is `wss://het.aridlin.pl/terminal-velocity/multiplayer`; an HTML meta `tv-multiplayer-url` overrides it for local testing. WebSocket origins are explicitly allowed with `--origin`.
 

@@ -29,6 +29,10 @@ int main(){
   }
   if(!played.ended)throw std::runtime_error("Ordinary-input multiplayer route stalled at "+std::to_string(played.progress[0])+","+std::to_string(played.progress[1]));
  }
+ party::Match abandoned(party::Mode::Race,1);abandoned.started=true;abandoned.connected={true,false};
+ for(int tick=0;tick<3602;++tick)abandoned.step({});
+ check(abandoned.ended&&abandoned.forfeit&&abandoned.forfeit_winner==0);
+ std::cout<<"PASS disconnect grace expires without claiming a cooperative completion\n";
  std::cout<<"PASS ordinary-input race and co-op finish all eight rooms\n";
  std::cout<<"PASS common route, ready countdown, disconnect freeze, race independence, shared machinery, cooperative exits and finish\n";
 }

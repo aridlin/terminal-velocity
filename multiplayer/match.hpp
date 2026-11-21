@@ -12,7 +12,8 @@ struct Match {
   uint32_t seed;
   int district;
   double clock=0,countdown=3,room_clock=0,exit_wait=0;
-  bool started=false,ended=false;
+  bool started=false,ended=false,forfeit=false;
+  double disconnected_for=0;int forfeit_winner=-1;
   explicit Match(Mode m,uint32_t s,int d=0):mode(m),seed(s),district(std::clamp(d,0,5)) {
     iceberg::SessionOptions o;o.no_save=true;o.mute=true;o.seed=s;o.seed_override=true;
     for(auto &p:players){p=std::make_unique<AdventureSession>(o,std::filesystem::path{});p->profile.language=iceberg::Language::English;}
@@ -35,7 +36,12 @@ struct Match {
     if(ended)return;
     if(!started){if(connected[0]&&connected[1]&&ready[0]&&ready[1]){countdown=std::max(0.,countdown-dt);started=countdown<=0;}return;}
     // Disconnection suspends the whole match; reconnect keeps the same state.
-    if(!connected[0]||!connected[1])return;
+    if(!connected[0]||!connected[1]) {
+      disconnected_for+=dt;
+      if(disconnected_for>=30){ended=forfeit=true;forfeit_winner=connected[0]?0:connected[1]?1:-1;}
+      return;
+    }
+    disconnected_for=0;
     clock+=dt;room_clock+=dt;
     if(mode==Mode::Coop&&same_room()) {
       const uint64_t switches=players[0]->grid.switch_flags|players[1]->grid.switch_flags;
@@ -81,14 +87,17 @@ struct Match {
       }
     }
   }
+  static std::string format_time(double seconds){std::ostringstream out;out<<std::fixed<<std::setprecision(2)<<seconds;return out.str();}
   std::string status(int i)const {
     const auto t=[&](const char *pl,const char *en){return std::string(players[i]->profile.language==iceberg::Language::English?en:pl);};
+    if(forfeit)return mode==Mode::Coop?t("Partner opuścił wyprawę. M: menu","Partner left the expedition. M: menu"):
+      forfeit_winner==i?t("WYGRANA — partner opuścił wyścig","YOU WIN — partner left the race"):t("Wyścig przerwany","Race interrupted");
     if(!connected[1-i])return t("Oczekiwanie na kuriera ","Waiting for courier ")+std::to_string(2-i);
     if(!started)return ready[0]&&ready[1]?"Start: "+std::to_string(int(std::ceil(countdown))):t("ENTER/E: gotowy","ENTER/E: ready");
     if(ended)return mode==Mode::Coop?t("WSPÓLNA DOSTAWA","DELIVERED TOGETHER"):finish[0]==finish[1]?t("REMIS","DRAW"):(finish[i]<finish[1-i]?t("WYGRANA","YOU WIN"):t("KONIEC WYŚCIGU","RACE FINISHED"));
-    if(finish[i]>=0)return t("Twój czas: ","Your time: ")+std::to_string(finish[i])+"s";
+    if(finish[i]>=0)return t("Twój czas: ","Your time: ")+format_time(finish[i])+"s";
     if(mode==Mode::Coop&&players[i]->state.won)return t("Poczekaj przy wyjściu na partnera","Wait at the exit for your partner");
-    return (mode==Mode::Race?t("WYŚCIG","RACE"):t("WSPÓŁPRACA","CO-OP"))+"  "+std::to_string(std::min(Rooms,progress[i]+1))+"/8  "+std::to_string(clock)+"s";
+    return (mode==Mode::Race?t("WYŚCIG","RACE"):t("WSPÓŁPRACA","CO-OP"))+"  "+std::to_string(std::min(Rooms,progress[i]+1))+"/8  "+format_time(clock)+"s";
   }
 };
 }

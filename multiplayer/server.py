@@ -22,6 +22,10 @@ class Room:
         self.peers = [None, None]
         self.tokens = [secrets.token_hex(16), secrets.token_hex(16)]
         self.empty_since = None
+        self.input_time=[time.monotonic(),time.monotonic()]
+        self.input_settings=[(76,34,1),(76,34,1)]
+        self.stale=[False,False]
+        self.frozen=[False,False]
         self.jobs = [asyncio.create_task(self.tick()), asyncio.create_task(self.read())]
     def command(self, line):
         if self.process.returncode is None:
@@ -36,6 +40,12 @@ class Room:
                     if now-self.empty_since>60:break
                 else:self.empty_since=None
                 if now-deadline>.25:deadline=now # bounded catch-up, no time jump
+                for i,peer in enumerate(self.peers):
+                    age=time.monotonic()-self.input_time[i]
+                    if peer and age>.35 and not self.stale[i]:
+                        cols,rows,language=self.input_settings[i]
+                        self.command(f'I {i} 0 {cols} {rows} {language}');self.stale[i]=True
+                    if peer and age>2 and not self.frozen[i]:self.command(f'C {i} 0');self.frozen[i]=True
                 self.command('T');await self.process.stdin.drain()
                 deadline+=1/120
                 await asyncio.sleep(max(0,deadline-asyncio.get_running_loop().time()))
@@ -92,6 +102,7 @@ class Service:
                 # An occupied, disconnected identity needs its token to resume.
                 if getattr(room,'joined',set()) and slot in room.joined:raise ValueError('Use reconnect token')
             room.joined=getattr(room,'joined',set())|{slot}
+            room.input_time[slot]=time.monotonic();room.stale[slot]=room.frozen[slot]=False
             room.peers[slot]=peer;room.command(f'C {slot} 1')
             await peer.send(f'WELCOME {code} {slot} {room.tokens[slot]}')
             interval=time.monotonic();count=0
@@ -106,6 +117,9 @@ class Service:
                 if now-interval>=1:interval=now;count=0
                 count+=1
                 if count>100:raise ValueError('Input rate exceeded')
+                room.input_time[slot]=time.monotonic();room.input_settings[slot]=(cols,rows,language)
+                if room.frozen[slot]:room.command(f'C {slot} 1')
+                room.stale[slot]=room.frozen[slot]=False
                 room.command(f'I {slot} {mask} {cols} {rows} {language}')
         except (ValueError,asyncio.TimeoutError,ConnectionError,EOFError) as error:
             with contextlib.suppress(Exception):await peer.send('ERROR '+str(error))
