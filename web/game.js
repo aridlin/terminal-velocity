@@ -1015,7 +1015,8 @@ function frame(now){
  // Resume with a normal step after an isolated stall so rapid motion stays visible.
  const dt=stalled&&!frameWasStalled?1/60:Math.min(.1,elapsed);
  frameWasStalled=stalled;
- if(started&&accounts?.active)accounts.draw();
+ if(window.tvParty?.active){window.tvParty.tick(held,pressed,cols,rows,english,focused);clearPresses();}
+ else if(started&&accounts?.active)accounts.draw();
  else if(started&&!importPending){
   Module._web_profile_action_busy(accountBooting||accounts?.busy?1:0);
   Module._web_tick(dt,held,pressed,cols,rows,focused?1:0,queuedDashAim());

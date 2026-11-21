@@ -20,7 +20,7 @@ fi
   "$@" --preload-file assets/audio@/assets/audio \
   -o web/dist/terminal-velocity.js
 
-cp web/index.html web/game.css web/game.js web/accounts.js web/dist/
+cp web/index.html web/game.css web/game.js web/accounts.js web/multiplayer.js web/dist/
 cp web/server/language.php web/server/pl-address-ranges.bin web/dist/
 cp assets/cell-font.ttf web/dist/
 cp assets/audio/CREDITS.txt web/dist/AUDIO-CREDITS.txt

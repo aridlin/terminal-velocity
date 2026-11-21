@@ -1122,19 +1122,19 @@
       const char *art[]={"             ▄╱╲▄             ","         ▄▄╱░░░░╲▄▄           ","  ∿∿∿∿∿╱░░░░░░░░░░╲∿∿∿∿∿    ","       ╲▒▤▒▒░╬░▒▒▤▒╱          ","        ╲▒▒▒▒▒▒▒▒▒╱           "};
       for(int i=0;i<5;++i)center(10+i,art[i],Color::Ice);
     }
-    std::array<std::string,7> labels{
+    std::array<std::string,8> labels{
       v.can_continue?tr("KONTYNUUJ PODRÓŻ","CONTINUE JOURNEY"):tr("ROZPOCZNIJ PODRÓŻ","BEGIN JOURNEY"),
       tr("NOWA HISTORIA","NEW STORY"),v.endless_resume?tr("WZNÓW WYPRAWĘ BEZ KOŃCA","RESUME ENDLESS EXPEDITION"):tr("WYPRAWA BEZ KOŃCA","ENDLESS EXPEDITION"),
       v.trial_resume?tr("WZNÓW PRÓBĘ MISTRZOWSKĄ","RESUME MASTERY TRIAL"):
         v.trial_replay?tr("POWTÓRZ PRÓBĘ MISTRZOWSKĄ","REPLAY MASTERY TRIAL"):tr("PRÓBA MISTRZOWSKA","MASTERY TRIAL"),
       tr("USTAWIENIA","SETTINGS"),
-      tr("TRASY KLASYCZNE","CLASSIC COURSES"),tr("OSIĄGNIĘCIA","ACHIEVEMENTS")};
+      tr("TRASY KLASYCZNE","CLASSIC COURSES"),tr("OSIĄGNIĘCIA","ACHIEVEMENTS"),tr("GRA WIELOOSOBOWA","MULTIPLAYER")};
     auto menu_line=[&](int row,const std::string &line,Color color=Color::Text){
       if(wide)text(row,cols_/2+1,line,color);else center(row,line,color);
     };
     for(int i=0;i<int(labels.size());++i)menu_line(first+i,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+"  "+labels[size_t(i)],v.selected==i?Color::Gold:Color::Text);
     if(v.selected==2||v.selected==3) {
-      int r=first+7;
+      int r=first+8;
       menu_line(r,tr("J zmień dzielnicę · ","J change district · ")+iceberg::Districts[size_t(v.run_district)].name.get(v.language),Color::Player);
       const auto &record=v.trials[size_t(v.run_district)];
       if(v.selected==3&&record.complete)menu_line(r+1,trial_record_lines(record,cols_).front(),Color::Gold);

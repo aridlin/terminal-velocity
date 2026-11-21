@@ -11,6 +11,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y g++ make pkg-config libsdl2-dev libfreetype6-dev
       - name: Build both frontends and test
         run: make -j2 all test
+      - name: Test real browser and native multiplayer sockets
+        run: |
+          python3 -m venv "$RUNNER_TEMP/multiplayer-tests"
+          "$RUNNER_TEMP/multiplayer-tests/bin/pip" install -r multiplayer/requirements.txt
+          "$RUNNER_TEMP/multiplayer-tests/bin/python" multiplayer/run_service_tests.py
       - name: Validate launchers
         run: sh -n play.sh ghostty-play.sh
       - name: Package verified Linux binaries and source

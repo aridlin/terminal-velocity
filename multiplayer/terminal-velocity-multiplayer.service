@@ -1,0 +1,24 @@
+[Unit]
+Description=Terminal Velocity authoritative multiplayer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/terminal-velocity/multiplayer/current
+ExecStart=/opt/terminal-velocity/multiplayer/venv/bin/python multiplayer/server.py --engine ./multiplayer_engine --tcp-host 0.0.0.0 --max-rooms 4
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryMax=1500M
+TasksMax=128
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

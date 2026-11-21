@@ -24,7 +24,7 @@ public:
   int last_columns=110,last_rows=34;
   double last_aspect=2;
   iceberg::Mode mode = iceberg::Mode::Campaign;
-  bool running = true, legacy_requested = false;
+  bool running = true, legacy_requested = false, online_requested = false;
   int district = 0, stage = 0, room = 0, depth = 0, run_district = 0;
   uint32_t run_seed = 1;
   double autosave_left = 15, run_seconds = 0;
@@ -1753,7 +1753,7 @@ public:
     }
     int old_selected=v.selected;
     if(c.map && (v.selected==2||v.selected==3))run_district=(run_district+1)%(expedition_unlocked()+1);
-    if(c.navigate)v.selected=(v.selected+c.navigate+7)%7;
+    if(c.navigate)v.selected=(v.selected+c.navigate+8)%8;
     if(c.select_level>=1&&c.select_level<=7)v.selected=c.select_level-1;
     if(v.selected!=old_selected){choose_saved_run_district(v.selected);audio.play(AudioCue::Menu);}
     if(c.language){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
@@ -1765,6 +1765,7 @@ public:
     if(selected==2||selected==3)request_run(selected==2?iceberg::Mode::Endless:iceberg::Mode::Trial);
     if(selected==4){v.settings=!v.settings;}
     if(selected==5){persist();legacy_requested=true;running=false;}
+    if(selected==7){persist();online_requested=true;running=false;return;}
     if(selected==6){v.achievement_menu=true;v.achievement_group=iceberg::AwardGroup::All;v.achievement_selection=0;}
   }
   void tick(Controls c,double dt,bool focused=true,int columns=110,int rows=34,double aspect=2) {

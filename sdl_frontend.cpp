@@ -1285,7 +1285,8 @@ int terminal_window_main(int argc,char **argv) {
         if(!args.smoke)SDL_Delay(1);
       }
       session.persist();cell_frame_sink={};
-      if(session.legacy_requested)result=10;
+      if(session.online_requested)result=12;
+      else if(session.legacy_requested)result=10;
       if(args.smoke){
         std::cout<<"SDL cell view smoke x="<<session.state.player.x<<" zoom="<<smoke_zoomed
                  <<" reset="<<smoke_reset<<" tap="<<smoke_tap
@@ -1484,8 +1485,75 @@ int diagnostic_window_main(int argc, char **argv) {
   return result;
 }
 
+int online_window(const party::ConnectionArgs &args) {
+  party::Lobby lobby;
+  std::unique_ptr<party::Remote> remote;
+  if(!args.endpoint.empty())remote=std::make_unique<party::Remote>(args.endpoint,args.room,args.mode);
+  if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS)!=0)return 2;
+  SDL_Window *window=SDL_CreateWindow("Terminal Velocity — Multiplayer",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,1100,680,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
+  if(!window){SDL_Quit();return 2;}
+  ren=SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
+  if(!ren)ren=SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE);
+  if(!ren){SDL_DestroyWindow(window);SDL_Quit();return 2;}
+  int result=0;
+  try {
+    Font font;const auto file=audio_directory().parent_path()/"cell-font.ttf";
+    if(!font.init(file.string(),(audio_directory().parent_path()/"font.ttf").string()))throw std::runtime_error("Font unavailable");
+    GameAudio party_audio;party_audio.init(audio_directory());
+    auto audio_at=std::chrono::steady_clock::now();
+    unsigned held=0,pulse=0;bool running=true,focused=true,fullscreen=false;
+    auto send_at=std::chrono::steady_clock::now();
+    auto bit=[](SDL_Scancode key)->unsigned {
+      switch(key){case SDL_SCANCODE_A:case SDL_SCANCODE_LEFT:return 1;case SDL_SCANCODE_D:case SDL_SCANCODE_RIGHT:return 2;
+      case SDL_SCANCODE_W:case SDL_SCANCODE_UP:return 4;case SDL_SCANCODE_S:case SDL_SCANCODE_DOWN:return 8;
+      case SDL_SCANCODE_SPACE:return 16;case SDL_SCANCODE_X:case SDL_SCANCODE_LSHIFT:return 32;
+      case SDL_SCANCODE_E:return 64;case SDL_SCANCODE_B:return 128;case SDL_SCANCODE_RETURN:return 256;
+      case SDL_SCANCODE_P:return 512;case SDL_SCANCODE_TAB:return 1024;case SDL_SCANCODE_J:return 2048;
+      case SDL_SCANCODE_R:return 8192;default:return 0;}
+    };
+    while(running) {
+      SDL_Event event;
+      while(SDL_PollEvent(&event)) {
+        if(event.type==SDL_QUIT)running=false;
+        if(event.type==SDL_WINDOWEVENT&&event.window.event==SDL_WINDOWEVENT_FOCUS_LOST){held=pulse=0;focused=false;}
+        if(event.type==SDL_WINDOWEVENT&&event.window.event==SDL_WINDOWEVENT_FOCUS_GAINED)focused=true;
+        if(event.type==SDL_KEYDOWN&&!event.key.repeat&&focused){held|=bit(event.key.keysym.scancode);pulse|=bit(event.key.keysym.scancode);
+          if(event.key.keysym.scancode==SDL_SCANCODE_Q||event.key.keysym.scancode==SDL_SCANCODE_M)running=false;
+          if(event.key.keysym.scancode==SDL_SCANCODE_U)party_audio.muted=!party_audio.muted;
+          if(event.key.keysym.scancode==SDL_SCANCODE_F11){fullscreen=!fullscreen;SDL_SetWindowFullscreen(window,fullscreen?SDL_WINDOW_FULLSCREEN_DESKTOP:0);}}
+        if(event.type==SDL_KEYUP)held&=~bit(event.key.keysym.scancode);
+      }
+      int width,height;SDL_GetRendererOutputSize(ren,&width,&height);
+      const int cell=std::max(6,std::min(width/110,height/68));
+      const int cols=std::clamp(width/cell,34,160),rows=std::clamp(height/(cell*2),24,60);
+      auto now=std::chrono::steady_clock::now();
+      if(!remote) {
+        lobby.tick(held|pulse);pulse=0;
+        if(lobby.submitted){try{remote=std::make_unique<party::Remote>(lobby.args.endpoint,lobby.args.room,lobby.args.mode);}catch(const std::exception &e){lobby.error=e.what();lobby.submitted=false;}}
+        if(!remote){const auto menu=lobby.draw();const int cw=std::max(1,std::min(width/76,height/68));color(ink);SDL_RenderClear(ren);
+          for(int y=0;y<34;++y)for(int x=0;x<76;++x)font.cell(menu[y][x],x*cw,y*cw*2,cw,cw*2);
+          SDL_RenderPresent(ren);SDL_Delay(16);continue;}
+      }
+      auto &client=*remote;
+      if(now>=send_at){client.input(focused?held|pulse:0,cols,rows,true);pulse=0;send_at=now+std::chrono::milliseconds(16);}
+      if(client.poll()){party_audio.set_environment(client.district);party::play_cues(party_audio,client.cues);}
+      party_audio.update(AudioScene::Play,2,std::min(.1,std::chrono::duration<double>(now-audio_at).count()),focused);audio_at=now;
+      color(ink);SDL_RenderClear(ren);
+      if(!client.frame.empty()) {
+        const int r=int(client.frame.size()),c=int(client.frame[0].size());
+        const int cw=std::max(1,std::min(width/c,height/(r*2))),ch=cw*2,left=(width-c*cw)/2,top=(height-r*ch)/2;
+        for(int y=0;y<r;++y)for(int x=0;x<c;++x){const auto &tile=client.frame[y][x];const auto bg=cell_background(tile);
+          box(left+x*cw,top+y*ch,cw,ch,{Uint8(bg>>16),Uint8(bg>>8),Uint8(bg),255});font.cell(tile,left+x*cw,top+y*ch,cw,ch);}
+      }
+      SDL_RenderPresent(ren);SDL_Delay(1);
+    }
+  }catch(const std::exception &e){std::cerr<<e.what()<<"\n";result=2;}
+  SDL_DestroyRenderer(ren);ren=nullptr;SDL_DestroyWindow(window);SDL_Quit();return result;
+}
+
 int main(int argc,char **argv) {
   SDL_SetMainReady();
+  try {party::ConnectionArgs online(argc,argv);if(!online.endpoint.empty())return online_window(online);}catch(const std::exception &e){std::cerr<<e.what()<<"\n";return 2;}
   bool cells=true,explicit_cells=false;
   for(int i=1;i<argc;++i) {
     std::string arg=argv[i];
@@ -1495,6 +1563,7 @@ int main(int argc,char **argv) {
   cells|=explicit_cells;
   for(;;) {
     int result=cells?terminal_window_main(argc,argv):diagnostic_window_main(argc,argv);
+    if(result==12){party::ConnectionArgs lobby(0,nullptr);online_window(lobby);continue;}
     if(result!=10)return result;
     cells=!cells;
   }

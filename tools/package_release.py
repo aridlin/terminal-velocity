@@ -33,7 +33,7 @@ def main():
     dest.mkdir(parents=True, exist_ok=True)
     variants = []
     if not args.windows_only:
-        variants.append(('linux-x64', ['terminal_velocity', 'terminal_velocity_sdl', 'keyboard_launcher', 'play.sh', 'ghostty-play.sh']))
+        variants.append(('linux-x64', ['terminal_velocity', 'terminal_velocity_sdl', 'keyboard_launcher', 'play.sh', 'ghostty-play.sh', 'multiplayer_engine']))
     if args.windows or args.windows_only:
         variants.append(('windows-x64-window', ['terminal_velocity.exe', 'terminal_velocity_sdl.exe', 'SDL2.dll', 'play.cmd', 'play-window.cmd']))
     for _, files in variants:

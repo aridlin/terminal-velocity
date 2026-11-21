@@ -73,6 +73,14 @@ void send_web_ui() {
 }
 }
 extern "C" {
+EMSCRIPTEN_KEEPALIVE void web_party_mute() {if(web_game)web_game->audio.muted=!web_game->audio.muted;}
+EMSCRIPTEN_KEEPALIVE void web_party_audio(unsigned cues,int district,int focused) {
+  if(!web_game)return;
+  web_game->audio.set_environment(std::clamp(district,0,5));
+  web_game->audio.update(AudioScene::Play,2,.05,bool(focused));
+  static constexpr AudioCue kinds[]={AudioCue::Jump,AudioCue::Dash,AudioCue::Pickup,AudioCue::Death,AudioCue::Checkpoint,AudioCue::Land,AudioCue::Door,AudioCue::Step1};
+  if(focused)for(int bit=0;bit<8;++bit)if(cues&(1u<<bit))web_game->audio.play(kinds[bit]);
+}
 EMSCRIPTEN_KEEPALIVE void web_set_start_slot(int slot) {
   if(!web_game&&slot>=1&&slot<=iceberg::SaveStore::SlotCount)web_slot=slot;
 }
@@ -165,6 +173,7 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   const auto last_save=web_game->save_revision;
   const int previous_slot=web_slot;
   web_game->tick(c,std::isfinite(dt)?dt:0,focused!=0,std::clamp(cols,34,160),std::clamp(rows,cols>=56?20:24,60),2);
+  if(web_game->online_requested){web_game->online_requested=false;web_game->running=true;EM_ASM({window.tvParty?.openSetup?.();});}
   if(web_game->legacy_requested) {
     web_game->legacy_requested=false;web_game->running=true;web_game->state.menu=true;
     web_game->notice(web_game->t("Trasy klasyczne są dostępne w wydaniu na komputer.","Classic courses are available in the desktop edition."),6);
