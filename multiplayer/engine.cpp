@@ -30,7 +30,12 @@ int main(int argc,char **argv) {
     for(int i=0;i<2;++i) {
       const int h=masks[i],p=pressed[i];auto &c=held[i];c={};
       c.move=int(bool(h&2))-int(bool(h&1));c.aim_y=int(bool(h&8))-int(bool(h&4));
+      c.move_pressed=(p&3)?std::optional<int>(int(bool(p&2))-int(bool(p&1))):std::nullopt;
+      c.aim_pressed=(p&12)?std::optional<int>(int(bool(p&8))-int(bool(p&4))):std::nullopt;
       c.jump_held=h&(16|4);c.jump_pressed=p&(16|4);c.dash_pressed=p&32;
+      if(c.dash_pressed)c.dash_pressed_direction=std::pair{
+        axis_on_press(h&1,h&2,int(bool(p&2))-int(bool(p&1))),
+        axis_on_press(h&4,h&8,int(bool(p&8))-int(bool(p&4)))};
       c.fast_fall=h&8;c.interact=p&64;c.inspect=p&128;c.confirm=p&256;
       c.pause=p&512;c.journal=p&1024;c.map=p&2048;c.restart=p&8192;
       c.navigate=int(bool(p&8))-int(bool(p&4));

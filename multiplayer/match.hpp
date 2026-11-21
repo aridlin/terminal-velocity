@@ -38,7 +38,7 @@ struct Match {
     // Disconnection suspends the whole match; reconnect keeps the same state.
     if(!connected[0]||!connected[1]) {
       disconnected_for+=dt;
-      if(disconnected_for>=30){ended=forfeit=true;forfeit_winner=connected[0]?0:connected[1]?1:-1;}
+      if(disconnected_for>=30){ended=forfeit=true;forfeit_winner=finish[0]>=0?0:finish[1]>=0?1:connected[0]?0:connected[1]?1:-1;}
       return;
     }
     disconnected_for=0;

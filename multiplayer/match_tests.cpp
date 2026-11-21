@@ -32,6 +32,13 @@ int main(){
  party::Match abandoned(party::Mode::Race,1);abandoned.started=true;abandoned.connected={true,false};
  for(int tick=0;tick<3602;++tick)abandoned.step({});
  check(abandoned.ended&&abandoned.forfeit&&abandoned.forfeit_winner==0);
+ party::Match finished_before_drop(party::Mode::Race,1);finished_before_drop.started=true;finished_before_drop.connected={false,true};finished_before_drop.finish[0]=10;
+ for(int tick=0;tick<3602;++tick)finished_before_drop.step({});
+ check(finished_before_drop.forfeit_winner==0);
+ party::Lobby lobby;lobby.tick(8);lobby.tick(0);lobby.tick(256);
+ check(lobby.submitted&&lobby.args.mode=="coop"&&lobby.args.room=="new");
+ for(auto [cols,rows]:{std::pair{34,24},std::pair{60,20},std::pair{110,34}}){auto frame=lobby.draw(cols,rows);check(int(frame.size())==rows&&int(frame[0].size())==cols);}
+ std::cout<<"PASS native co-op menu and compact room editor layouts\n";
  std::cout<<"PASS disconnect grace expires without claiming a cooperative completion\n";
  std::cout<<"PASS ordinary-input race and co-op finish all eight rooms\n";
  std::cout<<"PASS common route, ready countdown, disconnect freeze, race independence, shared machinery, cooperative exits and finish\n";
