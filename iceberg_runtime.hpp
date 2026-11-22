@@ -854,7 +854,11 @@ public:
                   iceberg::outfitter_balance(profile)>=item.price) {
           iceberg::remember_outfitter_tokens(profile);
           if(item.flag)profile.cosmetics|=item.flag;
-          else profile.task_items[1]|=iceberg::market_purchase_bit(shop,iceberg::market_accessory(shop,index));
+          else {
+            if(!(profile.task_items[1]&iceberg::MarketCreditMask))
+              profile.task_items[1]|=uint64_t(iceberg::market_credit(profile)+1)<<iceberg::MarketCreditShift;
+            profile.task_items[1]|=iceberg::market_purchase_bit(shop,iceberg::market_accessory(shop,index));
+          }
           unlock_achievement(iceberg::Achievement::Gear);
           constexpr uint32_t kit=iceberg::HarborScarf|iceberg::DockBoots|iceberg::SignalSatchel;
           if((profile.cosmetics&kit)==kit)unlock_achievement(iceberg::Achievement::AllGear);
@@ -995,7 +999,7 @@ public:
       const auto awards=iceberg::achievement_progress(previous);
       profile.discoveries=uint32_t(awards[0]);
       profile.task_items[0]=awards[0]&0xffffffff00000000ull;
-      profile.task_items[1]=awards[1]|(previous.task_items[1]&iceberg::MarketPurchaseMask);
+      profile.task_items[1]=awards[1]|(previous.task_items[1]&iceberg::MarketSaveMask);
       profile.music_volume=music;profile.effects_volume=effects;profile.ambience_volume=ambience;
       profile.pause_on_focus_loss=previous.pause_on_focus_loss;
       profile.smooth_camera=previous.smooth_camera;

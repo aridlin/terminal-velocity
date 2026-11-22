@@ -83,6 +83,16 @@ int main() {
          iceberg::outfitter_balance(reopened.profile)!=5||
          !reopened.trial_unlocked()||!iceberg::survey_pass(reopened.profile))
         throw std::runtime_error("gear and the remaining balance must survive a save reload and a fresh Journey");
+      iceberg::Profile launch_save;
+      launch_save.district_treasures=40;
+      launch_save.task_items[1]=iceberg::market_purchase_bit(0,1);
+      if(iceberg::outfitter_balance(launch_save)!=32)
+        throw std::runtime_error("a launch-price purchase must retain its original debit");
+      launch_save.district_treasures=350;
+      iceberg::remember_outfitter_tokens(launch_save);
+      launch_save.district_treasures=0;
+      if(iceberg::outfitter_balance(launch_save)!=342)
+        throw std::runtime_error("the earned balance above 255 must survive a route reset");
       for(int district=1;district<iceberg::DistrictCount;++district) {
         reopened.profile.visit_district=district;
         reopened.load_room(false);
@@ -97,6 +107,10 @@ int main() {
            reopened.state.adventure.dialogue.outfitter_item!=0)
           throw std::runtime_error("district market cannot be reached or opened");
         reopened.state.adventure.dialogue={};
+        const int basic=iceberg::market_price(district,0);
+        const int premium=iceberg::market_price(district,1);
+        if(basic<16||basic>24||premium<42||premium>48)
+          throw std::runtime_error("market tiers do not fit an eight-room token haul");
         for(int item=0;item<2;++item)
           if(iceberg::market_price(district,item)<=iceberg::market_price(district-1,item))
             throw std::runtime_error("market prices must rise with each district");
