@@ -10,6 +10,8 @@ int main(){
   m->connected={true,true};std::array<Controls,2> c;c[0].confirm=true;c[1].confirm=true;
   for(int n=0;n<362;++n)m->step(c);
   check(m->started);check(m->clock<.1);
+  c[0]={.journal=true};c[1]={.journal=true};m->step(c);
+  check(!m->players[0]->state.journal&&!m->players[1]->state.journal);
   m->connected[1]=false;const auto before=m->clock;m->step({});check(m->clock==before);m->connected[1]=true;
  }
  coop.players[0]->grid.switch_flags=1;coop.step({});check(coop.players[1]->grid.switch_flags&1);

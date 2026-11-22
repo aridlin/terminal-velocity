@@ -58,14 +58,15 @@ int main() {
         throw std::runtime_error("three tokens per room afford only the starter gear after a leg");
       shop.tick(Controls{.pause=true},1./120);
       int budget=5;
-      for(const auto &item:iceberg::OutfitterItems)budget+=item.price;
+      for(int i=0;i<iceberg::market_stock_size(0);++i)budget+=iceberg::market_item(0,i).price;
       shop.profile.district_treasures=budget;
       shop.tick(use,1./120);shop.tick(confirm,1./120);
-      for(size_t i=1;i<iceberg::OutfitterItems.size();++i) {
-        const auto &item=iceberg::OutfitterItems[i];
+      for(int i=1;i<iceberg::market_stock_size(0);++i) {
+        const auto item=iceberg::market_item(0,i);
         const int before=iceberg::outfitter_balance(shop.profile);
         shop.tick(previous,1./120);shop.tick(confirm,1./120);
-        if(!(shop.profile.cosmetics&item.flag)||iceberg::outfitter_balance(shop.profile)!=before-item.price)
+        if(!iceberg::owns_market_item(shop.profile.cosmetics,shop.profile.task_items[1],0,i)||
+           iceberg::outfitter_balance(shop.profile)!=before-item.price)
           throw std::runtime_error("buying gear must debit its price exactly once");
         shop.tick(previous,1./120);shop.tick(confirm,1./120);
         if(iceberg::outfitter_balance(shop.profile)!=before-item.price)
@@ -77,9 +78,29 @@ int main() {
       AdventureSession reopened(options,file);
       reopened.begin_campaign(true);
       const auto all=iceberg::HarborScarf|iceberg::DockBoots|iceberg::SignalSatchel;
-      if((reopened.profile.cosmetics&all)!=all||iceberg::outfitter_balance(reopened.profile)!=5||
+      if((reopened.profile.cosmetics&all)!=all||
+         !iceberg::owns_market_item(reopened.profile.cosmetics,reopened.profile.task_items[1],0,4)||
+         iceberg::outfitter_balance(reopened.profile)!=5||
          !reopened.trial_unlocked()||!iceberg::survey_pass(reopened.profile))
         throw std::runtime_error("gear and the remaining balance must survive a save reload and a fresh Journey");
+      for(int district=1;district<iceberg::DistrictCount;++district) {
+        reopened.profile.visit_district=district;
+        reopened.load_room(false);
+        const auto stall=std::find_if(reopened.grid.interactions.begin(),reopened.grid.interactions.end(),
+          [](const auto &node){return node.kind==InteractionKind::Outfitter;});
+        if(stall==reopened.grid.interactions.end()||stall->id!=district)
+          throw std::runtime_error("district market is missing");
+        reopened.state.player.x=stall->area.x+1.;
+        reopened.state.player.y=stall->area.bottom()-kPlayerHeight;
+        reopened.interact();
+        if(reopened.state.adventure.dialogue.outfitter_district!=district||
+           reopened.state.adventure.dialogue.outfitter_item!=0)
+          throw std::runtime_error("district market cannot be reached or opened");
+        reopened.state.adventure.dialogue={};
+        for(int item=0;item<2;++item)
+          if(iceberg::market_price(district,item)<=iceberg::market_price(district-1,item))
+            throw std::runtime_error("market prices must rise with each district");
+      }
       std::filesystem::remove_all(folder);
       std::cout<<"PASS outfitter purchases preserve both passes and survive reload without double charges\n";
     }

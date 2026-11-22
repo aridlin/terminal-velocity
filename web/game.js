@@ -691,7 +691,7 @@ function updateFocus(hasFocus){
  clearInput();
  // A hidden tab can lose every animation frame between blur and focus.
  // Deliver the focus edge without advancing the game clock.
- if(started&&!accounts?.active&&!importPending)Module._web_tick(0,0,0,cols,rows,0);
+ if(started&&!window.tvParty?.active&&!accounts?.active&&!importPending)Module._web_tick(0,0,0,cols,rows,0);
  syncSave();
 }
 addEventListener('blur',()=>updateFocus(false));
@@ -1285,11 +1285,20 @@ if(loadedRelease){
 
 translateUI();resize();watchEngineLoad();
 
+window.tvPartySave=()=>{
+ if(accounts?.active||accountBooting||importPending)return false;
+ if(started&&!inTour())syncSave();
+ return true;
+};
 // Multiplayer can start directly from entry without creating a campaign profile.
 window.tvPartyControls=enabled=>{
  clearInput();start.hidden=enabled||started;
- if(enabled){for(const button of document.querySelectorAll('#touch button,#toolbar [data-tap]'))button.disabled=false;}
- else{setGameButtons(started);renderSaveStatus();if(!started)drawBoot();}
+ if(enabled){
+  for(const button of document.querySelectorAll('#touch button,#toolbar [data-tap]'))button.disabled=false;
+  for(const button of document.querySelectorAll('[data-tap="10"],[data-key="10"]'))button.disabled=true;
+ }else{
+  setGameButtons(started);renderSaveStatus();if(!started)drawBoot();
+ }
 };
 last=performance.now();requestAnimationFrame(frame);
 

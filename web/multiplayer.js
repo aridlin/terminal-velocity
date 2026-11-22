@@ -63,7 +63,7 @@
   // Existing touch buttons and keyboard use the same action bits as native input.
   socket.send(`I ${(held|mask|edges)&0x3ffff} ${Math.max(34,Math.min(160,cols))} ${Math.max(cols>=56?20:24,Math.min(60,rows))} ${isEnglish?1:0}`);edges=0;lastSend=now;
  };
- const keys={KeyA:0,ArrowLeft:0,KeyD:1,ArrowRight:1,KeyW:2,ArrowUp:2,KeyS:3,ArrowDown:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyB:7,Enter:8,KeyP:9,Tab:10,KeyJ:11,KeyR:13,KeyU:16};
+ const keys={KeyA:0,ArrowLeft:0,KeyD:1,ArrowRight:1,KeyW:2,ArrowUp:2,KeyS:3,ArrowDown:3,Space:4,KeyX:5,ShiftLeft:5,ShiftRight:5,KeyE:6,KeyB:7,Enter:8,KeyP:9,KeyJ:11,KeyR:13,KeyU:16};
  document.addEventListener('keydown',event=>{
   if(!api.active)return;
   if(event.code==='KeyM'||event.code==='Escape'){event.preventDefault();event.stopImmediatePropagation();leave();return;}
@@ -112,7 +112,7 @@
   const [cols,rows,en]=lastSettings;socket.send(`I 0 ${cols} ${rows} ${en?1:0}`);lastSend=performance.now();
  },250);
  for(const button of document.querySelectorAll('[data-party]'))button.addEventListener('click',()=>{
-  try{window.Module?._web_save?.();}catch{}
+  if(window.tvPartySave?.()===false)return;
   if(button.dataset.party==='join')api.openSetup();
   else{mode=button.dataset.party;connect('new');}
  });

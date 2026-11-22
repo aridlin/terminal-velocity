@@ -131,8 +131,9 @@
     }
     if(grid_.template_id>=24&&grid_.template_id<36) {
       const auto &layout=iceworld::pattern(grid_.template_id);auto p=layout.path[layout.path.size()/2];
+      const auto backdrop=iceworld::estate_backdrop(grid_);
       switch(grid_.template_id%12) {
-      case 0:case 8:world_art(p.x,p.y-6,{"╭──────────────────────╮","│ 02  →  →  →  →  →  → │","├──────────────────────┤","│  ▥▥▥▥▥▥   ▥▥▥▥▥▥     │","╰───────────┬──────────╯","            │"},d.accent);break;
+      case 0:case 8:world_art(backdrop.anchor.x,backdrop.anchor.y,{"╭──────────────────────╮","│ 02  →  →  →  →  →  → │","├──────────────────────┤","│  ▥▥▥▥▥▥   ▥▥▥▥▥▥     │","╰───────────┬──────────╯","            │"},d.accent);break;
       case 1:
         if(grid_.solid_at(iceworld::EstateStairwellWalls.front()[0],iceworld::EstateStairwellWalls.front()[1])) {
           draw_estate_stairwells();
@@ -143,12 +144,12 @@
       case 2:world_art(p.x,p.y-7,{"╥─────────────────────────╥","║  ╭─╮  ╭──╮   ╭───╮      ║","║  │ │  │  │   │   │      ║","║  ╰─╯  ╰──╯   ╰───╯      ║"},0xb098aa);break;
       case 4:world_art(p.x,p.y-5,{"╭─────────────────────╮","│ ░░  11   ░░░░░░░░░░ │","├─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┤","╰─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─╯"},d.light);break;
       case 5:world_art(p.x,p.y-6,{"  ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲"," ╱________________╲"," │ ▱▱ ▱▱ ▱▱ ▱▱ ▱▱ │"," ├────────────────┤"," │   │        │   │"},d.accent);break;
-      case 7:world_art(p.x-3,p.y-9,{" ╥               ╥"," ║ ╭───────────╮ ║"," ║ │  ▒▒▒▒▒▒▒  │ ║"," ║ │  ▒▒▒▒▒▒▒  │ ║"," ║ ╰─────┬─────╯ ║"," ║       │       ║"},d.stone);break;
+      case 7:world_art(backdrop.anchor.x,backdrop.anchor.y,{" ╥               ╥"," ║ ╭───────────╮ ║"," ║ │  ▒▒▒▒▒▒▒  │ ║"," ║ │  ▒▒▒▒▒▒▒  │ ║"," ║ ╰─────┬─────╯ ║"," ║       │       ║"},d.stone);break;
       case 9:
         if(iceworld::has_estate_gutter(grid_))draw_estate_gutters();
         else world_art(p.x-2,p.y-8,{"╔══╗","║  ║","║  ╚══════╗","╚══════╗  ║","       ║  ║","       ║  ║"},0x657f8a);
         break;
-      default:world_art(p.x,p.y-4,{"  ╲│╱    ╲│╱    ╲│╱","   │      │      │","╭──┴──╮╭──┴──╮╭──┴──╮","╰─────╯╰─────╯╰─────╯"},0x9aab85);break;
+      default:world_art(backdrop.anchor.x,backdrop.anchor.y,{"  ╲│╱    ╲│╱    ╲│╱","   │      │      │","╭──┴──╮╭──┴──╮╭──┴──╮","╰─────╯╰─────╯╰─────╯"},0x9aab85);break;
       }
     }
   }

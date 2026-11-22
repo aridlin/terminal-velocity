@@ -64,6 +64,8 @@ struct Match {
       auto &p=*players[i];auto c=controls[i];
       // A match cannot enter campaign menus, save slots, secret rooms or restart its route.
       c.menu_request=c.new_run=c.next_seed=c.quit=false;c.select_level=0;c.language=false;
+      // The quest book belongs to the solo profile, not the temporary match.
+      c.journal=false;
       if(p.state.won)continue;
       p.tick(c,dt,true,p.last_columns,p.last_rows,2);
       // Both copies use the same machinery phase even when one courier waits.

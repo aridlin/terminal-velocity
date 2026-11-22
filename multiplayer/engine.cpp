@@ -54,7 +54,7 @@ int main(int argc,char **argv) {
         const auto &other=match.players[1-slot]->state.player;
         int x=int(std::floor((other.x-p.state.camera_x)/.4));
         int y=4+int(std::floor((other.y-p.state.camera_y)/.8));
-        
+
         for(int dy=0;dy<3;++dy)for(int dx=0;dx<3;++dx)if(y+dy>=4&&y+dy<rows-3&&x+dx>=0&&x+dx<cols){
           static const std::string pixels[3][3]={{"▄","█","▄"},{"█","█","█"},{"▌"," ","▐"}};
           frame[y+dy][x+dx].glyph=pixels[dy][dx];frame[y+dy][x+dx].rgb=slot?0xffb78e:0x81ddd8;
@@ -70,7 +70,7 @@ int main(int argc,char **argv) {
       };
       label(0,"ROOM / POKÓJ "+code+" · P"+std::to_string(slot+1));
       label(1,match.status(slot));
-      if(match.started)label(2,p.profile.language==iceberg::Language::English?"Eight rooms across districts · P: personal pause · M: leave":"Osiem pokoi dzielnic · P: osobista pauza · M: wyjdź");
+      if(match.started)label(2,p.profile.language==iceberg::Language::English?"Achievements: solo menu · P: pause · M: leave":"Osiągnięcia: menu solo · P: pauza · M: wyjdź");
       if(!match.started)label(2,"ENTER: ready · 8 rooms · "+std::string(coop?"Shared switches, pickups and exits":"First courier to finish wins"));
       unsigned cues=0;
       if(p.state.deaths>old_deaths[slot])cues|=1u<<3;

@@ -54,6 +54,11 @@
   void courier_sprite(int x,int feet,uint32_t coat) {
     const auto &p=state_.player;const auto &v=state_.adventure;
     uint32_t skin=0xe0b394,bag=(v.cosmetics&iceberg::SignalSatchel)?0xd47755:0x9b7864;
+    if(grid_.adventure_level&&grid_.district>=0&&grid_.district<iceberg::DistrictCount) {
+      const auto &market=iceberg::Markets[size_t(grid_.district)];
+      if(v.task_items[1]&iceberg::market_purchase_bit(grid_.district,0))coat=market.cap_color;
+      if(v.task_items[1]&iceberg::market_purchase_bit(grid_.district,1))bag=market.pack_color;
+    }
     uint32_t boot=(v.cosmetics&iceberg::DockBoots)?0xa693d8:0xc1cbd0,leg=0x55616f;
     uint32_t body=p.can_dash()&&!grid_.dash_locked()?0xf5cd79:0x83c5ce;
     std::vector<std::array<uint32_t,4>> pixels{{0,coat,coat,0},{0,skin,0x51474b,0},
