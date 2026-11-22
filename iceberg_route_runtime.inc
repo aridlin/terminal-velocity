@@ -62,8 +62,39 @@
       return iceworld::harbor_alternate(profile.itinerary,leg,profile.seed);
     return profile.itinerary[size_t(leg*iceberg::RoomsPerLeg+cell)];
   }
+  void top_up_campaign_tokens() {
+    constexpr size_t target=6;
+    if(grid.sweets.size()>=target)return;
+    std::vector<std::pair<double,double>> candidates;
+    for(const auto &[center,surface]:grid.route_points) {
+      const int floor=int(std::lround(surface));
+      for(double offset:{0.,-2.,2.}) {
+        const double x=center+offset;
+        const Rect courier{x-kPlayerWidth*.5,floor-kPlayerHeight,kPlayerWidth,kPlayerHeight};
+        if(x<grid.spawn_x+4||x>grid.goal.x-3||!grid.solid_at(int(x),floor)||
+           !ledge_clearance(grid,courier))continue;
+        candidates.emplace_back(x,floor-1.1);
+      }
+    }
+    // Append only. Older collected-token masks still refer to the same pickups.
+    while(grid.sweets.size()<target) {
+      double best_gap=2.8;
+      auto best=candidates.end();
+      for(auto it=candidates.begin();it!=candidates.end();++it) {
+        const auto [x,y]=*it;
+        double gap=200.;
+        for(const auto &[token_x,token_y]:grid.sweets)
+          gap=std::min(gap,std::hypot(x-token_x,y-token_y));
+        if(gap>best_gap){best_gap=gap;best=it;}
+      }
+      if(best==candidates.end())break;
+      grid.sweets.push_back(*best);
+      candidates.erase(best);
+    }
+  }
   void configure_route_room() {
     if(!on_campaign_route()||grid.room_role!=iceberg::RoomRole::Traverse)return;
+    top_up_campaign_tokens();
     const int leg=route_leg(),index=leg*iceberg::RoomsPerLeg+room;
     if(profile.started)profile.route_visited[size_t(district)]|=1u<<index;
     if(route_forks_enabled()&&room==1) {
