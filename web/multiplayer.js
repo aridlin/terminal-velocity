@@ -1,6 +1,9 @@
 /* All multiplayer setup, errors and room codes are drawn inside the game canvas. */
 (()=>{
- const canvas=document.getElementById('game');let socket=null,setup=null,mask=0,edges=0,lastSend=0,error='',room='',mode='race',token='',lastFrame=null,lastSettings=[76,34,true];
+ const canvas=document.getElementById('game');let socket=null,welcomed=false,setup=null,mask=0,edges=0,lastSend=0,error='',room='',mode='race',token='',lastFrame=null,lastSettings=[76,34,true];
+ // A 32 ms minimum keeps input independent of the display refresh rate.
+ const minInputInterval=32;
+ const canSendInput=()=>welcomed&&socket?.readyState===WebSocket.OPEN&&socket.bufferedAmount===0;
  const api=window.tvParty={active:false};
  const english=()=>document.documentElement.lang==='en';
  const text=(pl,en)=>english()?en:pl;
@@ -13,7 +16,7 @@
   window.tvFrame(data,w,h);
  }
  function showSetup(){panel([text('GRA WIELOOSOBOWA','MULTIPLAYER'),text('Wpisz sześciocyfrowy kod pokoju:','Enter the six-digit room code:'),room.padEnd(6,'_'),text('↑↓: wyścig / współpraca','↑↓: race / co-op'),mode==='race'?text('WYŚCIG','RACE'):text('WSPÓŁPRACA','CO-OP'),text('ENTER: dołącz · ESC: wróć','ENTER: join · ESC: back'),error,'1       2       3       4       5','','6       7       8       9       0','','⌫       TRYB / MODE          ENTER',text('Wróć','Back')]);}
- function closeSocket(){const old=socket;socket=null;if(old){old.onmessage=old.onclose=old.onerror=null;old.close();}}
+ function closeSocket(){const old=socket;socket=null;welcomed=false;if(old){old.onmessage=old.onclose=old.onerror=null;old.close();}}
  function leave(){api.active=false;setup=null;mask=edges=0;closeSocket();token='';lastFrame=null;window.Module?._web_party_audio?.(0,0,0);window.tvPartyControls?.(false);canvas.focus();}
  function connect(code,reconnect=false){
   closeSocket();setup=null;error='';room=code;api.active=true;mask=edges=0;if(!reconnect)token='';
@@ -25,8 +28,8 @@
   socket.onmessage=event=>{
    if(typeof event.data==='string'){
     const f=event.data.split(' ');
-    if(f[0]==='WELCOME'){room=f[1];token=f[3];lastSend=0;window.tvPartyStatus?.(`${mode==='race'?text('Wyścig','Race'):text('Współpraca','Co-op')} · ${room}`);}
-    else if(f[0]==='ERROR'){token='';error=event.data.slice(6);panel([text('Nie można dołączyć','Unable to join'),error,text('M: wróć','M: return')]);}
+    if(f[0]==='WELCOME'){welcomed=true;room=f[1];token=f[3];lastSend=0;window.tvPartyStatus?.(`${mode==='race'?text('Wyścig','Race'):text('Współpraca','Co-op')} · ${room}`);}
+    else if(f[0]==='ERROR'){welcomed=false;token='';error=event.data.slice(6);panel([text('Nie można dołączyć','Unable to join'),error,text('M: wróć','M: return')]);}
     return;
    }
    if(event.data.byteLength<8||event.data.byteLength>153608)return;
@@ -59,7 +62,7 @@
   if(pressed&(1<<16))toggleSound();
   lastSettings=[Math.max(34,Math.min(160,cols)),Math.max(cols>=56?20:24,Math.min(60,rows)),isEnglish];
   edges|=pressed;const now=performance.now();
-  if(now-lastSend<16)return;
+  if(!canSendInput()||now-lastSend<minInputInterval)return;
   // Existing touch buttons and keyboard use the same action bits as native input.
   socket.send(`I ${(held|mask|edges)&0x3ffff} ${Math.max(34,Math.min(160,cols))} ${Math.max(cols>=56?20:24,Math.min(60,rows))} ${isEnglish?1:0}`);edges=0;lastSend=now;
  };
@@ -108,7 +111,7 @@
  }
 // Background tabs keep their slot without retaining movement controls.
  setInterval(()=>{
-  if(!api.active||setup||socket?.readyState!==WebSocket.OPEN||performance.now()-lastSend<250)return;
+  if(!api.active||setup||!canSendInput()||performance.now()-lastSend<250)return;
   const [cols,rows,en]=lastSettings;socket.send(`I 0 ${cols} ${rows} ${en?1:0}`);lastSend=performance.now();
  },250);
  for(const button of document.querySelectorAll('[data-party]'))button.addEventListener('click',()=>{

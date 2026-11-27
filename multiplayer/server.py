@@ -6,6 +6,9 @@ import asyncio, argparse, secrets, time, contextlib, struct, re, signal
 from pathlib import Path
 from websockets.asyncio.server import serve
 
+INPUTS_PER_SECOND = 100
+INPUT_BURST = 150
+
 def pack_frame(data):
     cols,rows=struct.unpack_from('<II',data)
     result=bytearray(struct.pack('<II',cols,rows|0x80000000))
@@ -129,7 +132,8 @@ class Service:
             room.input_time[slot]=time.monotonic();room.stale[slot]=room.frozen[slot]=False
             room.peers[slot]=peer;room.command(f'C {slot} 1')
             await peer.send(f'WELCOME {code} {slot} {room.tokens[slot]}')
-            interval=time.monotonic();count=0
+            input_budget = INPUT_BURST
+            budget_updated = time.monotonic()
             while True:
                 line=await asyncio.wait_for(peer.recv(),10)
                 if len(line)>100:raise ValueError('Input too long')
@@ -138,10 +142,14 @@ class Service:
                 mask,cols,rows,language=map(int,f[1:])
                 if not (0<=mask<1<<18 and 34<=cols<=160 and (24 if cols<56 else 20)<=rows<=60 and language in (0,1)):raise ValueError('Invalid input')
                 now=time.monotonic()
-                if now-interval>=1:interval=now;count=0
-                count+=1
-                if count>100:raise ValueError('Input rate exceeded')
-                room.input_time[slot]=time.monotonic();room.input_settings[slot]=(cols,rows,language)
+                # Delayed packets can arrive together after a connection stall.
+                # Allow a bounded burst while keeping the sustained rate limit.
+                input_budget = min(INPUT_BURST, input_budget + (now-budget_updated)*INPUTS_PER_SECOND)
+                if input_budget < 1:
+                    raise ValueError('Input rate exceeded')
+                input_budget -= 1
+                budget_updated = now
+                room.input_time[slot]=now;room.input_settings[slot]=(cols,rows,language)
                 if room.frozen[slot]:room.command(f'C {slot} 1')
                 room.stale[slot]=room.frozen[slot]=False
                 room.command(f'I {slot} {mask} {cols} {rows} {language}')
