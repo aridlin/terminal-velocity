@@ -98,7 +98,10 @@ int main(){try {
     MechanicSample{4,48,&iceworld::SwingVineGuide},
     MechanicSample{4,48,&iceworld::Flytrap},
     MechanicSample{4,55,&iceworld::BrittleIce},
-    MechanicSample{5,68,&iceworld::Crosswind}
+    MechanicSample{5,68,&iceworld::Crosswind},
+    MechanicSample{2,34,&iceworld::WindowBoxes},
+    MechanicSample{2,32,&iceworld::EstateTramSign},
+    MechanicSample{2,31,&iceworld::EstateNoticeCase}
   };
   std::vector<std::vector<std::string>> studies_seen;
   for(const auto &[district,room,guide]:samples) {

@@ -119,3 +119,9 @@ CI testuje Linux i natywną logikę/terminal Windows. Jego dotychczasowy artefak
 `--diagnostic` zachowuje dawny graficzny frontend. Event JP2, górskie rozdziały i Szczyt są w **Trasach klasycznych**; opisuje je [dawna instrukcja](docs/LEGACY.pl.md).
 
 Wejście gościnne SSH: `ssh -t gra@prol.aridlin.pl`. Każda anonimowa wizyta ma osobny, tymczasowy zapis na maksymalnie dwie godziny; ponowne połączenie rozpoczyna nową wizytę.
+
+## Wyścig i współpraca online (wersja rozwojowa)
+
+Wybierz Multiplayer w menu głównym, aby utworzyć pokój dla dwóch kurierów lub dołączyć przez sześciocyfrowy kod. Wyścig ma osiem pokoi, osobny postęp i czas każdego gracza. Współpraca dzieli przełączniki, zebrane przedmioty, stan kruchych platform i punkty kontrolne; przy wyjściu muszą znaleźć się obaj kurierzy. Enter/E potwierdza gotowość. Serwer prowadzi symulację120Hz i wysyła skompresowane klatki Unicode30Hz; opóźnienie sieci wpływa na reakcję sterowania. Zapisy kampanii i rekordy solo są osobne.
+
+W przeglądarce dostępne są przyciski wyścigu, współpracy i dołączania, z klawiaturą dotykową wewnątrz obrazu gry. Instrukcje serwera i argumenty uruchomienia: [multiplayer/README.md](multiplayer/README.md). Działanie publicznej usługi wymaga osobnego sprawdzenia.

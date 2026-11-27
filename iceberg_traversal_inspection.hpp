@@ -55,6 +55,37 @@ inline constexpr TraversalInspection Crosswind{
   {"Smugi pokazują kierunek wiatru. Skocz, gdy wiatr wieje w stronę półki. Zryw na chwilę uniezależnia cię od podmuchu.",
    "The streaks show which way the wind is blowing. Jump when it blows toward the landing. A dash briefly cuts through the gust."},iceberg::TraversalStudy::Wind};
 
+inline constexpr TraversalInspection WindowBoxes{
+  {"Skrzynki na parapecie","Window boxes"},
+  {"Szczypiorek wyrasta z trzech skrzynek po herbacie. Pod ostatnią wisi kartka: „Podlewa mieszkanie 12. Zbiera cała klatka.”",
+   "Chives grow in three old tea crates. A note under the last one reads, ‘Flat 12 waters. The whole stairwell gets a share.’"},
+  iceberg::TraversalStudy::WindowBoxes};
+inline constexpr TraversalInspection EstateTramSign{
+  {"Tablica linii 02","Line 02 sign"},
+  {"Pod strzałką ktoś dopisał kredą: „Ostatni kurs czeka na zmianę z pieców.”",
+   "Somebody chalked a note below the arrow: ‘Last tram waits for the boiler shift.’"},
+  iceberg::TraversalStudy::TramSign};
+inline constexpr TraversalInspection EstateNoticeCase{
+  {"Gablota spółdzielni","Housing notice case"},
+  {"W dolnym rogu, pod okólnikiem o ciszy nocnej, przypięto przepis na ciasto ze szczypiorkiem.",
+   "A recipe for chive cake is pinned beneath the quiet-hours notice in the bottom corner."},
+  iceberg::TraversalStudy::NoticeCase};
+struct EstateBackdrop {
+  Rect anchor;
+  const TraversalInspection *description=nullptr;
+};
+inline EstateBackdrop estate_backdrop(const EngineGrid &room) {
+  if(room.district!=2||room.template_id<24||room.template_id>=36)return {};
+  const auto &path=pattern(room.template_id).path;
+  const auto platform=path[path.size()/2];
+  switch(room.template_id%12) {
+    case 0:case 8:return {{double(platform.x),platform.y-6.,9.,6.},&EstateTramSign};
+    case 7:return {{platform.x-3.,platform.y-9.,7.2,9.},&EstateNoticeCase};
+    case 3:case 10:case 11:return {{double(platform.x),platform.y-4.,8.4,4.},&WindowBoxes};
+    default:return {};
+  }
+}
+
 // Pick the same small object for the HUD and the inspector.
 inline std::optional<iceberg::InspectionArt> nearby_small_inspection(const EngineGrid &room,const GameState &state) {
   using Art=iceberg::InspectionArt;
@@ -116,6 +147,10 @@ inline const TraversalInspection *nearby_traversal_inspection(const EngineGrid &
     if(!field.active(room.switch_flags))continue;
     if(field.turbine)consider(field.area,TurbineDraft);
     else if(room.district==5&&field.ax!=0.)consider(field.area,Crosswind);
+  }
+  if(!nearest) {
+    const auto backdrop=estate_backdrop(room);
+    if(backdrop.description)consider(backdrop.anchor,*backdrop.description);
   }
   return nearest;
 }

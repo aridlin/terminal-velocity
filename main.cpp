@@ -3386,14 +3386,19 @@ iceberg::SessionOptions adventure_options(const Args &args) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
   session.persist();
-  return session.legacy_requested?10:0;
+  return session.online_requested?12:session.legacy_requested?10:0;
 }
 #endif
 
 } // namespace
 
+#ifndef __EMSCRIPTEN__
+#include "multiplayer/client.hpp"
+#endif
+
 #ifndef TERMINAL_VELOCITY_NO_TUI_MAIN
 int main(int argc, char **argv) {
+  try {party::ConnectionArgs online(argc,argv);if(!online.endpoint.empty())return party::terminal_client(online);}catch(const std::exception &e){std::cerr<<e.what()<<"\n";return 2;}
 #ifdef __linux__
   if(argc==2&&std::string_view(argv[1])=="--account-save-export") {
     return iceberg::SaveStore().export_backup(std::cout)?0:1;
@@ -3505,6 +3510,7 @@ int main(int argc, char **argv) {
   try {
     if(args.adventure) {
       int result=run_adventure(args,aspect);
+      if(result==12){auto lobby=party::terminal_lobby();return lobby?party::terminal_client(*lobby):0;}
       if(result!=10)return result;
     }
     return run_game(aspect, args.input_mode, args.demo, args.event_level,

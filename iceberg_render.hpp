@@ -1122,19 +1122,19 @@
       const char *art[]={"             ▄╱╲▄             ","         ▄▄╱░░░░╲▄▄           ","  ∿∿∿∿∿╱░░░░░░░░░░╲∿∿∿∿∿    ","       ╲▒▤▒▒░╬░▒▒▤▒╱          ","        ╲▒▒▒▒▒▒▒▒▒╱           "};
       for(int i=0;i<5;++i)center(10+i,art[i],Color::Ice);
     }
-    std::array<std::string,7> labels{
+    std::array<std::string,8> labels{
       v.can_continue?tr("KONTYNUUJ PODRÓŻ","CONTINUE JOURNEY"):tr("ROZPOCZNIJ PODRÓŻ","BEGIN JOURNEY"),
       tr("NOWA HISTORIA","NEW STORY"),v.endless_resume?tr("WZNÓW WYPRAWĘ BEZ KOŃCA","RESUME ENDLESS EXPEDITION"):tr("WYPRAWA BEZ KOŃCA","ENDLESS EXPEDITION"),
       v.trial_resume?tr("WZNÓW PRÓBĘ MISTRZOWSKĄ","RESUME MASTERY TRIAL"):
         v.trial_replay?tr("POWTÓRZ PRÓBĘ MISTRZOWSKĄ","REPLAY MASTERY TRIAL"):tr("PRÓBA MISTRZOWSKA","MASTERY TRIAL"),
       tr("USTAWIENIA","SETTINGS"),
-      tr("TRASY KLASYCZNE","CLASSIC COURSES"),tr("OSIĄGNIĘCIA","ACHIEVEMENTS")};
+      tr("TRASY KLASYCZNE","CLASSIC COURSES"),tr("OSIĄGNIĘCIA","ACHIEVEMENTS"),tr("GRA WIELOOSOBOWA","MULTIPLAYER")};
     auto menu_line=[&](int row,const std::string &line,Color color=Color::Text){
       if(wide)text(row,cols_/2+1,line,color);else center(row,line,color);
     };
     for(int i=0;i<int(labels.size());++i)menu_line(first+i,(v.selected==i?"▸ ":"  ")+std::to_string(i+1)+"  "+labels[size_t(i)],v.selected==i?Color::Gold:Color::Text);
     if(v.selected==2||v.selected==3) {
-      int r=first+7;
+      int r=first+8;
       menu_line(r,tr("J zmień dzielnicę · ","J change district · ")+iceberg::Districts[size_t(v.run_district)].name.get(v.language),Color::Player);
       const auto &record=v.trials[size_t(v.run_district)];
       if(v.selected==3&&record.complete)menu_line(r+1,trial_record_lines(record,cols_).front(),Color::Gold);
@@ -1289,18 +1289,20 @@
     frame(top,1,cols_-2,layout.height,0xe4ad68);
     const bool shop=dialogue.outfitter_item>=0;
     const auto language=state_.adventure.language;
-    const auto title=shop?tr("SKLEP PORTOWY","HARBOR OUTFITTER")+std::string(" · ◉ ")+
+    const int shop_district=dialogue.outfitter_district;
+    const auto title=shop?iceberg::Markets[size_t(shop_district)].name.get(language)+" · ◉ "+
       std::to_string(dialogue.outfitter_tokens):tr("TWOJA ODPOWIEDŹ","YOUR REPLY");
     paint_text(top+1,3,title,0xe4ad68,true);
     std::array<std::string,2> choices;
     if(shop) {
-      const auto &item=iceberg::OutfitterItems[size_t(dialogue.outfitter_item)];
+      const auto item=iceberg::market_item(shop_district,dialogue.outfitter_item);
       paint_text(top+2,3,item.name.get(language)+" · "+std::to_string(item.price)+" ◉",0xeee7d6);
       paint_text(top+4,5,item.effect.get(language),0x9dd4dd);
       const int shortfall=item.price-dialogue.outfitter_tokens;
-      choices[0]=(state_.adventure.cosmetics&item.flag)?tr("Kupione","Owned"):
+      choices[0]=iceberg::owns_market_item(state_.adventure.cosmetics,state_.adventure.task_items[1],
+        shop_district,dialogue.outfitter_item)?tr("Kupione","Owned"):
         shortfall>0?tr("Brakuje ","Need ")+std::to_string(shortfall)+" ◉":tr("Kup","Buy");
-      choices[1]=dialogue.outfitter_item+1<int(iceberg::OutfitterItems.size())?
+      choices[1]=dialogue.outfitter_item+1<iceberg::market_stock_size(shop_district)?
         tr("Następny przedmiot","Next item"):tr("Zamknij sklep","Close shop");
     } else for(int i=0;i<2;++i)choices[size_t(i)]=iceberg::civic_reply(dialogue.reply_scene,i).choice.get(language);
     for(int i=0;i<2;++i) {
@@ -1424,7 +1426,8 @@
     fill(rows_-3,0,cols_,3,Color::Default);
     text(rows_-3,2,state_.ssh_basic?tr("A/D bieg S stop SPACJA skok X zryw I/O ↑/↓ E rozmowa","A/D run S stop SPACE jump X dash I/O ↑/↓ E interact"):
       tr("A/D ruch  SPACJA skok  X zryw  E użyj  B obejrzyj","A/D move  SPACE jump  X dash  E use  B inspect"),Color::Player);
-    text(rows_-2,2,tr("R powrót  TAB zadania  J mapa  P pauza  M menu  U dźwięk","R retry  TAB quests  J map  P pause  M menu  U sound"));
+    if(state_.multiplayer)text(rows_-2,2,tr("R powrót  J mapa  P pauza  M menu  U dźwięk","R retry  J map  P pause  M menu  U sound"));
+    else text(rows_-2,2,tr("R powrót  TAB zadania  J mapa  P pauza  M menu  U dźwięk","R retry  TAB quests  J map  P pause  M menu  U sound"));
     if(v.save_error)text(rows_-1,2,save_failure_hint(),Color::Hazard);
     else if(state_.player.ledge&&state_.player.ledge_climb_left<=0.)
       text(rows_-1,2,ledge_hint(),Color::Gold);

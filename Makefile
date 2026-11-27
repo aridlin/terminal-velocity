@@ -3,7 +3,7 @@ CXXFLAGS ?= -std=c++20 -O2 -Wall -Wextra -pedantic
 SDL_FLAGS = $(shell pkg-config --cflags --libs sdl2 freetype2)
 ICEBERG_HEADERS = $(wildcard iceberg_*.hpp iceberg_*.inc)
 .PHONY: all run test smoke clean
-all: terminal_velocity keyboard_launcher terminal_velocity_sdl
+all: terminal_velocity keyboard_launcher terminal_velocity_sdl multiplayer_engine
 terminal_velocity_sdl: sdl_frontend.cpp main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio.o
 	$(CXX) $(CXXFLAGS) -o $@ sdl_frontend.cpp audio.o $(SDL_FLAGS) -ldl -lpthread
 terminal_velocity: main.cpp ssh_input.hpp ghost_net.hpp net_platform.hpp windows_console.hpp progress.hpp audio.hpp audio.o
@@ -21,8 +21,9 @@ campaign_tests: campaign_tests.cpp main.cpp progress.hpp audio.hpp audio.o
 	$(CXX) $(CXXFLAGS) -o $@ campaign_tests.cpp audio.o -ldl -lpthread
 iceberg_tests: iceberg_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
 	$(CXX) $(CXXFLAGS) -o $@ iceberg_tests.cpp audio.o -ldl -lpthread
-test: iceberg_compatibility_tests iceberg_harbor_tests sdl_cell_tests iceberg_route_tests iceberg_ui_tests physics_tests extension_tests multiplayer_tests campaign_tests iceberg_tests iceberg_campaign_tests iceberg_quest_tests iceberg_text_tests iceberg_story_playtest iceberg_mastery_tests iceberg_branch_tests iceberg_save_crash_tests iceberg_jubilee_tests iceberg_inspection_tests iceberg_reaction_tests terminal_velocity_sdl iceberg_dialogue_tests iceberg_ending_tests
+test: multiplayer_match_tests iceberg_compatibility_tests iceberg_harbor_tests sdl_cell_tests iceberg_route_tests iceberg_ui_tests physics_tests extension_tests multiplayer_tests campaign_tests iceberg_tests iceberg_campaign_tests iceberg_quest_tests iceberg_text_tests iceberg_story_playtest iceberg_mastery_tests iceberg_branch_tests iceberg_save_crash_tests iceberg_jubilee_tests iceberg_inspection_tests iceberg_reaction_tests terminal_velocity_sdl iceberg_dialogue_tests iceberg_ending_tests
 	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./sdl_cell_tests
+	./multiplayer_match_tests
 	./iceberg_compatibility_tests
 	./iceberg_harbor_tests
 	./iceberg_route_tests
@@ -140,3 +141,12 @@ iceberg_harbor_tests: iceberg_harbor_tests.cpp main.cpp $(ICEBERG_HEADERS) audio
 
 iceberg_compatibility_tests: iceberg_compatibility_tests.cpp main.cpp $(ICEBERG_HEADERS) audio.o
 	$(CXX) $(CXXFLAGS) -o $@ $< audio.o -ldl -lpthread
+
+# Authoritative online matches; clients reuse terminal/SDL Unicode presentation.
+multiplayer_engine: multiplayer/engine.cpp multiplayer/match.hpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ multiplayer/engine.cpp audio.o -ldl -lpthread
+multiplayer_match_tests: multiplayer/match_tests.cpp multiplayer/match.hpp multiplayer/client.hpp main.cpp $(ICEBERG_HEADERS) audio.o
+	$(CXX) $(CXXFLAGS) -o $@ multiplayer/match_tests.cpp audio.o -ldl -lpthread
+terminal_velocity terminal_velocity_sdl multiplayer_tests: multiplayer/client.hpp
+
+terminal_velocity.exe terminal_velocity_sdl.exe: multiplayer/client.hpp

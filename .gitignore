@@ -54,3 +54,8 @@ trailer_capture
 /sdl_cell_tests
 
 /iceberg_compatibility_tests
+
+/multiplayer_engine
+/multiplayer_match_tests
+
+/multiplayer/__pycache__/

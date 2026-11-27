@@ -44,7 +44,7 @@ enum class RoomRole { Traverse, Lesson, Finale, Settlement, Secret, Interlude };
 enum class Rhythm { Flow, Precision, Vertical, Timing, Explore, Recovery };
 enum class Mechanic { None, Current, Steam, Conveyor, Echo, Growth, Wind };
 enum class InspectionArt { Parcel, Valve, Signal, Address, File, Seeds, Speaker, Thermometer, Sign, Dedication, Board, Door, Coin, Refill, Lamp, Character, Delivery, Chart, Traversal, Achievement };
-enum class TraversalStudy { Sling, Piston, Turbine, Vent, Balcony, Cornice, Rack, Scanner, Vine, Flytrap, Ice, Wind, Count };
+enum class TraversalStudy { Sling, Piston, Turbine, Vent, Balcony, Cornice, Rack, Scanner, Vine, Flytrap, Ice, Wind, WindowBoxes, TramSign, NoticeCase, Count };
 struct Text {
   const char *pl = "";
   const char *en = "";
@@ -204,18 +204,80 @@ inline constexpr std::array OutfitterItems{
   OutfitterItem{{"Buty dokerskie","Dock boots"},{"Lepsza przyczepność","Better grip on ice"},30,DockBoots},
   OutfitterItem{{"Torba sygnałowa","Signal satchel"},{"Większy zasięg ogniw","Wider dash-cell reach"},42,SignalSatchel}
 };
+
+struct Market {
+  Text name, cap, pack;
+  uint32_t cap_color, pack_color;
+};
+inline constexpr std::array<Market,DistrictCount> Markets{{
+  {{"Sklep portowy","Harbor outfitter"},{"Czapka bosmana","Bosun's cap"},{"Torba z żagla","Sailcloth pack"},0x488caa,0xd9ae7d},
+  {{"Kram przy piecu","Boiler stall"},{"Czapka palacza","Stoker's cap"},{"Pokrowiec z miedzi","Copper pack cover"},0xf09256,0xbe7043},
+  {{"Kiosk tramwajowy","Tram kiosk"},{"Czapka motorniczego","Tram driver's cap"},{"Torba biletowa","Ticket satchel"},0xb1a3ed,0x8483bc},
+  {{"Papiernia archiwum","Archive stationer"},{"Czapka introligatora","Binder's cap"},{"Teczka na plany","Map folio"},0xbecbe8,0xa78567},
+  {{"Kram nasienny","Seed stall"},{"Czapka z lnu","Linen cap"},{"Worek na nasiona","Seed pouch"},0x8cce83,0x889b5a},
+  {{"Skład latarnika","Beacon supply"},{"Czapka latarnika","Beacon keeper's cap"},{"Torba na soczewki","Lens carrier"},0xf4d784,0x8cc8eb}
+}};
+// Keep the existing save format. Word 1 stores the launch-price credit, the
+// twelve purchases, and the ninth bit of the lifetime earned-token balance.
+inline constexpr int MarketCreditShift=22;
+inline constexpr uint64_t MarketCreditMask=0x1ffull<<MarketCreditShift;
+inline constexpr uint64_t MarketPurchaseMask=0xfffull<<32;
+inline constexpr uint64_t OutfitterEarnedHighBit=1ull<<44;
+inline constexpr uint64_t MarketSaveMask=MarketCreditMask|MarketPurchaseMask|OutfitterEarnedHighBit;
+inline constexpr int OutfitterTokenLimit=511;
+inline constexpr int market_stock_size(int district) {return district==0?5:2;}
+inline constexpr int market_accessory(int district,int index) {
+  return index-(district==0?int(OutfitterItems.size()):0);
+}
+inline constexpr uint64_t market_purchase_bit(int district,int accessory) {
+  return uint64_t(1)<<(32+district*2+accessory);
+}
+inline constexpr int market_price(int district,int accessory) {
+  return (accessory==0?16:43)+district;
+}
+inline int market_credit(const Profile &profile) {
+  const auto saved=(profile.task_items[1]&MarketCreditMask)>>MarketCreditShift;
+  if(saved)return int(saved)-1;
+  int credit=0;
+  for(int district=0;district<DistrictCount;++district)
+    for(int accessory=0;accessory<2;++accessory)
+      if(profile.task_items[1]&market_purchase_bit(district,accessory))
+        credit+=market_price(district,accessory)-(7+district*2+accessory);
+  return credit;
+}
+inline OutfitterItem market_item(int district,int index) {
+  const int accessory=market_accessory(district,index);
+  if(accessory<0)return OutfitterItems[size_t(index)];
+  const auto &market=Markets[size_t(district)];
+  return {accessory==0?market.cap:market.pack,
+    accessory==0?Text{"Nakrycie głowy w dzielnicy","Cap worn in this district"}:
+                 Text{"Torba noszona w dzielnicy","Pack worn in this district"},
+    market_price(district,accessory),0};
+}
+inline bool owns_market_item(uint32_t cosmetics,uint64_t purchases,int district,int index) {
+  const int accessory=market_accessory(district,index);
+  return accessory<0?(cosmetics&OutfitterItems[size_t(index)].flag)!=0:
+    (purchases&market_purchase_bit(district,accessory))!=0;
+}
 inline int outfitter_earned(const Profile &profile) {
-  return std::max(int((profile.cosmetics&OutfitterEarnedMask)>>OutfitterEarnedShift),
-    transit_token_progress(profile,255));
+  const int low=int((profile.cosmetics&OutfitterEarnedMask)>>OutfitterEarnedShift);
+  const int high=(profile.task_items[1]&OutfitterEarnedHighBit)?256:0;
+  return std::max(low+high,transit_token_progress(profile,OutfitterTokenLimit));
 }
 inline int outfitter_balance(const Profile &profile) {
-  int balance=outfitter_earned(profile);
+  int balance=outfitter_earned(profile)+market_credit(profile);
   for(const auto &item:OutfitterItems)if(profile.cosmetics&item.flag)balance-=item.price;
+  for(int district=0;district<DistrictCount;++district)
+    for(int accessory=0;accessory<2;++accessory)
+      if(profile.task_items[1]&market_purchase_bit(district,accessory))balance-=market_price(district,accessory);
   return std::max(0,balance);
 }
 inline void remember_outfitter_tokens(Profile &profile) {
+  const int earned=outfitter_earned(profile);
   profile.cosmetics=(profile.cosmetics&~OutfitterEarnedMask)|
-    (uint32_t(outfitter_earned(profile))<<OutfitterEarnedShift);
+    (uint32_t(earned&255)<<OutfitterEarnedShift);
+  profile.task_items[1]&=~OutfitterEarnedHighBit;
+  if(earned>=256)profile.task_items[1]|=OutfitterEarnedHighBit;
 }
 
 inline int mastery_token_progress(const Profile &profile) {
@@ -349,6 +411,8 @@ inline uint64_t stored_achievements(const Profile &profile) {
 // Room task ids are 0–23 in the first task word. The second word keeps
 // side-story flags at 47–63 and uses its low word for the expanded catalogue.
 inline constexpr uint64_t ExtendedAwardMask=(uint64_t(1)<<(Achievements.size()-ExtendedAwardStart))-1;
+static_assert((ExtendedAwardMask&MarketSaveMask)==0);
+static_assert(OutfitterEarnedHighBit<side_flag(SideFlag::LastCoatFound));
 inline AwardProgress stored_award_progress(const Profile &profile) {
   return {stored_achievements(profile),profile.task_items[1]&ExtendedAwardMask};
 }
@@ -468,7 +532,7 @@ struct Dialogue {
   std::optional<size_t> reflow_anchor=std::nullopt;
   size_t reflow_revealed=0;
   int reply_scene=-1, reply_option=0;
-  int outfitter_item=-1, outfitter_tokens=0;
+  int outfitter_item=-1, outfitter_tokens=0, outfitter_district=0;
   bool cinematic=false;
   double shot_seconds=0, line_seconds=0;
   void reset_reveal(){visible_characters=byte_cursor=reflow_revealed=0;character_delay=speech_delay=0;revealing=true;reflow_anchor.reset();}

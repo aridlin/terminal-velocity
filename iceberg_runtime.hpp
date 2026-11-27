@@ -24,7 +24,7 @@ public:
   int last_columns=110,last_rows=34;
   double last_aspect=2;
   iceberg::Mode mode = iceberg::Mode::Campaign;
-  bool running = true, legacy_requested = false;
+  bool running = true, legacy_requested = false, online_requested = false;
   int district = 0, stage = 0, room = 0, depth = 0, run_district = 0;
   uint32_t run_seed = 1;
   double autosave_left = 15, run_seconds = 0;
@@ -526,10 +526,14 @@ public:
       grid.interactions.push_back({{x,floor-4.,3,4},InteractionKind::Replay,iceberg::SurveyReplay,
         {"Objazd latarni przyboju","Breakwater survey"}});
     }
-    if(grid.template_id==100||grid.template_id==600||grid.template_id==330) {
+    if(mode==iceberg::Mode::Campaign&&grid.room_role==iceberg::RoomRole::Settlement) {
+      constexpr std::array<Rect,iceberg::DistrictCount> stalls{{
+        {72,44,3,4},{34,48,4,4},{94,44,4,4},{53,44,4,4},{52,46,4,4},{59,47,4,4}
+      }};
       const Rect stall=grid.template_id==600?Rect{72,39,4,4}:
-        grid.template_id==100?Rect{72,44,3,4}:Rect{96,45,4,4};
-      grid.interactions.push_back({stall,InteractionKind::Outfitter,0,{"Sklep portowy","Harbor outfitter"}});
+        grid.template_id==330?Rect{96,45,4,4}:stalls[size_t(grid.district)];
+      grid.interactions.push_back({stall,InteractionKind::Outfitter,grid.district,
+        iceberg::Markets[size_t(grid.district)].name});
     }
     grid.protect_exit();
     configure_route_room();
@@ -827,10 +831,11 @@ public:
     v.achievement_left=iceberg::AchievementToastTime;
     audio.play(iceberg::Achievements[size_t(v.achievement_toast)].rare?AudioCue::RareAchievement:AudioCue::Achievement);
   }
-  void offer_outfitter_item(int index) {
+  void offer_outfitter_item(int shop_district,int index) {
     talk({{iceberg::ReplyPrompt,{}}});
     auto &dialogue=state.adventure.dialogue;
     dialogue.outfitter_item=index;
+    dialogue.outfitter_district=shop_district;
     dialogue.outfitter_tokens=iceberg::outfitter_balance(profile);
     dialogue.reply_option=1;
   }
@@ -840,18 +845,25 @@ public:
     if(dialogue.choosing()) {
       if(dialogue.outfitter_item>=0) {
         const int index=dialogue.outfitter_item;
-        const auto &item=iceberg::OutfitterItems[size_t(index)];
+        const int shop=dialogue.outfitter_district;
+        const auto item=iceberg::market_item(shop,index);
         if(dialogue.reply_option==1) {
-          if(index+1<int(iceberg::OutfitterItems.size()))offer_outfitter_item(index+1);
+          if(index+1<iceberg::market_stock_size(shop))offer_outfitter_item(shop,index+1);
           else dialogue={};
-        } else if(!(profile.cosmetics&item.flag)&&iceberg::outfitter_balance(profile)>=item.price) {
+        } else if(!iceberg::owns_market_item(profile.cosmetics,profile.task_items[1],shop,index)&&
+                  iceberg::outfitter_balance(profile)>=item.price) {
           iceberg::remember_outfitter_tokens(profile);
-          profile.cosmetics|=item.flag;
+          if(item.flag)profile.cosmetics|=item.flag;
+          else {
+            if(!(profile.task_items[1]&iceberg::MarketCreditMask))
+              profile.task_items[1]|=uint64_t(iceberg::market_credit(profile)+1)<<iceberg::MarketCreditShift;
+            profile.task_items[1]|=iceberg::market_purchase_bit(shop,iceberg::market_accessory(shop,index));
+          }
           unlock_achievement(iceberg::Achievement::Gear);
           constexpr uint32_t kit=iceberg::HarborScarf|iceberg::DockBoots|iceberg::SignalSatchel;
           if((profile.cosmetics&kit)==kit)unlock_achievement(iceberg::Achievement::AllGear);
           persist();audio.play(AudioCue::Cloth);
-          offer_outfitter_item(index);
+          offer_outfitter_item(shop,index);
         }
         return;
       }
@@ -987,7 +999,7 @@ public:
       const auto awards=iceberg::achievement_progress(previous);
       profile.discoveries=uint32_t(awards[0]);
       profile.task_items[0]=awards[0]&0xffffffff00000000ull;
-      profile.task_items[1]=awards[1];
+      profile.task_items[1]=awards[1]|(previous.task_items[1]&iceberg::MarketSaveMask);
       profile.music_volume=music;profile.effects_volume=effects;profile.ambience_volume=ambience;
       profile.pause_on_focus_loss=previous.pause_on_focus_loss;
       profile.smooth_camera=previous.smooth_camera;
@@ -1057,6 +1069,12 @@ public:
       t("PRÓBA MISTRZOWSKA — osiem sal, jeden rekord","MASTERY TRIAL — eight rooms, one record"),3,true);
   }
   void advance_room() {
+    const auto previous_room=room_revision;
+    const bool in_tour=tour_scene>=0;
+    advance_room_impl();
+    if(room_revision!=previous_room&&!in_tour)audio.play(AudioCue::Door);
+  }
+  void advance_room_impl() {
     if(tour_scene>=0) {
       const int next=tour_scene+1;
       if(next<int(iceberg::DebugTour.size()))load_tour_scene(next);
@@ -1065,7 +1083,6 @@ public:
     }
     if(on_campaign_route()&&route_forks_enabled()&&room==1)
       profile.route_decisions[size_t(district)]|=1u<<route_leg();
-    audio.play(AudioCue::Door);
     if(mode==iceberg::Mode::Campaign&&district==0&&stage==0&&profile.hidden_room<0&&profile.visit_district<0&&!profile.revisit.active)
       unlock_achievement(iceberg::Achievement::FirstDoor);
     if(state.deaths>=5&&grid.room_role==iceberg::RoomRole::Traverse)
@@ -1296,8 +1313,8 @@ public:
         const auto survey=t(" Objazd latarni przyboju w Dolnej Przystani: "," Breakwater Survey in Lower Harbor: ")+
           std::to_string(iceberg::survey_pass(profile)?iceberg::SurveyTokenFare:
             iceberg::transit_token_progress(profile,iceberg::SurveyTokenFare))+"/"+std::to_string(iceberg::SurveyTokenFare)+".";
-        const auto shop=t(" Żetony wydasz w sklepie w Dolnej Przystani.",
-          " Spend tokens at the Lower Harbor outfitter.");
+        const auto shop=t(" Żetony wydasz w sklepach dzielnicowych.",
+          " Spend tokens at district shops.");
         describe(t("Żeton transportowy","Transit token"),body+survey+shop,"◉",Art::Coin);return;
       }
       if(small==Art::Refill) {
@@ -1518,7 +1535,7 @@ public:
     int at=near_interaction();if(at<0)return;
     const auto node=grid.interactions[size_t(at)];
     if(choose_route(node)||harbor_interact(node)||side_story_interact(node))return;
-    if(node.kind==InteractionKind::Outfitter) {offer_outfitter_item(0);return;}
+    if(node.kind==InteractionKind::Outfitter) {offer_outfitter_item(node.id,0);return;}
     if(node.kind==InteractionKind::Epilogue) {
       if(grid.template_id!=330)return;
       auto bit=uint64_t(1)<<node.id;
@@ -1753,7 +1770,7 @@ public:
     }
     int old_selected=v.selected;
     if(c.map && (v.selected==2||v.selected==3))run_district=(run_district+1)%(expedition_unlocked()+1);
-    if(c.navigate)v.selected=(v.selected+c.navigate+7)%7;
+    if(c.navigate)v.selected=(v.selected+c.navigate+8)%8;
     if(c.select_level>=1&&c.select_level<=7)v.selected=c.select_level-1;
     if(v.selected!=old_selected){choose_saved_run_district(v.selected);audio.play(AudioCue::Menu);}
     if(c.language){profile.language=profile.language==iceberg::Language::Polish?iceberg::Language::English:iceberg::Language::Polish;persist();}
@@ -1765,6 +1782,7 @@ public:
     if(selected==2||selected==3)request_run(selected==2?iceberg::Mode::Endless:iceberg::Mode::Trial);
     if(selected==4){v.settings=!v.settings;}
     if(selected==5){persist();legacy_requested=true;running=false;}
+    if(selected==7){persist();online_requested=true;running=false;return;}
     if(selected==6){v.achievement_menu=true;v.achievement_group=iceberg::AwardGroup::All;v.achievement_selection=0;}
   }
   void tick(Controls c,double dt,bool focused=true,int columns=110,int rows=34,double aspect=2) {
@@ -2029,7 +2047,7 @@ public:
     stepper.advance(state,grid,c,dt);
     update_water_splash(before,old_deaths,dt);
     if(!state.won)v.door_open=std::max(0.,v.door_open-dt*4.5);
-    feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,false,old_elapsed,dt,audio);
+    feedback_step(state,grid,before,old_deaths,old_pickups,old_cp,at_door,old_elapsed,dt,audio);
     harbor_step(before,old_deaths);
     night_line_step(before,old_deaths,dt);
     night_platform_step(state.elapsed-old_elapsed);

@@ -33,7 +33,7 @@ def main():
     dest.mkdir(parents=True, exist_ok=True)
     variants = []
     if not args.windows_only:
-        variants.append(('linux-x64', ['terminal_velocity', 'terminal_velocity_sdl', 'keyboard_launcher', 'play.sh', 'ghostty-play.sh']))
+        variants.append(('linux-x64', ['terminal_velocity', 'terminal_velocity_sdl', 'keyboard_launcher', 'play.sh', 'ghostty-play.sh', 'multiplayer_engine']))
     if args.windows or args.windows_only:
         variants.append(('windows-x64-window', ['terminal_velocity.exe', 'terminal_velocity_sdl.exe', 'SDL2.dll', 'play.cmd', 'play-window.cmd']))
     for _, files in variants:
@@ -52,7 +52,7 @@ def main():
             folder.mkdir()
             for name in files + ['README.md', 'README.pl.md', 'DEVELOPMENT.md', 'THIRD_PARTY.md']:
                 shutil.copy2(ROOT / name, folder / name)
-            for name in ['assets', 'docs']:
+            for name in ['assets', 'docs'] + (['multiplayer'] if platform == 'linux-x64' else []):
                 shutil.copytree(ROOT / name, folder / name, ignore=shutil.ignore_patterns('media') if name == 'docs' else None)
             hashes = []
             for name in files:

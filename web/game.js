@@ -13,6 +13,7 @@ function setGameButtons(enabled){
  for(const button of gameButtons)button.disabled=!enabled;
 }
 setGameButtons(false);
+for(const button of document.querySelectorAll('[data-party]'))button.disabled=true;
 const mobile=()=>matchMedia('(pointer:coarse)').matches||innerWidth<760||(innerHeight<500&&innerWidth<1100);
 const languageKey='terminal-velocity.language',pendingLanguageKey='terminal-velocity.pending-language';
 let pendingBootLanguage=null;
@@ -690,7 +691,7 @@ function updateFocus(hasFocus){
  clearInput();
  // A hidden tab can lose every animation frame between blur and focus.
  // Deliver the focus edge without advancing the game clock.
- if(started&&!accounts?.active&&!importPending)Module._web_tick(0,0,0,cols,rows,0);
+ if(started&&!window.tvParty?.active&&!accounts?.active&&!importPending)Module._web_tick(0,0,0,cols,rows,0);
  syncSave();
 }
 addEventListener('blur',()=>updateFocus(false));
@@ -715,7 +716,7 @@ function resize(){
   cols=portraitPhone?Math.max(56,Math.ceil(width/6.5)):Math.max(76,Math.min(160,Math.floor(width/10)));
   rows=Math.max(portraitPhone?20:24,Math.min(48,Math.floor(height/(width/cols*2))));
  }
- previous=new Uint32Array(0);if(!started)drawBoot();
+ previous=new Uint32Array(0);if(!started&&!window.tvParty?.active)drawBoot();
 }addEventListener('resize',resize);
 function drawBoot(){
  const w=38,h=24,cells=new Uint32Array(w*h*4);for(let i=0;i<w*h;i++){cells[i*4]=32;cells[i*4+1]=0xc8bbb8;cells[i*4+2]=0x101923;}
@@ -1015,7 +1016,8 @@ function frame(now){
  // Resume with a normal step after an isolated stall so rapid motion stays visible.
  const dt=stalled&&!frameWasStalled?1/60:Math.min(.1,elapsed);
  frameWasStalled=stalled;
- if(started&&accounts?.active)accounts.draw();
+ if(window.tvParty?.active){window.tvParty.tick(held,pressed,cols,rows,english,focused);clearPresses();}
+ else if(started&&accounts?.active)accounts.draw();
  else if(started&&!importPending){
   Module._web_profile_action_busy(accountBooting||accounts?.busy?1:0);
   Module._web_tick(dt,held,pressed,cols,rows,focused?1:0,queuedDashAim());
@@ -1066,7 +1068,7 @@ start.onclick=()=>{
   setGameButtons(true);
   translateUI();
   refreshSaveControls();
-  last=performance.now();canvas.focus();requestAnimationFrame(frame);
+  last=performance.now();canvas.focus();
  } catch(error) {
   failStartup(error);
  }
@@ -1130,6 +1132,7 @@ canvas.addEventListener('pointercancel',event=>{
  if(canvasPress?.id===event.pointerId)canvasPress=null;
 });
 canvas.onclick=event=>{
+ if(window.tvParty?.active)return;
  const press=canvasPress;
  canvasPress=null;
  if(accounts?.active||importPending)return;
@@ -1178,7 +1181,7 @@ async function finishBoot(storageError,canWrite=true){
   browserStorageWritable=!storageError&&canWrite;
   if(storageError)browserSaveStatus=['Zapis przeglądarki niedostępny — pobieraj kopię','Browser storage unavailable — download backups'];
   else if(!canWrite)browserSaveStatus=['Inna karta zapisuje — pobierz kopię','Another tab is saving — download a copy'];
-  ready=true;start.disabled=false;translateUI();
+  ready=true;start.disabled=false;for(const button of document.querySelectorAll('[data-party]'))button.disabled=false;translateUI();
   drawBoot();document.fonts.load('17px Cell').then(()=>{tiles.clear();previous=new Uint32Array(0);});
  }catch(error){failStartup(error);}
 }
@@ -1233,7 +1236,7 @@ var Module={
  },
  setStatus(){
   if(engineLoadTimer!==null)watchEngineLoad();
-  if(!started)drawBoot();
+  if(!started&&!window.tvParty?.active)drawBoot();
  },
  onAbort:failStartup
 };
@@ -1258,7 +1261,7 @@ const entryRelease=page=>/^\.\/releases\/([a-f0-9]{12})\/$/.exec(
 const loadedRelease=entryRelease(document);
 let checkingRelease=false;
 async function refreshIdleEntry(){
- if(!loadedRelease||started||checkingRelease||document.hidden)return;
+ if(!loadedRelease||started||window.tvParty?.active||checkingRelease||document.hidden)return;
  checkingRelease=true;
  const controller=new AbortController();
  const deadline=setTimeout(()=>controller.abort(),2500);
@@ -1281,3 +1284,22 @@ if(loadedRelease){
 }
 
 translateUI();resize();watchEngineLoad();
+
+window.tvPartySave=()=>{
+ if(accounts?.active||accountBooting||importPending)return false;
+ if(started&&!inTour())syncSave();
+ return true;
+};
+// Multiplayer can start directly from entry without creating a campaign profile.
+window.tvPartyControls=enabled=>{
+ clearInput();start.hidden=enabled||started;
+ if(enabled){
+  for(const button of document.querySelectorAll('#touch button,#toolbar [data-tap]'))button.disabled=false;
+  for(const button of document.querySelectorAll('[data-tap="10"],[data-key="10"]'))button.disabled=true;
+ }else{
+  setGameButtons(started);renderSaveStatus();if(!started)drawBoot();
+ }
+};
+last=performance.now();requestAnimationFrame(frame);
+
+window.tvPartyStatus=message=>{if(window.tvParty?.active&&saveStatus.textContent!==message)saveStatus.textContent=message;};

@@ -4,6 +4,7 @@
 
 namespace {
 std::unique_ptr<AdventureSession> web_game;
+std::unique_ptr<GameAudio> web_party_sound;
 std::vector<uint32_t> web_cells;
 bool web_account_was_paused=false;
 const char *web_save_base="/persist/progress.dat.iceberg";
@@ -73,6 +74,20 @@ void send_web_ui() {
 }
 }
 extern "C" {
+EMSCRIPTEN_KEEPALIVE void web_party_boot(int muted) {
+  if(!web_game&&!web_party_sound){web_party_sound=std::make_unique<GameAudio>();web_party_sound->init(audio_directory(),bool(muted));}
+}
+EMSCRIPTEN_KEEPALIVE int web_party_mute() {
+  auto *audio=web_game?&web_game->audio:web_party_sound.get();if(audio)audio->muted=!audio->muted;return audio?int(audio->muted):1;
+}
+EMSCRIPTEN_KEEPALIVE void web_party_audio(unsigned cues,int district,int focused) {
+  auto *audio=web_game?&web_game->audio:web_party_sound.get();if(!audio)return;
+  audio->set_climax(false,0);audio->film_voice(-1,false,0,false);
+  audio->set_environment(std::clamp(district,0,5));
+  audio->update(AudioScene::Play,2,.05,bool(focused));
+  static constexpr AudioCue kinds[]={AudioCue::Jump,AudioCue::Dash,AudioCue::Pickup,AudioCue::Death,AudioCue::Checkpoint,AudioCue::Land,AudioCue::Door,AudioCue::Step1,AudioCue::Valve};
+  if(focused)for(int bit=0;bit<9;++bit)if(cues&(1u<<bit))audio->play(kinds[bit]);
+}
 EMSCRIPTEN_KEEPALIVE void web_set_start_slot(int slot) {
   if(!web_game&&slot>=1&&slot<=iceberg::SaveStore::SlotCount)web_slot=slot;
 }
@@ -90,6 +105,7 @@ EMSCRIPTEN_KEEPALIVE int web_saved_language() {
 EMSCRIPTEN_KEEPALIVE void web_start(unsigned seed,int language,int muted) {
   iceberg::SessionOptions options;options.seed=seed;options.mute=muted!=0;options.save_slot=web_slot;
   if(language==0||language==1){options.language=iceberg::Language(language);options.language_override=true;}
+  web_party_sound.reset();
   web_game=std::make_unique<AdventureSession>(options,web_save_base);
   cell_frame_sink=[](const CellFrame &frame) {
     int rows=int(frame.size()),cols=rows?int(frame[0].size()):0;
@@ -165,6 +181,7 @@ EMSCRIPTEN_KEEPALIVE void web_tick(double dt,unsigned held,unsigned pressed,int 
   const auto last_save=web_game->save_revision;
   const int previous_slot=web_slot;
   web_game->tick(c,std::isfinite(dt)?dt:0,focused!=0,std::clamp(cols,34,160),std::clamp(rows,cols>=56?20:24,60),2);
+  if(web_game->online_requested){web_game->online_requested=false;web_game->running=true;EM_ASM({window.tvParty?.openSetup?.();});}
   if(web_game->legacy_requested) {
     web_game->legacy_requested=false;web_game->running=true;web_game->state.menu=true;
     web_game->notice(web_game->t("Trasy klasyczne są dostępne w wydaniu na komputer.","Classic courses are available in the desktop edition."),6);

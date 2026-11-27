@@ -131,3 +131,9 @@ For the native window build, install UCRT64 SDL2/FreeType development packages a
 GitHub CI tests Linux and native Windows terminal/shared logic. Its existing Windows artifact contains the terminal edition; the separately prepared **window edition** also includes the SDL executable and DLL. Windows window testing includes cross-compilation and Wine; physical Windows graphics/input testing remains separate.
 
 The original graphical frontend is retained with `--diagnostic`. The event, mountain chapters and precision summit remain available through **Classic courses**; the [older guide](docs/LEGACY.md) documents those modes.
+
+## Online race and co-op (development)
+
+Choose Multiplayer from the main menu to create or join a private two-courier expedition. Race runs eight rooms with independent progress and finish times. Co-op shares machinery, pickups, fragile-platform state and checkpoints; both couriers must reach each exit. Confirm readiness with Enter/E. Matches use the host's real120Hz simulation and compressed30Hz Unicode frames, so network latency affects control response. Campaign saves and solo records are isolated.
+
+The browser has Online race, Online co-op and Join room buttons with room entry inside the canvas, including a touch keypad. Native launch options and hosting instructions: [multiplayer/README.md](multiplayer/README.md). Public availability is verified separately from a successful build.
